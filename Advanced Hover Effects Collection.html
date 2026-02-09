@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Hover Effects</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .effects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 2rem;
+        }
+
+        .effect-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        /* Shimmer Effect */
+        .shimmer-btn {
+            position: relative;
+            padding: 15px 30px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #ff6b6b);
+            background-size: 300% 100%;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .shimmer-btn:hover {
+            background-position: 100% 0;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Neon Glow Button */
+        .neon-btn {
+            position: relative;
+            padding: 15px 30px;
+            background: transparent;
+            border: 2px solid #00ffff;
+            border-radius: 30px;
+            color: #00ffff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .neon-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: #00ffff;
+            transition: all 0.5s ease;
+            z-index: -1;
+        }
+
+        .neon-btn:hover {
+            color: #000;
+            box-shadow: 
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 30px #00ffff,
+                inset 0 0 10px #00ffff;
+        }
+
+        .neon-btn:hover::before {
+            left: 0;
+        }
+
+        /* Liquid Fill Button */
+        .liquid-btn {
+            position: relative;
+            padding: 15px 30px;
+            background: transparent;
+            border: 2px solid #ff6b6b;
+            border-radius: 30px;
+            color: #ff6b6b;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .liquid-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: #ff6b6b;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+            z-index: -1;
+        }
+
+        .liquid-btn:hover {
+            color: white;
+            border-color: #ff6b6b;
+        }
+
+        .liquid-btn:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Ripple Effect Card */
+        .ripple-card {
+            position: relative;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 40px 20px;
+            color: white;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .ripple-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+        }
+
+        .ripple-card p {
+            margin: 0;
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(0);
+            animation: ripple-animation 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Tilt Card */
+        .tilt-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            padding: 40px 20px;
+            color: white;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tilt-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+        }
+
+        .tilt-card p {
+            margin: 0;
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        /* Magnetic Button */
+        .magnetic-btn {
+            position: relative;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* Glitch Text */
+        .glitch-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            position: relative;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-text::before {
+            animation: glitch-1 0.5s infinite;
+            color: #ff00ff;
+            z-index: -1;
+        }
+
+        .glitch-text::after {
+            animation: glitch-2 0.5s infinite;
+            color: #00ffff;
+            z-index: -2;
+        }
+
+        @keyframes glitch-1 {
+            0%, 100% {
+                clip-path: inset(0 0 0 0);
+                transform: translate(0);
+            }
+            20% {
+                clip-path: inset(20% 0 30% 0);
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                clip-path: inset(50% 0 20% 0);
+                transform: translate(2px, -2px);
+            }
+            60% {
+                clip-path: inset(10% 0 60% 0);
+                transform: translate(-2px, 1px);
+            }
+            80% {
+                clip-path: inset(70% 0 10% 0);
+                transform: translate(2px, -1px);
+            }
+        }
+
+        @keyframes glitch-2 {
+            0%, 100% {
+                clip-path: inset(0 0 0 0);
+                transform: translate(0);
+            }
+            20% {
+                clip-path: inset(60% 0 10% 0);
+                transform: translate(2px, -1px);
+            }
+            40% {
+                clip-path: inset(10% 0 70% 0);
+                transform: translate(-2px, 1px);
+            }
+            60% {
+                clip-path: inset(40% 0 30% 0);
+                transform: translate(2px, -2px);
+            }
+            80% {
+                clip-path: inset(20% 0 50% 0);
+                transform: translate(-2px, 2px);
+            }
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Hover Effects</h1>
+        
+        <div class="effects-grid">
+            <div class="effect-card">
+                <h3>Shimmer Effect</h3>
+                <button class="shimmer-btn">Shimmer Button</button>
+            </div>
+            
+            <div class="effect-card">
+                <h3>Neon Glow</h3>
+                <button class="neon-btn">Neon Button</button>
+            </div>
+            
+            <div class="effect-card">
+                <h3>Liquid Fill</h3>
+                <button class="liquid-btn">Liquid Button</button>
+            </div>
+            
+            <div class="effect-card">
+                <h3>Ripple Effect</h3>
+                <div class="ripple-card" onclick="createRipple(event)">
+                    <h3>Click Me</h3>
+                    <p>Click anywhere to see ripple effect</p>
+                </div>
+            </div>
+            
+            <div class="effect-card">
+                <h3>3D Tilt</h3>
+                <div class="tilt-card" onmousemove="tiltCard(event)" onmouseleave="resetTilt(event)">
+                    <h3>Hover Me</h3>
+                    <p>Move mouse to tilt</p>
+                </div>
+            </div>
+            
+            <div class="effect-card">
+                <h3>Glitch Text</h3>
+                <div class="glitch-text" data-text="GLITCH EFFECT">GLITCH EFFECT</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="toggleAnimations()">Toggle Animations</button>
+            <button class="control-btn" onclick="randomizeColors()">Random Colors</button>
+        </div>
+        
+        <div class="code-container">
+            <pre>/* Shimmer Effect */
+.shimmer-btn {
+    background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #ff6b6b);
+    background-size: 300% 100%;
+    transition: all 0.3s ease;
+}
+
+.shimmer-btn:hover {
+    background-position: 100% 0;
+    transform: translateY(-3px);
+}
+
+/* Ripple Effect */
+.ripple-card {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+function createRipple(event) {
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    
+    const rect = this.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    
+    this.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+}</pre>
+        </div>
+    </div>
+
+    <script>
+        let animationsEnabled = true;
+        
+        function createRipple(event) {
+            const card = event.currentTarget;
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            
+            const rect = card.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            
+            card.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }
+        
+        function tiltCard(event) {
+            const card = event.currentTarget;
+            const rect = card.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const rotateX = (y - centerY) / 10;
+            const rotateY = (centerX - x) / 10;
+            
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+        }
+        
+        function resetTilt(event) {
+            const card = event.currentTarget;
+            card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+        }
+        
+        function toggleAnimations() {
+            animationsEnabled = !animationsEnabled;
+            
+            const animatedElements = document.querySelectorAll('.glitch-text::before, .glitch-text::after');
+            animatedElements.forEach(element => {
+                element.style.animationPlayState = animationsEnabled ? 'running' : 'paused';
+            });
+        }
+        
+        function randomizeColors() {
+            const colors = [
+                ['#ff6b6b', '#4ecdc4', '#45b7d1'],
+                ['#f093fb', '#f5576c'],
+                ['#4facfe', '#00f2fe'],
+                ['#fa709a', '#fee140'],
+                ['#30cfd0', '#330867']
+            ];
+            
+            const randomColorSet = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Apply to shimmer button
+            const shimmerBtn = document.querySelector('.shimmer-btn');
+            shimmerBtn.style.background = `linear-gradient(90deg, ${randomColorSet.join(', ')}, ${randomColorSet[0]})`;
+            shimmerBtn.style.backgroundSize = '300% 100%';
+            
+            // Apply to other elements
+            document.querySelector('.neon-btn').style.borderColor = randomColorSet[0];
+            document.querySelector('.liquid-btn').style.borderColor = randomColorSet[1];
+        }
+        
+        // Magnetic button effect
+        document.querySelectorAll('.magnetic-btn').forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                
+                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+            });
+            
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = '';
+            });
+        });
+    </script>
+</body>
+</html>

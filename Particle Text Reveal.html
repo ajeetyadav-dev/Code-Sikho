@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Text Reveal</title>
+    <style>
+        body {
+            font-family: 'Arial Black', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+        }
+
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .text-container {
+            position: relative;
+            z-index: 2;
+            font-size: 5rem;
+            font-weight: bold;
+            color: transparent;
+            -webkit-text-stroke: 2px rgba(255, 255, 255, 0.3);
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+        }
+
+        .slider-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .slider-control input {
+            width: 100px;
+        }
+
+        .text-input {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+
+        .text-input input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 16px;
+            width: 250px;
+        }
+
+        .text-input button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .code-container {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            max-width: 300px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .code-container pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    
+    <div class="container">
+        <div class="text-container" id="textContainer">PARTICLES</div>
+    </div>
+    
+    <div class="text-input">
+        <input type="text" id="customText" placeholder="Enter text" value="PARTICLES">
+        <button onclick="updateText()">Update</button>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn active" onclick="setEffect('explode')">Explode</button>
+        <button class="control-btn" onclick="setEffect('form')">Form</button>
+        <button class="control-btn" onclick="setEffect('wave')">Wave</button>
+        <button class="control-btn" onclick="setEffect('spiral')">Spiral</button>
+        
+        <div class="slider-control">
+            <label>Speed:</label>
+            <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" onchange="updateSpeed()">
+            <span id="speedValue">1x</span>
+        </div>
+    </div>
+    
+    <div class="code-container">
+        <pre>// Particle Text Reveal
+class ParticleText {
+    constructor(canvas, text) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.text = text;
+        this.particles = [];
+        this.mouse = { x: null, y: null };
+        this.effect = 'explode';
+        this.speed = 1;
+        
+        this.resize();
+        this.createParticles();
+        this.animate();
+        
+        window.addEventListener('resize', () => this.resize());
+        canvas.addEventListener('mousemove', (e) => {
+            this.mouse.x = e.x;
+            this.mouse.y = e.y;
+        });
+    }
+    
+    createParticles() {
+        // Create particles from text
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        tempCtx.font = 'bold 80px Arial Black';
+        const textWidth = tempCtx.measureText(this.text).width;
+        
+        tempCanvas.width = textWidth;
+        tempCanvas.height = 100;
+        
+        tempCtx.font = 'bold 80px Arial Black';
+        tempCtx.fillStyle = 'white';
+        tempCtx.fillText(this.text, 0, 80);
+        
+        const imageData = tempCtx.getImageData(0, 0, textWidth, 100);
+        const data = imageData.data;
+        
+        for (let y = 0; y < 100; y += 2) {
+            for (let x = 0; x < textWidth; x += 2) {
+                const index = (y * textWidth + x) * 4;
+                const alpha = data[index + 3];
+                
+                if (alpha > 128) {
+                    this.particles.push(new Particle(
+                        x + (this.canvas.width - textWidth) / 2,
+                        y + (this.canvas.height - 100) / 2
+                    ));
+                }
+            }
+        }
+    }
+}</pre>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let particles = [];
+        let mouse = { x: null, y: null };
+        let currentEffect = 'explode';
+        let animationSpeed = 1;
+        let animationId;
+        
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.originX = x;
+                this.originY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 2;
+                this.color = `hsl(${Math.random() * 60 + 200}, 100%, 50%)`;
+                this.angle = Math.random() * Math.PI * 2;
+                this.distance = 0;
+                this.friction = 0.95;
+                this.ease = 0.1;
+            }
+            
+            update() {
+                switch(currentEffect) {
+                    case 'explode':
+                        this.explodeUpdate();
+                        break;
+                    case 'form':
+                        this.formUpdate();
+                        break;
+                    case 'wave':
+                        this.waveUpdate();
+                        break;
+                    case 'spiral':
+                        this.spiralUpdate();
+                        break;
+                }
+            }
+            
+            explodeUpdate() {
+                if (mouse.x != null && mouse.y != null) {
+                    const dx = mouse.x - this.x;
+                    const dy = mouse.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 100) {
+                        const force = (100 - distance) / 100;
+                        this.vx -= (dx / distance) * force * 2;
+                        this.vy -= (dy / distance) * force * 2;
+                    }
+                }
+                
+                this.vx += (this.originX - this.x) * this.ease * animationSpeed;
+                this.vy += (this.originY - this.y) * this.ease * animationSpeed;
+                
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                
+                this.x += this.vx * animationSpeed;
+                this.y += this.vy * animationSpeed;
+            }
+            
+            formUpdate() {
+                this.distance += 0.05 * animationSpeed;
+                
+                const targetX = this.originX + Math.cos(this.angle + this.distance) * 50;
+                const targetY = this.originY + Math.sin(this.angle + this.distance) * 50;
+                
+                this.x += (targetX - this.x) * 0.1 * animationSpeed;
+                this.y += (targetY - this.y) * 0.1 * animationSpeed;
+            }
+            
+            waveUpdate() {
+                this.angle += 0.05 * animationSpeed;
+                this.y = this.originY + Math.sin(this.angle) * 20;
+            }
+            
+            spiralUpdate() {
+                this.angle += 0.05 * animationSpeed;
+                const radius = this.angle * 10;
+                this.x = this.originX + Math.cos(this.angle) * radius;
+                this.y = this.originY + Math.sin(this.angle) * radius;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            createParticles();
+        }
+        
+        function createParticles() {
+            particles = [];
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            const text = document.getElementById('textContainer').textContent;
+            
+            tempCtx.font = 'bold 80px Arial Black';
+            const textWidth = tempCtx.measureText(text).width;
+            
+            tempCanvas.width = textWidth;
+            tempCanvas.height = 100;
+            
+            tempCtx.font = 'bold 80px Arial Black';
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillText(text, 0, 80);
+            
+            const imageData = tempCtx.getImageData(0, 0, textWidth, 100);
+            const data = imageData.data;
+            
+            for (let y = 0; y < 100; y += 2) {
+                for (let x = 0; x < textWidth; x += 2) {
+                    const index = (y * textWidth + x) * 4;
+                    const alpha = data[index + 3];
+                    
+                    if (alpha > 128) {
+                        particles.push(new Particle(
+                            x + (canvas.width - textWidth) / 2,
+                            y + (canvas.height - 100) / 2
+                        ));
+                    }
+                }
+            }
+        }
+        
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function setEffect(effect) {
+            currentEffect = effect;
+            
+            // Update active button
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reset particles for new effect
+            particles.forEach(particle => {
+                particle.angle = Math.random() * Math.PI * 2;
+                particle.distance = 0;
+                particle.vx = 0;
+                particle.vy = 0;
+            });
+        }
+        
+        function updateText() {
+            const text = document.getElementById('customText').value;
+            document.getElementById('textContainer').textContent = text;
+            createParticles();
+        }
+        
+        function updateSpeed() {
+            animationSpeed = parseFloat(document.getElementById('speed').value);
+            document.getElementById('speedValue').textContent = animationSpeed + 'x';
+        }
+        
+        // Initialize
+        window.addEventListener('resize', resize);
+        canvas.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+        
+        resize();
+        animate();
+    </script>
+</body>
+</html>
