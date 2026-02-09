@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morphing Shape Loader</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .loader-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+
+        .morph-loader {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .shape {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 50%;
+            animation: morph 4s ease-in-out infinite;
+        }
+
+        @keyframes morph {
+            0%, 100% {
+                border-radius: 50%;
+                transform: rotate(0deg) scale(1);
+            }
+            25% {
+                border-radius: 0% 50% 50% 50%;
+                transform: rotate(90deg) scale(0.8);
+            }
+            50% {
+                border-radius: 0%;
+                transform: rotate(180deg) scale(1.2);
+            }
+            75% {
+                border-radius: 50% 0% 50% 50%;
+                transform: rotate(270deg) scale(0.9);
+            }
+        }
+
+        .loader-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            z-index: 2;
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 4;
+            fill: transparent;
+        }
+
+        .progress-ring-progress {
+            stroke: #fff;
+            stroke-width: 4;
+            fill: transparent;
+            stroke-dasharray: 565.48;
+            stroke-dashoffset: 565.48;
+            transition: stroke-dashoffset 0.35s;
+            transform-origin: 50% 50%;
+        }
+
+        .dots-loader {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .dot {
+            width: 15px;
+            height: 15px;
+            background: white;
+            border-radius: 50%;
+            animation: dotPulse 1.5s ease-in-out infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+
+        .speed-control input {
+            width: 100px;
+        }
+
+        .code-container {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            max-width: 300px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .code-container pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader-container">
+        <div class="morph-loader">
+            <div class="shape"></div>
+            <svg class="progress-ring" width="200" height="200">
+                <circle class="progress-ring-circle" cx="100" cy="100" r="90"></circle>
+                <circle class="progress-ring-progress" cx="100" cy="100" r="90"></circle>
+            </svg>
+            <div class="loader-text">
+                <div id="percentage">0%</div>
+                <div>Loading...</div>
+            </div>
+        </div>
+        
+        <div class="dots-loader">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn active" onclick="setLoaderType('morph')">Morph</button>
+        <button class="control-btn" onclick="setLoaderType('pulse')">Pulse</button>
+        <button class="control-btn" onclick="setLoaderType('rotate')">Rotate</button>
+        <button class="control-btn" onclick="setLoaderType('bounce')">Bounce</button>
+        
+        <div class="speed-control">
+            <label>Speed:</label>
+            <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1" onchange="updateSpeed()">
+            <span id="speedValue">1x</span>
+        </div>
+    </div>
+    
+    <div class="code-container">
+        <pre>/* Morphing Shape Loader */
+.shape {
+    width: 200px;
+    height: 200px;
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    animation: morph 4s ease-in-out infinite;
+}
+
+@keyframes morph {
+    0%, 100% {
+        border-radius: 50%;
+        transform: rotate(0deg) scale(1);
+    }
+    25% {
+        border-radius: 0% 50% 50% 50%;
+        transform: rotate(90deg) scale(0.8);
+    }
+    50% {
+        border-radius: 0%;
+        transform: rotate(180deg) scale(1.2);
+    }
+    75% {
+        border-radius: 50% 0% 50% 50%;
+        transform: rotate(270deg) scale(0.9);
+    }
+}
+
+/* Progress Ring */
+.progress-ring-progress {
+    stroke: #fff;
+    stroke-width: 4;
+    fill: transparent;
+    stroke-dasharray: 565.48;
+    stroke-dashoffset: 565.48;
+    transition: stroke-dashoffset 0.35s;
+}
+
+function setProgress(percent) {
+    const circle = document.querySelector('.progress-ring-progress');
+    const offset = 565.48 - (565.48 * percent) / 100;
+    circle.style.strokeDashoffset = offset;
+}</pre>
+    </div>
+
+    <script>
+        let currentLoaderType = 'morph';
+        let animationSpeed = 1;
+        let progress = 0;
+        let progressInterval;
+        
+        function setLoaderType(type) {
+            currentLoaderType = type;
+            
+            // Update active button
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update shape animation
+            const shape = document.querySelector('.shape');
+            
+            switch(type) {
+                case 'morph':
+                    shape.style.animation = `morph ${4 / animationSpeed}s ease-in-out infinite`;
+                    break;
+                case 'pulse':
+                    shape.style.animation = `pulse ${2 / animationSpeed}s ease-in-out infinite`;
+                    break;
+                case 'rotate':
+                    shape.style.animation = `rotate ${3 / animationSpeed}s linear infinite`;
+                    break;
+                case 'bounce':
+                    shape.style.animation = `bounce ${2.5 / animationSpeed}s ease-in-out infinite`;
+                    break;
+            }
+        }
+        
+        function updateSpeed() {
+            animationSpeed = parseFloat(document.getElementById('speed').value);
+            document.getElementById('speedValue').textContent = animationSpeed + 'x';
+            
+            // Reapply current loader type with new speed
+            setLoaderType(currentLoaderType);
+        }
+        
+        function setProgress(percent) {
+            const circle = document.querySelector('.progress-ring-progress');
+            const offset = 565.48 - (565.48 * percent) / 100;
+            circle.style.strokeDashoffset = offset;
+            
+            document.getElementById('percentage').textContent = percent + '%';
+        }
+        
+        // Simulate loading progress
+        function startProgress() {
+            progress = 0;
+            clearInterval(progressInterval);
+            
+            progressInterval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+                    
+                    // Reset after completion
+                    setTimeout(() => {
+                        progress = 0;
+                        startProgress();
+                    }, 2000);
+                }
+                
+                setProgress(Math.floor(progress));
+            }, 300 / animationSpeed);
+        }
+        
+        // Add additional animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                50% {
+                    transform: scale(1.2);
+                    opacity: 0.7;
+                }
+            }
+            
+            @keyframes rotate {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            
+            @keyframes bounce {
+                0%, 100% {
+                    transform: translateY(0);
+                }
+                50% {
+                    transform: translateY(-30px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Start progress animation
+        startProgress();
+    </script>
+</body>
+</html>

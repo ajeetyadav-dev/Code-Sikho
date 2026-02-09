@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Card Carousel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            perspective: 1200px;
+        }
+
+        .carousel-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+
+        .carousel-card {
+            position: absolute;
+            width: 300px;
+            height: 400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            box-sizing: border-box;
+            color: white;
+            backface-visibility: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .carousel-card:hover {
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            transform: translateZ(20px);
+        }
+
+        .carousel-card h3 {
+            font-size: 1.8rem;
+            margin: 0 0 15px 0;
+        }
+
+        .carousel-card p {
+            font-size: 1rem;
+            margin: 0;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        .carousel-card .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .carousel-nav {
+            display: flex;
+            gap: 20px;
+            margin-top: 50px;
+        }
+
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
+        .indicators {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .indicator.active {
+            background: white;
+            transform: scale(1.2);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .control-group input {
+            width: 100%;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .control-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .code-container {
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            max-width: 300px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .code-container pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        .auto-rotate {
+            animation: autoRotate 15s linear infinite;
+        }
+
+        @keyframes autoRotate {
+            from {
+                transform: rotateY(0deg);
+            }
+            to {
+                transform: rotateY(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="carousel-container" id="carousel">
+        <div class="carousel-card" style="transform: rotateY(0deg) translateZ(200px);">
+            <div class="icon">🎨</div>
+            <h3>Design</h3>
+            <p>Create stunning visual experiences with modern design principles and creative solutions.</p>
+        </div>
+        
+        <div class="carousel-card" style="transform: rotateY(60deg) translateZ(200px);">
+            <div class="icon">💻</div>
+            <h3>Development</h3>
+            <p>Build robust applications with cutting-edge technologies and best practices.</p>
+        </div>
+        
+        <div class="carousel-card" style="transform: rotateY(120deg) translateZ(200px);">
+            <div class="icon">🚀</div>
+            <h3>Performance</h3>
+            <p>Optimize for speed and efficiency to deliver exceptional user experiences.</p>
+        </div>
+        
+        <div class="carousel-card" style="transform: rotateY(180deg) translateZ(200px);">
+            <div class="icon">📱</div>
+            <h3>Responsive</h3>
+            <p>Ensure perfect display across all devices with responsive design techniques.</p>
+        </div>
+        
+        <div class="carousel-card" style="transform: rotateY(240deg) translateZ(200px);">
+            <div class="icon">🔒</div>
+            <h3>Security</h3>
+            <p>Implement robust security measures to protect data and user privacy.</p>
+        </div>
+        
+        <div class="carousel-card" style="transform: rotateY(300deg) translateZ(200px);">
+            <div class="icon">⚡</div>
+            <h3>Innovation</h3>
+            <p>Push boundaries with innovative solutions and creative problem-solving.</p>
+        </div>
+    </div>
+    
+    <div class="carousel-nav">
+        <button class="nav-btn" onclick="rotateCarousel(-60)">‹</button>
+        <button class="nav-btn" onclick="rotateCarousel(60)">›</button>
+    </div>
+    
+    <div class="indicators">
+        <div class="indicator active" onclick="goToCard(0)"></div>
+        <div class="indicator" onclick="goToCard(1)"></div>
+        <div class="indicator" onclick="goToCard(2)"></div>
+        <div class="indicator" onclick="goToCard(3)"></div>
+        <div class="indicator" onclick="goToCard(4)"></div>
+        <div class="indicator" onclick="goToCard(5)"></div>
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Rotation Angle: <span id="angleValue">0°</span></label>
+            <input type="range" id="rotation" min="0" max="360" value="0" onchange="manualRotate()">
+        </div>
+        
+        <div class="control-group">
+            <label>Card Distance: <span id="distanceValue">200px</span></label>
+            <input type="range" id="distance" min="100" max="400" value="200" onchange="updateDistance()">
+        </div>
+        
+        <div class="control-buttons">
+            <button class="control-btn" onclick="toggleAutoRotate()">Auto Rotate</button>
+            <button class="control-btn" onclick="resetCarousel()">Reset</button>
+        </div>
+    </div>
+    
+    <div class="code-container">
+        <pre>/* 3D Carousel */
+.carousel-container {
+    position: relative;
+    width: 300px;
+    height: 400px;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+}
+
+.carousel-card {
+    position: absolute;
+    width: 300px;
+    height: 400px;
+    backface-visibility: hidden;
+}
+
+/* Position cards in circle */
+function positionCards() {
+    const cards = document.querySelectorAll('.carousel-card');
+    const angleStep = 360 / cards.length;
+    const radius = 200;
+    
+    cards.forEach((card, index) => {
+        const angle = angleStep * index;
+        card.style.transform = `
+            rotateY(${angle}deg) 
+            translateZ(${radius}px)
+        `;
+    });
+}
+
+/* Rotate carousel */
+function rotateCarousel(angle) {
+    const carousel = document.getElementById('carousel');
+    const currentRotation = getCurrentRotation();
+    carousel.style.transform = `rotateY(${currentRotation + angle}deg)`;
+}</pre>
+    </div>
+
+    <script>
+        let currentRotation = 0;
+        let autoRotateInterval;
+        let isAutoRotating = false;
+        
+        function rotateCarousel(angle) {
+            currentRotation += angle;
+            const carousel = document.getElementById('carousel');
+            carousel.style.transform = `rotateY(${currentRotation}deg)`;
+            
+            // Update rotation slider
+            document.getElementById('rotation').value = currentRotation % 360;
+            document.getElementById('angleValue').textContent = (currentRotation % 360) + '°';
+            
+            // Update indicators
+            updateIndicators();
+        }
+        
+        function goToCard(index) {
+            const anglePerCard = 60;
+            const targetRotation = -index * anglePerCard;
+            currentRotation = targetRotation;
+            
+            const carousel = document.getElementById('carousel');
+            carousel.style.transform = `rotateY(${currentRotation}deg)`;
+            
+            // Update rotation slider
+            document.getElementById('rotation').value = Math.abs(currentRotation % 360);
+            document.getElementById('angleValue').textContent = Math.abs(currentRotation % 360) + '°';
+            
+            // Update indicators
+            updateIndicators();
+        }
+        
+        function manualRotate() {
+            const angle = parseInt(document.getElementById('rotation').value);
+            currentRotation = angle;
+            
+            const carousel = document.getElementById('carousel');
+            carousel.style.transform = `rotateY(${currentRotation}deg)`;
+            
+            document.getElementById('angleValue').textContent = angle + '°';
+            
+            // Update indicators
+            updateIndicators();
+        }
+        
+        function updateDistance() {
+            const distance = document.getElementById('distance').value;
+            document.getElementById('distanceValue').textContent = distance + 'px';
+            
+            const cards = document.querySelectorAll('.carousel-card');
+            const angleStep = 360 / cards.length;
+            
+            cards.forEach((card, index) => {
+                const angle = angleStep * index;
+                card.style.transform = `
+                    rotateY(${angle}deg) 
+                    translateZ(${distance}px)
+                `;
+            });
+        }
+        
+        function updateIndicators() {
+            const indicators = document.querySelectorAll('.indicator');
+            const normalizedRotation = ((currentRotation % 360) + 360) % 360;
+            const activeIndex = Math.round(normalizedRotation / 60) % 6;
+            
+            indicators.forEach((indicator, index) => {
+                indicator.classList.toggle('active', index === activeIndex);
+            });
+        }
+        
+        function toggleAutoRotate() {
+            isAutoRotating = !isAutoRotating;
+            
+            if (isAutoRotating) {
+                const carousel = document.getElementById('carousel');
+                carousel.classList.add('auto-rotate');
+                event.target.textContent = 'Stop Auto';
+            } else {
+                const carousel = document.getElementById('carousel');
+                carousel.classList.remove('auto-rotate');
+                event.target.textContent = 'Auto Rotate';
+            }
+        }
+        
+        function resetCarousel() {
+            currentRotation = 0;
+            const carousel = document.getElementById('carousel');
+            carousel.style.transform = 'rotateY(0deg)';
+            
+            // Reset controls
+            document.getElementById('rotation').value = 0;
+            document.getElementById('angleValue').textContent = '0°';
+            document.getElementById('distance').value = 200;
+            document.getElementById('distanceValue').textContent = '200px';
+            
+            // Reset card positions
+            updateDistance();
+            
+            // Update indicators
+            updateIndicators();
+            
+            // Stop auto rotate if active
+            if (isAutoRotating) {
+                toggleAutoRotate();
+            }
+        }
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    rotateCarousel(-60);
+                    break;
+                case 'ArrowRight':
+                    rotateCarousel(60);
+                    break;
+                case ' ':
+                    toggleAutoRotate();
+                    e.preventDefault();
+                    break;
+            }
+        });
+        
+        // Add touch/swipe support
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        const carousel = document.getElementById('carousel');
+        
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+        
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    rotateCarousel(60); // Swipe left, go to next
+                } else {
+                    rotateCarousel(-60); // Swipe right, go to previous
+                }
+            }
+        }
+        
+        // Initialize
+        updateIndicators();
+    </script>
+</body>
+</html>
