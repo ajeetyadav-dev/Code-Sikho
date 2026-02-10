@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll-Triggered Counter Animation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .scroll-indicator span {
+            display: block;
+            width: 30px;
+            height: 50px;
+            border: 2px solid white;
+            border-radius: 25px;
+            position: relative;
+        }
+
+        .scroll-indicator span::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            margin-left: -3px;
+            background-color: white;
+            border-radius: 50%;
+            animation: scroll-animation 2s infinite;
+        }
+
+        @keyframes scroll-animation {
+            0% {
+                transform: translateY(0);
+                opacity: 0;
+            }
+            40% {
+                opacity: 1;
+            }
+            80% {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .counters-section {
+            padding: 80px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .counters-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+
+        .counter-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .counter-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .counter-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .counter-number {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4facfe;
+        }
+
+        .counter-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            border-radius: 4px;
+            width: 0;
+            transition: width 2s ease-out;
+        }
+
+        .circular-progress {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+        }
+
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circular-progress-circle {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 8;
+        }
+
+        .circular-progress-fill {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 440;
+            stroke-dashoffset: 440;
+            transition: stroke-dashoffset 2s ease-out;
+        }
+
+        .circular-progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 40px auto;
+            max-width: 800px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>Scroll-Triggered Counter Animation</h1>
+        <p>Scroll down to see animated counters that count up when they come into view</p>
+        <div class="scroll-indicator">
+            <span></span>
+        </div>
+    </div>
+
+    <div class="counters-section">
+        <div class="counters-container">
+            <div class="counter-card">
+                <div class="counter-icon">👥</div>
+                <div class="counter-number" data-target="1234">0</div>
+                <div class="counter-label">Happy Clients</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="85"></div>
+                </div>
+            </div>
+            
+            <div class="counter-card">
+                <div class="counter-icon">📁</div>
+                <div class="counter-number" data-target="567">0</div>
+                <div class="counter-label">Projects Completed</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="92"></div>
+                </div>
+            </div>
+            
+            <div class="counter-card">
+                <div class="counter-icon">☕</div>
+                <div class="counter-number" data-target="2890">0</div>
+                <div class="counter-label">Cups of Coffee</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-progress="78"></div>
+                </div>
+            </div>
+            
+            <div class="counter-card">
+                <div class="counter-icon">⭐</div>
+                <div class="circular-progress">
+                    <svg width="150" height="150">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="circular-progress-circle" cx="75" cy="75" r="70"></circle>
+                        <circle class="circular-progress-fill" cx="75" cy="75" r="70" data-progress="95"></circle>
+                    </svg>
+                    <div class="circular-progress-text">0%</div>
+                </div>
+                <div class="counter-label">Success Rate</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="code-container">
+        <pre>// Scroll-Triggered Counter Animation
+const observerOptions = {
+    root: null,
+    rootMargin: '0px',
+    threshold: 0.5
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            // Animate counter
+            animateCounter(entry.target);
+            
+            // Animate progress bar
+            const progressBar = entry.target.querySelector('.progress-fill');
+            if (progressBar) {
+                const progress = progressBar.dataset.progress;
+                setTimeout(() => {
+                    progressBar.style.width = progress + '%';
+                }, 200);
+            }
+            
+            // Animate circular progress
+            const circularProgress = entry.target.querySelector('.circular-progress-fill');
+            if (circularProgress) {
+                const progress = circularProgress.dataset.progress;
+                const offset = 440 - (440 * progress) / 100;
+                setTimeout(() => {
+                    circularProgress.style.strokeDashoffset = offset;
+                }, 200);
+            }
+            
+            // Stop observing after animation
+            observer.unobserve(entry.target);
+        }
+    });
+}, observerOptions);
+
+// Observe all counter cards
+document.querySelectorAll('.counter-card').forEach(card => {
+    observer.observe(card);
+});
+
+function animateCounter(element) {
+    const target = parseInt(element.dataset.target);
+    const duration = 2000;
+    const step = target / (duration / 16);
+    let current = 0;
+    
+    const timer = setInterval(() => {
+        current += step;
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current);
+    }, 16);
+}</pre>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="resetCounters()">Reset</button>
+        <button class="control-btn" onclick="replayAnimations()">Replay</button>
+    </div>
+
+    <script>
+        let hasAnimated = false;
+        
+        // Intersection Observer for scroll-triggered animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.5
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                    // Animate counter
+                    const counterNumber = entry.target.querySelector('.counter-number');
+                    if (counterNumber) {
+                        animateCounter(counterNumber);
+                    }
+                    
+                    // Animate progress bar
+                    const progressBar = entry.target.querySelector('.progress-fill');
+                    if (progressBar) {
+                        const progress = progressBar.dataset.progress;
+                        setTimeout(() => {
+                            progressBar.style.width = progress + '%';
+                        }, 200);
+                    }
+                    
+                    // Animate circular progress
+                    const circularProgress = entry.target.querySelector('.circular-progress-fill');
+                    const circularText = entry.target.querySelector('.circular-progress-text');
+                    if (circularProgress && circularText) {
+                        const progress = circularProgress.dataset.progress;
+                        const offset = 440 - (440 * progress) / 100;
+                        
+                        setTimeout(() => {
+                            circularProgress.style.strokeDashoffset = offset;
+                            
+                            // Animate percentage text
+                            animateCounter(circularText, progress, '%');
+                        }, 200);
+                    }
+                    
+                    // Mark as animated
+                    entry.target.classList.add('animated');
+                }
+            });
+        }, observerOptions);
+        
+        // Observe all counter cards
+        document.querySelectorAll('.counter-card').forEach(card => {
+            observer.observe(card);
+        });
+        
+        function animateCounter(element, target, suffix = '') {
+            const targetValue = target || parseInt(element.dataset.target);
+            const duration = 2000;
+            const step = targetValue / (duration / 16);
+            let current = 0;
+            
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= targetValue) {
+                    current = targetValue;
+                    clearInterval(timer);
+                }
+                
+                if (suffix === '%') {
+                    element.textContent = Math.floor(current) + suffix;
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 16);
+        }
+        
+        function resetCounters() {
+            // Reset all counters
+            document.querySelectorAll('.counter-number').forEach(counter => {
+                counter.textContent = '0';
+            });
+            
+            // Reset all progress bars
+            document.querySelectorAll('.progress-fill').forEach(bar => {
+                bar.style.width = '0';
+            });
+            
+            // Reset circular progress
+            document.querySelectorAll('.circular-progress-fill').forEach(circle => {
+                circle.style.strokeDashoffset = '440';
+            });
+            
+            // Reset circular text
+            document.querySelectorAll('.circular-progress-text').forEach(text => {
+                text.textContent = '0%';
+            });
+            
+            // Remove animated class
+            document.querySelectorAll('.counter-card').forEach(card => {
+                card.classList.remove('animated');
+            });
+            
+            // Re-observe all cards
+            document.querySelectorAll('.counter-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
+        
+        function replayAnimations() {
+            resetCounters();
+            
+            // Trigger animations after a short delay
+            setTimeout(() => {
+                document.querySelectorAll('.counter-card').forEach(card => {
+                    const counterNumber = card.querySelector('.counter-number');
+                    if (counterNumber) {
+                        animateCounter(counterNumber);
+                    }
+                    
+                    const progressBar = card.querySelector('.progress-fill');
+                    if (progressBar) {
+                        const progress = progressBar.dataset.progress;
+                        setTimeout(() => {
+                            progressBar.style.width = progress + '%';
+                        }, 200);
+                    }
+                    
+                    const circularProgress = card.querySelector('.circular-progress-fill');
+                    const circularText = card.querySelector('.circular-progress-text');
+                    if (circularProgress && circularText) {
+                        const progress = circularProgress.dataset.progress;
+                        const offset = 440 - (440 * progress) / 100;
+                        
+                        setTimeout(() => {
+                            circularProgress.style.strokeDashoffset = offset;
+                            animateCounter(circularText, progress, '%');
+                        }, 200);
+                    }
+                    
+                    card.classList.add('animated');
+                });
+            }, 500);
+        }
+        
+        // Add smooth scrolling
+        document.documentElement.style.scrollBehavior = 'smooth';
+    </script>
+</body>
+</html>

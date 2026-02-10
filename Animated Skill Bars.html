@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Skill Bars</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .skills-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .skill-item {
+            margin-bottom: 30px;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 0.6s ease;
+        }
+
+        .skill-item.animate {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .skill-name {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .skill-percentage {
+            color: #4facfe;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .skill-bar {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .skill-progress {
+            height: 100%;
+            border-radius: 6px;
+            width: 0;
+            transition: width 2s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skill-progress::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.3), 
+                transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .skill-html { background: linear-gradient(90deg, #e34c26, #f06529); }
+        .skill-css { background: linear-gradient(90deg, #264de4, #2965f1); }
+        .skill-js { background: linear-gradient(90deg, #f0db4f, #f7df1e); }
+        .skill-react { background: linear-gradient(90deg, #61dafb, #4fa8c5); }
+        .skill-node { background: linear-gradient(90deg, #68a063, #8cc84b); }
+        .skill-python { background: linear-gradient(90deg, #3776ab, #ffd43b); }
+
+        .circular-skill {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+
+        .circular-skill-item {
+            text-align: center;
+            margin: 20px;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.6s ease;
+        }
+
+        .circular-skill-item.animate {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .circular-progress {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+        }
+
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circular-progress-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 8;
+        }
+
+        .circular-progress-fill {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 339.292;
+            stroke-dashoffset: 339.292;
+            transition: stroke-dashoffset 2s ease-out;
+        }
+
+        .circular-progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .circular-skill-name {
+            color: white;
+            font-size: 1rem;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Animated Skill Bars</h1>
+        
+        <div class="skills-container">
+            <div class="skill-item" data-skill="95">
+                <div class="skill-header">
+                    <span class="skill-name">HTML/CSS</span>
+                    <span class="skill-percentage">95%</span>
+                </div>
+                <div class="skill-bar">
+                    <div class="skill-progress skill-html"></div>
+                </div>
+            </div>
+            
+            <div class="skill-item" data-skill="90">
+                <div class="skill-header">
+                    <span class="skill-name">JavaScript</span>
+                    <span class="skill-percentage">90%</span>
+                </div>
+                <div class="skill-bar">
+                    <div class="skill-progress skill-js"></div>
+                </div>
+            </div>
+            
+            <div class="skill-item" data-skill="85">
+                <div class="skill-header">
+                    <span class="skill-name">React</span>
+                    <span class="skill-percentage">85%</span>
+                </div>
+                <div class="skill-bar">
+                    <div class="skill-progress skill-react"></div>
+                </div>
+            </div>
+            
+            <div class="skill-item" data-skill="80">
+                <div class="skill-header">
+                    <span class="skill-name">Node.js</span>
+                    <span class="skill-percentage">80%</span>
+                </div>
+                <div class="skill-bar">
+                    <div class="skill-progress skill-node"></div>
+                </div>
+            </div>
+            
+            <div class="skill-item" data-skill="88">
+                <div class="skill-header">
+                    <span class="skill-name">Python</span>
+                    <span class="skill-percentage">88%</span>
+                </div>
+                <div class="skill-bar">
+                    <div class="skill-progress skill-python"></div>
+                </div>
+            </div>
+            
+            <div class="circular-skill">
+                <div class="circular-skill-item" data-skill="92">
+                    <div class="circular-progress">
+                        <svg width="120" height="120">
+                            <circle class="circular-progress-bg" cx="60" cy="60" r="54"></circle>
+                            <circle class="circular-progress-fill" cx="60" cy="60" r="54" 
+                                    stroke="url(#gradient1)"></circle>
+                            <defs>
+                                <linearGradient id="gradient1">
+                                    <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="circular-progress-text">0%</div>
+                    </div>
+                    <div class="circular-skill-name">UI/UX</div>
+                </div>
+                
+                <div class="circular-skill-item" data-skill="87">
+                    <div class="circular-progress">
+                        <svg width="120" height="120">
+                            <circle class="circular-progress-bg" cx="60" cy="60" r="54"></circle>
+                            <circle class="circular-progress-fill" cx="60" cy="60" r="54" 
+                                    stroke="url(#gradient2)"></circle>
+                            <defs>
+                                <linearGradient id="gradient2">
+                                    <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="circular-progress-text">0%</div>
+                    </div>
+                    <div class="circular-skill-name">Database</div>
+                </div>
+                
+                <div class="circular-skill-item" data-skill="93">
+                    <div class="circular-progress">
+                        <svg width="120" height="120">
+                            <circle class="circular-progress-bg" cx="60" cy="60" r="54"></circle>
+                            <circle class="circular-progress-fill" cx="60" cy="60" r="54" 
+                                    stroke="url(#gradient3)"></circle>
+                            <defs>
+                                <linearGradient id="gradient3">
+                                    <stop offset="0%" style="stop-color:#fa709a;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#fee140;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="circular-progress-text">0%</div>
+                    </div>
+                    <div class="circular-skill-name">Git</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="code-container">
+            <pre>// Animated Skill Bars
+const skillItems = document.querySelectorAll('.skill-item');
+const circularSkills = document.querySelectorAll('.circular-skill-item');
+
+// Animate linear skill bars
+skillItems.forEach((item, index) => {
+    setTimeout(() => {
+        item.classList.add('animate');
+        
+        const progress = item.querySelector('.skill-progress');
+        const skillLevel = item.dataset.skill;
+        
+        setTimeout(() => {
+            progress.style.width = skillLevel + '%';
+        }, 300);
+    }, index * 200);
+});
+
+// Animate circular skill bars
+circularSkills.forEach((item, index) => {
+    setTimeout(() => {
+        item.classList.add('animate');
+        
+        const progressCircle = item.querySelector('.circular-progress-fill');
+        const progressText = item.querySelector('.circular-progress-text');
+        const skillLevel = item.dataset.skill;
+        
+        const circumference = 2 * Math.PI * 54;
+        const offset = circumference - (circumference * skillLevel) / 100;
+        
+        setTimeout(() => {
+            progressCircle.style.strokeDashoffset = offset;
+            
+            // Animate percentage text
+            let currentPercentage = 0;
+            const increment = skillLevel / 50;
+            
+            const timer = setInterval(() => {
+                currentPercentage += increment;
+                if (currentPercentage >= skillLevel) {
+                    currentPercentage = skillLevel;
+                    clearInterval(timer);
+                }
+                progressText.textContent = Math.floor(currentPercentage) + '%';
+            }, 30);
+        }, 300);
+    }, (skillItems.length * 200) + (index * 200));
+});</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="resetSkills()">Reset</button>
+        <button class="control-btn" onclick="animateSkills()">Animate</button>
+    </div>
+
+    <script>
+        function animateSkills() {
+            // Animate linear skill bars
+            const skillItems = document.querySelectorAll('.skill-item');
+            skillItems.forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('animate');
+                    
+                    const progress = item.querySelector('.skill-progress');
+                    const skillLevel = item.dataset.skill;
+                    
+                    setTimeout(() => {
+                        progress.style.width = skillLevel + '%';
+                    }, 300);
+                }, index * 200);
+            });
+            
+            // Animate circular skill bars
+            const circularSkills = document.querySelectorAll('.circular-skill-item');
+            circularSkills.forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('animate');
+                    
+                    const progressCircle = item.querySelector('.circular-progress-fill');
+                    const progressText = item.querySelector('.circular-progress-text');
+                    const skillLevel = item.dataset.skill;
+                    
+                    const circumference = 2 * Math.PI * 54;
+                    const offset = circumference - (circumference * skillLevel) / 100;
+                    
+                    setTimeout(() => {
+                        progressCircle.style.strokeDashoffset = offset;
+                        
+                        // Animate percentage text
+                        let currentPercentage = 0;
+                        const increment = skillLevel / 50;
+                        
+                        const timer = setInterval(() => {
+                            currentPercentage += increment;
+                            if (currentPercentage >= skillLevel) {
+                                currentPercentage = skillLevel;
+                                clearInterval(timer);
+                            }
+                            progressText.textContent = Math.floor(currentPercentage) + '%';
+                        }, 30);
+                    }, 300);
+                }, (skillItems.length * 200) + (index * 200));
+            });
+        }
+        
+        function resetSkills() {
+            // Reset linear skill bars
+            const skillItems = document.querySelectorAll('.skill-item');
+            skillItems.forEach(item => {
+                item.classList.remove('animate');
+                const progress = item.querySelector('.skill-progress');
+                progress.style.width = '0';
+            });
+            
+            // Reset circular skill bars
+            const circularSkills = document.querySelectorAll('.circular-skill-item');
+            circularSkills.forEach(item => {
+                item.classList.remove('animate');
+                const progressCircle = item.querySelector('.circular-progress-fill');
+                const progressText = item.querySelector('.circular-progress-text');
+                progressCircle.style.strokeDashoffset = '339.292';
+                progressText.textContent = '0%';
+            });
+        }
+        
+        // Auto-animate on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                animateSkills();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
