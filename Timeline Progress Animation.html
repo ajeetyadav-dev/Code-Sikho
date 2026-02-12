@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Progress Animation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-50%);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 50px;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .timeline-item.animate {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            width: 45%;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            position: relative;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content {
+            margin-left: auto;
+        }
+
+        .timeline-date {
+            position: absolute;
+            top: 25px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .timeline-item:nth-child(odd) .timeline-date {
+            left: -80px;
+        }
+
+        .timeline-item:nth-child(even) .timeline-date {
+            right: -80px;
+        }
+
+        .timeline-icon {
+            position: absolute;
+            top: 30px;
+            width: 20px;
+            height: 20px;
+            background: #4facfe;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.3);
+            z-index: 1;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-icon {
+            left: -10px;
+        }
+
+        .timeline-item:nth-child(even) .timeline-icon {
+            right: -10px;
+        }
+
+        .timeline h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            color: #4facfe;
+        }
+
+        .timeline p {
+            margin: 0;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            border-radius: 3px;
+            width: 0;
+            transition: width 1.5s ease-out;
+        }
+
+        .timeline-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .vertical-timeline {
+            position: relative;
+            padding: 20px 0;
+            display: none;
+        }
+
+        .vertical-timeline::before {
+            content: '';
+            position: absolute;
+            left: 30px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .vertical-timeline .timeline-item {
+            padding-left: 80px;
+            width: 100%;
+        }
+
+        .vertical-timeline .timeline-content {
+            width: 100%;
+        }
+
+        .vertical-timeline .timeline-date {
+            left: 0;
+        }
+
+        .vertical-timeline .timeline-icon {
+            left: 20px;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 30px;
+            }
+            
+            .timeline-content {
+                width: calc(100% - 80px);
+                margin-left: 80px !important;
+            }
+            
+            .timeline-date {
+                left: 0 !important;
+                right: auto !important;
+            }
+            
+            .timeline-icon {
+                left: 20px !important;
+                right: auto !important;
+            }
+            
+            .vertical-timeline {
+                display: block;
+            }
+            
+            .timeline {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Timeline Progress Animation</h1>
+        
+        <div class="timeline" id="horizontalTimeline">
+            <div class="timeline-item" data-progress="100">
+                <div class="timeline-content">
+                    <div class="timeline-date">2021</div>
+                    <div class="timeline-icon"></div>
+                    <h3>Project Launch</h3>
+                    <p>Successfully launched the initial version of our platform with core features.</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="timeline-stats">
+                        <div class="stat">
+                            <div class="stat-value">100%</div>
+                            <div>Complete</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">45</div>
+                            <div>Tasks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-progress="85">
+                <div class="timeline-content">
+                    <div class="timeline-date">2022</div>
+                    <div class="timeline-icon"></div>
+                    <h3>Major Update</h3>
+                    <p>Released version 2.0 with enhanced features and improved user experience.</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="timeline-stats">
+                        <div class="stat">
+                            <div class="stat-value">85%</div>
+                            <div>Complete</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">38</div>
+                            <div>Tasks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-progress="60">
+                <div class="timeline-content">
+                    <div class="timeline-date">2023</div>
+                    <div class="timeline-icon"></div>
+                    <h3>Expansion Phase</h3>
+                    <p>Expanded to new markets and added mobile application support.</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="timeline-stats">
+                        <div class="stat">
+                            <div class="stat-value">60%</div>
+                            <div>Complete</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">27</div>
+                            <div>Tasks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-progress="30">
+                <div class="timeline-content">
+                    <div class="timeline-date">2024</div>
+                    <div class="timeline-icon"></div>
+                    <h3>Future Plans</h3>
+                    <p>AI integration and advanced analytics features in development.</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="timeline-stats">
+                        <div class="stat">
+                            <div class="stat-value">30%</div>
+                            <div>Complete</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">15</div>
+                            <div>Tasks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="vertical-timeline" id="verticalTimeline">
+            <!-- Mobile timeline items will be dynamically added here -->
+        </div>
+        
+        <div class="code-container">
+            <pre>// Timeline Progress Animation
+const observerOptions = {
+    root: null,
+    rootMargin: '0px',
+    threshold: 0.3
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+            setTimeout(() => {
+                entry.target.classList.add('animate');
+                
+                // Animate progress bar
+                const progressBar = entry.target.querySelector('.progress-fill');
+                const progress = entry.target.dataset.progress;
+                
+                setTimeout(() => {
+                    progressBar.style.width = progress + '%';
+                }, 500);
+            }, index * 200);
+        }
+    });
+}, observerOptions);
+
+// Observe all timeline items
+document.querySelectorAll('.timeline-item').forEach(item => {
+    observer.observe(item);
+});
+
+// Add stagger effect for visual appeal
+function addStaggerEffect() {
+    const items = document.querySelectorAll('.timeline-item');
+    items.forEach((item, index) => {
+        item.style.transitionDelay = `${index * 0.1}s`;
+    });
+}</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn active" onclick="setTimelineView('horizontal')">Horizontal</button>
+        <button class="control-btn" onclick="setTimelineView('vertical')">Vertical</button>
+        <button class="control-btn" onclick="resetTimeline()">Reset</button>
+        <button class="control-btn" onclick="replayAnimation()">Replay</button>
+    </div>
+
+    <script>
+        let currentView = 'horizontal';
+        
+        // Intersection Observer for scroll-triggered animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.3
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                    const index = Array.from(entry.target.parentElement.children).indexOf(entry.target);
+                    
+                    setTimeout(() => {
+                        entry.target.classList.add('animate');
+                        
+                        // Animate progress bar
+                        const progressBar = entry.target.querySelector('.progress-fill');
+                        const progress = entry.target.dataset.progress;
+                        
+                        setTimeout(() => {
+                            progressBar.style.width = progress + '%';
+                        }, 500);
+                    }, index * 200);
+                    
+                    // Mark as animated
+                    entry.target.classList.add('animated');
+                }
+            });
+        }, observerOptions);
+        
+        function initTimeline() {
+            // Observe all timeline items
+            document.querySelectorAll('.timeline-item').forEach(item => {
+                observer.observe(item);
+            });
+            
+            // Create mobile timeline
+            createMobileTimeline();
+        }
+        
+        function createMobileTimeline() {
+            const verticalTimeline = document.getElementById('verticalTimeline');
+            const horizontalItems = document.querySelectorAll('#horizontalTimeline .timeline-item');
+            
+            verticalTimeline.innerHTML = '';
+            
+            horizontalItems.forEach(item => {
+                const clone = item.cloneNode(true);
+                verticalTimeline.appendChild(clone);
+            });
+        }
+        
+        function setTimelineView(view) {
+            currentView = view;
+            
+            // Update active button
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const horizontalTimeline = document.getElementById('horizontalTimeline');
+            const verticalTimeline = document.getElementById('verticalTimeline');
+            
+            if (view === 'horizontal') {
+                horizontalTimeline.style.display = 'block';
+                verticalTimeline.style.display = 'none';
+            } else {
+                horizontalTimeline.style.display = 'none';
+                verticalTimeline.style.display = 'block';
+                
+                // Re-observe vertical timeline items
+                document.querySelectorAll('#verticalTimeline .timeline-item').forEach(item => {
+                    observer.observe(item);
+                });
+            }
+        }
+        
+        function resetTimeline() {
+            // Remove all animation classes
+            document.querySelectorAll('.timeline-item').forEach(item => {
+                item.classList.remove('animate', 'animated');
+            });
+            
+            // Reset progress bars
+            document.querySelectorAll('.progress-fill').forEach(bar => {
+                bar.style.width = '0';
+            });
+            
+            // Re-initialize
+            initTimeline();
+        }
+        
+        function replayAnimation() {
+            resetTimeline();
+            
+            // Trigger animations after a short delay
+            setTimeout(() => {
+                document.querySelectorAll('.timeline-item').forEach((item, index) => {
+                    setTimeout(() => {
+                        item.classList.add('animate');
+                        
+                        const progressBar = item.querySelector('.progress-fill');
+                        const progress = item.dataset.progress;
+                        
+                        setTimeout(() => {
+                            progressBar.style.width = progress + '%';
+                        }, 500);
+                    }, index * 200);
+                });
+            }, 500);
+        }
+        
+        // Add hover effect to timeline items
+        function addHoverEffect() {
+            document.querySelectorAll('.timeline-content').forEach(content => {
+                content.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                    this.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.2)';
+                });
+                
+                content.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = 'none';
+                });
+            });
+        }
+        
+        // Check for mobile view
+        function checkMobileView() {
+            if (window.innerWidth <= 768 && currentView === 'horizontal') {
+                setTimelineView('vertical');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initTimeline();
+            addHoverEffect();
+            checkMobileView();
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', checkMobileView);
+    </script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Progress Steps</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 25px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            z-index: 1;
+        }
+
+        .progress-line-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            width: 0;
+            transition: width 1s ease-out;
+            z-index: 2;
+        }
+
+        .step {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            margin: 0 auto 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .step.completed .step-circle {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border-color: #4facfe;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .step.active .step-circle {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            border-color: #f093fb;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(240, 147, 251, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(240, 147, 251, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(240, 147, 251, 0);
+            }
+        }
+
+        .step-label {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 5px;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+
+        .step.completed .step-label,
+        .step.active .step-label {
+            opacity: 1;
+            font-weight: 600;
+        }
+
+        .step-description {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            max-width: 150px;
+            margin: 0 auto;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .step.completed .step-description,
+        .step.active .step-description {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .vertical-steps {
+            display: none;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .vertical-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 0.6s ease;
+        }
+
+        .vertical-step.animate {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .vertical-step-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.2rem;
+            margin-right: 20px;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .vertical-step.completed .vertical-step-circle {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border-color: #4facfe;
+        }
+
+        .vertical-step.active .vertical-step-circle {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            border-color: #f093fb;
+            animation: pulse 2s infinite;
+        }
+
+        .vertical-step-content {
+            flex: 1;
+        }
+
+        .vertical-step-title {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .vertical-step-description {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .progress-steps {
+                display: none;
+            }
+            
+            .vertical-steps {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Animated Progress Steps</h1>
+        
+        <div class="progress-steps" id="horizontalSteps">
+            <div class="progress-line">
+                <div class="progress-line-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="step" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Planning</div>
+                <div class="step-description">Research and planning phase</div>
+            </div>
+            
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Design</div>
+                <div class="step-description">Create mockups and prototypes</div>
+            </div>
+            
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Development</div>
+                <div class="step-description">Build the application</div>
+            </div>
+            
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Testing</div>
+                <div class="step-description">Quality assurance and bug fixes</div>
+            </div>
+            
+            <div class="step" data-step="5">
+                <div class="step-circle">5</div>
+                <div class="step-label">Launch</div>
+                <div class="step-description">Deploy to production</div>
+            </div>
+        </div>
+        
+        <div class="vertical-steps" id="verticalSteps">
+            <div class="vertical-step" data-step="1">
+                <div class="vertical-step-circle">1</div>
+                <div class="vertical-step-content">
+                    <div class="vertical-step-title">Planning</div>
+                    <div class="vertical-step-description">Research and planning phase</div>
+                </div>
+            </div>
+            
+            <div class="vertical-step" data-step="2">
+                <div class="vertical-step-circle">2</div>
+                <div class="vertical-step-content">
+                    <div class="vertical-step-title">Design</div>
+                    <div class="vertical-step-description">Create mockups and prototypes</div>
+                </div>
+            </div>
+            
+            <div class="vertical-step" data-step="3">
+                <div class="vertical-step-circle">3</div>
+                <div class="vertical-step-content">
+                    <div class="vertical-step-title">Development</div>
+                    <div class="vertical-step-description">Build the application</div>
+                </div>
+            </div>
+            
+            <div class="vertical-step" data-step="4">
+                <div class="vertical-step-circle">4</div>
+                <div class="vertical-step-content">
+                    <div class="vertical-step-title">Testing</div>
+                    <div class="vertical-step-description">Quality assurance and bug fixes</div>
+                </div>
+            </div>
+            
+            <div class="vertical-step" data-step="5">
+                <div class="vertical-step-circle">5</div>
+                <div class="vertical-step-content">
+                    <div class="vertical-step-title">Launch</div>
+                    <div class="vertical-step-description">Deploy to production</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="code-container">
+            <pre>// Animated Progress Steps
+let currentStep = 0;
+const totalSteps = 5;
+
+function updateProgress(step) {
+    currentStep = step;
+    
+    // Update progress line
+    const progressFill = document.getElementById('progressFill');
+    const progressPercentage = ((step - 1) / (totalSteps - 1)) * 100;
+    progressFill.style.width = progressPercentage + '%';
+    
+    // Update step states
+    document.querySelectorAll('.step').forEach((stepElement, index) => {
+        stepElement.classList.remove('completed', 'active');
+        
+        if (index < step - 1) {
+            stepElement.classList.add('completed');
+        } else if (index === step - 1) {
+            stepElement.classList.add('active');
+        }
+    });
+}
+
+// Auto-advance through steps
+function autoAdvance() {
+    let step = 1;
+    
+    const interval = setInterval(() => {
+        updateProgress(step);
+        step++;
+        
+        if (step > totalSteps) {
+            clearInterval(interval);
+            setTimeout(() => {
+                // Reset and restart
+                resetProgress();
+                setTimeout(autoAdvance, 2000);
+            }, 2000);
+        }
+    }, 2000);
+}
+
+// Start animation
+autoAdvance();</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn active" onclick="setView('horizontal')">Horizontal</button>
+        <button class="control-btn" onclick="setView('vertical')">Vertical</button>
+        <button class="control-btn" onclick="startAutoPlay()">Auto Play</button>
+        <button class="control-btn" onclick="resetProgress()">Reset</button>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        let totalSteps = 5;
+        let autoPlayInterval;
+        let isAutoPlaying = false;
+        let currentView = 'horizontal';
+        
+        function updateProgress(step) {
+            currentStep = step;
+            
+            // Update progress line
+            const progressFill = document.getElementById('progressFill');
+            if (progressFill) {
+                const progressPercentage = step > 1 ? ((step - 1) / (totalSteps - 1)) * 100 : 0;
+                progressFill.style.width = progressPercentage + '%';
+            }
+            
+            // Update step states
+            const steps = document.querySelectorAll(currentView === 'horizontal' ? '.step' : '.vertical-step');
+            steps.forEach((stepElement, index) => {
+                stepElement.classList.remove('completed', 'active');
+                
+                if (index < step - 1) {
+                    stepElement.classList.add('completed');
+                } else if (index === step - 1) {
+                    stepElement.classList.add('active');
+                }
+            });
+        }
+        
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                updateProgress(currentStep + 1);
+            } else {
+                resetProgress();
+                updateProgress(1);
+            }
+        }
+        
+        function previousStep() {
+            if (currentStep > 1) {
+                updateProgress(currentStep - 1);
+            } else {
+                updateProgress(totalSteps);
+            }
+        }
+        
+        function startAutoPlay() {
+            if (isAutoPlaying) {
+                stopAutoPlay();
+                event.target.textContent = 'Auto Play';
+            } else {
+                isAutoPlaying = true;
+                event.target.textContent = 'Stop';
+                
+                autoPlayInterval = setInterval(() => {
+                    nextStep();
+                }, 2000);
+            }
+        }
+        
+        function stopAutoPlay() {
+            isAutoPlaying = false;
+            clearInterval(autoPlayInterval);
+        }
+        
+        function resetProgress() {
+            currentStep = 0;
+            updateProgress(0);
+            
+            // Reset progress line
+            const progressFill = document.getElementById('progressFill');
+            if (progressFill) {
+                progressFill.style.width = '0';
+            }
+            
+            // Remove all classes
+            document.querySelectorAll('.step, .vertical-step').forEach(step => {
+                step.classList.remove('completed', 'active');
+            });
+        }
+        
+        function setView(view) {
+            currentView = view;
+            
+            // Update active button
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const horizontalSteps = document.getElementById('horizontalSteps');
+            const verticalSteps = document.getElementById('verticalSteps');
+            
+            if (view === 'horizontal') {
+                horizontalSteps.style.display = 'flex';
+                verticalSteps.style.display = 'none';
+            } else {
+                horizontalSteps.style.display = 'none';
+                verticalSteps.style.display = 'block';
+                
+                // Animate vertical steps
+                const verticalStepElements = document.querySelectorAll('.vertical-step');
+                verticalStepElements.forEach((step, index) => {
+                    setTimeout(() => {
+                        step.classList.add('animate');
+                    }, index * 200);
+                });
+            }
+            
+            resetProgress();
+        }
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowRight':
+                    nextStep();
+                    break;
+                case 'ArrowLeft':
+                    previousStep();
+                    break;
+                case ' ':
+                    startAutoPlay();
+                    e.preventDefault();
+                    break;
+                case 'Escape':
+                    stopAutoPlay();
+                    break;
+            }
+        });
+        
+        // Add click navigation to steps
+        document.querySelectorAll('.step, .vertical-step').forEach((step, index) => {
+            step.addEventListener('click', () => {
+                updateProgress(index + 1);
+            });
+        });
+        
+        // Check for mobile view
+        function checkMobileView() {
+            if (window.innerWidth <= 768 && currentView === 'horizontal') {
+                setView('vertical');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkMobileView();
+            
+            // Start with first step active after a delay
+            setTimeout(() => {
+                updateProgress(1);
+            }, 500);
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', checkMobileView);
+    </script>
+</body>
+</html>
