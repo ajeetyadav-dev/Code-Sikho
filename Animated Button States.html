@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Button States</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Ripple Effect Button */
+        .btn-ripple {
+            position: relative;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-ripple:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(0);
+            animation: ripple-animation 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Slide Fill Button */
+        .btn-slide {
+            position: relative;
+            padding: 15px 40px;
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-slide:hover {
+            color: #667eea;
+        }
+
+        .btn-slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: white;
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .btn-slide:hover::before {
+            left: 0;
+        }
+
+        /* Pulse Button */
+        .btn-pulse {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pulse:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-pulse::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50px;
+            background: inherit;
+            animation: pulse 1.5s infinite;
+            z-index: -1;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        /* Bounce Button */
+        .btn-bounce {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .btn-bounce:hover {
+            animation: bounce 0.6s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Glitch Button */
+        .btn-glitch {
+            padding: 15px 40px;
+            background: #222;
+            color: white;
+            border: 2px solid #222;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glitch:hover {
+            color: #00ff00;
+            border-color: #00ff00;
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0% {
+                transform: translate(0);
+            }
+            20% {
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                transform: translate(-2px, -2px);
+            }
+            60% {
+                transform: translate(2px, 2px);
+            }
+            80% {
+                transform: translate(2px, -2px);
+            }
+            100% {
+                transform: translate(0);
+            }
+        }
+
+        /* Liquid Button */
+        .btn-liquid {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-liquid::before,
+        .btn-liquid::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-liquid:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-liquid:hover::after {
+            width: 300px;
+            height: 300px;
+            transition-delay: 0.3s;
+        }
+
+        .button-label {
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .buttons-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Animated Button States</h1>
+        
+        <div class="buttons-grid">
+            <div class="btn-container">
+                <button class="btn-ripple" onclick="createRipple(event, this)">Ripple Effect</button>
+                <div class="button-label">Click for ripple</div>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn-slide">Slide Fill</button>
+                <div class="button-label">Hover to fill</div>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn-pulse">Pulse Animation</button>
+                <div class="button-label">Hover to pulse</div>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn-bounce">Bounce Effect</button>
+                <div class="button-label">Hover to bounce</div>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn-glitch">Glitch Effect</button>
+                <div class="button-label">Hover to glitch</div>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn-liquid">Liquid Effect</button>
+                <div class="button-label">Hover for liquid</div>
+            </div>
+        </div>
+        
+        <div class="code-container">
+            <pre>// Button Animation Effects
+function createRipple(event, button) {
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    
+    const rect = button.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    
+    button.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+}
+
+// Add event listeners
+document.querySelectorAll('.btn-ripple').forEach(button => {
+    button.addEventListener('click', function(e) {
+        createRipple(e, this);
+    });
+});</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="animateAllButtons()">Animate All</button>
+        <button class="control-btn" onclick="resetButtons()">Reset</button>
+    </div>
+
+    <script>
+        function createRipple(event, button) {
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }
+        
+        // Add ripple effect to all ripple buttons
+        document.querySelectorAll('.btn-ripple').forEach(button => {
+            button.addEventListener('click', function(e) {
+                createRipple(e, this);
+            });
+        });
+        
+        function animateAllButtons() {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach((button, index) => {
+                setTimeout(() => {
+                    button.click();
+                }, index * 200);
+            });
+        }
+        
+        function resetButtons() {
+            // Remove any active animations
+            document.querySelectorAll('.ripple').forEach(ripple => {
+                ripple.remove();
+            });
+        }
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'a' || e.key === 'A') {
+                animateAllButtons();
+            }
+            if (e.key === 'r' || e.key === 'R') {
+                resetButtons();
+            }
+        });
+    </script>
+</body>
+</html>

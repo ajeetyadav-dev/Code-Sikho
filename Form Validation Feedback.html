@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Validation Feedback</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+        }
+
+        .form-input.valid {
+            border-color: #4ade80;
+            animation: valid-shake 0.5s ease;
+        }
+
+        .form-input.invalid {
+            border-color: #f87171;
+            animation: invalid-shake 0.5s ease;
+        }
+
+        @keyframes valid-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes invalid-shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .validation-icon {
+            position: absolute;
+            right: 15px;
+            top: 38px;
+            font-size: 20px;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s ease;
+        }
+
+        .validation-icon.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .validation-icon.valid {
+            color: #4ade80;
+        }
+
+        .validation-icon.invalid {
+            color: #f87171;
+        }
+
+        .error-message {
+            color: #f87171;
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .error-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .success-message {
+            color: #4ade80;
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .success-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .submit-btn.loading {
+            color: transparent;
+        }
+
+        .submit-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid white;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spinner 0.8s linear infinite;
+        }
+
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            border-radius: 2px;
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        .floating-label {
+            position: absolute;
+            left: 15px;
+            top: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .form-input:focus ~ .floating-label,
+        .form-input:not(:placeholder-shown) ~ .floating-label {
+            top: -10px;
+            left: 10px;
+            font-size: 12px;
+            color: #4facfe;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 0 5px;
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Form Validation Feedback</h1>
+        
+        <div class="form-container">
+            <form id="validationForm">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div style="position: relative;">
+                        <input type="email" class="form-input" id="email" placeholder="Enter your email" required>
+                        <span class="validation-icon" id="emailIcon"></span>
+                        <span class="floating-label">Email</span>
+                    </div>
+                    <div class="error-message" id="emailError"></div>
+                    <div class="success-message" id="emailSuccess"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div style="position: relative;">
+                        <input type="password" class="form-input" id="password" placeholder="Enter password" required>
+                        <span class="validation-icon" id="passwordIcon"></span>
+                        <span class="floating-label">Password</span>
+                    </div>
+                    <div class="error-message" id="passwordError"></div>
+                    <div class="success-message" id="passwordSuccess"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <div style="position: relative;">
+                        <input type="password" class="form-input" id="confirmPassword" placeholder="Confirm password" required>
+                        <span class="validation-icon" id="confirmIcon"></span>
+                        <span class="floating-label">Confirm</span>
+                    </div>
+                    <div class="error-message" id="confirmError"></div>
+                    <div class="success-message" id="confirmSuccess"></div>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">Submit Form</button>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="code-container">
+            <pre>// Form Validation with Animated Feedback
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+function validatePassword(password) {
+    return password.length >= 8;
+}
+
+function showValidation(inputId, isValid, message) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(inputId + 'Icon');
+    const errorMsg = document.getElementById(inputId + 'Error');
+    const successMsg = document.getElementById(inputId + 'Success');
+    
+    input.classList.remove('valid', 'invalid');
+    icon.classList.remove('show', 'valid', 'invalid');
+    errorMsg.classList.remove('show');
+    successMsg.classList.remove('show');
+    
+    if (isValid) {
+        input.classList.add('valid');
+        icon.classList.add('show', 'valid');
+        icon.innerHTML = '✓';
+        successMsg.textContent = message || 'Looks good!';
+        successMsg.classList.add('show');
+    } else {
+        input.classList.add('invalid');
+        icon.classList.add('show', 'invalid');
+        icon.innerHTML = '✗';
+        errorMsg.textContent = message;
+        errorMsg.classList.add('show');
+    }
+    
+    updateProgress();
+}
+
+function updateProgress() {
+    const inputs = document.querySelectorAll('.form-input');
+    let validCount = 0;
+    
+    inputs.forEach(input => {
+        if (input.classList.contains('valid')) {
+            validCount++;
+        }
+    });
+    
+    const progress = (validCount / inputs.length) * 100;
+    document.getElementById('progressFill').style.width = progress + '%';
+}</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="fillValidData()">Valid Data</button>
+        <button class="control-btn" onclick="fillInvalidData()">Invalid Data</button>
+        <button class="control-btn" onclick="resetForm()">Reset</button>
+    </div>
+
+    <script>
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function validatePassword(password) {
+            return password.length >= 8;
+        }
+
+        function showValidation(inputId, isValid, message) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(inputId + 'Icon');
+            const errorMsg = document.getElementById(inputId + 'Error');
+            const successMsg = document.getElementById(inputId + 'Success');
+            
+            input.classList.remove('valid', 'invalid');
+            icon.classList.remove('show', 'valid', 'invalid');
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+            
+            if (isValid) {
+                input.classList.add('valid');
+                icon.classList.add('show', 'valid');
+                icon.innerHTML = '✓';
+                successMsg.textContent = message || 'Looks good!';
+                successMsg.classList.add('show');
+            } else {
+                input.classList.add('invalid');
+                icon.classList.add('show', 'invalid');
+                icon.innerHTML = '✗';
+                errorMsg.textContent = message;
+                errorMsg.classList.add('show');
+            }
+            
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const inputs = document.querySelectorAll('.form-input');
+            let validCount = 0;
+            
+            inputs.forEach(input => {
+                if (input.classList.contains('valid')) {
+                    validCount++;
+                }
+            });
+            
+            const progress = (validCount / inputs.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        // Real-time validation
+        document.getElementById('email').addEventListener('input', function() {
+            const email = this.value;
+            if (email.length > 0) {
+                if (validateEmail(email)) {
+                    showValidation('email', true, 'Valid email address');
+                } else {
+                    showValidation('email', false, 'Please enter a valid email');
+                }
+            } else {
+                const icon = document.getElementById('emailIcon');
+                const errorMsg = document.getElementById('emailError');
+                const successMsg = document.getElementById('emailSuccess');
+                icon.classList.remove('show');
+                errorMsg.classList.remove('show');
+                successMsg.classList.remove('show');
+                this.classList.remove('valid', 'invalid');
+                updateProgress();
+            }
+        });
+
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            if (password.length > 0) {
+                if (validatePassword(password)) {
+                    showValidation('password', true, 'Strong password');
+                } else {
+                    showValidation('password', false, 'Password must be at least 8 characters');
+                }
+            } else {
+                const icon = document.getElementById('passwordIcon');
+                const errorMsg = document.getElementById('passwordError');
+                const successMsg = document.getElementById('passwordSuccess');
+                icon.classList.remove('show');
+                errorMsg.classList.remove('show');
+                successMsg.classList.remove('show');
+                this.classList.remove('valid', 'invalid');
+                updateProgress();
+            }
+        });
+
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (confirmPassword.length > 0) {
+                if (confirmPassword === password) {
+                    showValidation('confirmPassword', true, 'Passwords match');
+                } else {
+                    showValidation('confirmPassword', false, 'Passwords do not match');
+                }
+            } else {
+                const icon = document.getElementById('confirmIcon');
+                const errorMsg = document.getElementById('confirmError');
+                const successMsg = document.getElementById('confirmSuccess');
+                icon.classList.remove('show');
+                errorMsg.classList.remove('show');
+                successMsg.classList.remove('show');
+                this.classList.remove('valid', 'invalid');
+                updateProgress();
+            }
+        });
+
+        // Form submission
+        document.getElementById('validationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            
+            setTimeout(() => {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+                
+                // Show success animation
+                submitBtn.style.background = 'linear-gradient(135deg, #4ade80, #22c55e)';
+                submitBtn.textContent = 'Success!';
+                
+                setTimeout(() => {
+                    submitBtn.style.background = 'linear-gradient(135deg, #4facfe, #00f2fe)';
+                    submitBtn.textContent = 'Submit Form';
+                }, 2000);
+            }, 2000);
+        });
+
+        function fillValidData() {
+            document.getElementById('email').value = 'user@example.com';
+            document.getElementById('password').value = 'password123';
+            document.getElementById('confirmPassword').value = 'password123';
+            
+            // Trigger validation
+            ['email', 'password', 'confirmPassword'].forEach(id => {
+                const input = document.getElementById(id);
+                input.dispatchEvent(new Event('input'));
+            });
+        }
+
+        function fillInvalidData() {
+            document.getElementById('email').value = 'invalid-email';
+            document.getElementById('password').value = '123';
+            document.getElementById('confirmPassword').value = '456';
+            
+            // Trigger validation
+            ['email', 'password', 'confirmPassword'].forEach(id => {
+                const input = document.getElementById(id);
+                input.dispatchEvent(new Event('input'));
+            });
+        }
+
+        function resetForm() {
+            document.getElementById('validationForm').reset();
+            
+            // Clear all validation states
+            document.querySelectorAll('.form-input').forEach(input => {
+                input.classList.remove('valid', 'invalid');
+            });
+            
+            document.querySelectorAll('.validation-icon').forEach(icon => {
+                icon.classList.remove('show', 'valid', 'invalid');
+            });
+            
+            document.querySelectorAll('.error-message, .success-message').forEach(msg => {
+                msg.classList.remove('show');
+            });
+            
+            document.getElementById('progressFill').style.width = '0';
+        }
+    </script>
+</body>
+</html>
