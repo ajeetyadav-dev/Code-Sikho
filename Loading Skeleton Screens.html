@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Skeleton Screens</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .skeleton-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .skeleton-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Skeleton Base Animation */
+        .skeleton {
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0.1) 25%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                rgba(255, 255, 255, 0.1) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Profile Skeleton */
+        .skeleton-profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .skeleton-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .skeleton-info {
+            flex: 1;
+        }
+
+        .skeleton-name {
+            height: 20px;
+            width: 60%;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-email {
+            height: 14px;
+            width: 80%;
+        }
+
+        /* Card Skeleton */
+        .skeleton-card-header {
+            height: 30px;
+            width: 70%;
+            margin-bottom: 15px;
+        }
+
+        .skeleton-card-content {
+            height: 14px;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-card-content:last-child {
+            width: 90%;
+        }
+
+        /* List Skeleton */
+        .skeleton-list-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 0;
+        }
+
+        .skeleton-list-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+
+        .skeleton-list-text {
+            flex: 1;
+        }
+
+        .skeleton-list-title {
+            height: 16px;
+            width: 70%;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-list-subtitle {
+            height: 12px;
+            width: 50%;
+        }
+
+        /* Stats Skeleton */
+        .skeleton-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .skeleton-stat {
+            text-align: center;
+        }
+
+        .skeleton-stat-number {
+            height: 30px;
+            width: 60px;
+            margin: 0 auto 10px;
+            border-radius: 4px;
+        }
+
+        .skeleton-stat-label {
+            height: 14px;
+            width: 40px;
+            margin: 0 auto;
+        }
+
+        /* Content Skeleton */
+        .skeleton-image {
+            height: 200px;
+            width: 100%;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .skeleton-title {
+            height: 28px;
+            width: 80%;
+            margin-bottom: 15px;
+        }
+
+        .skeleton-paragraph {
+            height: 14px;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-paragraph:last-child {
+            width: 95%;
+        }
+
+        /* Actual Content (Hidden by default) */
+        .content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .content.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .profile-info h3 {
+            color: white;
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .profile-info p {
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .card-header {
+            color: white;
+            font-size: 20px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+
+        .card-content {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .list-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 15px;
+            font-size: 20px;
+        }
+
+        .list-text h4 {
+            color: white;
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .list-text p {
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
+            font-size: 12px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+
+        .content-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
+        .content-title {
+            color: white;
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+
+        .content-paragraph {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .skeleton-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Loading Skeleton Screens</h1>
+        
+        <div class="skeleton-grid">
+            <!-- Profile Card -->
+            <div class="skeleton-card">
+                <div class="skeleton-elements">
+                    <div class="skeleton-profile">
+                        <div class="skeleton skeleton-avatar"></div>
+                        <div class="skeleton-info">
+                            <div class="skeleton skeleton-name"></div>
+                            <div class="skeleton skeleton-email"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="content">
+                    <div class="profile">
+                        <div class="profile-avatar">JD</div>
+                        <div class="profile-info">
+                            <h3> Code Sikho</h3>
+                            <p>codesikho@example.com</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Card -->
+            <div class="skeleton-card">
+                <div class="skeleton-elements">
+                    <div class="skeleton skeleton-card-header"></div>
+                    <div class="skeleton-stats">
+                        <div class="skeleton-stat">
+                            <div class="skeleton skeleton-stat-number"></div>
+                            <div class="skeleton skeleton-stat-label"></div>
+                        </div>
+                        <div class="skeleton-stat">
+                            <div class="skeleton skeleton-stat-number"></div>
+                            <div class="skeleton skeleton-stat-label"></div>
+                        </div>
+                        <div class="skeleton-stat">
+                            <div class="skeleton skeleton-stat-number"></div>
+                            <div class="skeleton skeleton-stat-label"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="content">
+                    <div class="card-header">Analytics Overview</div>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-number">1,234</div>
+                            <div class="stat-label">Visitors</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">567</div>
+                            <div class="stat-label">Sales</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">89%</div>
+                            <div class="stat-label">Growth</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- List Card -->
+            <div class="skeleton-card">
+                <div class="skeleton-elements">
+                    <div class="skeleton-list-item">
+                        <div class="skeleton skeleton-list-icon"></div>
+                        <div class="skeleton-list-text">
+                            <div class="skeleton skeleton-list-title"></div>
+                            <div class="skeleton skeleton-list-subtitle"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-list-item">
+                        <div class="skeleton skeleton-list-icon"></div>
+                        <div class="skeleton-list-text">
+                            <div class="skeleton skeleton-list-title"></div>
+                            <div class="skeleton skeleton-list-subtitle"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-list-item">
+                        <div class="skeleton skeleton-list-icon"></div>
+                        <div class="skeleton-list-text">
+                            <div class="skeleton skeleton-list-title"></div>
+                            <div class="skeleton skeleton-list-subtitle"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="content">
+                    <div class="list-item">
+                        <div class="list-icon">📊</div>
+                        <div class="list-text">
+                            <h4>Dashboard</h4>
+                            <p>View analytics</p>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-icon">👥</div>
+                        <div class="list-text">
+                            <h4>Users</h4>
+                            <p>Manage users</p>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-icon">⚙️</div>
+                        <div class="list-text">
+                            <h4>Settings</h4>
+                            <p>Configure app</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Content Card -->
+            <div class="skeleton-card">
+                <div class="skeleton-elements">
+                    <div class="skeleton skeleton-image"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-paragraph"></div>
+                    <div class="skeleton skeleton-paragraph"></div>
+                    <div class="skeleton skeleton-paragraph"></div>
+                </div>
+                
+                <div class="content">
+                    <div class="content-image">🎨</div>
+                    <div class="content-title">Creative Design</div>
+                    <div class="content-paragraph">
+                        Experience the power of modern web design with stunning visuals and smooth animations.
+                    </div>
+                    <div class="content-paragraph">
+                        Our skeleton screens provide a better loading experience, keeping users engaged while content loads.
+                    </div>
+                    <div class="content-paragraph">
+                        Transform your user interface with these beautiful loading states.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="code-container">
+            <pre>// Skeleton Loading Animation
+.skeleton {
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.1) 25%, 
+        rgba(255, 255, 255, 0.2) 50%, 
+        rgba(255, 255, 255, 0.1) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+// Fade in content when loaded
+function showContent() {
+    document.querySelectorAll('.content').forEach((content, index) => {
+        setTimeout(() => {
+            content.classList.add('show');
+        }, index * 200);
+    });
+}
+
+// Hide skeleton and show content
+function loadContent() {
+    document.querySelectorAll('.skeleton-elements').forEach(element => {
+        element.style.display = 'none';
+    });
+    showContent();
+}</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="loadContent()">Load Content</button>
+        <button class="control-btn" onclick="showSkeleton()">Show Skeleton</button>
+        <button class="control-btn" onclick="toggleView()">Toggle</button>
+    </div>
+
+    <script>
+        function loadContent() {
+            document.querySelectorAll('.skeleton-elements').forEach(element => {
+                element.style.display = 'none';
+            });
+            
+            document.querySelectorAll('.content').forEach((content, index) => {
+                setTimeout(() => {
+                    content.classList.add('show');
+                }, index * 200);
+            });
+        }
+
+        function showSkeleton() {
+            document.querySelectorAll('.skeleton-elements').forEach(element => {
+                element.style.display = 'block';
+            });
+            
+            document.querySelectorAll('.content').forEach(content => {
+                content.classList.remove('show');
+            });
+        }
+
+        function toggleView() {
+            const firstCard = document.querySelector('.skeleton-card');
+            const skeletonElements = firstCard.querySelector('.skeleton-elements');
+            const content = firstCard.querySelector('.content');
+            
+            if (skeletonElements.style.display === 'none') {
+                showSkeleton();
+            } else {
+                loadContent();
+            }
+        }
+
+        // Auto-load content after 3 seconds
+        setTimeout(() => {
+            loadContent();
+        }, 3000);
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'l':
+                case 'L':
+                    loadContent();
+                    break;
+                case 's':
+                case 'S':
+                    showSkeleton();
+                    break;
+                case ' ':
+                    toggleView();
+                    e.preventDefault();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

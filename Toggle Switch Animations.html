@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toggle Switch Animations</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .toggles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .toggle-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .toggle-title {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        /* Classic Toggle */
+        .toggle-classic {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            margin: 0 auto;
+        }
+
+        .toggle-classic input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-classic-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+
+        .toggle-classic-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        .toggle-classic input:checked + .toggle-classic-slider {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .toggle-classic input:checked + .toggle-classic-slider:before {
+            transform: translateX(30px);
+        }
+
+        /* Animated Toggle */
+        .toggle-animated {
+            position: relative;
+            width: 80px;
+            height: 40px;
+            margin: 0 auto;
+        }
+
+        .toggle-animated input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-animated-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.2);
+            transition: 0.4s;
+            border-radius: 40px;
+            overflow: hidden;
+        }
+
+        .toggle-animated-slider:before {
+            position: absolute;
+            content: "";
+            height: 32px;
+            width: 32px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .toggle-animated-slider:after {
+            content: 'OFF';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .toggle-animated input:checked + .toggle-animated-slider {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .toggle-animated input:checked + .toggle-animated-slider:before {
+            transform: translateX(40px);
+        }
+
+        .toggle-animated input:checked + .toggle-animated-slider:after {
+            content: 'ON';
+            left: 10px;
+            right: auto;
+            opacity: 0;
+        }
+
+        /* Pulse Toggle */
+        .toggle-pulse {
+            position: relative;
+            width: 70px;
+            height: 35px;
+            margin: 0 auto;
+        }
+
+        .toggle-pulse input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-pulse-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            transition: 0.4s;
+            border-radius: 35px;
+        }
+
+        .toggle-pulse-slider:before {
+            position: absolute;
+            content: "";
+            height: 27px;
+            width: 27px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        .toggle-pulse input:checked + .toggle-pulse-slider {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+        }
+
+        .toggle-pulse input:checked + .toggle-pulse-slider:before {
+            transform: translateX(35px);
+            animation: pulse-toggle 1s infinite;
+        }
+
+        @keyframes pulse-toggle {
+            0% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+            }
+        }
+
+        /* Icon Toggle */
+        .toggle-icon {
+            position: relative;
+            width: 70px;
+            height: 35px;
+            margin: 0 auto;
+        }
+
+        .toggle-icon input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-icon-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            transition: 0.4s;
+            border-radius: 35px;
+        }
+
+        .toggle-icon-slider:before {
+            position: absolute;
+            content: "☀️";
+            height: 27px;
+            width: 27px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .toggle-icon input:checked + .toggle-icon-slider {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+        }
+
+        .toggle-icon input:checked + .toggle-icon-slider:before {
+            transform: translateX(35px);
+            content: "🌙";
+        }
+
+        /* Morph Toggle */
+        .toggle-morph {
+            position: relative;
+            width: 100px;
+            height: 50px;
+            margin: 0 auto;
+        }
+
+        .toggle-morph input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-morph-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            transition: 0.4s;
+            border-radius: 50px;
+        }
+
+        .toggle-morph-slider:before {
+            position: absolute;
+            content: "";
+            height: 40px;
+            width: 40px;
+            left: 5px;
+            bottom: 5px;
+            background: white;
+            transition: all 0.4s;
+            border-radius: 50%;
+        }
+
+        .toggle-morph input:checked + .toggle-morph-slider {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+        }
+
+        .toggle-morph input:checked + .toggle-morph-slider:before {
+            transform: translateX(50px) rotate(180deg);
+            border-radius: 10px;
+        }
+
+        /* Neon Toggle */
+        .toggle-neon {
+            position: relative;
+            width: 80px;
+            height: 40px;
+            margin: 0 auto;
+        }
+
+        .toggle-neon input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-neon-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            transition: 0.4s;
+            border-radius: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .toggle-neon-slider:before {
+            position: absolute;
+            content: "";
+            height: 32px;
+            width: 32px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        .toggle-neon input:checked + .toggle-neon-slider {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
+                        inset 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .toggle-neon input:checked + .toggle-neon-slider:before {
+            transform: translateX(40px);
+            background: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+
+        .toggle-status {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-status.active {
+            color: #4facfe;
+            font-weight: 600;
+        }
+
+        .code-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 100%;
+        }
+
+        .code-container pre {
+            color: white;
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .toggles-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Toggle Switch Animations</h1>
+        
+        <div class="toggles-grid">
+            <div class="toggle-container">
+                <div class="toggle-title">Classic Toggle</div>
+                <label class="toggle-classic">
+                    <input type="checkbox" id="classic">
+                    <span class="toggle-classic-slider"></span>
+                </label>
+                <div class="toggle-status" id="classicStatus">OFF</div>
+            </div>
+            
+            <div class="toggle-container">
+                <div class="toggle-title">Animated Toggle</div>
+                <label class="toggle-animated">
+                    <input type="checkbox" id="animated">
+                    <span class="toggle-animated-slider"></span>
+                </label>
+                <div class="toggle-status" id="animatedStatus">OFF</div>
+            </div>
+            
+            <div class="toggle-container">
+                <div class="toggle-title">Pulse Toggle</div>
+                <label class="toggle-pulse">
+                    <input type="checkbox" id="pulse">
+                    <span class="toggle-pulse-slider"></span>
+                </label>
+                <div class="toggle-status" id="pulseStatus">OFF</div>
+            </div>
+            
+            <div class="toggle-container">
+                <div class="toggle-title">Icon Toggle</div>
+                <label class="toggle-icon">
+                    <input type="checkbox" id="icon">
+                    <span class="toggle-icon-slider"></span>
+                </label>
+                <div class="toggle-status" id="iconStatus">Day</div>
+            </div>
+            
+            <div class="toggle-container">
+                <div class="toggle-title">Morph Toggle</div>
+                <label class="toggle-morph">
+                    <input type="checkbox" id="morph">
+                    <span class="toggle-morph-slider"></span>
+                </label>
+                <div class="toggle-status" id="morphStatus">OFF</div>
+            </div>
+            
+            <div class="toggle-container">
+                <div class="toggle-title">Neon Toggle</div>
+                <label class="toggle-neon">
+                    <input type="checkbox" id="neon">
+                    <span class="toggle-neon-slider"></span>
+                </label>
+                <div class="toggle-status" id="neonStatus">OFF</div>
+            </div>
+        </div>
+        
+        <div class="code-container">
+            <pre>// Toggle Switch Animations
+// Add event listeners to all toggles
+document.querySelectorAll('input[type="checkbox"]').forEach(toggle => {
+    toggle.addEventListener('change', function() {
+        const status = document.getElementById(this.id + 'Status');
+        
+        if (this.checked) {
+            status.textContent = 'ON';
+            status.classList.add('active');
+            
+            // Add special effects for specific toggles
+            if (this.id === 'icon') {
+                status.textContent = 'Night';
+            }
+        } else {
+            status.textContent = 'OFF';
+            status.classList.remove('active');
+            
+            if (this.id === 'icon') {
+                status.textContent = 'Day';
+            }
+        }
+    });
+});
+
+// Toggle all switches with animation
+function toggleAll() {
+    const toggles = document.querySelectorAll('input[type="checkbox"]');
+    toggles.forEach((toggle, index) => {
+        setTimeout(() => {
+            toggle.checked = !toggle.checked;
+            toggle.dispatchEvent(new Event('change'));
+        }, index * 100);
+    });
+}</pre>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="toggleAll()">Toggle All</button>
+        <button class="control-btn" onclick="randomToggle()">Random</button>
+        <button class="control-btn" onclick="resetAll()">Reset All</button>
+    </div>
+
+    <script>
+        // Add event listeners to all toggles
+        document.querySelectorAll('input[type="checkbox"]').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const status = document.getElementById(this.id + 'Status');
+                
+                if (this.checked) {
+                    status.textContent = 'ON';
+                    status.classList.add('active');
+                    
+                    // Add special effects for specific toggles
+                    if (this.id === 'icon') {
+                        status.textContent = 'Night';
+                    }
+                } else {
+                    status.textContent = 'OFF';
+                    status.classList.remove('active');
+                    
+                    if (this.id === 'icon') {
+                        status.textContent = 'Day';
+                    }
+                }
+            });
+        });
+
+        function toggleAll() {
+            const toggles = document.querySelectorAll('input[type="checkbox"]');
+            toggles.forEach((toggle, index) => {
+                setTimeout(() => {
+                    toggle.checked = !toggle.checked;
+                    toggle.dispatchEvent(new Event('change'));
+                }, index * 100);
+            });
+        }
+
+        function randomToggle() {
+            const toggles = document.querySelectorAll('input[type="checkbox"]');
+            toggles.forEach((toggle, index) => {
+                setTimeout(() => {
+                    toggle.checked = Math.random() > 0.5;
+                    toggle.dispatchEvent(new Event('change'));
+                }, index * 100);
+            });
+        }
+
+        function resetAll() {
+            const toggles = document.querySelectorAll('input[type="checkbox"]');
+            toggles.forEach((toggle, index) => {
+                setTimeout(() => {
+                    toggle.checked = false;
+                    toggle.dispatchEvent(new Event('change'));
+                }, index * 100);
+            });
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 't':
+                case 'T':
+                    toggleAll();
+                    break;
+                case 'r':
+                case 'R':
+                    randomToggle();
+                    break;
+                case 'Escape':
+                    resetAll();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
