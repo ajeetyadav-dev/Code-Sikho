@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Card Flip</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .card-container {
+            width: 300px;
+            height: 400px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+
+        .card-container:hover {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        .card-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            font-size: 16px;
+            text-align: center;
+            opacity: 0.9;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="card-container" id="card">
+        <div class="card-face card-front">
+            <div class="card-icon">🎨</div>
+            <div class="card-title">Creative Design</div>
+            <div class="card-description">Hover to discover more amazing features</div>
+        </div>
+        <div class="card-face card-back">
+            <div class="card-icon">✨</div>
+            <div class="card-title">Behind the Scenes</div>
+            <div class="card-description">Explore the magic of 3D transformations</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="flipCard()">Flip Card</button>
+        <button class="control-btn" onclick="resetCard()">Reset</button>
+    </div>
+
+    <script>
+        let isFlipped = false;
+        
+        function flipCard() {
+            const card = document.getElementById('card');
+            isFlipped = !isFlipped;
+            card.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0)';
+        }
+
+        function resetCard() {
+            const card = document.getElementById('card');
+            isFlipped = false;
+            card.style.transform = 'rotateY(0)';
+        }
+
+        // Add keyboard control
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                flipCard();
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

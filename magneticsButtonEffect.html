@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnetic Button Effect</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .magnetic-btn {
+            position: relative;
+            padding: 20px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .magnetic-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .magnetic-btn:active {
+            transform: scale(0.95);
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .coordinates {
+            font-family: monospace;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <button class="magnetic-btn" id="magneticBtn">Magnetic Button</button>
+
+    <div class="info-panel">
+        <div class="coordinates">Mouse X: <span id="mouseX">0</span></div>
+        <div class="coordinates">Mouse Y: <span id="mouseY">0</span></div>
+        <div class="coordinates">Button X: <span id="btnX">0</span></div>
+        <div class="coordinates">Button Y: <span id="btnY">0</span></div>
+    </div>
+
+    <script>
+        const btn = document.getElementById('magneticBtn');
+        const mouseXDisplay = document.getElementById('mouseX');
+        const mouseYDisplay = document.getElementById('mouseY');
+        const btnXDisplay = document.getElementById('btnX');
+        const btnYDisplay = document.getElementById('btnY');
+
+        let isMouseOver = false;
+        let btnRect;
+
+        function updateButtonPosition(e) {
+            if (!isMouseOver) return;
+
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            
+            const centerX = btnRect.left + btnRect.width / 2;
+            const centerY = btnRect.top + btnRect.height / 2;
+            
+            const deltaX = (mouseX - centerX) * 0.2;
+            const deltaY = (mouseY - centerY) * 0.2;
+            
+            btn.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
+            
+            // Update coordinate displays
+            mouseXDisplay.textContent = Math.round(mouseX);
+            mouseYDisplay.textContent = Math.round(mouseY);
+            btnXDisplay.textContent = Math.round(deltaX);
+            btnYDisplay.textContent = Math.round(deltaY);
+        }
+
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            document.body.appendChild(particle);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 50 + 30;
+            const lifetime = Math.random() * 1000 + 500;
+            
+            particle.animate([
+                { 
+                    transform: 'translate(0, 0) scale(1)',
+                    opacity: 1
+                },
+                { 
+                    transform: `translate(${Math.cos(angle) * velocity}px, ${Math.sin(angle) * velocity}px) scale(0)`,
+                    opacity: 0
+                }
+            ], {
+                duration: lifetime,
+                easing: 'cubic-bezier(0, .9, .57, 1)'
+            }).onfinish = () => particle.remove();
+        }
+
+        btn.addEventListener('mouseenter', (e) => {
+            isMouseOver = true;
+            btnRect = btn.getBoundingClientRect();
+        });
+
+        btn.addEventListener('mouseleave', (e) => {
+            isMouseOver = false;
+            btn.style.transform = 'translate(0, 0) scale(1)';
+            btnXDisplay.textContent = '0';
+            btnYDisplay.textContent = '0';
+        });
+
+        btn.addEventListener('mousemove', updateButtonPosition);
+
+        btn.addEventListener('click', (e) => {
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    createParticle(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20);
+                }, i * 20);
+            }
+        });
+    </script>
+</body>
+</html>
