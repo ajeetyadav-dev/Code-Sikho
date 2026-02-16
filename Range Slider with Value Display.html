@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Range Slider with Value Display</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slider-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .slider-title {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            margin: 30px 0;
+        }
+
+        .slider {
+            width: 300px;
+            height: 8px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.5);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .value-display {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .value-display::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #f5576c;
+        }
+
+        .slider-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-fill {
+            position: absolute;
+            height: 8px;
+            background: linear-gradient(90deg, #f093fb, #f5576c);
+            border-radius: 10px;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-item {
+            text-align: center;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="slider-container">
+        <h2 class="slider-title">Interactive Range Slider</h2>
+        
+        <div class="slider-wrapper">
+            <div class="slider-label">
+                <span>Volume</span>
+                <span id="volumeValue">50%</span>
+            </div>
+            <div class="progress-fill" id="volumeFill"></div>
+            <input type="range" class="slider" id="volumeSlider" min="0" max="100" value="50">
+            <div class="value-display" id="volumeDisplay">50</div>
+        </div>
+
+        <div class="slider-wrapper">
+            <div class="slider-label">
+                <span>Brightness</span>
+                <span id="brightnessValue">75%</span>
+            </div>
+            <div class="progress-fill" id="brightnessFill"></div>
+            <input type="range" class="slider" id="brightnessSlider" min="0" max="100" value="75">
+            <div class="value-display" id="brightnessDisplay">75</div>
+        </div>
+
+        <div class="slider-wrapper">
+            <div class="slider-label">
+                <span>Speed</span>
+                <span id="speedValue">30%</span>
+            </div>
+            <div class="progress-fill" id="speedFill"></div>
+            <input type="range" class="slider" id="speedSlider" min="0" max="100" value="30">
+            <div class="value-display" id="speedDisplay">30</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="avgValue">52</div>
+                <div class="stat-label">Average</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalValue">155</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="maxValue">75</div>
+                <div class="stat-label">Maximum</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setupSlider(sliderId, displayId, fillId, valueId) {
+            const slider = document.getElementById(sliderId);
+            const display = document.getElementById(displayId);
+            const fill = document.getElementById(fillId);
+            const value = document.getElementById(valueId);
+
+            function updateSlider() {
+                const val = slider.value;
+                const percent = (val - slider.min) / (slider.max - slider.min) * 100;
+                
+                display.textContent = val;
+                display.style.left = `${percent}%`;
+                fill.style.width = `${percent}%`;
+                value.textContent = `${val}%`;
+                
+                updateStats();
+            }
+
+            slider.addEventListener('input', updateSlider);
+            
+            // Initialize
+            updateSlider();
+        }
+
+        function updateStats() {
+            const volume = parseInt(document.getElementById('volumeSlider').value);
+            const brightness = parseInt(document.getElementById('brightnessSlider').value);
+            const speed = parseInt(document.getElementById('speedSlider').value);
+            
+            const avg = Math.round((volume + brightness + speed) / 3);
+            const total = volume + brightness + speed;
+            const max = Math.max(volume, brightness, speed);
+            
+            document.getElementById('avgValue').textContent = avg;
+            document.getElementById('totalValue').textContent = total;
+            document.getElementById('maxValue').textContent = max;
+        }
+
+        // Setup all sliders
+        setupSlider('volumeSlider', 'volumeDisplay', 'volumeFill', 'volumeValue');
+        setupSlider('brightnessSlider', 'brightnessDisplay', 'brightnessFill', 'brightnessValue');
+        setupSlider('speedSlider', 'speedDisplay', 'speedFill', 'speedValue');
+
+        // Add keyboard controls
+        document.addEventListener('keydown', (e) => {
+            const activeElement = document.activeElement;
+            if (activeElement.classList.contains('slider')) {
+                if (e.key === 'ArrowLeft') {
+                    activeElement.value = Math.max(activeElement.min, parseInt(activeElement.value) - 5);
+                    activeElement.dispatchEvent(new Event('input'));
+                } else if (e.key === 'ArrowRight') {
+                    activeElement.value = Math.min(activeElement.max, parseInt(activeElement.value) + 5);
+                    activeElement.dispatchEvent(new Event('input'));
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circular Progress Slider</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circular-slider-container {
+            display: flex;
+            gap: 50px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .circular-slider {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+
+        .circular-slider svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .circular-slider-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 15;
+        }
+
+        .circular-slider-progress {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 15;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .circular-slider-handle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .circular-slider-handle:active {
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .circular-slider-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .circular-slider-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .info-label {
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-weight: bold;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="circular-slider-container">
+        <div class="circular-slider" id="slider1">
+            <svg>
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <circle class="circular-slider-bg" cx="100" cy="100" r="85"></circle>
+                <circle class="circular-slider-progress" id="progress1" cx="100" cy="100" r="85"></circle>
+            </svg>
+            <div class="circular-slider-handle" id="handle1"></div>
+            <div class="circular-slider-value" id="value1">75</div>
+            <div class="circular-slider-label">Performance</div>
+        </div>
+
+        <div class="circular-slider" id="slider2">
+            <svg>
+                <circle class="circular-slider-bg" cx="100" cy="100" r="85"></circle>
+                <circle class="circular-slider-progress" id="progress2" cx="100" cy="100" r="85" 
+                        stroke="url(#gradient2)"></circle>
+                <defs>
+                    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <div class="circular-slider-handle" id="handle2"></div>
+            <div class="circular-slider-value" id="value2">50</div>
+            <div class="circular-slider-label">Quality</div>
+        </div>
+
+        <div class="circular-slider" id="slider3">
+            <svg>
+                <circle class="circular-slider-bg" cx="100" cy="100" r="85"></circle>
+                <circle class="circular-slider-progress" id="progress3" cx="100" cy="100" r="85"
+                        stroke="url(#gradient3)"></circle>
+                <defs>
+                    <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#43e97b;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#38f9d7;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <div class="circular-slider-handle" id="handle3"></div>
+            <div class="circular-slider-value" id="value3">25</div>
+            <div class="circular-slider-label">Speed</div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <div class="info-item">
+            <span class="info-label">Average:</span>
+            <span class="info-value" id="avgValue">50</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Total:</span>
+            <span class="info-value" id="totalValue">150</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Status:</span>
+            <span class="info-value" id="statusValue">Normal</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="randomizeAll()">Randomize</button>
+        <button class="control-btn" onclick="resetAll()">Reset</button>
+        <button class="control-btn" onclick="maxAll()">Max All</button>
+    </div>
+
+    <script>
+        class CircularSlider {
+            constructor(sliderId, progressId, handleId, valueId, initialValue = 50) {
+                this.slider = document.getElementById(sliderId);
+                this.progress = document.getElementById(progressId);
+                this.handle = document.getElementById(handleId);
+                this.valueDisplay = document.getElementById(valueId);
+                this.value = initialValue;
+                this.isDragging = false;
+                this.centerX = 100;
+                this.centerY = 100;
+                this.radius = 85;
+                
+                this.circumference = 2 * Math.PI * this.radius;
+                this.progress.style.strokeDasharray = this.circumference;
+                
+                this.init();
+            }
+            
+            init() {
+                this.updateProgress();
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                this.handle.addEventListener('mousedown', (e) => this.startDrag(e));
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('mouseup', () => this.endDrag());
+                
+                this.handle.addEventListener('touchstart', (e) => this.startDrag(e.touches[0]));
+                document.addEventListener('touchmove', (e) => this.drag(e.touches[0]));
+                document.addEventListener('touchend', () => this.endDrag());
+            }
+            
+            startDrag(e) {
+                this.isDragging = true;
+                this.updateFromMouse(e);
+            }
+            
+            drag(e) {
+                if (!this.isDragging) return;
+                this.updateFromMouse(e);
+            }
+            
+            endDrag() {
+                this.isDragging = false;
+            }
+            
+            updateFromMouse(e) {
+                const rect = this.slider.getBoundingClientRect();
+                const x = e.clientX - rect.left - this.centerX;
+                const y = e.clientY - rect.top - this.centerY;
+                
+                let angle = Math.atan2(y, x) + Math.PI / 2;
+                if (angle < 0) angle += 2 * Math.PI;
+                
+                this.value = Math.round((angle / (2 * Math.PI)) * 100);
+                this.updateProgress();
+                updateInfo();
+            }
+            
+            updateProgress() {
+                const offset = this.circumference - (this.value / 100) * this.circumference;
+                this.progress.style.strokeDashoffset = offset;
+                this.valueDisplay.textContent = this.value;
+                
+                // Update handle position
+                const angle = (this.value / 100) * 2 * Math.PI - Math.PI / 2;
+                const handleX = this.centerX + Math.cos(angle) * this.radius;
+                const handleY = this.centerY + Math.sin(angle) * this.radius;
+                
+                this.handle.style.left = `${handleX}px`;
+                this.handle.style.top = `${handleY}px`;
+            }
+            
+            setValue(newValue) {
+                this.value = Math.max(0, Math.min(100, newValue));
+                this.updateProgress();
+            }
+        }
+
+        // Create sliders
+        const slider1 = new CircularSlider('slider1', 'progress1', 'handle1', 'value1', 75);
+        const slider2 = new CircularSlider('slider2', 'progress2', 'handle2', 'value2', 50);
+        const slider3 = new CircularSlider('slider3', 'progress3', 'handle3', 'value3', 25);
+
+        function updateInfo() {
+            const values = [slider1.value, slider2.value, slider3.value];
+            const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+            const total = values.reduce((a, b) => a + b, 0);
+            
+            document.getElementById('avgValue').textContent = avg;
+            document.getElementById('totalValue').textContent = total;
+            
+            let status = 'Low';
+            if (avg > 70) status = 'High';
+            else if (avg > 40) status = 'Normal';
+            
+            document.getElementById('statusValue').textContent = status;
+        }
+
+        function randomizeAll() {
+            slider1.setValue(Math.random() * 100);
+            slider2.setValue(Math.random() * 100);
+            slider3.setValue(Math.random() * 100);
+            updateInfo();
+        }
+
+        function resetAll() {
+            slider1.setValue(50);
+            slider2.setValue(50);
+            slider3.setValue(50);
+            updateInfo();
+        }
+
+        function maxAll() {
+            slider1.setValue(100);
+            slider2.setValue(100);
+            slider3.setValue(100);
+            updateInfo();
+        }
+
+        // Initialize info
+        updateInfo();
+    </script>
+</body>
+</html>
