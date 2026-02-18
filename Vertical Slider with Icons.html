@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vertical Slider with Icons</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vertical-sliders-container {
+            display: flex;
+            gap: 60px;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .vertical-slider {
+            position: relative;
+            width: 80px;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .slider-track {
+            position: absolute;
+            width: 8px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .slider-progress {
+            position: absolute;
+            width: 8px;
+            background: linear-gradient(to top, #f093fb, #f5576c);
+            border-radius: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 0;
+            transition: height 0.3s ease;
+        }
+
+        .slider-thumb {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: grab;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .slider-thumb:active {
+            cursor: grabbing;
+            transform: translateX(-50%) scale(1.2);
+        }
+
+        .slider-icon {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .slider-value {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .slider-label {
+            position: absolute;
+            bottom: -70px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .panel-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="vertical-sliders-container">
+        <div class="vertical-slider" data-type="volume">
+            <div class="slider-icon">🔊</div>
+            <div class="slider-track"></div>
+            <div class="slider-progress"></div>
+            <div class="slider-thumb">🎵</div>
+            <div class="slider-value">50</div>
+            <div class="slider-label">Volume</div>
+        </div>
+
+        <div class="vertical-slider" data-type="brightness">
+            <div class="slider-icon">☀️</div>
+            <div class="slider-track"></div>
+            <div class="slider-progress"></div>
+            <div class="slider-thumb">💡</div>
+            <div class="slider-value">75</div>
+            <div class="slider-label">Brightness</div>
+        </div>
+
+        <div class="vertical-slider" data-type="temperature">
+            <div class="slider-icon">🌡️</div>
+            <div class="slider-track"></div>
+            <div class="slider-progress"></div>
+            <div class="slider-thumb">🔥</div>
+            <div class="slider-value">30</div>
+            <div class="slider-label">Temperature</div>
+        </div>
+
+        <div class="vertical-slider" data-type="speed">
+            <div class="slider-icon">⚡</div>
+            <div class="slider-track"></div>
+            <div class="slider-progress"></div>
+            <div class="slider-thumb">🚀</div>
+            <div class="slider-value">60</div>
+            <div class="slider-label">Speed</div>
+        </div>
+
+        <div class="control-panel">
+            <h3 class="panel-title">Control Center</h3>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="avgValue">54</div>
+                    <div class="stat-label">Average</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalValue">215</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="maxValue">75</div>
+                    <div class="stat-label">Maximum</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="minValue">30</div>
+                    <div class="stat-label">Minimum</div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn" onclick="balanceAll()">Balance</button>
+                <button class="action-btn" onclick="maxAll()">Max All</button>
+                <button class="action-btn" onclick="minAll()">Min All</button>
+                <button class="action-btn" onclick="randomAll()">Random</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        class VerticalSlider {
+            constructor(element) {
+                this.element = element;
+                this.thumb = element.querySelector('.slider-thumb');
+                this.progress = element.querySelector('.slider-progress');
+                this.valueDisplay = element.querySelector('.slider-value');
+                this.type = element.dataset.type;
+                
+                this.value = parseInt(this.valueDisplay.textContent);
+                this.isDragging = false;
+                this.height = 300;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.updateSlider();
+            }
+            
+            setupEventListeners() {
+                // Mouse events
+                this.thumb.addEventListener('mousedown', (e) => this.startDrag(e));
+                
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('mouseup', () => this.endDrag());
+                
+                // Touch events
+                this.thumb.addEventListener('touchstart', (e) => this.startDrag(e.touches[0]));
+                
+                document.addEventListener('touchmove', (e) => this.drag(e.touches[0]));
+                document.addEventListener('touchend', () => this.endDrag());
+            }
+            
+            startDrag(e) {
+                this.isDragging = true;
+                this.updateFromMouse(e);
+            }
+            
+            drag(e) {
+                if (!this.isDragging) return;
+                this.updateFromMouse(e);
+            }
+            
+            endDrag() {
+                this.isDragging = false;
+            }
+            
+            updateFromMouse(e) {
+                const rect = this.element.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const percent = 1 - Math.max(0, Math.min(1, y / this.height));
+                
+                this.value = Math.round(percent * 100);
+                this.updateSlider();
+                updateStats();
+            }
+            
+            updateSlider() {
+                const percent = this.value / 100;
+                const bottom = percent * (this.height - 32);
+                
+                this.thumb.style.bottom = `${bottom}px`;
+                this.progress.style.height = `${this.value}%`;
+                this.valueDisplay.textContent = this.value;
+                
+                // Update icon based on value
+                this.updateIcon();
+            }
+            
+            updateIcon() {
+                const icon = this.thumb.textContent;
+                // Icon changes could be implemented here based on value ranges
+            }
+            
+            setValue(newValue) {
+                this.value = Math.max(0, Math.min(100, newValue));
+                this.updateSlider();
+            }
+        }
+
+        // Create sliders
+        const sliders = [];
+        document.querySelectorAll('.vertical-slider').forEach(element => {
+            sliders.push(new VerticalSlider(element));
+        });
+
+        function updateStats() {
+            const values = sliders.map(s => s.value);
+            const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+            const total = values.reduce((a, b) => a + b, 0);
+            const max = Math.max(...values);
+            const min = Math.min(...values);
+            
+            document.getElementById('avgValue').textContent = avg;
+            document.getElementById('totalValue').textContent = total;
+            document.getElementById('maxValue').textContent = max;
+            document.getElementById('minValue').textContent = min;
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function balanceAll() {
+            sliders.forEach(slider => slider.setValue(50));
+            updateStats();
+            showNotification('All sliders balanced to 50%');
+        }
+
+        function maxAll() {
+            sliders.forEach(slider => slider.setValue(100));
+            updateStats();
+            showNotification('All sliders set to maximum');
+        }
+
+        function minAll() {
+            sliders.forEach(slider => slider.setValue(0));
+            updateStats();
+            showNotification('All sliders set to minimum');
+        }
+
+        function randomAll() {
+            sliders.forEach(slider => slider.setValue(Math.random() * 100));
+            updateStats();
+            showNotification('Sliders randomized');
+        }
+
+        // Initialize stats
+        updateStats();
+
+        // Add keyboard controls
+        document.addEventListener('keydown', (e) => {
+            const step = 5;
+            sliders.forEach((slider, index) => {
+                if (e.key === `${index + 1}`) {
+                    slider.setValue(Math.min(100, slider.value + step));
+                    updateStats();
+                } else if (e.key === `q${index + 1}`) {
+                    slider.setValue(Math.max(0, slider.value - step));
+                    updateStats();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

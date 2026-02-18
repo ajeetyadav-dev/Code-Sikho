@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Thumb Range Slider</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .multi-slider-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .slider-title {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .multi-slider {
+            position: relative;
+            height: 60px;
+            margin: 40px 0;
+        }
+
+        .slider-track {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            transform: translateY(-50%);
+        }
+
+        .slider-range {
+            position: absolute;
+            top: 50%;
+            height: 8px;
+            background: linear-gradient(90deg, #f093fb, #f5576c);
+            border-radius: 4px;
+            transform: translateY(-50%);
+            transition: all 0.3s ease;
+        }
+
+        .slider-thumb {
+            position: absolute;
+            top: 50%;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+            z-index: 2;
+        }
+
+        .slider-thumb:active {
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .slider-thumb.min {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .slider-thumb.max {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .slider-value {
+            position: absolute;
+            top: -35px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .slider-thumb:hover .slider-value,
+        .slider-thumb.dragging .slider-value {
+            opacity: 1;
+        }
+
+        .range-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+        }
+
+        .range-info {
+            display: flex;
+            gap: 20px;
+        }
+
+        .range-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .range-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .range-number {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .range-diff {
+            font-size: 18px;
+            color: #4ecdc4;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            margin-top: 30px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 10px;
+            width: 4px;
+            background: linear-gradient(to top, #4facfe, #00f2fe);
+            border-radius: 2px;
+            transition: height 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="multi-slider-container">
+        <h2 class="slider-title">Multi-Thumb Range Selector</h2>
+        
+        <div class="multi-slider" id="multiSlider">
+            <div class="slider-track"></div>
+            <div class="slider-range" id="sliderRange"></div>
+            
+            <div class="slider-thumb min" id="minThumb">
+                <div class="slider-value" id="minValue">25</div>
+            </div>
+            
+            <div class="slider-thumb max" id="maxThumb">
+                <div class="slider-value" id="maxValue">75</div>
+            </div>
+        </div>
+
+        <div class="range-display">
+            <div class="range-info">
+                <div class="range-item">
+                    <span class="range-label">Minimum</span>
+                    <span class="range-number" id="minDisplay">25</span>
+                </div>
+                <div class="range-item">
+                    <span class="range-label">Maximum</span>
+                    <span class="range-number" id="maxDisplay">75</span>
+                </div>
+                <div class="range-item">
+                    <span class="range-label">Range</span>
+                    <span class="range-diff" id="rangeDisplay">50</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="preset-buttons">
+            <button class="preset-btn" onclick="setPreset(0, 25)">Small</button>
+            <button class="preset-btn" onclick="setPreset(25, 75)">Medium</button>
+            <button class="preset-btn" onclick="setPreset(50, 100)">Large</button>
+            <button class="preset-btn" onclick="setPreset(0, 100)">Full</button>
+            <button class="preset-btn" onclick="setPreset(40, 60)">Narrow</button>
+        </div>
+
+        <div class="chart-container" id="chartContainer"></div>
+    </div>
+
+    <script>
+        class MultiThumbSlider {
+            constructor() {
+                this.slider = document.getElementById('multiSlider');
+                this.minThumb = document.getElementById('minThumb');
+                this.maxThumb = document.getElementById('maxThumb');
+                this.range = document.getElementById('sliderRange');
+                
+                this.minValue = 25;
+                this.maxValue = 75;
+                this.isDragging = null;
+                
+                this.sliderWidth = this.slider.offsetWidth;
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.updateSlider();
+                this.createChart();
+            }
+            
+            setupEventListeners() {
+                // Mouse events
+                this.minThumb.addEventListener('mousedown', (e) => this.startDrag('min', e));
+                this.maxThumb.addEventListener('mousedown', (e) => this.startDrag('max', e));
+                
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('mouseup', () => this.endDrag());
+                
+                // Touch events
+                this.minThumb.addEventListener('touchstart', (e) => this.startDrag('min', e.touches[0]));
+                this.maxThumb.addEventListener('touchstart', (e) => this.startDrag('max', e.touches[0]));
+                
+                document.addEventListener('touchmove', (e) => this.drag(e.touches[0]));
+                document.addEventListener('touchend', () => this.endDrag());
+            }
+            
+            startDrag(thumb, e) {
+                this.isDragging = thumb;
+                this.sliderWidth = this.slider.offsetWidth;
+                document.getElementById(`${thumb}Thumb`).classList.add('dragging');
+                this.updateFromMouse(e);
+            }
+            
+            drag(e) {
+                if (!this.isDragging) return;
+                this.updateFromMouse(e);
+            }
+            
+            endDrag() {
+                if (this.isDragging) {
+                    document.getElementById(`${this.isDragging}Thumb`).classList.remove('dragging');
+                }
+                this.isDragging = null;
+            }
+            
+            updateFromMouse(e) {
+                const rect = this.slider.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(100, (x / this.sliderWidth) * 100));
+                
+                if (this.isDragging === 'min') {
+                    this.minValue = Math.min(percent, this.maxValue - 5);
+                } else if (this.isDragging === 'max') {
+                    this.maxValue = Math.max(percent, this.minValue + 5);
+                }
+                
+                this.updateSlider();
+            }
+            
+            updateSlider() {
+                // Update thumb positions
+                this.minThumb.style.left = `${this.minValue}%`;
+                this.maxThumb.style.left = `${this.maxValue}%`;
+                
+                // Update range
+                this.range.style.left = `${this.minValue}%`;
+                this.range.style.width = `${this.maxValue - this.minValue}%`;
+                
+                // Update displays
+                document.getElementById('minValue').textContent = Math.round(this.minValue);
+                document.getElementById('maxValue').textContent = Math.round(this.maxValue);
+                document.getElementById('minDisplay').textContent = Math.round(this.minValue);
+                document.getElementById('maxDisplay').textContent = Math.round(this.maxValue);
+                document.getElementById('rangeDisplay').textContent = Math.round(this.maxValue - this.minValue);
+                
+                this.updateChart();
+            }
+            
+            createChart() {
+                const container = document.getElementById('chartContainer');
+                for (let i = 0; i < 50; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'chart-bar';
+                    bar.style.left = `${i * 2}%`;
+                    container.appendChild(bar);
+                }
+            }
+            
+            updateChart() {
+                const bars = document.querySelectorAll('.chart-bar');
+                bars.forEach((bar, index) => {
+                    const value = (index / bars.length) * 100;
+                    let height = 0;
+                    
+                    if (value >= this.minValue && value <= this.maxValue) {
+                        height = 80;
+                    } else if (Math.abs(value - this.minValue) < 10 || Math.abs(value - this.maxValue) < 10) {
+                        height = 40;
+                    }
+                    
+                    bar.style.height = `${height}px`;
+                });
+            }
+            
+            setRange(min, max) {
+                this.minValue = min;
+                this.maxValue = max;
+                this.updateSlider();
+            }
+        }
+
+        // Initialize slider
+        const slider = new MultiThumbSlider();
+
+        function setPreset(min, max) {
+            slider.setRange(min, max);
+        }
+
+        // Add keyboard controls
+        document.addEventListener('keydown', (e) => {
+            const step = 5;
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (slider.minValue > 0) {
+                        slider.minValue = Math.max(0, slider.minValue - step);
+                        slider.updateSlider();
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (slider.maxValue < 100) {
+                        slider.maxValue = Math.min(100, slider.maxValue + step);
+                        slider.updateSlider();
+                    }
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
