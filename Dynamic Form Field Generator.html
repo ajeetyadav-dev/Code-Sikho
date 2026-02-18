@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Form Field Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .field-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .field-type {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .field-type:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .field-type:active {
+            transform: translateY(-1px);
+        }
+
+        .field-type::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .field-type:active::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        .dynamic-form {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            min-height: 300px;
+            position: relative;
+        }
+
+        .form-field {
+            margin-bottom: 20px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .form-field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-field textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .field-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .field-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .duplicate-btn {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .duplicate-btn:hover {
+            background: #45b7b8;
+        }
+
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e0e0e0;
+        }
+
+        .clear-btn:hover {
+            background: #e9ecef;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .field-counter {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Dynamic Form Field Generator</h1>
+        
+        <div class="field-counter" id="fieldCounter">0 fields added</div>
+        
+        <div class="field-selector">
+            <button class="field-type" onclick="addField('text')">
+                📝 Text Input
+            </button>
+            <button class="field-type" onclick="addField('email')">
+                📧 Email
+            </button>
+            <button class="field-type" onclick="addField('number')">
+                🔢 Number
+            </button>
+            <button class="field-type" onclick="addField('date')">
+                📅 Date
+            </button>
+            <button class="field-type" onclick="addField('select')">
+                📋 Dropdown
+            </button>
+            <button class="field-type" onclick="addField('textarea')">
+                📄 Text Area
+            </button>
+            <button class="field-type" onclick="addField('password')">
+                🔒 Password
+            </button>
+            <button class="field-type" onclick="addField('tel')">
+                📞 Phone
+            </button>
+        </div>
+
+        <div class="dynamic-form" id="dynamicForm">
+            <div class="empty-state" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="9" x2="15" y2="9"></line>
+                    <line x1="9" y1="13" x2="15" y2="13"></line>
+                    <line x1="9" y1="17" x2="11" y2="17"></line>
+                </svg>
+                <h3>No fields added yet</h3>
+                <p>Click the buttons above to add form fields</p>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="action-btn clear-btn" onclick="clearForm()">Clear All</button>
+            <button class="action-btn submit-btn" onclick="submitForm()">Submit Form</button>
+        </div>
+    </div>
+
+    <script>
+        let fieldCount = 0;
+        let fields = [];
+
+        function addField(type) {
+            fieldCount++;
+            const fieldId = `field_${fieldCount}`;
+            const field = createField(type, fieldId);
+            fields.push({ id: fieldId, type, element: field });
+            
+            const form = document.getElementById('dynamicForm');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
+            form.appendChild(field);
+            updateFieldCounter();
+            
+            // Focus on the new field
+            const input = field.querySelector('input, select, textarea');
+            if (input) {
+                setTimeout(() => input.focus(), 100);
+            }
+        }
+
+        function createField(type, fieldId) {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'form-field';
+            fieldDiv.id = fieldId;
+            
+            const label = document.createElement('label');
+            label.textContent = getFieldLabel(type);
+            label.for = fieldId;
+            
+            let input;
+            
+            switch(type) {
+                case 'text':
+                case 'email':
+                case 'password':
+                case 'tel':
+                case 'number':
+                case 'date':
+                    input = document.createElement('input');
+                    input.type = type;
+                    input.name = fieldId;
+                    input.placeholder = `Enter ${type}...`;
+                    if (type === 'number') {
+                        input.min = '0';
+                        input.max = '100';
+                    }
+                    break;
+                    
+                case 'select':
+                    input = document.createElement('select');
+                    input.name = fieldId;
+                    const options = ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+                    options.forEach(option => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option.toLowerCase().replace(' ', '_');
+                        optionElement.textContent = option;
+                        input.appendChild(optionElement);
+                    });
+                    break;
+                    
+                case 'textarea':
+                    input = document.createElement('textarea');
+                    input.name = fieldId;
+                    input.placeholder = 'Enter your message...';
+                    break;
+            }
+            
+            input.id = fieldId;
+            
+            const actions = document.createElement('div');
+            actions.className = 'field-actions';
+            
+            const duplicateBtn = document.createElement('button');
+            duplicateBtn.className = 'field-btn duplicate-btn';
+            duplicateBtn.textContent = 'Duplicate';
+            duplicateBtn.onclick = () => duplicateField(fieldId);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'field-btn delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = () => deleteField(fieldId);
+            
+            actions.appendChild(duplicateBtn);
+            actions.appendChild(deleteBtn);
+            
+            fieldDiv.appendChild(label);
+            fieldDiv.appendChild(input);
+            fieldDiv.appendChild(actions);
+            
+            return fieldDiv;
+        }
+
+        function getFieldLabel(type) {
+            const labels = {
+                'text': 'Text Input',
+                'email': 'Email Address',
+                'password': 'Password',
+                'tel': 'Phone Number',
+                'number': 'Number',
+                'date': 'Date',
+                'select': 'Select Option',
+                'textarea': 'Message'
+            };
+            return labels[type] || 'Field';
+        }
+
+        function deleteField(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    field.remove();
+                    fields = fields.filter(f => f.id !== fieldId);
+                    updateFieldCounter();
+                    
+                    if (fields.length === 0) {
+                        document.getElementById('emptyState').style.display = 'block';
+                    }
+                }, 300);
+            }
+        }
+
+        function duplicateField(fieldId) {
+            const originalField = fields.find(f => f.id === fieldId);
+            if (originalField) {
+                addField(originalField.type);
+            }
+        }
+
+        function clearForm() {
+            const form = document.getElementById('dynamicForm');
+            form.innerHTML = `
+                <div class="empty-state" id="emptyState">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="9" x2="15" y2="9"></line>
+                        <line x1="9" y1="13" x2="15" y2="13"></line>
+                        <line x1="9" y1="17" x2="11" y2="17"></line>
+                    </svg>
+                    <h3>No fields added yet</h3>
+                    <p>Click the buttons above to add form fields</p>
+                </div>
+            `;
+            fields = [];
+            fieldCount = 0;
+            updateFieldCounter();
+        }
+
+        function submitForm() {
+            const formData = {};
+            let hasData = false;
+            
+            fields.forEach(field => {
+                const input = field.element.querySelector('input, select, textarea');
+                if (input && input.value) {
+                    formData[field.id] = input.value;
+                    hasData = true;
+                }
+            });
+            
+            if (hasData) {
+                console.log('Form Data:', formData);
+                alert(`Form submitted with ${fields.length} fields! Check console for data.`);
+            } else {
+                alert('Please fill in at least one field before submitting.');
+            }
+        }
+
+        function updateFieldCounter() {
+            const counter = document.getElementById('fieldCounter');
+            counter.textContent = `${fields.length} field${fields.length !== 1 ? 's' : ''} added`;
+        }
+
+        // Add slide out animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideOut {
+                to {
+                    opacity: 0;
+                    transform: translateX(20px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

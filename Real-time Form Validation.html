@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Form Validation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .validation-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input.valid {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.05);
+        }
+
+        .form-group input.invalid {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.05);
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .validation-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .validation-icon.show {
+            opacity: 1;
+        }
+
+        .validation-icon.valid {
+            color: #4ecdc4;
+        }
+
+        .validation-icon.invalid {
+            color: #ff6b6b;
+        }
+
+        .validation-message {
+            position: absolute;
+            bottom: -22px;
+            left: 0;
+            font-size: 12px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .validation-message.show {
+            opacity: 1;
+        }
+
+        .validation-message.error {
+            color: #ff6b6b;
+        }
+
+        .validation-message.success {
+            color: #4ecdc4;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .password-strength-bar.weak {
+            width: 33%;
+            background: #ff6b6b;
+        }
+
+        .password-strength-bar.medium {
+            width: 66%;
+            background: #feca57;
+        }
+
+        .password-strength-bar.strong {
+            width: 100%;
+            background: #4ecdc4;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .validation-summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .validation-summary.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .summary-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .summary-item.valid {
+            color: #4ecdc4;
+        }
+
+        .summary-item.invalid {
+            color: #ff6b6b;
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+        }
+
+        .progress-ring-circle {
+            stroke: #e0e0e0;
+            stroke-width: 4;
+            fill: transparent;
+        }
+
+        .progress-ring-progress {
+            stroke: #667eea;
+            stroke-width: 4;
+            fill: transparent;
+            stroke-dasharray: 157;
+            stroke-dashoffset: 157;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 0.3s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="validation-container">
+        <div class="progress-ring">
+            <svg width="60" height="60">
+                <circle class="progress-ring-circle" cx="30" cy="30" r="25"></circle>
+                <circle class="progress-ring-progress" id="progressCircle" cx="30" cy="30" r="25"></circle>
+            </svg>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+
+        <h2>✨ Smart Form Validation</h2>
+        
+        <form id="validationForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" name="username" placeholder="Enter username">
+                    <span class="validation-icon" id="usernameIcon"></span>
+                </div>
+                <div class="validation-message" id="usernameMessage"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" name="email" placeholder="Enter email">
+                    <span class="validation-icon" id="emailIcon"></span>
+                </div>
+                <div class="validation-message" id="emailMessage"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <div class="input-wrapper">
+                    <input type="tel" id="phone" name="phone" placeholder="Enter phone number">
+                    <span class="validation-icon" id="phoneIcon"></span>
+                </div>
+                <div class="validation-message" id="phoneMessage"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" placeholder="Enter password">
+                    <span class="validation-icon" id="passwordIcon"></span>
+                </div>
+                <div class="password-strength">
+                    <div class="password-strength-bar" id="passwordStrength"></div>
+                </div>
+                <div class="validation-message" id="passwordMessage"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm password">
+                    <span class="validation-icon" id="confirmPasswordIcon"></span>
+                </div>
+                <div class="validation-message" id="confirmPasswordMessage"></div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn" disabled>Submit Form</button>
+        </form>
+
+        <div class="validation-summary" id="validationSummary">
+            <div class="summary-title">Validation Summary</div>
+            <div id="summaryContent"></div>
+        </div>
+    </div>
+
+    <script>
+        class FormValidator {
+            constructor() {
+                this.form = document.getElementById('validationForm');
+                this.fields = {
+                    username: {
+                        element: document.getElementById('username'),
+                        icon: document.getElementById('usernameIcon'),
+                        message: document.getElementById('usernameMessage'),
+                        validate: this.validateUsername.bind(this)
+                    },
+                    email: {
+                        element: document.getElementById('email'),
+                        icon: document.getElementById('emailIcon'),
+                        message: document.getElementById('emailMessage'),
+                        validate: this.validateEmail.bind(this)
+                    },
+                    phone: {
+                        element: document.getElementById('phone'),
+                        icon: document.getElementById('phoneIcon'),
+                        message: document.getElementById('phoneMessage'),
+                        validate: this.validatePhone.bind(this)
+                    },
+                    password: {
+                        element: document.getElementById('password'),
+                        icon: document.getElementById('passwordIcon'),
+                        message: document.getElementById('passwordMessage'),
+                        validate: this.validatePassword.bind(this)
+                    },
+                    confirmPassword: {
+                        element: document.getElementById('confirmPassword'),
+                        icon: document.getElementById('confirmPasswordIcon'),
+                        message: document.getElementById('confirmPasswordMessage'),
+                        validate: this.validateConfirmPassword.bind(this)
+                    }
+                };
+                
+                this.validity = {};
+                this.init();
+            }
+
+            init() {
+                Object.keys(this.fields).forEach(fieldName => {
+                    const field = this.fields[fieldName];
+                    field.element.addEventListener('input', () => {
+                        this.validateField(fieldName);
+                        this.updateProgress();
+                    });
+                    
+                    field.element.addEventListener('blur', () => {
+                        this.validateField(fieldName);
+                    });
+                });
+
+                this.form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSubmit();
+                });
+            }
+
+            validateField(fieldName) {
+                const field = this.fields[fieldName];
+                const result = field.validate(field.element.value);
+                
+                this.validity[fieldName] = result.isValid;
+                
+                // Update UI
+                field.element.classList.remove('valid', 'invalid');
+                field.icon.classList.remove('show', 'valid', 'invalid');
+                field.message.classList.remove('show', 'error', 'success');
+                
+                if (field.element.value) {
+                    if (result.isValid) {
+                        field.element.classList.add('valid');
+                        field.icon.textContent = '✓';
+                        field.icon.classList.add('show', 'valid');
+                        if (result.message) {
+                            field.message.textContent = result.message;
+                            field.message.classList.add('show', 'success');
+                        }
+                    } else {
+                        field.element.classList.add('invalid');
+                        field.icon.textContent = '✗';
+                        field.icon.classList.add('show', 'invalid');
+                        field.message.textContent = result.message;
+                        field.message.classList.add('show', 'error');
+                    }
+                }
+                
+                this.updateSubmitButton();
+                return result.isValid;
+            }
+
+            validateUsername(value) {
+                if (!value) return { isValid: false, message: 'Username is required' };
+                if (value.length < 3) return { isValid: false, message: 'Username must be at least 3 characters' };
+                if (value.length > 20) return { isValid: false, message: 'Username must be less than 20 characters' };
+                if (!/^[a-zA-Z0-9_]+$/.test(value)) return { isValid: false, message: 'Username can only contain letters, numbers, and underscores' };
+                return { isValid: true, message: 'Username is available' };
+            }
+
+            validateEmail(value) {
+                if (!value) return { isValid: false, message: 'Email is required' };
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) return { isValid: false, message: 'Please enter a valid email address' };
+                return { isValid: true, message: 'Email format is valid' };
+            }
+
+            validatePhone(value) {
+                if (!value) return { isValid: false, message: 'Phone number is required' };
+                const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+                if (!phoneRegex.test(value)) return { isValid: false, message: 'Please enter a valid phone number' };
+                if (value.replace(/\D/g, '').length < 10) return { isValid: false, message: 'Phone number must be at least 10 digits' };
+                return { isValid: true, message: 'Phone number is valid' };
+            }
+
+            validatePassword(value) {
+                if (!value) return { isValid: false, message: 'Password is required' };
+                
+                let strength = 0;
+                let message = '';
+                
+                if (value.length >= 8) strength++;
+                else message = 'Password must be at least 8 characters';
+                
+                if (/[a-z]/.test(value)) strength++;
+                if (/[A-Z]/.test(value)) strength++;
+                if (/[0-9]/.test(value)) strength++;
+                if (/[^a-zA-Z0-9]/.test(value)) strength++;
+                
+                const strengthBar = document.getElementById('passwordStrength');
+                strengthBar.className = 'password-strength-bar';
+                
+                if (strength <= 2) {
+                    strengthBar.classList.add('weak');
+                    return { isValid: false, message: message || 'Password is too weak' };
+                } else if (strength <= 3) {
+                    strengthBar.classList.add('medium');
+                    return { isValid: true, message: 'Password strength: medium' };
+                } else {
+                    strengthBar.classList.add('strong');
+                    return { isValid: true, message: 'Password strength: strong' };
+                }
+            }
+
+            validateConfirmPassword(value) {
+                const password = this.fields.password.element.value;
+                if (!value) return { isValid: false, message: 'Please confirm your password' };
+                if (value !== password) return { isValid: false, message: 'Passwords do not match' };
+                return { isValid: true, message: 'Passwords match' };
+            }
+
+            updateSubmitButton() {
+                const submitBtn = document.getElementById('submitBtn');
+                const allValid = Object.values(this.validity).every(valid => valid === true);
+                submitBtn.disabled = !allValid;
+            }
+
+            updateProgress() {
+                const totalFields = Object.keys(this.fields).length;
+                const validFields = Object.values(this.validity).filter(valid => valid === true).length;
+                const percentage = Math.round((validFields / totalFields) * 100);
+                
+                const progressCircle = document.getElementById('progressCircle');
+                const progressText = document.getElementById('progressText');
+                
+                const offset = 157 - (157 * percentage) / 100;
+                progressCircle.style.strokeDashoffset = offset;
+                progressText.textContent = `${percentage}%`;
+            }
+
+            handleSubmit() {
+                const summary = document.getElementById('validationSummary');
+                const summaryContent = document.getElementById('summaryContent');
+                
+                let summaryHTML = '';
+                Object.keys(this.fields).forEach(fieldName => {
+                    const field = this.fields[fieldName];
+                    const isValid = this.validity[fieldName];
+                    const icon = isValid ? '✓' : '✗';
+                    const status = isValid ? 'valid' : 'invalid';
+                    const label = field.element.previousElementSibling.textContent;
+                    
+                    summaryHTML += `
+                        <div class="summary-item ${status}">
+                            <span style="margin-right: 8px;">${icon}</span>
+                            <span>${label}: ${isValid ? 'Valid' : 'Invalid'}</span>
+                        </div>
+                    `;
+                });
+                
+                summaryContent.innerHTML = summaryHTML;
+                summary.classList.add('show');
+                
+                // Simulate form submission
+                setTimeout(() => {
+                    alert('Form submitted successfully!');
+                    this.form.reset();
+                    this.resetValidation();
+                }, 1000);
+            }
+
+            resetValidation() {
+                Object.keys(this.fields).forEach(fieldName => {
+                    const field = this.fields[fieldName];
+                    field.element.classList.remove('valid', 'invalid');
+                    field.icon.classList.remove('show', 'valid', 'invalid');
+                    field.message.classList.remove('show', 'error', 'success');
+                });
+                
+                document.getElementById('passwordStrength').className = 'password-strength-bar';
+                document.getElementById('validationSummary').classList.remove('show');
+                this.validity = {};
+                this.updateProgress();
+                this.updateSubmitButton();
+            }
+        }
+
+        // Initialize validator
+        const validator = new FormValidator();
+    </script>
+</body>
+</html>
