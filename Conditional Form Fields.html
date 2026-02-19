@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditional Form Fields</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .form-section.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .radio-item,
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .radio-item input,
+        .checkbox-item input {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .conditional-field {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+
+        .conditional-field.show {
+            max-height: 500px;
+            opacity: 1;
+            margin-top: 20px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .submit-section {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .progress-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .progress-indicator::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .progress-step {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 50%;
+            margin: 0 auto 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #999;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active .step-circle {
+            border-color: #667eea;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .progress-step.completed .step-circle {
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .progress-step.active .step-label,
+        .progress-step.completed .step-label {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-summary {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .form-summary.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .summary-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .summary-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Smart Conditional Form</h1>
+        
+        <div class="progress-indicator">
+            <div class="progress-step active" id="step1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Basic Info</div>
+            </div>
+            <div class="progress-step" id="step2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Details</div>
+            </div>
+            <div class="progress-step" id="step3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Preferences</div>
+            </div>
+        </div>
+
+        <form id="conditionalForm">
+            <div class="form-section active" id="section1">
+                <div class="section-title">
+                    <div class="section-icon">👤</div>
+                    Basic Information
+                </div>
+                
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Account Type</label>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="accountType" value="personal" checked>
+                            <span>Personal</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="accountType" value="business">
+                            <span>Business</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="accountType" value="nonprofit">
+                            <span>Non-Profit</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="conditional-field" id="businessFields">
+                    <div class="form-group">
+                        <label for="companyName">Company Name</label>
+                        <input type="text" id="companyName" name="companyName">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="companySize">Company Size</label>
+                        <select id="companySize" name="companySize">
+                            <option value="">Select size</option>
+                            <option value="1-10">1-10 employees</option>
+                            <option value="11-50">11-50 employees</option>
+                            <option value="51-200">51-200 employees</option>
+                            <option value="201+">201+ employees</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="conditional-field" id="nonprofitFields">
+                    <div class="form-group">
+                        <label for="organizationName">Organization Name</label>
+                        <input type="text" id="organizationName" name="organizationName">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="taxId">Tax ID</label>
+                        <input type="text" id="taxId" name="taxId" placeholder="XX-XXXXXXX">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" id="section2">
+                <div class="section-title">
+                    <div class="section-icon">📋</div>
+                    Additional Details
+                </div>
+                
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <select id="country" name="country" onchange="updateCountryFields()">
+                        <option value="">Select country</option>
+                        <option value="US">United States</option>
+                        <option value="CA">Canada</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="conditional-field" id="usFields">
+                    <div class="field-row">
+                        <div class="form-group">
+                            <label for="state">State</label>
+                            <select id="state" name="state">
+                                <option value="">Select state</option>
+                                <option value="CA">California</option>
+                                <option value="NY">New York</option>
+                                <option value="TX">Texas</option>
+                                <option value="FL">Florida</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="zipCode">ZIP Code</label>
+                            <input type="text" id="zipCode" name="zipCode" placeholder="12345">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="conditional-field" id="caFields">
+                    <div class="field-row">
+                        <div class="form-group">
+                            <label for="province">Province</label>
+                            <select id="province" name="province">
+                                <option value="">Select province</option>
+                                <option value="ON">Ontario</option>
+                                <option value="QC">Quebec</option>
+                                <option value="BC">British Columbia</option>
+                                <option value="AB">Alberta</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="postalCode">Postal Code</label>
+                            <input type="text" id="postalCode" name="postalCode" placeholder="A1A 1A1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="conditional-field" id="otherFields">
+                    <div class="form-group">
+                        <label for="region">Region/State</label>
+                        <input type="text" id="region" name="region" placeholder="Enter your region">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Do you have a referral code?</label>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="hasReferral" value="yes" onchange="toggleReferralField()">
+                            <span>Yes</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="hasReferral" value="no" checked onchange="toggleReferralField()">
+                            <span>No</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="conditional-field" id="referralField">
+                    <div class="form-group">
+                        <label for="referralCode">Referral Code</label>
+                        <input type="text" id="referralCode" name="referralCode" placeholder="Enter referral code">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" id="section3">
+                <div class="section-title">
+                    <div class="section-icon">⚙️</div>
+                    Preferences
+                </div>
+                
+                <div class="form-group">
+                    <label>Notification Preferences</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="notifications" value="email" checked>
+                            <span>Email Notifications</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="notifications" value="sms">
+                            <span>SMS Notifications</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="notifications" value="push">
+                            <span>Push Notifications</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="conditional-field" id="smsFields">
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number for SMS</label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="+1 (555) 123-4567">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="newsletter">Newsletter Frequency</label>
+                    <select id="newsletter" name="newsletter">
+                        <option value="never">Never</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="weekly" selected>Weekly</option>
+                        <option value="daily">Daily</option>
+                    </select>
+                </div>
+
+                <div class="conditional-field" id="newsletterFields">
+                    <div class="form-group">
+                        <label>Newsletter Topics</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="topics" value="tech">
+                                <span>Technology</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="topics" value="business">
+                                <span>Business</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="topics" value="design">
+                                <span>Design</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="comments">Additional Comments</label>
+                    <textarea id="comments" name="comments" rows="4" placeholder="Tell us more about your needs..."></textarea>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset Form</button>
+                <button type="submit" class="btn btn-primary">Submit Application</button>
+            </div>
+        </form>
+
+        <div class="form-summary" id="formSummary">
+            <div class="summary-title">📊 Form Summary</div>
+            <div id="summaryContent"></div>
+        </div>
+    </div>
+
+    <script>
+        class ConditionalForm {
+            constructor() {
+                this.form = document.getElementById('conditionalForm');
+                this.currentStep = 1;
+                this.init();
+            }
+
+            init() {
+                this.setupConditionalFields();
+                this.setupFormSubmission();
+                this.updateNewsletterFields();
+            }
+
+            setupConditionalFields() {
+                // Account type conditional fields
+                const accountTypeRadios = document.querySelectorAll('input[name="accountType"]');
+                accountTypeRadios.forEach(radio => {
+                    radio.addEventListener('change', () => this.updateAccountTypeFields());
+                });
+
+                // Country conditional fields
+                const countrySelect = document.getElementById('country');
+                countrySelect.addEventListener('change', () => this.updateCountryFields());
+
+                // Notification checkboxes
+                const notificationCheckboxes = document.querySelectorAll('input[name="notifications"]');
+                notificationCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => this.updateNotificationFields());
+                });
+
+                // Newsletter frequency
+                const newsletterSelect = document.getElementById('newsletter');
+                newsletterSelect.addEventListener('change', () => this.updateNewsletterFields());
+
+                // Initialize states
+                this.updateAccountTypeFields();
+                this.updateNotificationFields();
+            }
+
+            updateAccountTypeFields() {
+                const accountType = document.querySelector('input[name="accountType"]:checked').value;
+                const businessFields = document.getElementById('businessFields');
+                const nonprofitFields = document.getElementById('nonprofitFields');
+
+                // Hide all conditional fields first
+                businessFields.classList.remove('show');
+                nonprofitFields.classList.remove('show');
+
+                // Show relevant fields
+                if (accountType === 'business') {
+                    businessFields.classList.add('show');
+                } else if (accountType === 'nonprofit') {
+                    nonprofitFields.classList.add('show');
+                }
+
+                this.updateProgress();
+            }
+
+            updateCountryFields() {
+                const country = document.getElementById('country').value;
+                const usFields = document.getElementById('usFields');
+                const caFields = document.getElementById('caFields');
+                const otherFields = document.getElementById('otherFields');
+
+                // Hide all country fields
+                usFields.classList.remove('show');
+                caFields.classList.remove('show');
+                otherFields.classList.remove('show');
+
+                // Show relevant fields
+                if (country === 'US') {
+                    usFields.classList.add('show');
+                } else if (country === 'CA') {
+                    caFields.classList.add('show');
+                } else if (country === 'Other') {
+                    otherFields.classList.add('show');
+                }
+
+                this.updateProgress();
+            }
+
+            toggleReferralField() {
+                const hasReferral = document.querySelector('input[name="hasReferral"]:checked').value;
+                const referralField = document.getElementById('referralField');
+
+                if (hasReferral === 'yes') {
+                    referralField.classList.add('show');
+                } else {
+                    referralField.classList.remove('show');
+                }
+
+                this.updateProgress();
+            }
+
+            updateNotificationFields() {
+                const smsCheckbox = document.querySelector('input[name="notifications"][value="sms"]');
+                const smsFields = document.getElementById('smsFields');
+
+                if (smsCheckbox.checked) {
+                    smsFields.classList.add('show');
+                } else {
+                    smsFields.classList.remove('show');
+                }
+
+                this.updateProgress();
+            }
+
+            updateNewsletterFields() {
+                const newsletter = document.getElementById('newsletter').value;
+                const newsletterFields = document.getElementById('newsletterFields');
+
+                if (newsletter !== 'never') {
+                    newsletterFields.classList.add('show');
+                } else {
+                    newsletterFields.classList.remove('show');
+                }
+
+                this.updateProgress();
+            }
+
+            updateProgress() {
+                const sections = document.querySelectorAll('.form-section');
+                const steps = document.querySelectorAll('.progress-step');
+                
+                sections.forEach((section, index) => {
+                    const hasVisibleFields = section.querySelectorAll('input:not([type="hidden"]), select, textarea').length > 0;
+                    const hasFilledFields = Array.from(section.querySelectorAll('input:not([type="hidden"]), select, textarea'))
+                        .some(field => field.type === 'checkbox' ? field.checked : field.value);
+                    
+                    if (hasFilledFields || index === 0) {
+                        steps[index].classList.add('completed');
+                        steps[index].classList.remove('active');
+                    } else if (hasVisibleFields) {
+                        steps[index].classList.add('active');
+                        steps[index].classList.remove('completed');
+                    }
+                });
+            }
+
+            setupFormSubmission() {
+                this.form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.showSummary();
+                });
+            }
+
+            showSummary() {
+                const formData = new FormData(this.form);
+                const summary = document.getElementById('formSummary');
+                const content = document.getElementById('summaryContent');
+                
+                let summaryHTML = '';
+                
+                // Basic info
+                summaryHTML += `
+                    <div class="summary-item">
+                        <span class="summary-label">Name:</span>
+                        <span class="summary-value">${formData.get('fullName') || 'Not provided'}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Email:</span>
+                        <span class="summary-value">${formData.get('email') || 'Not provided'}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Account Type:</span>
+                        <span class="summary-value">${formData.get('accountType') || 'Not selected'}</span>
+                    </div>
+                `;
+                
+                // Conditional fields
+                if (formData.get('companyName')) {
+                    summaryHTML += `
+                        <div class="summary-item">
+                            <span class="summary-label">Company:</span>
+                            <span class="summary-value">${formData.get('companyName')}</span>
+                        </div>
+                    `;
+                }
+                
+                if (formData.get('country')) {
+                    summaryHTML += `
+                        <div class="summary-item">
+                            <span class="summary-label">Country:</span>
+                            <span class="summary-value">${formData.get('country')}</span>
+                        </div>
+                    `;
+                }
+                
+                // Notifications
+                const notifications = formData.getAll('notifications');
+                if (notifications.length > 0) {
+                    summaryHTML += `
+                        <div class="summary-item">
+                            <span class="summary-label">Notifications:</span>
+                            <span class="summary-value">${notifications.join(', ')}</span>
+                        </div>
+                    `;
+                }
+                
+                content.innerHTML = summaryHTML;
+                summary.classList.add('show');
+                
+                // Scroll to summary
+                summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            resetForm() {
+                this.form.reset();
+                document.querySelectorAll('.conditional-field').forEach(field => {
+                    field.classList.remove('show');
+                });
+                document.getElementById('formSummary').classList.remove('show');
+                this.updateAccountTypeFields();
+                this.updateProgress();
+            }
+        }
+
+        // Global function for referral toggle
+        function toggleReferralField() {
+            const hasReferral = document.querySelector('input[name="hasReferral"]:checked').value;
+            const referralField = document.getElementById('referralField');
+
+            if (hasReferral === 'yes') {
+                referralField.classList.add('show');
+            } else {
+                referralField.classList.remove('show');
+            }
+        }
+
+        // Global function for country update
+        function updateCountryFields() {
+            const country = document.getElementById('country').value;
+            const usFields = document.getElementById('usFields');
+            const caFields = document.getElementById('caFields');
+            const otherFields = document.getElementById('otherFields');
+
+            usFields.classList.remove('show');
+            caFields.classList.remove('show');
+            otherFields.classList.remove('show');
+
+            if (country === 'US') {
+                usFields.classList.add('show');
+            } else if (country === 'CA') {
+                caFields.classList.add('show');
+            } else if (country === 'Other') {
+                otherFields.classList.add('show');
+            }
+        }
+
+        // Initialize form
+        const conditionalForm = new ConditionalForm();
+    </script>
+</body>
+</html>

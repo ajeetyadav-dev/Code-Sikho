@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-step Form with Progress</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .form-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+        }
+
+        .form-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .form-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .form-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .progress-container {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            width: 33.33%;
+        }
+
+        .step-indicators {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #999;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+
+        .step.active .step-circle {
+            border-color: #667eea;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.1);
+        }
+
+        .step.completed .step-circle {
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+
+        .step.active .step-label,
+        .step.completed .step-label {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-body {
+            padding: 40px;
+            min-height: 400px;
+        }
+
+        .form-step {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .step-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .step-description {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .radio-item,
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .radio-item:hover,
+        .checkbox-item:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .radio-item input,
+        .checkbox-item input {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .form-navigation {
+            display: flex;
+            justify-content: space-between;
+            padding: 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .nav-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-prev {
+            background: white;
+            color: #666;
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn-prev:hover:not(:disabled) {
+            background: #f8f9fa;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-next:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #4ecdc4, #44a3a0);
+            color: white;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #4ecdc4, #44a3a0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+            color: white;
+        }
+
+        .success-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .success-text {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .summary-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .step-label {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="form-header">
+            <h1 class="form-title">🚀 Create Your Account</h1>
+            <p class="form-subtitle">Join us in 3 simple steps</p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="step-indicators">
+                <div class="step active" id="step1Indicator">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Personal Info</div>
+                </div>
+                <div class="step" id="step2Indicator">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Account Details</div>
+                </div>
+                <div class="step" id="step3Indicator">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Preferences</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-body">
+            <!-- Step 1: Personal Information -->
+            <div class="form-step active" id="step1">
+                <h2 class="step-title">Personal Information</h2>
+                <p class="step-description">Tell us about yourself</p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <input type="text" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <input type="text" id="lastName" name="lastName" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
+                </div>
+
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <div class="form-row">
+                        <input type="number" id="birthDay" name="birthDay" placeholder="Day" min="1" max="31">
+                        <select id="birthMonth" name="birthMonth">
+                            <option value="">Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                        <input type="number" id="birthYear" name="birthYear" placeholder="Year" min="1900" max="2024">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Account Details -->
+            <div class="form-step" id="step2">
+                <h2 class="step-title">Account Details</h2>
+                <p class="step-description">Set up your account credentials</p>
+                
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Account Type</label>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="accountType" value="personal" checked>
+                            <span>Personal Account</span>
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="accountType" value="business">
+                            <span>Business Account</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Security Question</label>
+                    <select id="securityQuestion" name="securityQuestion">
+                        <option value="">Select a question</option>
+                        <option value="pet">What was your first pet's name?</option>
+                        <option value="school">What elementary school did you attend?</option>
+                        <option value="city">In what city were you born?</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="securityAnswer">Security Answer</label>
+                    <input type="text" id="securityAnswer" name="securityAnswer">
+                </div>
+            </div>
+
+            <!-- Step 3: Preferences -->
+            <div class="form-step" id="step3">
+                <h2 class="step-title">Preferences</h2>
+                <p class="step-description">Customize your experience</p>
+                
+                <div class="form-group">
+                    <label>Notification Preferences</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="notifications" value="email" checked>
+                            <span>Email notifications</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="notifications" value="sms">
+                            <span>SMS notifications</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="notifications" value="push" checked>
+                            <span>Push notifications</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="newsletter">Newsletter Subscription</label>
+                    <select id="newsletter" name="newsletter">
+                        <option value="daily">Daily</option>
+                        <option value="weekly" selected>Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="never">Never</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="timezone">Timezone</label>
+                    <select id="timezone" name="timezone">
+                        <option value="EST">Eastern Time (EST)</option>
+                        <option value="CST">Central Time (CST)</option>
+                        <option value="MST">Mountain Time (MST)</option>
+                        <option value="PST">Pacific Time (PST)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="bio">Bio (Optional)</label>
+                    <textarea id="bio" name="bio" rows="4" placeholder="Tell us a bit about yourself..."></textarea>
+                </div>
+
+                <div class="form-summary">
+                    <div class="summary-title">📋 Registration Summary</div>
+                    <div id="summaryContent"></div>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                <div class="success-icon">✓</div>
+                <h2 class="success-title">Registration Complete!</h2>
+                <p class="success-text">Your account has been successfully created.</p>
+                <button class="nav-btn btn-submit" onclick="resetForm()">Create Another Account</button>
+            </div>
+        </div>
+
+        <div class="form-navigation" id="formNavigation">
+            <button type="button" class="nav-btn btn-prev" id="prevBtn" onclick="changeStep(-1)" disabled>
+                Previous
+            </button>
+            <button type="button" class="nav-btn btn-next" id="nextBtn" onclick="changeStep(1)">
+                Next
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class MultiStepForm {
+            constructor() {
+                this.currentStep = 1;
+                this.totalSteps = 3;
+                this.formData = {};
+                
+                this.init();
+            }
+
+            init() {
+                this.updateStepDisplay();
+                this.setupFormValidation();
+            }
+
+            setupFormValidation() {
+                // Add real-time validation
+                const inputs = document.querySelectorAll('input[required], select[required]');
+                inputs.forEach(input => {
+                    input.addEventListener('blur', () => this.validateField(input));
+                    input.addEventListener('input', () => {
+                        if (input.classList.contains('invalid')) {
+                            this.validateField(input);
+                        }
+                    });
+                });
+            }
+
+            validateField(field) {
+                const value = field.value.trim();
+                let isValid = true;
+
+                if (field.hasAttribute('required') && !value) {
+                    isValid = false;
+                }
+
+                if (field.type === 'email' && value) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    isValid = emailRegex.test(value);
+                }
+
+                if (field.id === 'confirmPassword' && value) {
+                    const password = document.getElementById('password').value;
+                    isValid = value === password;
+                }
+
+                if (isValid) {
+                    field.classList.remove('invalid');
+                    field.classList.add('valid');
+                } else {
+                    field.classList.remove('valid');
+                    field.classList.add('invalid');
+                }
+
+                return isValid;
+            }
+
+            validateCurrentStep() {
+                const currentStepElement = document.getElementById(`step${this.currentStep}`);
+                const requiredFields = currentStepElement.querySelectorAll('[required]');
+                let isValid = true;
+
+                requiredFields.forEach(field => {
+                    if (!this.validateField(field)) {
+                        isValid = false;
+                    }
+                });
+
+                return isValid;
+            }
+
+            changeStep(direction) {
+                if (direction === 1 && !this.validateCurrentStep()) {
+                    this.showStepError();
+                    return;
+                }
+
+                // Save current step data
+                this.saveStepData();
+
+                // Hide current step
+                document.getElementById(`step${this.currentStep}`).classList.remove('active');
+                document.getElementById(`step${this.currentStep}Indicator`).classList.remove('active');
+
+                // Update step number
+                this.currentStep += direction;
+
+                // Show new step or success message
+                if (this.currentStep > this.totalSteps) {
+                    this.showSuccess();
+                } else if (this.currentStep < 1) {
+                    this.currentStep = 1;
+                } else {
+                    this.showStep();
+                }
+            }
+
+            showStep() {
+                const stepElement = document.getElementById(`step${this.currentStep}`);
+                const stepIndicator = document.getElementById(`step${this.currentStep}Indicator`);
+                
+                stepElement.classList.add('active');
+                stepIndicator.classList.add('active');
+                
+                // Mark previous steps as completed
+                for (let i = 1; i < this.currentStep; i++) {
+                    document.getElementById(`step${i}Indicator`).classList.add('completed');
+                }
+
+                this.updateStepDisplay();
+                this.updateSummary();
+            }
+
+            updateStepDisplay() {
+                // Update progress bar
+                const progressFill = document.getElementById('progressFill');
+                const progressPercent = (this.currentStep / this.totalSteps) * 100;
+                progressFill.style.width = `${progressPercent}%`;
+
+                // Update navigation buttons
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                
+                prevBtn.disabled = this.currentStep === 1;
+                
+                if (this.currentStep === this.totalSteps) {
+                    nextBtn.textContent = 'Submit';
+                    nextBtn.className = 'nav-btn btn-submit';
+                    nextBtn.onclick = () => this.submitForm();
+                } else {
+                    nextBtn.textContent = 'Next';
+                    nextBtn.className = 'nav-btn btn-next';
+                    nextBtn.onclick = () => this.changeStep(1);
+                }
+            }
+
+            saveStepData() {
+                const currentStepElement = document.getElementById(`step${this.currentStep}`);
+                const inputs = currentStepElement.querySelectorAll('input, select, textarea');
+                
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        this.formData[input.name] = input.checked;
+                    } else if (input.type === 'radio') {
+                        if (input.checked) {
+                            this.formData[input.name] = input.value;
+                        }
+                    } else {
+                        this.formData[input.name] = input.value;
+                    }
+                });
+            }
+
+            updateSummary() {
+                if (this.currentStep === 3) {
+                    const summaryContent = document.getElementById('summaryContent');
+                    let summaryHTML = '';
+                    
+                    // Personal Info Summary
+                    if (this.formData.firstName && this.formData.lastName) {
+                        summaryHTML += `
+                            <div class="summary-item">
+                                <span class="summary-label">Name:</span>
+                                <span class="summary-value">${this.formData.firstName} ${this.formData.lastName}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (this.formData.email) {
+                        summaryHTML += `
+                            <div class="summary-item">
+                                <span class="summary-label">Email:</span>
+                                <span class="summary-value">${this.formData.email}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Account Details Summary
+                    if (this.formData.username) {
+                        summaryHTML += `
+                            <div class="summary-item">
+                                <span class="summary-label">Username:</span>
+                                <span class="summary-value">${this.formData.username}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (this.formData.accountType) {
+                        summaryHTML += `
+                            <div class="summary-item">
+                                <span class="summary-label">Account Type:</span>
+                                <span class="summary-value">${this.formData.accountType}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    summaryContent.innerHTML = summaryHTML;
+                }
+            }
+
+            submitForm() {
+                if (!this.validateCurrentStep()) {
+                    this.showStepError();
+                    return;
+                }
+
+                this.saveStepData();
+                this.showSuccess();
+            }
+
+            showSuccess() {
+                // Hide form navigation
+                document.getElementById('formNavigation').style.display = 'none';
+                
+                // Hide all steps
+                for (let i = 1; i <= this.totalSteps; i++) {
+                    document.getElementById(`step${i}`).style.display = 'none';
+                }
+                
+                // Mark all steps as completed
+                for (let i = 1; i <= this.totalSteps; i++) {
+                    document.getElementById(`step${i}Indicator`).classList.add('completed');
+                    document.getElementById(`step${i}Indicator`).classList.remove('active');
+                }
+                
+                // Update progress to 100%
+                document.getElementById('progressFill').style.width = '100%';
+                
+                // Show success message
+                document.getElementById('successMessage').style.display = 'block';
+                
+                // Log form data
+                console.log('Form submitted with data:', this.formData);
+            }
+
+            showStepError() {
+                const currentStepElement = document.getElementById(`step${this.currentStep}`);
+                const firstInvalid = currentStepElement.querySelector('.invalid');
+                
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.style.animation = 'shake 0.5s ease';
+                    setTimeout(() => {
+                        firstInvalid.style.animation = '';
+                    }, 500);
+                }
+            }
+
+            reset() {
+                this.currentStep = 1;
+                this.formData = {};
+                
+                // Reset form
+                document.getElementById('successMessage').style.display = 'none';
+                document.getElementById('formNavigation').style.display = 'flex';
+                
+                // Show first step
+                for (let i = 1; i <= this.totalSteps; i++) {
+                    const step = document.getElementById(`step${i}`);
+                    const indicator = document.getElementById(`step${i}Indicator`);
+                    
+                    step.style.display = i === 1 ? 'block' : 'none';
+                    step.classList.toggle('active', i === 1);
+                    
+                    indicator.classList.remove('completed', 'active');
+                    if (i === 1) indicator.classList.add('active');
+                }
+                
+                // Clear form fields
+                const form = document.querySelector('.form-body');
+                const inputs = form.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    } else {
+                        input.value = '';
+                    }
+                    input.classList.remove('valid', 'invalid');
+                });
+                
+                this.updateStepDisplay();
+            }
+        }
+
+        // Add shake animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            
+            input.valid {
+                border-color: #4ecdc4 !important;
+            }
+            
+            input.invalid {
+                border-color: #ff6b6b !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize form
+        const multiStepForm = new MultiStepForm();
+
+        // Global function for navigation
+        function changeStep(direction) {
+            multiStepForm.changeStep(direction);
+        }
+
+        function resetForm() {
+            multiStepForm.reset();
+        }
+    </script>
+</body>
+</html>

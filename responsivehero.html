@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Hero Section</title>
+    <style>
+        .hero{
+           height:100vh;
+           background: url(I\ Phone\ 7\ Wallpaper.jpg) center/cover no-repeat;
+           display:flex;
+           justify-content:center;
+           align-items:center;
+           color:black; 
+           text-align:center;
+           padding:20px;
+        }
+        .hero h1{
+            font-size:50px;
+        }
+        .hero p{
+            font-size:20px;
+        }
+        @media (max-width:768px){
+            .hero h1{
+                font-size: 28px;
+            }
+            .hero p{
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div>
+            <h1>Welcome To Code Sikho With Aj</h1>
+            <p>Learn Web Development Step By Step</p>
+        </div>
+    </div>
+</body>
+</html>
