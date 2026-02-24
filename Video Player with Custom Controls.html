@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Video Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+        }
+
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            background: #000;
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.5) 100%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .video-overlay {
+            opacity: 1;
+        }
+
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .video-container:hover .video-controls {
+            transform: translateY(0);
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .control-btn.active {
+            color: #667eea;
+        }
+
+        .progress-container {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+
+        .progress-buffered {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 3px;
+        }
+
+        .progress-handle {
+            position: absolute;
+            right: -8px;
+            top: -5px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-container:hover .progress-handle {
+            opacity: 1;
+        }
+
+        .time-display {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            width: 70%;
+            transition: width 0.1s ease;
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .video-container:hover .play-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .play-overlay:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .settings-menu {
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 10px;
+            padding: 10px;
+            min-width: 200px;
+            display: none;
+        }
+
+        .settings-menu.show {
+            display: block;
+        }
+
+        .setting-item {
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            font-size: 14px;
+        }
+
+        .setting-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-item.active {
+            color: #667eea;
+        }
+
+        .playlist {
+            background: white;
+            border-radius: 0 0 20px 20px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .playlist-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 5px;
+        }
+
+        .playlist-item:hover {
+            background: #f0f0f0;
+        }
+
+        .playlist-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-left: 3px solid #667eea;
+        }
+
+        .playlist-thumbnail {
+            width: 60px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 5px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .playlist-info {
+            flex: 1;
+        }
+
+        .playlist-title-text {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .playlist-duration {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .video-info {
+            background: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .video-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .video-stats {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .video-container.loading .loading-spinner {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .controls-row {
+                flex-wrap: wrap;
+            }
+            
+            .volume-slider {
+                width: 60px;
+            }
+            
+            .time-display {
+                font-size: 12px;
+                min-width: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-info">
+        <h1 class="video-title">🎬 Custom Video Player Demo</h1>
+        <div class="video-stats">
+            <div class="stat-item">
+                <span>👁️</span>
+                <span>1.2M views</span>
+            </div>
+            <div class="stat-item">
+                <span>👍</span>
+                <span>45K likes</span>
+            </div>
+            <div class="stat-item">
+                <span>💬</span>
+                <span>892 comments</span>
+            </div>
+            <div class="stat-item">
+                <span>📅</span>
+                <span>2 days ago</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="video-container" id="videoContainer">
+        <div class="video-wrapper">
+            <video id="videoPlayer">
+                <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            
+            <div class="video-overlay"></div>
+            
+            <div class="play-overlay" id="playOverlay">
+                <span id="playIcon">▶️</span>
+            </div>
+            
+            <div class="loading-spinner"></div>
+        </div>
+        
+        <div class="video-controls">
+            <div class="controls-row">
+                <button class="control-btn" id="playPauseBtn">▶️</button>
+                
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-buffered" id="progressBuffered"></div>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-handle"></div>
+                    </div>
+                </div>
+                
+                <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+                
+                <div class="volume-control">
+                    <button class="control-btn" id="volumeBtn">🔊</button>
+                    <div class="volume-slider" id="volumeSlider">
+                        <div class="volume-fill" id="volumeFill"></div>
+                    </div>
+                </div>
+                
+                <button class="control-btn" id="settingsBtn">⚙️</button>
+                <button class="control-btn" id="fullscreenBtn">⛶</button>
+            </div>
+        </div>
+        
+        <div class="settings-menu" id="settingsMenu">
+            <div class="setting-item active" data-speed="1">Normal Speed</div>
+            <div class="setting-item" data-speed="0.5">0.5x</div>
+            <div class="setting-item" data-speed="0.75">0.75x</div>
+            <div class="setting-item" data-speed="1.25">1.25x</div>
+            <div class="setting-item" data-speed="1.5">1.5x</div>
+            <div class="setting-item" data-speed="2">2x</div>
+        </div>
+    </div>
+
+    <div class="playlist">
+        <h2 class="playlist-title">📹 Related Videos</h2>
+        
+        <div class="playlist-item active" data-video="0">
+            <div class="playlist-thumbnail">🎥</div>
+            <div class="playlist-info">
+                <div class="playlist-title-text">Custom Video Player Demo</div>
+                <div class="playlist-duration">0:32</div>
+            </div>
+        </div>
+        
+        <div class="playlist-item" data-video="1">
+            <div class="playlist-thumbnail">🎬</div>
+            <div class="playlist-info">
+                <div class="playlist-title-text">Advanced Web Animation</div>
+                <div class="playlist-duration">2:45</div>
+            </div>
+        </div>
+        
+        <div class="playlist-item" data-video="2">
+            <div class="playlist-thumbnail">🎨</div>
+            <div class="playlist-info">
+                <div class="playlist-title-text">CSS Grid Layout Tutorial</div>
+                <div class="playlist-duration">5:12</div>
+            </div>
+        </div>
+        
+        <div class="playlist-item" data-video="3">
+            <div class="playlist-thumbnail">💻</div>
+            <div class="playlist-info">
+                <div class="playlist-title-text">JavaScript ES6 Features</div>
+                <div class="playlist-duration">8:30</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CustomVideoPlayer {
+            constructor() {
+                this.video = document.getElementById('videoPlayer');
+                this.container = document.getElementById('videoContainer');
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.playOverlay = document.getElementById('playOverlay');
+                this.playIcon = document.getElementById('playIcon');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressBuffered = document.getElementById('progressBuffered');
+                this.progressContainer = document.getElementById('progressContainer');
+                this.timeDisplay = document.getElementById('timeDisplay');
+                this.volumeBtn = document.getElementById('volumeBtn');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.volumeFill = document.getElementById('volumeFill');
+                this.settingsBtn = document.getElementById('settingsBtn');
+                this.settingsMenu = document.getElementById('settingsMenu');
+                this.fullscreenBtn = document.getElementById('fullscreenBtn');
+                
+                this.isPlaying = false;
+                this.isDragging = false;
+                this.currentSpeed = 1;
+                
+                this.videos = [
+                    'https://www.w3schools.com/html/mov_bbb.mp4',
+                    'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
+                    'https://sample-videos.com/video123/mp4/480/big_buck_bunny_480p_1mb.mp4',
+                    'https://sample-videos.com/video123/mp4/360/big_buck_bunny_360p_1mb.mp4'
+                ];
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.updateVolumeDisplay();
+            }
+
+            setupEventListeners() {
+                // Play/Pause controls
+                this.playPauseBtn.addEventListener('click', () => this.togglePlay());
+                this.playOverlay.addEventListener('click', () => this.togglePlay());
+                this.video.addEventListener('click', () => this.togglePlay());
+                
+                // Video events
+                this.video.addEventListener('play', () => this.onPlay());
+                this.video.addEventListener('pause', () => this.onPause());
+                this.video.addEventListener('timeupdate', () => this.updateProgress());
+                this.video.addEventListener('progress', () => this.updateBuffered());
+                this.video.addEventListener('loadedmetadata', () => this.updateTimeDisplay());
+                this.video.addEventListener('ended', () => this.onEnded());
+                
+                // Progress bar
+                this.progressContainer.addEventListener('click', (e) => this.seek(e));
+                this.progressContainer.addEventListener('mousedown', () => this.isDragging = true);
+                document.addEventListener('mousemove', (e) => this.onDrag(e));
+                document.addEventListener('mouseup', () => this.isDragging = false);
+                
+                // Volume control
+                this.volumeBtn.addEventListener('click', () => this.toggleMute());
+                this.volumeSlider.addEventListener('click', (e) => this.changeVolume(e));
+                
+                // Settings
+                this.settingsBtn.addEventListener('click', () => this.toggleSettings());
+                document.querySelectorAll('.setting-item').forEach(item => {
+                    item.addEventListener('click', () => this.changeSpeed(item));
+                });
+                
+                // Fullscreen
+                this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+                
+                // Playlist
+                document.querySelectorAll('.playlist-item').forEach(item => {
+                    item.addEventListener('click', () => this.loadVideo(item));
+                });
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+            }
+
+            togglePlay() {
+                if (this.video.paused) {
+                    this.video.play();
+                } else {
+                    this.video.pause();
+                }
+            }
+
+            onPlay() {
+                this.isPlaying = true;
+                this.playPauseBtn.textContent = '⏸️';
+                this.playIcon.textContent = '⏸️';
+            }
+
+            onPause() {
+                this.isPlaying = false;
+                this.playPauseBtn.textContent = '▶️';
+                this.playIcon.textContent = '▶️';
+            }
+
+            onEnded() {
+                this.isPlaying = false;
+                this.playPauseBtn.textContent = '▶️';
+                this.playIcon.textContent = '🔄';
+            }
+
+            updateProgress() {
+                if (!this.isDragging) {
+                    const progress = (this.video.currentTime / this.video.duration) * 100;
+                    this.progressBar.style.width = progress + '%';
+                }
+                this.updateTimeDisplay();
+            }
+
+            updateBuffered() {
+                if (this.video.buffered.length > 0) {
+                    const bufferedEnd = this.video.buffered.end(this.video.buffered.length - 1);
+                    const bufferedProgress = (bufferedEnd / this.video.duration) * 100;
+                    this.progressBuffered.style.width = bufferedProgress + '%';
+                }
+            }
+
+            updateTimeDisplay() {
+                const current = this.formatTime(this.video.currentTime);
+                const duration = this.formatTime(this.video.duration);
+                this.timeDisplay.textContent = `${current} / ${duration}`;
+            }
+
+            formatTime(seconds) {
+                if (isNaN(seconds)) return '0:00';
+                const minutes = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${minutes}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            seek(e) {
+                const rect = this.progressContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                this.video.currentTime = pos * this.video.duration;
+            }
+
+            onDrag(e) {
+                if (this.isDragging) {
+                    const rect = this.progressContainer.getBoundingClientRect();
+                    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    this.progressBar.style.width = (pos * 100) + '%';
+                    this.video.currentTime = pos * this.video.duration;
+                }
+            }
+
+            toggleMute() {
+                this.video.muted = !this.video.muted;
+                this.updateVolumeDisplay();
+            }
+
+            changeVolume(e) {
+                const rect = this.volumeSlider.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                this.video.volume = Math.max(0, Math.min(1, pos));
+                this.updateVolumeDisplay();
+            }
+
+            updateVolumeDisplay() {
+                const volume = this.video.muted ? 0 : this.video.volume;
+                this.volumeFill.style.width = (volume * 100) + '%';
+                
+                if (volume === 0 || this.video.muted) {
+                    this.volumeBtn.textContent = '🔇';
+                } else if (volume < 0.5) {
+                    this.volumeBtn.textContent = '🔉';
+                } else {
+                    this.volumeBtn.textContent = '🔊';
+                }
+            }
+
+            toggleSettings() {
+                this.settingsMenu.classList.toggle('show');
+            }
+
+            changeSpeed(item) {
+                document.querySelectorAll('.setting-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                this.currentSpeed = parseFloat(item.dataset.speed);
+                this.video.playbackRate = this.currentSpeed;
+                this.toggleSettings();
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    this.container.requestFullscreen();
+                    this.fullscreenBtn.textContent = '⛶';
+                } else {
+                    document.exitFullscreen();
+                    this.fullscreenBtn.textContent = '⛶';
+                }
+            }
+
+            loadVideo(item) {
+                const videoIndex = parseInt(item.dataset.video);
+                const videoUrl = this.videos[videoIndex];
+                
+                // Update active state
+                document.querySelectorAll('.playlist-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Load new video
+                this.container.classList.add('loading');
+                this.video.src = videoUrl;
+                this.video.load();
+                
+                this.video.addEventListener('canplay', () => {
+                    this.container.classList.remove('loading');
+                    this.video.play();
+                }, { once: true });
+            }
+
+            handleKeyboard(e) {
+                switch(e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        this.togglePlay();
+                        break;
+                    case 'ArrowLeft':
+                        this.video.currentTime -= 5;
+                        break;
+                    case 'ArrowRight':
+                        this.video.currentTime += 5;
+                        break;
+                    case 'ArrowUp':
+                        this.video.volume = Math.min(1, this.video.volume + 0.1);
+                        this.updateVolumeDisplay();
+                        break;
+                    case 'ArrowDown':
+                        this.video.volume = Math.max(0, this.video.volume - 0.1);
+                        this.updateVolumeDisplay();
+                        break;
+                    case 'f':
+                        this.toggleFullscreen();
+                        break;
+                    case 'm':
+                        this.toggleMute();
+                        break;
+                }
+            }
+        }
+
+        // Initialize video player
+        const videoPlayer = new CustomVideoPlayer();
+    </script>
+</body>
+</html>

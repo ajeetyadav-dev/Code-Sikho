@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Feed</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        .social-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .create-post {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-input-area {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .post-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .post-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .post-actions {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .post-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .post-action-btn:hover {
+            background: #f0f0f0;
+            color: #667eea;
+        }
+
+        .story-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .story-container::-webkit-scrollbar {
+            height: 0;
+        }
+
+        .story-item {
+            min-width: 120px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .story-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            padding: 3px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .story-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .story-avatar-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+
+        .story-username {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .feed-post {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+        }
+
+        .post-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .author-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .author-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .post-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .post-menu {
+            width: 35px;
+            height: 35px;
+            border: none;
+            background: transparent;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .post-menu:hover {
+            background: #f0f0f0;
+        }
+
+        .post-content {
+            padding: 0 20px 15px;
+        }
+
+        .post-text {
+            color: #333;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            font-size: 15px;
+        }
+
+        .post-image {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 60px;
+        }
+
+        .post-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            margin-bottom: 10px;
+        }
+
+        .post-likes {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .like-avatars {
+            display: flex;
+            margin-right: 5px;
+        }
+
+        .like-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            border: 2px solid white;
+            margin-left: -8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+        }
+
+        .post-comments {
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .post-comments:hover {
+            color: #333;
+        }
+
+        .post-buttons {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .post-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .post-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .post-btn.liked {
+            color: #e74c3c;
+        }
+
+        .comment-section {
+            padding: 15px 20px;
+            border-top: 1px solid #e0e0e0;
+            display: none;
+        }
+
+        .comment-section.show {
+            display: block;
+        }
+
+        .comment {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .comment-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .comment-content {
+            flex: 1;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .comment-text {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .comment-input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .comment-input:focus {
+            border-color: #667eea;
+        }
+
+        .comment-btn {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .comment-btn:hover {
+            background: #5a67d8;
+        }
+
+        .suggestions {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .suggestions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .suggestions-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .see-all {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .suggestion-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .suggestion-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .suggestion-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .suggestion-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .suggestion-mutual {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .follow-btn {
+            padding: 6px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .follow-btn:hover {
+            background: #5a67d8;
+        }
+
+        .follow-btn.following {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .social-container {
+                padding: 10px;
+            }
+            
+            .post-image {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="social-container">
+        <div class="create-post">
+            <div class="post-input-area">
+                <div class="user-avatar">AJ</div>
+                <input type="text" class="post-input" placeholder="What's on your mind?" id="postInput">
+            </div>
+            <div class="post-actions">
+                <button class="post-action-btn" onclick="addPost('text')">
+                    <span>📝</span> Text
+                </button>
+                <button class="post-action-btn" onclick="addPost('photo')">
+                    <span>📷</span> Photo
+                </button>
+                <button class="post-action-btn" onclick="addPost('video')">
+                    <span>🎥</span> Video
+                </button>
+                <button class="post-action-btn" onclick="addPost('poll')">
+                    <span>📊</span> Poll
+                </button>
+            </div>
+        </div>
+
+        <div class="story-container">
+            <div class="story-item">
+                <div class="story-avatar">
+                    <div class="story-avatar-inner">➕</div>
+                </div>
+                <div class="story-username">Your Story</div>
+            </div>
+            <div class="story-item">
+                <div class="story-avatar">
+                    <div class="story-avatar-inner">👤</div>
+                </div>
+                <div class="story-username">Aakash</div>
+            </div>
+            <div class="story-item">
+                <div class="story-avatar">
+                    <div class="story-avatar-inner">👤</div>
+                </div>
+                <div class="story-username">Ankit</div>
+            </div>
+            <div class="story-item">
+                <div class="story-avatar">
+                    <div class="story-avatar-inner">👤</div>
+                </div>
+                <div class="story-username">Aman</div>
+            </div>
+            <div class="story-item">
+                <div class="story-avatar">
+                    <div class="story-avatar-inner">👤</div>
+                </div>
+                <div class="story-username">Nitesh</div>
+            </div>
+        </div>
+
+        <div id="feedContainer">
+            <div class="feed-post">
+                <div class="post-header">
+                    <div class="post-author">
+                        <div class="author-avatar">VN</div>
+                        <div class="author-info">
+                            <div class="author-name">Vishal Nikam</div>
+                            <div class="post-time">2 hours ago</div>
+                        </div>
+                    </div>
+                    <button class="post-menu">⋯</button>
+                </div>
+                <div class="post-content">
+                    <div class="post-text">Just finished an amazing hiking trip! The views were absolutely breathtaking 🏔️ Can't wait for the next adventure!</div>
+                    <div class="post-image">🏔️</div>
+                </div>
+                <div class="post-stats">
+                    <div class="post-likes">
+                        <div class="like-avatars">
+                            <div class="like-avatar">AJ</div>
+                            <div class="like-avatar">AY</div>
+                        </div>
+                        <span>245 likes</span>
+                    </div>
+                    <div class="post-comments">32 comments</div>
+                </div>
+                <div class="post-buttons">
+                    <button class="post-btn" onclick="toggleLike(this)">
+                        <span>❤️</span> Like
+                    </button>
+                    <button class="post-btn" onclick="toggleComments(this)">
+                        <span>💬</span> Comment
+                    </button>
+                    <button class="post-btn">
+                        <span>🔗</span> Share
+                    </button>
+                </div>
+                <div class="comment-section">
+                    <div class="comment">
+                        <div class="comment-avatar">SG</div>
+                        <div class="comment-content">
+                            <div class="comment-author">Sujeet Gupta</div>
+                            <div class="comment-text">Wow, looks incredible! Where was this?</div>
+                            <div class="comment-time">1 hour ago</div>
+                        </div>
+                    </div>
+                    <div class="comment-input-area">
+                        <input type="text" class="comment-input" placeholder="Write a comment...">
+                        <button class="comment-btn">Post</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feed-post">
+                <div class="post-header">
+                    <div class="post-author">
+                        <div class="author-avatar">SJ</div>
+                        <div class="author-info">
+                            <div class="author-name">Sanjay Jaiswal</div>
+                            <div class="post-time">5 hours ago</div>
+                        </div>
+                    </div>
+                    <button class="post-menu">⋯</button>
+                </div>
+                <div class="post-content">
+                    <div class="post-text">New recipe alert! 🍝 Just made the most delicious homemade pasta. Recipe in the comments!</div>
+                </div>
+                <div class="post-stats">
+                    <div class="post-likes">
+                        <div class="like-avatars">
+                            <div class="like-avatar">SY</div>
+                        </div>
+                        <span>189 likes</span>
+                    </div>
+                    <div class="post-comments">24 comments</div>
+                </div>
+                <div class="post-buttons">
+                    <button class="post-btn" onclick="toggleLike(this)">
+                        <span>❤️</span> Like
+                    </button>
+                    <button class="post-btn" onclick="toggleComments(this)">
+                        <span>💬</span> Comment
+                    </button>
+                    <button class="post-btn">
+                        <span>🔗</span> Share
+                    </button>
+                </div>
+                <div class="comment-section">
+                    <div class="comment-input-area">
+                        <input type="text" class="comment-input" placeholder="Write a comment...">
+                        <button class="comment-btn">Post</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="suggestions">
+            <div class="suggestions-header">
+                <h3 class="suggestions-title">Suggestions For You</h3>
+                <span class="see-all">See All</span>
+            </div>
+            <div class="suggestion-item">
+                <div class="suggestion-user">
+                    <div class="suggestion-avatar">AY</div>
+                    <div class="suggestion-info">
+                        <div class="suggestion-name">Ankit Yadav</div>
+                        <div class="suggestion-mutual">12 mutual friends</div>
+                    </div>
+                </div>
+                <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+            </div>
+            <div class="suggestion-item">
+                <div class="suggestion-user">
+                    <div class="suggestion-avatar">MP</div>
+                    <div class="suggestion-info">
+                        <div class="suggestion-name">Manoj Patel</div>
+                        <div class="suggestion-mutual">8 mutual friends</div>
+                    </div>
+                </div>
+                <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+            </div>
+            <div class="suggestion-item">
+                <div class="suggestion-user">
+                    <div class="suggestion-avatar">AY</div>
+                    <div class="suggestion-info">
+                        <div class="suggestion-name">Arun Yadav</div>
+                        <div class="suggestion-mutual">5 mutual friends</div>
+                    </div>
+                </div>
+                <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SocialFeed {
+            constructor() {
+                this.posts = [];
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadMorePosts();
+            }
+
+            setupEventListeners() {
+                const postInput = document.getElementById('postInput');
+                postInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                        this.createPost(e.target.value);
+                        e.target.value = '';
+                    }
+                });
+            }
+
+            createPost(content) {
+                const post = {
+                    id: Date.now(),
+                    author: 'John Doe',
+                    avatar: 'JD',
+                    content: content,
+                    time: 'Just now',
+                    likes: 0,
+                    comments: 0,
+                    liked: false
+                };
+
+                this.addPostToFeed(post);
+                this.showNotification('Post created successfully!');
+            }
+
+            addPostToFeed(post) {
+                const feedContainer = document.getElementById('feedContainer');
+                const postElement = this.createPostElement(post);
+                feedContainer.insertBefore(postElement, feedContainer.firstChild);
+            }
+
+            createPostElement(post) {
+                const postDiv = document.createElement('div');
+                postDiv.className = 'feed-post';
+                postDiv.innerHTML = `
+                    <div class="post-header">
+                        <div class="post-author">
+                            <div class="author-avatar">${post.avatar}</div>
+                            <div class="author-info">
+                                <div class="author-name">${post.author}</div>
+                                <div class="post-time">${post.time}</div>
+                            </div>
+                        </div>
+                        <button class="post-menu">⋯</button>
+                    </div>
+                    <div class="post-content">
+                        <div class="post-text">${post.content}</div>
+                    </div>
+                    <div class="post-stats">
+                        <div class="post-likes">
+                            <span>${post.likes} likes</span>
+                        </div>
+                        <div class="post-comments">${post.comments} comments</div>
+                    </div>
+                    <div class="post-buttons">
+                        <button class="post-btn" onclick="toggleLike(this)">
+                            <span>❤️</span> Like
+                        </button>
+                        <button class="post-btn" onclick="toggleComments(this)">
+                            <span>💬</span> Comment
+                        </button>
+                        <button class="post-btn">
+                            <span>🔗</span> Share
+                        </button>
+                    </div>
+                    <div class="comment-section">
+                        <div class="comment-input-area">
+                            <input type="text" class="comment-input" placeholder="Write a comment...">
+                            <button class="comment-btn">Post</button>
+                        </div>
+                    </div>
+                `;
+                return postDiv;
+            }
+
+            loadMorePosts() {
+                // Simulate loading more posts
+                setTimeout(() => {
+                    const additionalPosts = [
+                        {
+                            author: 'Ajay Yadav',
+                            avatar: 'DB',
+                            content: 'Working on something exciting! Can\'t wait to share it with you all 🚀',
+                            time: '8 hours ago',
+                            likes: 156,
+                            comments: 18
+                        },
+                        {
+                            author: 'Riya Sharma',
+                            avatar: 'ED',
+                            content: 'Coffee and coding ☕💻 Perfect combination for a productive day!',
+                            time: '12 hours ago',
+                            likes: 234,
+                            comments: 42
+                        }
+                    ];
+
+                    additionalPosts.forEach(post => {
+                        this.addPostToFeed(post);
+                    });
+                }, 1000);
+            }
+
+            showNotification(message) {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    bottom: 30px;
+                    right: 30px;
+                    background: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                    z-index: 2000;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        }
+
+        // Initialize social feed
+        const socialFeed = new SocialFeed();
+
+        // Global functions
+        function toggleLike(button) {
+            button.classList.toggle('liked');
+            const post = button.closest('.feed-post');
+            const likesElement = post.querySelector('.post-likes span');
+            const currentLikes = parseInt(likesElement.textContent);
+            
+            if (button.classList.contains('liked')) {
+                likesElement.textContent = `${currentLikes + 1} likes`;
+                button.innerHTML = '<span>❤️</span> Liked';
+            } else {
+                likesElement.textContent = `${currentLikes - 1} likes`;
+                button.innerHTML = '<span>❤️</span> Like';
+            }
+        }
+
+        function toggleComments(button) {
+            const post = button.closest('.feed-post');
+            const commentSection = post.querySelector('.comment-section');
+            commentSection.classList.toggle('show');
+        }
+
+        function toggleFollow(button) {
+            if (button.classList.contains('following')) {
+                button.classList.remove('following');
+                button.textContent = 'Follow';
+            } else {
+                button.classList.add('following');
+                button.textContent = 'Following';
+            }
+        }
+
+        function addPost(type) {
+            const input = document.getElementById('postInput');
+            if (input.value.trim()) {
+                socialFeed.createPost(input.value);
+                input.value = '';
+            } else {
+                const messages = {
+                    'text': 'Please enter some text to post',
+                    'photo': 'Photo upload feature coming soon!',
+                    'video': 'Video upload feature coming soon!',
+                    'poll': 'Poll feature coming soon!'
+                };
+                socialFeed.showNotification(messages[type] || 'Feature coming soon!');
+            }
+        }
+
+        // Infinite scroll
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+                socialFeed.loadMorePosts();
+            }
+        });
+    </script>
+</body>
+</html>
