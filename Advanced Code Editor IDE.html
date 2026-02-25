@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor IDE - Code Sikho With AJ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --purple: #a371f7;
+            --pink: #f778ba;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .ide-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 50px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            transition: width 0.3s ease;
+            overflow: hidden;
+        }
+
+        .sidebar.expanded {
+            width: 250px;
+        }
+
+        .sidebar-item {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .sidebar-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .sidebar-tooltip {
+            position: absolute;
+            left: 50px;
+            background: var(--bg-tertiary);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        .sidebar-item:hover .sidebar-tooltip {
+            opacity: 1;
+        }
+
+        /* File Explorer */
+        .file-explorer {
+            width: 250px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: none;
+            flex-direction: column;
+        }
+
+        .file-explorer.open {
+            display: flex;
+        }
+
+        .explorer-header {
+            padding: 10px 15px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.2s ease;
+            font-size: 13px;
+            margin: 2px 0;
+        }
+
+        .file-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .file-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .file-icon {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .file-folder {
+            font-weight: 600;
+        }
+
+        .file-children {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .file-children.open {
+            display: block;
+        }
+
+        /* Main Editor Area */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            padding: 8px 15px;
+            background: var(--bg-tertiary);
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            font-size: 13px;
+            position: relative;
+        }
+
+        .tab:hover {
+            background: #2d333b;
+        }
+
+        .tab.active {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .tab.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+        }
+
+        .tab-close {
+            margin-left: 10px;
+            padding: 2px;
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        .tab-close:hover {
+            background: var(--error);
+        }
+
+        /* Editor */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            width: 50px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border);
+            padding: 15px 10px;
+            text-align: right;
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .code-editor {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            outline: none;
+            position: relative;
+        }
+
+        /* Syntax Highlighting */
+        .keyword { color: var(--accent); }
+        .string { color: var(--success); }
+        .comment { color: var(--text-secondary); font-style: italic; }
+        .function { color: var(--purple); }
+        .variable { color: var(--pink); }
+        .number { color: var(--warning); }
+        .operator { color: var(--text-primary); }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+            padding: 5px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-left, .status-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        /* Terminal */
+        .terminal {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 0;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            transition: height 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal.open {
+            height: 300px;
+        }
+
+        .terminal-header {
+            background: var(--bg-secondary);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-body {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .terminal-input {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .terminal-prompt {
+            color: var(--success);
+            margin-right: 10px;
+        }
+
+        .terminal-input-field {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        /* Minimap */
+        .minimap {
+            position: absolute;
+            right: 10px;
+            top: 50px;
+            width: 100px;
+            height: 80%;
+            background: rgba(22, 27, 34, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .minimap:hover {
+            opacity: 1;
+        }
+
+        .minimap-viewport {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 20%;
+            background: rgba(88, 166, 255, 0.2);
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+        }
+
+        /* Command Palette */
+        .command-palette {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 600px;
+            max-height: 400px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .command-palette.open {
+            opacity: 1;
+            pointer-events: all;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .command-input {
+            width: 100%;
+            padding: 15px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .command-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .command-item {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            font-size: 13px;
+        }
+
+        .command-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .command-item.selected {
+            background: var(--accent);
+            color: white;
+        }
+
+        .command-shortcut {
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Breadcrumbs */
+        .breadcrumbs {
+            background: var(--bg-tertiary);
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .breadcrumb-item {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .breadcrumb-item:hover {
+            color: var(--text-primary);
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .file-explorer {
+                display: none;
+            }
+            
+            .sidebar {
+                width: 40px;
+            }
+            
+            .minimap {
+                display: none;
+            }
+            
+            .command-palette {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ide-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-item active" onclick="toggleFileExplorer()">
+                📁
+                <span class="sidebar-tooltip">File Explorer</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleSearch()">
+                🔍
+                <span class="sidebar-tooltip">Search</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleSourceControl()">
+                📊
+                <span class="sidebar-tooltip">Source Control</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleRun()">
+                ▶️
+                <span class="sidebar-tooltip">Run and Debug</span>
+            </div>
+            <div class="sidebar-item" onclick="toggleExtensions()">
+                🧩
+                <span class="sidebar-tooltip">Extensions</span>
+            </div>
+        </aside>
+
+        <!-- File Explorer -->
+        <aside class="file-explorer" id="fileExplorer">
+            <div class="explorer-header">
+                <span>EXPLORER</span>
+                <span style="cursor: pointer;" onclick="toggleFileExplorer()">✕</span>
+            </div>
+            <div class="file-tree">
+                <div class="file-item file-folder" onclick="toggleFolder(this)">
+                    <span class="file-icon">📁</span>
+                    <span>code-sikho-with-aj</span>
+                </div>
+                <div class="file-children open">
+                    <div class="file-item file-folder" onclick="toggleFolder(this)">
+                        <span class="file-icon">📁</span>
+                        <span>src</span>
+                    </div>
+                    <div class="file-children">
+                        <div class="file-item active">
+                            <span class="file-icon">📄</span>
+                            <span>index.js</span>
+                        </div>
+                        <div class="file-item">
+                            <span class="file-icon">📄</span>
+                            <span>App.js</span>
+                        </div>
+                        <div class="file-item">
+                            <span class="file-icon">📄</span>
+                            <span>styles.css</span>
+                        </div>
+                    </div>
+                    <div class="file-item file-folder">
+                        <span class="file-icon">📁</span>
+                        <span>components</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-icon">📄</span>
+                        <span>package.json</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-icon">📄</span>
+                        <span>README.md</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <main class="main-area">
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <div class="tab active">
+                    <span>index.js</span>
+                    <span class="tab-close" onclick="closeTab(this)">✕</span>
+                </div>
+                <div class="tab">
+                    <span>App.js</span>
+                    <span class="tab-close" onclick="closeTab(this)">✕</span>
+                </div>
+                <div class="tab">
+                    <span>styles.css</span>
+                    <span class="tab-close" onclick="closeTab(this)">✕</span>
+                </div>
+            </div>
+
+            <!-- Breadcrumbs -->
+            <div class="breadcrumbs">
+                <a href="#" class="breadcrumb-item">code-sikho-with-aj</a>
+                <span class="breadcrumb-separator">›</span>
+                <a href="#" class="breadcrumb-item">src</a>
+                <span class="breadcrumb-separator">›</span>
+                <a href="#" class="breadcrumb-item">index.js</a>
+            </div>
+
+            <!-- Editor -->
+            <div class="editor-container">
+                <div class="line-numbers">
+                    1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24<br>25<br>26<br>27<br>28<br>29<br>30
+                </div>
+                <div class="code-editor" contenteditable="true" spellcheck="false">
+<span class="comment">// Code Sikho With AJ - Advanced React Component</span>
+<span class="keyword">import</span> React, { useState, useEffect } <span class="keyword">from</span> <span class="string">'react'</span>;
+<span class="keyword">import</span> { BrowserRouter <span class="keyword">as</span> Router, Route, Switch } <span class="keyword">from</span> <span class="string">'react-router-dom'</span>;
+
+<span class="keyword">const</span> <span class="function">App</span> = () => {
+  <span class="keyword">const</span> [user, setUser] = useState(<span class="keyword">null</span>);
+  <span class="keyword">const</span> [loading, setLoading] = useState(<span class="keyword">true</span>);
+
+  <span class="function">useEffect</span>(() => {
+    <span class="comment">// Fetch user data by Ajeet Yadav</span>
+    <span class="function">fetchUserData</span>()
+      .<span class="function">then</span>(data => {
+        setUser(data);
+        setLoading(<span class="keyword">false</span>);
+      })
+      .<span class="function">catch</span>(error => {
+        console.<span class="function">error</span>(<span class="string">'Error fetching user:'</span>, error);
+        setLoading(<span class="keyword">false</span>);
+      });
+  }, []);
+
+  <span class="keyword">const</span> <span class="function">fetchUserData</span> = <span class="keyword">async</span> () => {
+    <span class="keyword">const</span> response = <span class="keyword">await</span> <span class="function">fetch</span>(<span class="string">'/api/user'</span>);
+    <span class="keyword">return</span> response.<span class="function">json</span>();
+  };
+
+  <span class="keyword">if</span> (loading) {
+    <span class="keyword">return</span> <span class="keyword">&lt;</span>div<span class="operator">&gt;</span>Loading...<span class="keyword">&lt;/</span>div<span class="operator">&gt;</span>;
+  }
+
+  <span class="keyword">return</span> (
+    <span class="keyword">&lt;</span>Router<span class="operator">&gt;</span>
+      <span class="keyword">&lt;</span>div className<span class="operator">=</span><span class="string">"app"</span><span class="operator">&gt;</span>
+        <span class="keyword">&lt;</span>header<span class="operator">&gt;</span>
+          <span class="keyword">&lt;</span>h1<span class="operator">&gt;</span>Code Sikho With AJ<span class="keyword">&lt;/</span>h1<span class="operator">&gt;</span>
+          <span class="keyword">&lt;</span>p<span class="operator">&gt;</span>Created by Ajeet Yadav<span class="keyword">&lt;/</span>p<span class="operator">&gt;</span>
+        <span class="keyword">&lt;/</span>header<span class="operator">&gt;</span>
+        
+        <span class="keyword">&lt;</span>main<span class="operator">&gt;</span>
+          <span class="keyword">&lt;</span>Switch<span class="operator">&gt;</span>
+            <span class="keyword">&lt;</span>Route path<span class="operator">=</span><span class="string">"/"</span> exact component<span class="operator">=</span>{HomePage} <span class="operator">/&gt;</span>
+            <span class="keyword">&lt;</span>Route path<span class="operator">=</span><span class="string">"/about"</span> component<span class="operator">=</span>{AboutPage} <span class="operator">/&gt;</span>
+            <span class="keyword">&lt;</span>Route path<span class="operator">=</span><span class="string">"/contact"</span> component<span class="operator">=</span>{ContactPage} <span class="operator">/&gt;</span>
+          <span class="keyword">&lt;/</span>Switch<span class="operator">&gt;</span>
+        <span class="keyword">&lt;/</span>main<span class="operator">&gt;</span>
+      <span class="keyword">&lt;/</span>div<span class="operator">&gt;</span>
+    <span class="keyword">&lt;/</span>Router<span class="operator">&gt;</span>
+  );
+};
+
+<span class="keyword">export</span> <span class="keyword">default</span> App;
+                </div>
+                
+                <!-- Minimap -->
+                <div class="minimap">
+                    <div class="minimap-viewport"></div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-left">
+                    <div class="status-item">
+                        <span class="status-indicator"></span>
+                        <span>JavaScript</span>
+                    </div>
+                    <div class="status-item">
+                        <span>UTF-8</span>
+                    </div>
+                    <div class="status-item">
+                        <span>LF</span>
+                    </div>
+                </div>
+                <div class="status-right">
+                    <div class="status-item">
+                        <span>Ln 30, Col 1</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Spaces: 2</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Prettier</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Git: main</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Terminal -->
+        <div class="terminal" id="terminal">
+            <div class="terminal-header">
+                <span>TERMINAL</span>
+                <span style="cursor: pointer;" onclick="toggleTerminal()">✕</span>
+            </div>
+            <div class="terminal-body">
+                <div>$ npm install</div>
+                <div>added 1450 packages in 45s</div>
+                <div>$ npm start</div>
+                <div>Starting development server...</div>
+                <div>Server running at http://localhost:3000</div>
+                <div class="terminal-input">
+                    <span class="terminal-prompt">$</span>
+                    <input type="text" class="terminal-input-field" placeholder="Type command...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Palette -->
+    <div class="command-palette" id="commandPalette">
+        <input type="text" class="command-input" placeholder="Type a command or search..." onkeyup="filterCommands(this.value)">
+        <div class="command-list">
+            <div class="command-item selected">
+                <span>File: New File</span>
+                <span class="command-shortcut">Ctrl+N</span>
+            </div>
+            <div class="command-item">
+                <span>File: Save</span>
+                <span class="command-shortcut">Ctrl+S</span>
+            </div>
+            <div class="command-item">
+                <span>Edit: Find</span>
+                <span class="command-shortcut">Ctrl+F</span>
+            </div>
+            <div class="command-item">
+                <span>Edit: Replace</span>
+                <span class="command-shortcut">Ctrl+H</span>
+            </div>
+            <div class="command-item">
+                <span>View: Toggle Terminal</span>
+                <span class="command-shortcut">Ctrl+`</span>
+            </div>
+            <div class="command-item">
+                <span>View: Command Palette</span>
+                <span class="command-shortcut">Ctrl+Shift+P</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle file explorer
+        function toggleFileExplorer() {
+            document.getElementById('fileExplorer').classList.toggle('open');
+        }
+
+        // Toggle terminal
+        function toggleTerminal() {
+            document.getElementById('terminal').classList.toggle('open');
+        }
+
+        // Toggle folder
+        function toggleFolder(element) {
+            const children = element.nextElementSibling;
+            if (children && children.classList.contains('file-children')) {
+                children.classList.toggle('open');
+            }
+        }
+
+        // Close tab
+        function closeTab(element) {
+            element.parentElement.remove();
+        }
+
+        // Command palette
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                document.getElementById('commandPalette').classList.add('open');
+                document.querySelector('.command-input').focus();
+            }
+            if (e.key === 'Escape') {
+                document.getElementById('commandPalette').classList.remove('open');
+            }
+            if (e.ctrlKey && e.key === '`') {
+                e.preventDefault();
+                toggleTerminal();
+            }
+        });
+
+        // Filter commands
+        function filterCommands(search) {
+            const commands = document.querySelectorAll('.command-item');
+            commands.forEach(cmd => {
+                const text = cmd.textContent.toLowerCase();
+                if (text.includes(search.toLowerCase())) {
+                    cmd.style.display = 'flex';
+                } else {
+                    cmd.style.display = 'none';
+                }
+            });
+        }
+
+        // Click outside to close command palette
+        document.getElementById('commandPalette').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                e.currentTarget.classList.remove('open');
+            }
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Auto-update line numbers
+        const codeEditor = document.querySelector('.code-editor');
+        const lineNumbers = document.querySelector('.line-numbers');
+        
+        codeEditor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = codeEditor.scrollTop;
+        });
+
+        // Simulate file operations
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.addEventListener('click', function() {
+                if (!this.classList.contains('file-folder')) {
+                    document.querySelectorAll('.file-item').forEach(f => f.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update tab
+                    const fileName = this.querySelector('span:last-child').textContent;
+                    const activeTab = document.querySelector('.tab.active span:first-child');
+                    if (activeTab) {
+                        activeTab.textContent = fileName;
+                    }
+                }
+            });
+        });
+
+        // Terminal input handling
+        document.querySelector('.terminal-input-field').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const command = e.target.value;
+                const terminalBody = document.querySelector('.terminal-body');
+                const newLine = document.createElement('div');
+                newLine.textContent = `$ ${command}`;
+                terminalBody.insertBefore(newLine, terminalBody.lastElementChild);
+                e.target.value = '';
+                
+                // Simulate command response
+                setTimeout(() => {
+                    const response = document.createElement('div');
+                    response.textContent = 'Command executed successfully';
+                    response.style.color = 'var(--success)';
+                    terminalBody.insertBefore(response, terminalBody.lastElementChild);
+                    terminalBody.scrollTop = terminalBody.scrollHeight;
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>
