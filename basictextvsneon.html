@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Text vs Neon Glow Upgrade | CSS Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0a0a0a;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+            background: linear-gradient(90deg, #ff0080, #ff8c00, #40e0d0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        .hindi-title {
+            font-size: 1.8rem;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #f0f0f0;
+        }
+
+        .text-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 60px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .text-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .text-label {
+            position: absolute;
+            top: -40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #888;
+        }
+
+        /* Basic Text */
+        .basic-text {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .basic-text:hover {
+            transform: scale(1.05);
+        }
+
+        /* Neon Text */
+        .neon-text {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            animation: neonFlicker 2s infinite alternate;
+        }
+
+        .neon-text::before {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #ff0080);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientMove 3s ease infinite;
+            z-index: -1;
+            filter: blur(15px);
+            opacity: 0.8;
+        }
+
+        .neon-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #ff0080);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientMove 3s ease infinite;
+            z-index: -2;
+            filter: blur(25px);
+            opacity: 0.6;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes neonFlicker {
+            0%, 100% {
+                text-shadow: 
+                    0 0 10px rgba(255, 0, 128, 0.8),
+                    0 0 20px rgba(255, 0, 128, 0.6),
+                    0 0 30px rgba(255, 0, 128, 0.4),
+                    0 0 40px rgba(255, 140, 0, 0.4),
+                    0 0 50px rgba(255, 140, 0, 0.2),
+                    0 0 60px rgba(64, 224, 208, 0.2);
+            }
+            50% {
+                text-shadow: 
+                    0 0 5px rgba(255, 0, 128, 1),
+                    0 0 10px rgba(255, 0, 128, 0.8),
+                    0 0 15px rgba(255, 0, 128, 0.6),
+                    0 0 20px rgba(255, 140, 0, 0.6),
+                    0 0 25px rgba(255, 140, 0, 0.4),
+                    0 0 30px rgba(64, 224, 208, 0.4);
+            }
+        }
+
+        /* Animated background particles */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleFloat 10s infinite;
+        }
+
+        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; animation-delay: 1s; }
+        .particle:nth-child(3) { left: 30%; animation-delay: 2s; }
+        .particle:nth-child(4) { left: 40%; animation-delay: 3s; }
+        .particle:nth-child(5) { left: 50%; animation-delay: 4s; }
+        .particle:nth-child(6) { left: 60%; animation-delay: 5s; }
+        .particle:nth-child(7) { left: 70%; animation-delay: 6s; }
+        .particle:nth-child(8) { left: 80%; animation-delay: 7s; }
+        .particle:nth-child(9) { left: 90%; animation-delay: 8s; }
+        .particle:nth-child(10) { left: 95%; animation-delay: 9s; }
+
+        @keyframes particleFloat {
+            0% {
+                opacity: 0;
+                transform: translateY(100vh) scale(0);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(90vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(0) scale(0);
+            }
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .controls {
+            margin-top: 50px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #ff0080, #ff8c00);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(255, 0, 128, 0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .color-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+            border-color: #fff;
+        }
+
+        .color-btn.active {
+            border-color: #fff;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .color-pink { background: linear-gradient(45deg, #ff0080, #ff1493); }
+        .color-blue { background: linear-gradient(45deg, #00d4ff, #0099ff); }
+        .color-green { background: linear-gradient(45deg, #00ff88, #00cc66); }
+        .color-purple { background: linear-gradient(45deg, #b300ff, #8800ff); }
+        .color-rainbow { background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff); }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .text-container {
+                flex-direction: column;
+                gap: 40px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .hindi-title {
+                font-size: 1.5rem;
+            }
+
+            .basic-text, .neon-text {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">Basic Text vs Neon Glow Upgrade</h1>
+        <h2 class="hindi-title">ये टेक्स्ट इफेक्ट देख कर दिल धड़क जाएगा! 💖</h2>
+
+        <div class="text-container">
+            <div class="text-wrapper">
+                <div class="text-label">Basic Text</div>
+                <div class="basic-text" id="basicText">AWESOME</div>
+            </div>
+
+            <div class="text-wrapper">
+                <div class="text-label">Neon Glow Text</div>
+                <div class="neon-text" id="neonText" data-text="AWESOME">AWESOME</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="pulseBtn">Pulse Effect</button>
+            <button class="control-btn" id="glitchBtn">Glitch Effect</button>
+            <button class="control-btn" id="waveBtn">Wave Effect</button>
+        </div>
+
+        <div class="color-options">
+            <div class="color-btn color-pink active" data-color="pink"></div>
+            <div class="color-btn color-blue" data-color="blue"></div>
+            <div class="color-btn color-green" data-color="green"></div>
+            <div class="color-btn color-purple" data-color="purple"></div>
+            <div class="color-btn color-rainbow" data-color="rainbow"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const neonText = document.getElementById('neonText');
+            const basicText = document.getElementById('basicText');
+            const pulseBtn = document.getElementById('pulseBtn');
+            const glitchBtn = document.getElementById('glitchBtn');
+            const waveBtn = document.getElementById('waveBtn');
+            const colorBtns = document.querySelectorAll('.color-btn');
+
+            // Color themes
+            const colorThemes = {
+                pink: ['#ff0080', '#ff8c00', '#40e0d0'],
+                blue: ['#00d4ff', '#0099ff', '#0066cc'],
+                green: ['#00ff88', '#00cc66', '#00aa44'],
+                purple: ['#b300ff', '#8800ff', '#6600cc'],
+                rainbow: ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#8b00ff']
+            };
+
+            // Pulse effect
+            pulseBtn.addEventListener('click', function() {
+                neonText.style.animation = 'neonPulse 1s ease-in-out 3';
+                setTimeout(() => {
+                    neonText.style.animation = 'neonFlicker 2s infinite alternate';
+                }, 3000);
+            });
+
+            // Glitch effect
+            glitchBtn.addEventListener('click', function() {
+                neonText.style.animation = 'neonGlitch 0.5s ease-in-out 5';
+                setTimeout(() => {
+                    neonText.style.animation = 'neonFlicker 2s infinite alternate';
+                }, 2500);
+            });
+
+            // Wave effect
+            waveBtn.addEventListener('click', function() {
+                const text = neonText.textContent;
+                neonText.innerHTML = '';
+                
+                text.split('').forEach((char, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.style.display = 'inline-block';
+                    span.style.animation = `wave 1s ease-in-out ${index * 0.1}s`;
+                    neonText.appendChild(span);
+                });
+
+                setTimeout(() => {
+                    neonText.textContent = text;
+                    neonText.style.animation = 'neonFlicker 2s infinite alternate';
+                }, 2000);
+            });
+
+            // Color change
+            colorBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    colorBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const color = this.dataset.color;
+                    const colors = colorThemes[color];
+                    
+                    if (color === 'rainbow') {
+                        neonText.style.background = `linear-gradient(90deg, ${colors.join(', ')})`;
+                    } else {
+                        neonText.style.background = `linear-gradient(90deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
+                    }
+                    
+                    neonText.style.backgroundSize = '400% 400%';
+                    neonText.style.webkitBackgroundClip = 'text';
+                    neonText.style.backgroundClip = 'text';
+                    neonText.style.color = 'transparent';
+                });
+            });
+
+            // Create animation keyframes
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes neonPulse {
+                    0%, 100% { 
+                        transform: scale(1);
+                        filter: brightness(1);
+                    }
+                    50% { 
+                        transform: scale(1.1);
+                        filter: brightness(1.5);
+                    }
+                }
+
+                @keyframes neonGlitch {
+                    0%, 100% { 
+                        transform: translate(0);
+                        filter: hue-rotate(0deg);
+                    }
+                    20% { 
+                        transform: translate(-2px, 2px);
+                        filter: hue-rotate(90deg);
+                    }
+                    40% { 
+                        transform: translate(-2px, -2px);
+                        filter: hue-rotate(180deg);
+                    }
+                    60% { 
+                        transform: translate(2px, 2px);
+                        filter: hue-rotate(270deg);
+                    }
+                    80% { 
+                        transform: translate(2px, -2px);
+                        filter: hue-rotate(360deg);
+                    }
+                }
+
+                @keyframes wave {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-20px); }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Interactive hover effect
+            neonText.addEventListener('mousemove', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = (y - centerY) / 10;
+                const rotateY = (centerX - x) / 10;
+                
+                this.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+
+            neonText.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+
+            // Typing animation on load
+            const originalText = neonText.textContent;
+            neonText.textContent = '';
+            let charIndex = 0;
+
+            function typeText() {
+                if (charIndex < originalText.length) {
+                    neonText.textContent += originalText[charIndex];
+                    charIndex++;
+                    setTimeout(typeText, 100);
+                }
+            }
+
+            setTimeout(typeText, 500);
+        });
+    </script>
+</body>
+</html>
