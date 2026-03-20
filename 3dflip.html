@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Flip Holographic Card | Basic vs Premium</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated background grid */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 10s linear infinite;
+            z-index: -2;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+            background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00, #00ffff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientFlow 4s ease infinite;
+        }
+
+        .hindi-title {
+            font-size: 1.8rem;
+            margin-bottom: 50px;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .cards-showcase {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 80px;
+            flex-wrap: wrap;
+            margin-bottom: 50px;
+        }
+
+        .card-wrapper {
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .card-label {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #aaa;
+            white-space: nowrap;
+        }
+
+        /* Basic 2D Card */
+        .basic-card {
+            width: 300px;
+            height: 400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .basic-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .basic-card .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .basic-card .card-title {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .basic-card .card-description {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .basic-card .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .basic-card .card-price {
+            font-size: 1.5rem;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .basic-card .card-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .basic-card .card-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* 3D Flip Holographic Card */
+        .flip-card {
+            width: 300px;
+            height: 400px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .flip-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .flip-card-front {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .flip-card-back {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transform: rotateY(180deg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Holographic effect */
+        .holographic {
+            position: relative;
+            background: linear-gradient(
+                45deg,
+                #ff0080,
+                #ff8c00,
+                #40e0d0,
+                #ff0080,
+                #ff8c00,
+                #40e0d0
+            );
+            background-size: 400% 400%;
+            animation: holographicShift 3s ease infinite;
+        }
+
+        .holographic::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.4),
+                transparent
+            );
+            animation: holographicShine 3s infinite;
+        }
+
+        @keyframes holographicShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes holographicShine {
+            0% { left: -100%; }
+            20%, 100% { left: 100%; }
+        }
+
+        .flip-card-front .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: iconFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes iconFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .flip-card-front .card-title {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .flip-card-front .card-description {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .flip-card-front .card-features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .flip-card-front .card-features li {
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .flip-card-front .card-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .flip-card-back .premium-badge {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: badgeRotate 4s linear infinite;
+        }
+
+        @keyframes badgeRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .flip-card-back .premium-title {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .flip-card-back .premium-text {
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* Control buttons */
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .control-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 0, 255, 0.4);
+        }
+
+        /* Floating particles */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleRise 8s infinite;
+        }
+
+        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; animation-delay: 1s; }
+        .particle:nth-child(3) { left: 30%; animation-delay: 2s; }
+        .particle:nth-child(4) { left: 40%; animation-delay: 3s; }
+        .particle:nth-child(5) { left: 50%; animation-delay: 4s; }
+        .particle:nth-child(6) { left: 60%; animation-delay: 5s; }
+        .particle:nth-child(7) { left: 70%; animation-delay: 6s; }
+        .particle:nth-child(8) { left: 80%; animation-delay: 7s; }
+
+        @keyframes particleRise {
+            0% {
+                opacity: 0;
+                transform: translateY(100vh) scale(0);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(90vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(0) scale(0);
+            }
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .cards-showcase {
+                flex-direction: column;
+                gap: 60px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .hindi-title {
+                font-size: 1.5rem;
+            }
+
+            .basic-card, .flip-card {
+                width: 250px;
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">3D Flip Holographic Card</h1>
+        <h2 class="hindi-title">ये कार्ड देख कर मन ही मन कर लोगे "वाउ"! 🤯</h2>
+
+        <div class="cards-showcase">
+            <div class="card-wrapper">
+                <div class="card-label">Basic 2D Card</div>
+                <div class="basic-card">
+                    <div>
+                        <div class="card-icon">💎</div>
+                        <h3 class="card-title">Standard Plan</h3>
+                        <p class="card-description">Get started with our basic features and essential tools for your needs.</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="card-price">$9/mo</span>
+                        <button class="card-button">Select</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-wrapper">
+                <div class="card-label">Premium 3D Card</div>
+                <div class="flip-card" id="flipCard">
+                    <div class="flip-card-face flip-card-front holographic">
+                        <div>
+                            <div class="card-icon">🚀</div>
+                            <h3 class="card-title">Premium Plan</h3>
+                            <p class="card-description">Unlock the full potential with advanced features and priority support.</p>
+                            <ul class="card-features">
+                                <li>Unlimited Access</li>
+                                <li>Priority Support</li>
+                                <li>Advanced Analytics</li>
+                                <li>Custom Integrations</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <span class="card-price">$29/mo</span>
+                            <button class="card-button">Upgrade</button>
+                        </div>
+                    </div>
+                    <div class="flip-card-face flip-card-back holographic">
+                        <div class="premium-badge">👑</div>
+                        <h3 class="premium-title">Premium Unlocked!</h3>
+                        <p class="premium-text">Welcome to the elite experience. You now have access to all premium features and exclusive benefits.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="flipBtn">Flip Card</button>
+            <button class="control-btn" id="autoFlipBtn">Auto Flip</button>
+            <button class="control-btn" id="glitchBtn">Glitch Effect</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const flipCard = document.getElementById('flipCard');
+            const flipBtn = document.getElementById('flipBtn');
+            const autoFlipBtn = document.getElementById('autoFlipBtn');
+            const glitchBtn = document.getElementById('glitchBtn');
+            
+            let autoFlipInterval = null;
+            let isAutoFlipping = false;
+
+            // Manual flip
+            flipBtn.addEventListener('click', function() {
+                flipCard.classList.toggle('flipped');
+            });
+
+            // Auto flip
+            autoFlipBtn.addEventListener('click', function() {
+                if (isAutoFlipping) {
+                    clearInterval(autoFlipInterval);
+                    autoFlipBtn.textContent = 'Auto Flip';
+                    isAutoFlipping = false;
+                } else {
+                    autoFlipInterval = setInterval(() => {
+                        flipCard.classList.toggle('flipped');
+                    }, 2000);
+                    autoFlipBtn.textContent = 'Stop Auto Flip';
+                    isAutoFlipping = true;
+                }
+            });
+
+            // Glitch effect
+            glitchBtn.addEventListener('click', function() {
+                flipCard.style.animation = 'glitch 0.5s ease-in-out 3';
+                setTimeout(() => {
+                    flipCard.style.animation = '';
+                }, 1500);
+            });
+
+            // Click on card to flip
+            flipCard.addEventListener('click', function() {
+                if (!isAutoFlipping) {
+                    this.classList.toggle('flipped');
+                }
+            });
+
+            // Create glitch animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes glitch {
+                    0%, 100% { 
+                        transform: translate(0);
+                        filter: hue-rotate(0deg);
+                    }
+                    20% { 
+                        transform: translate(-5px, 5px);
+                        filter: hue-rotate(90deg) saturate(2);
+                    }
+                    40% { 
+                        transform: translate(-5px, -5px);
+                        filter: hue-rotate(180deg) saturate(0.5);
+                    }
+                    60% { 
+                        transform: translate(5px, 5px);
+                        filter: hue-rotate(270deg) saturate(1.5);
+                    }
+                    80% { 
+                        transform: translate(5px, -5px);
+                        filter: hue-rotate(360deg) saturate(1);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Add interactive hover effect
+            flipCard.addEventListener('mousemove', function(e) {
+                if (!isAutoFlipping) {
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    const rotateX = (y - centerY) / 10;
+                    const rotateY = (centerX - x) / 10;
+                    
+                    if (!this.classList.contains('flipped')) {
+                        this.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                    } else {
+                        this.style.transform = `perspective(1000px) rotateY(180deg) rotateX(${-rotateX}deg) rotateY(${-rotateY}deg)`;
+                    }
+                }
+            });
+
+            flipCard.addEventListener('mouseleave', function() {
+                if (!isAutoFlipping) {
+                    if (this.classList.contains('flipped')) {
+                        this.style.transform = 'rotateY(180deg)';
+                    } else {
+                        this.style.transform = 'rotateY(0deg)';
+                    }
+                }
+            });
+
+            // Add ripple effect to buttons
+            const buttons = document.querySelectorAll('.card-button, .control-btn');
+            
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    ripple.style.position = 'absolute';
+                    ripple.style.borderRadius = '50%';
+                    ripple.style.background = 'rgba(255, 255, 255, 0.5)';
+                    ripple.style.transform = 'scale(0)';
+                    ripple.style.animation = 'rippleEffect 0.6s ease-out';
+                    ripple.style.pointerEvents = 'none';
+                    
+                    this.style.position = 'relative';
+                    this.style.overflow = 'hidden';
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
+
+            // Create ripple effect animation
+            const rippleStyle = document.createElement('style');
+            rippleStyle.textContent = `
+                @keyframes rippleEffect {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(rippleStyle);
+        });
+    </script>
+</body>
+</html>
