@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Animation Card Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated gradient background */
+        .bg-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            opacity: 0.1;
+            z-index: -2;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+            z-index: -1;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: #ff006e;
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: #8338ec;
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: #3a86ff;
+            top: 50%;
+            left: 50%;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -100px) scale(1.1); }
+            50% { transform: translate(-100px, 100px) scale(0.9); }
+            75% { transform: translate(50px, 50px) scale(1.05); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            padding: 40px 20px;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .main-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 400;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+
+        /* Basic Static Card */
+        .basic-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .basic-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-right: 20px;
+        }
+
+        .card-title-section h3 {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .card-title-section p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .card-features li {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+        }
+
+        .card-features li:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: #667eea;
+            font-size: 12px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .price-period {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 400;
+        }
+
+        .btn-basic {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-basic:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Advanced Animated Card */
+        .advanced-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .advanced-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff, #06ffa5);
+            background-size: 300% 300%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: -1;
+        }
+
+        .advanced-card:hover::before {
+            opacity: 0.1;
+            animation: gradientMove 3s ease infinite;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .advanced-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(131, 56, 236, 0.3);
+            border-color: rgba(131, 56, 236, 0.3);
+        }
+
+        .advanced-card .card-icon {
+            background: linear-gradient(135deg, #ff006e, #8338ec);
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(131, 56, 236, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(131, 56, 236, 0); }
+        }
+
+        .advanced-card .check-icon {
+            background: rgba(255, 0, 110, 0.2);
+            color: #ff006e;
+            animation: checkBounce 1s ease-in-out infinite;
+        }
+
+        .advanced-card .check-icon:nth-child(2) { animation-delay: 0.1s; }
+        .advanced-card .check-icon:nth-child(3) { animation-delay: 0.2s; }
+        .advanced-card .check-icon:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes checkBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .btn-advanced {
+            background: linear-gradient(135deg, #ff006e, #8338ec);
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-advanced::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-advanced:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-advanced:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.4);
+        }
+
+        /* Popular Badge */
+        .popular-badge {
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            animation: badgeShine 2s ease-in-out infinite;
+        }
+
+        @keyframes badgeShine {
+            0%, 100% { box-shadow: 0 0 20px rgba(240, 147, 251, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(240, 147, 251, 0.8); }
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .control-panel {
+                padding: 20px;
+            }
+
+            .control-btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="main-title">Animation Card Showcase</h1>
+            <p class="subtitle">Experience the difference between static and interactive design</p>
+        </div>
+
+        <div class="cards-grid">
+            <!-- Basic Static Card -->
+            <div class="basic-card">
+                <div class="card-header">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title-section">
+                        <h3>Basic Plan</h3>
+                        <p>Perfect for getting started</p>
+                    </div>
+                </div>
+
+                <ul class="card-features">
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>10GB Storage Space</span>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>Basic Support</span>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>Standard Analytics</span>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>Mobile App Access</span>
+                    </li>
+                </ul>
+
+                <div class="card-footer">
+                    <div>
+                        <span class="price">$9</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <button class="btn-basic" onclick="selectPlan('basic')">Select Plan</button>
+                </div>
+            </div>
+
+            <!-- Advanced Animated Card -->
+            <div class="advanced-card" id="advancedCard">
+                <div class="popular-badge">MOST POPULAR</div>
+                
+                <div class="card-header">
+                    <div class="card-icon">🚀</div>
+                    <div class="card-title-section">
+                        <h3>Pro Plan</h3>
+                        <p>Unlock premium features</p>
+                    </div>
+                </div>
+
+                <ul class="card-features">
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>Unlimited Storage</span>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>Priority Support 24/7</span>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>Advanced Analytics & AI</span>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <span>API Access & Integrations</span>
+                    </li>
+                </ul>
+
+                <div class="card-footer">
+                    <div>
+                        <span class="price">$29</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <button class="btn-advanced" onclick="selectPlan('pro')">Upgrade Now</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <button class="control-btn" onclick="toggleAnimation('pulse')">Pulse Effect</button>
+            <button class="control-btn" onclick="toggleAnimation('glow')">Glow Effect</button>
+            <button class="control-btn" onclick="toggleAnimation('shake')">Shake Effect</button>
+            <button class="control-btn" onclick="toggleAnimation('rotate')">Rotate Effect</button>
+            <button class="control-btn" onclick="resetAnimation()">Reset All</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-icon">✓</div>
+        <span id="toastMessage">Action completed successfully!</span>
+    </div>
+
+    <script>
+        // Animation control
+        let currentAnimation = null;
+        const advancedCard = document.getElementById('advancedCard');
+        const controlBtns = document.querySelectorAll('.control-btn');
+
+        function toggleAnimation(type) {
+            // Remove existing animation
+            if (currentAnimation) {
+                advancedCard.style.animation = '';
+            }
+
+            // Remove active class from all buttons
+            controlBtns.forEach(btn => btn.classList.remove('active'));
+
+            // Add new animation
+            switch(type) {
+                case 'pulse':
+                    advancedCard.style.animation = 'cardPulse 1.5s ease-in-out infinite';
+                    event.target.classList.add('active');
+                    break;
+                case 'glow':
+                    advancedCard.style.animation = 'cardGlow 2s ease-in-out infinite';
+                    event.target.classList.add('active');
+                    break;
+                case 'shake':
+                    advancedCard.style.animation = 'cardShake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        advancedCard.style.animation = '';
+                    }, 500);
+                    break;
+                case 'rotate':
+                    advancedCard.style.animation = 'cardRotate 2s ease-in-out';
+                    setTimeout(() => {
+                        advancedCard.style.animation = '';
+                    }, 2000);
+                    break;
+            }
+            currentAnimation = type;
+        }
+
+        function resetAnimation() {
+            advancedCard.style.animation = '';
+            controlBtns.forEach(btn => btn.classList.remove('active'));
+            currentAnimation = null;
+            showToast('All animations reset');
+        }
+
+        // Plan selection
+        function selectPlan(plan) {
+            if (plan === 'basic') {
+                showToast('Basic Plan selected - $9/month');
+            } else if (plan === 'pro') {
+                showToast('Pro Plan selected - $29/month');
+                
+                // Add special animation for pro selection
+                advancedCard.style.animation = 'successPulse 0.6s ease';
+                setTimeout(() => {
+                    advancedCard.style.animation = currentAnimation ? 
+                        getAnimationString(currentAnimation) : '';
+                }, 600);
+            }
+        }
+
+        // Toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function getAnimationString(type) {
+            switch(type) {
+                case 'pulse': return 'cardPulse 1.5s ease-in-out infinite';
+                case 'glow': return 'cardGlow 2s ease-in-out infinite';
+                default: return '';
+            }
+        }
+
+        // Create animation keyframes
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes cardPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+
+            @keyframes cardGlow {
+                0%, 100% { 
+                    box-shadow: 0 0 20px rgba(131, 56, 236, 0.3);
+                    border-color: rgba(131, 56, 236, 0.3);
+                }
+                50% { 
+                    box-shadow: 0 0 40px rgba(131, 56, 236, 0.6);
+                    border-color: rgba(131, 56, 236, 0.6);
+                }
+            }
+
+            @keyframes cardShake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+            }
+
+            @keyframes cardRotate {
+                0% { transform: rotateY(0deg); }
+                50% { transform: rotateY(180deg); }
+                100% { transform: rotateY(360deg); }
+            }
+
+            @keyframes successPulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); box-shadow: 0 0 50px rgba(255, 0, 110, 0.6); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Interactive card tilt effect
+        advancedCard.addEventListener('mousemove', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const rotateX = (y - centerY) / 15;
+            const rotateY = (centerX - x) / 15;
+            
+            if (!currentAnimation || currentAnimation === 'glow') {
+                this.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            }
+        });
+
+        advancedCard.addEventListener('mouseleave', function() {
+            if (!currentAnimation) {
+                this.style.transform = '';
+            } else if (currentAnimation === 'glow') {
+                this.style.transform = '';
+                this.style.animation = 'cardGlow 2s ease-in-out infinite';
+            }
+        });
+
+        // Auto-rotate popular badge
+        const badge = document.querySelector('.popular-badge');
+        let badgeRotation = 0;
+        setInterval(() => {
+            badgeRotation += 1;
+            badge.style.transform = `rotate(${Math.sin(badgeRotation * 0.05) * 5}deg)`;
+        }, 50);
+
+        // Add ripple effect to buttons
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.style.position = 'absolute';
+                ripple.style.borderRadius = '50%';
+                ripple.style.background = 'rgba(255, 255, 255, 0.5)';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'rippleEffect 0.6s ease-out';
+                ripple.style.pointerEvents = 'none';
+                
+                this.style.position = 'relative';
+                this.style.overflow = 'hidden';
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Add ripple effect animation
+        const rippleStyle = document.createElement('style');
+        rippleStyle.textContent = `
+            @keyframes rippleEffect {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(rippleStyle);
+    </script>
+</body>
+</html>
