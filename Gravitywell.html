@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravity Well</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700;900&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --accent: #00e5c8; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#050510;
+    overflow:hidden;
+    height:100vh;width:100vw;
+    cursor:none;
+    font-family:'Space Grotesk',sans-serif;
+    color:#f0ece4;
+  }
+  body::after{
+    content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse at 50% 50%,transparent 35%,rgba(5,5,16,0.65) 100%);
+    pointer-events:none;z-index:3;
+  }
+  canvas{position:fixed;inset:0;width:100%;height:100%;z-index:1}
+  .cr{
+    position:fixed;width:30px;height:30px;
+    border:1.5px solid rgba(0,229,200,0.45);border-radius:50%;
+    pointer-events:none;z-index:200;transform:translate(-50%,-50%);
+    transition:width .25s,height .25s,border-color .3s;
+  }
+  .cd{
+    position:fixed;width:5px;height:5px;
+    background:var(--accent);border-radius:50%;
+    pointer-events:none;z-index:201;transform:translate(-50%,-50%);
+    box-shadow:0 0 10px rgba(0,229,200,0.5);
+    transition:background .3s,box-shadow .3s;
+  }
+  @media(hover:none){.cr,.cd{display:none}body{cursor:auto}}
+  .ui{position:fixed;z-index:50;pointer-events:none}
+  .ui>*{pointer-events:auto}
+  .title{bottom:48px;left:48px;pointer-events:none!important}
+  .title h1{
+    font-family:'Outfit',sans-serif;font-weight:900;
+    font-size:clamp(38px,7vw,72px);letter-spacing:-3px;line-height:.92;
+  }
+  .title h1 em{font-style:normal;color:var(--accent);transition:color .4s}
+  .title p{margin-top:14px;font-size:13px;color:rgba(240,236,228,.18);line-height:1.7;max-width:310px}
+  .stats{top:28px;right:36px;text-align:right;pointer-events:none!important}
+  .st{margin-bottom:14px}
+  .sl{font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(240,236,228,.13);margin-bottom:1px}
+  .sv{font-family:'Outfit',sans-serif;font-size:20px;font-weight:200;color:rgba(240,236,228,.45)}
+  .sv b{font-weight:400;color:var(--accent);transition:color .4s}
+  .modes{top:28px;left:36px;display:flex;flex-direction:column;gap:6px}
+  .mb{
+    padding:7px 14px;border-radius:8px;
+    font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;
+    letter-spacing:1.5px;text-transform:uppercase;
+    background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);
+    color:rgba(240,236,228,.22);cursor:none;transition:all .25s;outline:none;
+  }
+  .mb:focus-visible{box-shadow:0 0 0 2px var(--accent)}
+  .mb.on{background:rgba(0,229,200,.07);border-color:rgba(0,229,200,.2);color:var(--accent)}
+  .mb:hover:not(.on){background:rgba(0,229,200,.03);color:rgba(240,236,228,.4)}
+  .hint{bottom:52px;right:48px;font-size:10px;color:rgba(240,236,228,.12);letter-spacing:2px;text-transform:uppercase;pointer-events:none!important}
+  @media(max-width:700px){
+    .title{left:20px;bottom:24px}.title p{display:none}
+    .stats{right:16px;top:16px}.modes{left:16px;top:16px}.hint{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="cr" id="cr"></div>
+<div class="cd" id="cd"></div>
+
+<div class="ui title">
+  <h1>Gravity<br><em>Well</em></h1>
+  <p>Move to warp the field. Click to unleash shockwaves. Switch force modes to reshape reality.</p>
+</div>
+<div class="ui stats">
+  <div class="st"><div class="sl">Force</div><div class="sv" id="sf"><b>0.0</b></div></div>
+  <div class="st"><div class="sl">Displaced</div><div class="sv" id="sd"><b>0</b></div></div>
+  <div class="st"><div class="sl">Shockwaves</div><div class="sv" id="sw"><b>0</b></div></div>
+  <div class="st"><div class="sl">Orbiting</div><div class="sv" id="so"><b>35</b></div></div>
+</div>
+<div class="ui modes" id="modes">
+  <button class="mb on" data-m="repel">Repel</button>
+  <button class="mb" data-m="attract">Attract</button>
+  <button class="mb" data-m="vortex">Vortex</button>
+  <button class="mb" data-m="wave">Ripple</button>
+</div>
+<div class="ui hint">Click anywhere for shockwave</div>
+
+<script>
+/* ── Setup ── */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const crEl = document.getElementById('cr');
+const cdEl = document.getElementById('cd');
+const sfEl = document.getElementById('sf');
+const sdEl = document.getElementById('sd');
+const swEl = document.getElementById('sw');
+let W, H;
+
+/* ── Mode colors ── */
+const MC = {
+  repel:   { r:0,   g:229, b:200, hex:'#00e5c8' },
+  attract: { r:255, g:200, b:50,  hex:'#ffc832' },
+  vortex:  { r:200, g:130, b:255, hex:'#c882ff' },
+  wave:    { r:0,   g:195, b:255, hex:'#00c3ff' }
+};
+let mode = 'repel';
+let mc = MC.repel;
+
+function setMode(m) {
+  mode = m;
+  mc = MC[m];
+  document.documentElement.style.setProperty('--accent', mc.hex);
+  cdEl.style.background = mc.hex;
+  cdEl.style.boxShadow = `0 0 10px rgba(${mc.r},${mc.g},${mc.b},0.5)`;
+  crEl.style.borderColor = `rgba(${mc.r},${mc.g},${mc.b},0.45)`;
+  document.querySelectorAll('.mb').forEach(b => {
+    b.classList.toggle('on', b.dataset.m === m);
+    if (b.dataset.m === m) {
+      b.style.background = `rgba(${mc.r},${mc.g},${mc.b},0.07)`;
+      b.style.borderColor = `rgba(${mc.r},${mc.g},${mc.b},0.2)`;
+      b.style.color = mc.hex;
+    } else {
+      b.style.background = '';
+      b.style.borderColor = '';
+      b.style.color = '';
+    }
+  });
+}
+
+document.getElementById('modes').addEventListener('click', e => {
+  const btn = e.target.closest('.mb');
+  if (btn) setMode(btn.dataset.m);
+});
+document.addEventListener('keydown', e => {
+  const map = {'1':'repel','2':'attract','3':'vortex','4':'wave'};
+  if (map[e.key]) setMode(map[e.key]);
+});
+
+/* ── Mouse state ── */
+let mx = -9999, my = -9999;
+let smx = -9999, smy = -9999;
+let cdx = -9999, cdy = -9999, crx = -9999, cry = -9999;
+const TRAIL = 28;
+let trail = [];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+document.addEventListener('touchmove', e => {
+  mx = e.touches[0].clientX; my = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('click', e => {
+  if (e.target.closest('.modes')) return;
+  shocks.push({ x: e.clientX, y: e.clientY, radius: 0, str: 7, w: 50 });
+  waveCount++;
+});
+document.addEventListener('touchstart', e => {
+  if (e.target.closest('.modes')) return;
+  shocks.push({ x: e.touches[0].clientX, y: e.touches[0].clientY, radius: 0, str: 7, w: 50 });
+  waveCount++;
+}, { passive: true });
+
+/* ── Dot grid ── */
+const SP = 25;
+let dots = [], gCols = 0, gRows = 0;
+
+function buildGrid(anim) {
+  dots = [];
+  gCols = Math.ceil(W / SP) + 2;
+  gRows = Math.ceil(H / SP) + 2;
+  const ox = (W - (gCols - 1) * SP) / 2;
+  const oy = (H - (gRows - 1) * SP) / 2;
+  for (let r = 0; r < gRows; r++) {
+    for (let c = 0; c < gCols; c++) {
+      const rx = ox + c * SP, ry = oy + r * SP;
+      dots.push({
+        rx, ry,
+        x: anim ? rx + (Math.random() - .5) * 500 : rx,
+        y: anim ? ry + (Math.random() - .5) * 500 : ry,
+        vx: 0, vy: 0, c, r
+      });
+    }
+  }
+}
+
+function gd(c, r) {
+  if (c < 0 || c >= gCols || r < 0 || r >= gRows) return null;
+  return dots[r * gCols + c];
+}
+
+/* ── Shockwaves ── */
+let shocks = [], waveCount = 0;
+
+/* ── Orbit particles ── */
+const ON = 40;
+let orbits = [];
+function initOrbits() {
+  orbits = [];
+  for (let i = 0; i < ON; i++) {
+    const a = 65 + Math.random() * 200;
+    orbits.push({
+      a, b: a * (.3 + Math.random() * .6),
+      ang: Math.random() * Math.PI * 2,
+      spd: (.15 + Math.random() * .9) * (Math.random() < .5 ? 1 : -1) * .007,
+      sz: .8 + Math.random() * 2.5,
+      hue: Math.random() < .55 ? 168 : 18,
+      al: .25 + Math.random() * .5
+    });
+  }
+}
+initOrbits();
+
+/* ── 3D wireframes ── */
+const phi = (1 + Math.sqrt(5)) / 2;
+const il = Math.sqrt(1 + phi * phi);
+const iV = [[0,1,phi],[0,-1,phi],[0,1,-phi],[0,-1,-phi],[1,phi,0],[-1,phi,0],[1,-phi,0],[-1,-phi,0],[phi,0,1],[-phi,0,1],[phi,0,-1],[-phi,0,-1]].map(v=>[v[0]/il,v[1]/il,v[2]/il]);
+const iE = [[0,1],[0,4],[0,5],[0,8],[0,9],[1,6],[1,7],[1,8],[1,9],[2,3],[2,4],[2,5],[2,10],[2,11],[3,6],[3,7],[3,10],[3,11],[4,5],[4,8],[4,10],[5,9],[5,11],[6,7],[6,8],[6,10],[7,9],[7,11],[8,10],[9,11]];
+const oV = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const oE = [[0,2],[0,3],[0,4],[0,5],[1,2],[1,3],[1,4],[1,5],[2,4],[2,5],[3,4],[3,5]];
+
+/* Dodecahedron - more impressive */
+const dv = [];
+for (let i = -1; i <= 1; i += 2)
+  for (let j = -1; j <= 1; j += 2)
+    for (let k = -1; k <= 1; k += 2)
+      dv.push([i, j, k]);
+const ip = 1/phi;
+for (let i = -1; i <= 1; i += 2)
+  for (let j = -1; j <= 1; j += 2) {
+    dv.push([0, i*ip, j*phi]);
+    dv.push([i*ip, j*phi, 0]);
+    dv.push([j*phi, 0, i*ip]);
+  }
+const dl = Math.sqrt(3);
+const dV = dv.map(v => [v[0]/dl, v[1]/dl, v[2]/dl]);
+const dE = [
+  [0,8],[0,10],[0,16],[1,9],[1,11],[1,17],[2,12],[2,14],[2,18],
+  [3,13],[3,15],[3,19],[4,8],[4,9],[4,12],[4,13],[5,10],[5,11],[5,14],[5,15],
+  [6,16],[6,17],[6,18],[6,19],[7,8],[7,10],[7,12],[7,13],[8,9],
+  [10,11],[12,14],[13,15],[16,18],[17,19]
+];
+
+function drawShape(verts, edges, cx, cy, sc, rx, ry, rz, cr, cg, cb) {
+  const proj = verts.map(v => {
+    let [x,y,z] = v;
+    let y2 = y*Math.cos(rx)-z*Math.sin(rx), z2 = y*Math.sin(rx)+z*Math.cos(rx);
+    let x2 = x*Math.cos(ry)+z2*Math.sin(ry), z3 = -x*Math.sin(ry)+z2*Math.cos(ry);
+    let x3 = x2*Math.cos(rz)-y2*Math.sin(rz), y3 = x2*Math.sin(rz)+y2*Math.cos(rz);
+    return { sx:cx+x3*sc, sy:cy+y3*sc, z:z3 };
+  });
+  ctx.lineWidth = .6;
+  for (const [a,b] of edges) {
+    const pa = proj[a], pb = proj[b];
+    const az = (pa.z+pb.z)/2;
+    const al = .03 + Math.max(0, az+1)/2*.07;
+    ctx.beginPath();
+    ctx.moveTo(pa.sx, pa.sy);
+    ctx.lineTo(pb.sx, pb.sy);
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${al.toFixed(3)})`;
+    ctx.stroke();
+  }
+}
+
+/* ── Resize ── */
+let firstLoad = true;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  buildGrid(firstLoad);
+  firstLoad = false;
+}
+resize();
+window.addEventListener('resize', resize);
+
+/* ── Physics ── */
+const SK = .022, DMP = .92, MRAD = 170, MSTR = 10;
+
+function physics() {
+  let disp = 0, tf = 0;
+  const now = performance.now();
+  for (const d of dots) {
+    d.vx += (d.rx - d.x) * SK;
+    d.vy += (d.ry - d.y) * SK;
+    const dx = smx - d.x, dy = smy - d.y;
+    const dist = Math.max(1, Math.hypot(dx, dy));
+    if (dist < MRAD) {
+      const f = (1 - dist / MRAD) * MSTR;
+      const nx = dx / dist, ny = dy / dist;
+      tf += f;
+      if (mode === 'repel') { d.vx -= nx*f; d.vy -= ny*f; }
+      else if (mode === 'attract') { d.vx += nx*f*.5; d.vy += ny*f*.5; }
+      else if (mode === 'vortex') { d.vx += -ny*f*.9+nx*f*.08; d.vy += nx*f*.9+ny*f*.08; }
+      else { const w = Math.sin(dist*.055-now*.004)*f*.6; d.vx -= nx*w; d.vy -= ny*w; }
+    }
+    for (const s of shocks) {
+      const sdx = d.x-s.x, sdy = d.y-s.y, sd = Math.max(1,Math.hypot(sdx,sdy));
+      const rd = Math.abs(sd-s.radius);
+      if (rd < s.w) { const sf = (1-rd/s.w)*s.str; d.vx += (sdx/sd)*sf; d.vy += (sdy/sd)*sf; }
+    }
+    d.vx *= DMP; d.vy *= DMP; d.x += d.vx; d.y += d.vy;
+    if (Math.hypot(d.x-d.rx, d.y-d.ry) > 3) disp++;
+  }
+  for (let i = shocks.length-1; i >= 0; i--) {
+    shocks[i].radius += 5.5;
+    shocks[i].str *= .965;
+    if (shocks[i].str < .04) shocks.splice(i, 1);
+  }
+  for (const o of orbits) o.ang += o.spd;
+  if (mx > -999) { trail.unshift({x:mx,y:my}); if (trail.length > TRAIL) trail.pop(); }
+  return { disp, tf };
+}
+
+/* ── Draw ── */
+function draw(st) {
+  ctx.clearRect(0, 0, W, H);
+  const t = performance.now() * .001;
+  const {r: cr, g: cg, b: cb} = mc;
+
+  /* Wireframe shapes */
+  const tiltX = (smy/H-.5)*.5, tiltY = (smx/W-.5)*.5;
+  drawShape(dV, dE, W*.8, H*.22, 75, t*.22+tiltX, t*.18+tiltY, t*.08, cr, cg, cb);
+  drawShape(iV, iE, W*.15, H*.8, 65, -t*.2+tiltX, -t*.28+tiltY, 0, cr, cg, cb);
+  drawShape(oV, oE, W*.55, H*.88, 40, t*.35, -t*.15+tiltX, tiltY*.5,
+    Math.min(255,cr+80), Math.min(255,cg+40), Math.min(255,cb+40));
+
+  /* Grid connections (batched) */
+  ctx.beginPath();
+  ctx.lineWidth = .5;
+  for (const d of dots) {
+    const dp = Math.hypot(d.x-d.rx, d.y-d.ry);
+    if (dp < 2) continue;
+    const rt = gd(d.c+1, d.r);
+    if (rt) { ctx.moveTo(d.x, d.y); ctx.lineTo(rt.x, rt.y); }
+    const bt = gd(d.c, d.r+1);
+    if (bt) { ctx.moveTo(d.x, d.y); ctx.lineTo(bt.x, bt.y); }
+  }
+  ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.055)`;
+  ctx.stroke();
+
+  /* Base dots */
+  ctx.fillStyle = `rgba(${cr},${cg},${cb},0.08)`;
+  ctx.beginPath();
+  for (const d of dots) {
+    const dp = Math.hypot(d.x-d.rx, d.y-d.ry);
+    if (dp < 2) { ctx.moveTo(d.x+.9, d.y); ctx.arc(d.x, d.y, .9, 0, Math.PI*2); }
+  }
+  ctx.fill();
+
+  /* Displaced dots - accent */
+  ctx.fillStyle = `rgba(${cr},${cg},${cb},0.45)`;
+  ctx.beginPath();
+  for (const d of dots) {
+    const dp = Math.hypot(d.x-d.rx, d.y-d.ry);
+    if (dp >= 2 && dp < 18) {
+      const sz = 1 + dp * .08;
+      ctx.moveTo(d.x+sz, d.y); ctx.arc(d.x, d.y, sz, 0, Math.PI*2);
+    }
+  }
+  ctx.fill();
+
+  /* Heavy displaced - bright glow */
+  ctx.fillStyle = `rgba(${Math.min(255,cr+120)},${Math.min(255,cg+80)},${Math.min(255,cb+80)},0.55)`;
+  ctx.beginPath();
+  for (const d of dots) {
+    const dp = Math.hypot(d.x-d.rx, d.y-d.ry);
+    if (dp >= 18) {
+      const sz = 1.8 + Math.min(3, dp*.06);
+      ctx.moveTo(d.x+sz, d.y); ctx.arc(d.x, d.y, sz, 0, Math.PI*2);
+    }
+  }
+  ctx.fill();
+
+  /* Heavy displaced - outer glow */
+  ctx.fillStyle = `rgba(${cr},${cg},${cb},0.06)`;
+  ctx.beginPath();
+  for (const d of dots) {
+    const dp = Math.hypot(d.x-d.rx, d.y-d.ry);
+    if (dp >= 20) {
+      const sz = 6 + Math.min(8, dp*.2);
+      ctx.moveTo(d.x+sz, d.y); ctx.arc(d.x, d.y, sz, 0, Math.PI*2);
+    }
+  }
+  ctx.fill();
+
+  /* Core glow */
+  const cx = W/2 + (smx-W/2)*.04, cy = H/2 + (smy-H/2)*.04;
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 140);
+  grd.addColorStop(0, `rgba(${cr},${cg},${cb},0.1)`);
+  grd.addColorStop(.5, `rgba(${cr},${cg},${cb},0.025)`);
+  grd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(cx, cy, 140, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = `rgba(${cr},${cg},${cb},0.7)`;
+  ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI*2); ctx.fill();
+
+  /* Orbit particles */
+  for (const o of orbits) {
+    const px = cx + Math.cos(o.ang) * o.a;
+    const py = cy + Math.sin(o.ang) * o.b;
+    ctx.fillStyle = `hsla(${o.hue},80%,55%,${o.al})`;
+    ctx.beginPath(); ctx.arc(px, py, o.sz, 0, Math.PI*2); ctx.fill();
+  }
+
+  /* Shockwave rings */
+  for (const s of shocks) {
+    const al = Math.min(.55, s.str*.08);
+    ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(0,s.radius), 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${al.toFixed(3)})`;
+    ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(0,s.radius-4), 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(255,255,255,${(al*.3).toFixed(3)})`;
+    ctx.lineWidth = .8; ctx.stroke();
+    /* Shockwave glow */
+    const sg = ctx.createRadialGradient(s.x, s.y, Math.max(0,s.radius-20), s.x, s.y, s.radius+20);
+    sg.addColorStop(0, `rgba(${cr},${cg},${cb},0)`);
+    sg.addColorStop(.5, `rgba(${cr},${cg},${cb},${(al*.15).toFixed(3)})`);
+    sg.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.radius+20, 0, Math.PI*2); ctx.fill();
+  }
+
+  /* Force field rings */
+  if (smx > -999) {
+    for (let i = 0; i < 4; i++) {
+      const ph = t*2.5 + i*(Math.PI*2/4);
+      const rr = 25 + Math.sin(ph)*12 + i*16;
+      const al = .03 + Math.sin(ph)*.015;
+      ctx.beginPath(); ctx.arc(smx, smy, rr, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},${al.toFixed(3)})`;
+      ctx.lineWidth = .7; ctx.stroke();
+    }
+  }
+
+  /* Mouse trail */
+  for (let i = 0; i < trail.length; i++) {
+    const al = (1-i/trail.length)*.25;
+    const sz = (1-i/trail.length)*2.5;
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${al.toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(trail[i].x, trail[i].y, Math.max(.1,sz), 0, Math.PI*2); ctx.fill();
+  }
+
+  /* HUD update */
+  sfEl.innerHTML = `<b>${st.tf.toFixed(1)}</b>`;
+  sdEl.innerHTML = `<b>${st.disp}</b>`;
+  swEl.innerHTML = `<b>${waveCount}</b>`;
+}
+
+/* ── Loop ── */
+function loop() {
+  smx = lerp(smx, mx, .1);
+  smy = lerp(smy, my, .1);
+  cdx = lerp(cdx, mx, .3); cdy = lerp(cdy, my, .3);
+  crx = lerp(crx, mx, .1); cry = lerp(cry, my, .1);
+  crEl.style.left = crx + 'px'; crEl.style.top = cry + 'px';
+  cdEl.style.left = cdx + 'px'; cdEl.style.top = cdy + 'px';
+  const st = physics();
+  draw(st);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ── Hover effect on buttons ── */
+document.querySelectorAll('.mb').forEach(b => {
+  b.addEventListener('mouseenter', () => { crEl.style.width = '50px'; crEl.style.height = '50px'; });
+  b.addEventListener('mouseleave', () => { crEl.style.width = '30px'; crEl.style.height = '30px'; });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Hover Effects</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #080808;
+            --fg: #ece6dc;
+            --muted: #5e5850;
+            --accent: #ff6347;
+            --accent2: #fbbf24;
+            --card: #0f0f0f;
+            --border: #1c1c1c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== Background atmosphere ===== */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(130px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .bg-orb--1 { width: 550px; height: 550px; background: rgba(255,99,71,0.05); top: -150px; right: -120px; animation: orbDrift1 22s ease-in-out infinite; }
+        .bg-orb--2 { width: 420px; height: 420px; background: rgba(251,191,36,0.035); bottom: -120px; left: -80px; animation: orbDrift2 28s ease-in-out infinite; }
+        .bg-orb--3 { width: 300px; height: 300px; background: rgba(255,99,71,0.025); top: 45%; left: 40%; animation: orbDrift3 18s ease-in-out infinite; }
+
+        @keyframes orbDrift1 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(-70px,90px)} 66%{transform:translate(50px,-50px)} }
+        @keyframes orbDrift2 { 0%,100%{transform:translate(0,0)} 33%{transform:translate(90px,-70px)} 66%{transform:translate(-50px,50px)} }
+        @keyframes orbDrift3 { 0%,100%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.4)} }
+
+        .dot-grid {
+            position: fixed; inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ===== Header ===== */
+        .page-header {
+            position: relative; z-index: 1;
+            text-align: center;
+            padding: 72px 24px 20px;
+        }
+        .page-header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 900;
+            font-size: clamp(34px, 6vw, 62px);
+            letter-spacing: -2px;
+            line-height: 1.1;
+            margin-bottom: 14px;
+        }
+        .page-header .accent-word {
+            color: var(--accent);
+            position: relative;
+            display: inline-block;
+        }
+        .page-header .accent-word::after {
+            content: '';
+            position: absolute;
+            bottom: 2px; left: 0;
+            width: 100%; height: 4px;
+            background: var(--accent);
+            border-radius: 4px;
+            opacity: 0.4;
+            animation: underlinePulse 3s ease-in-out infinite;
+        }
+        @keyframes underlinePulse {
+            0%,100% { opacity: 0.2; transform: scaleX(0.8); }
+            50% { opacity: 0.5; transform: scaleX(1); }
+        }
+        .page-header p {
+            color: var(--muted); font-size: 15px;
+            font-weight: 300; max-width: 460px;
+            margin: 0 auto; line-height: 1.6;
+        }
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 18px; padding: 6px 16px;
+            border-radius: 100px; border: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            font-size: 12px; color: var(--muted); font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        .badge i { color: var(--accent); font-size: 10px; }
+
+        /* ===== Grid ===== */
+        .effects-grid {
+            position: relative; z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1080px;
+            margin: 32px auto 0;
+            padding: 0 20px 80px;
+        }
+        @media(max-width:900px) { .effects-grid { grid-template-columns: repeat(2,1fr); } }
+        @media(max-width:560px) { .effects-grid { grid-template-columns: 1fr; } }
+
+        /* ===== Cell ===== */
+        .cell {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 44px 20px 24px;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 18px;
+            min-height: 170px;
+            position: relative;
+            overflow: visible;
+            transition: border-color 0.4s;
+            opacity: 0; transform: translateY(30px);
+        }
+        .cell.visible { opacity: 1; transform: translateY(0); transition: opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1), border-color 0.4s; }
+        .cell:hover { border-color: rgba(255,99,71,0.12); }
+
+        .cell-num {
+            position: absolute; top: 12px; right: 16px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 200; font-size: 13px;
+            color: rgba(255,255,255,0.04);
+        }
+        .cell-label {
+            font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--muted);
+        }
+
+        /* ===== BASE BUTTON ===== */
+        .btn {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px; font-weight: 600;
+            padding: 13px 30px;
+            border-radius: 11px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+            border: 1.5px solid rgba(255,99,71,0.25);
+            color: var(--fg);
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            transition: color 0.3s, border-color 0.3s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+        /* ===== 1. MAGNETIC ===== */
+        .btn-magnetic { overflow: visible; transition: transform 0.18s ease-out, color 0.3s, border-color 0.3s; }
+
+        /* ===== 2. LIQUID FILL ===== */
+        .btn-liquid { z-index: 1; }
+        .btn-liquid::before {
+            content: ''; position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 100%;
+            background: var(--accent);
+            border-radius: 11px;
+            transform: translateY(100%);
+            transition: transform 0.5s cubic-bezier(0.16,1,0.3,1);
+            z-index: -1;
+        }
+        .btn-liquid:hover::before { transform: translateY(0); }
+        .btn-liquid:hover { color: var(--bg); border-color: var(--accent); }
+
+        /* ===== 3. NEON PULSE ===== */
+        .btn-neon { border-color: var(--accent); color: var(--accent); }
+        .btn-neon:hover {
+            animation: neonPulse 1.4s ease-in-out infinite;
+            text-shadow: 0 0 8px rgba(255,99,71,0.5), 0 0 20px rgba(255,99,71,0.2);
+        }
+        @keyframes neonPulse {
+            0%,100% { box-shadow: 0 0 5px rgba(255,99,71,0.25), 0 0 20px rgba(255,99,71,0.08), inset 0 0 5px rgba(255,99,71,0.06); }
+            50% { box-shadow: 0 0 12px rgba(255,99,71,0.45), 0 0 45px rgba(255,99,71,0.15), 0 0 90px rgba(255,99,71,0.07), inset 0 0 12px rgba(255,99,71,0.1); }
+        }
+
+        /* ===== 4. BORDER DRAW ===== */
+        .btn-draw { border: none; }
+        .btn-draw svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        .btn-draw svg rect {
+            fill: none; stroke: var(--accent); stroke-width: 1.5;
+            stroke-dasharray: 380; stroke-dashoffset: 380;
+            rx: 11; ry: 11;
+            transition: stroke-dashoffset 0.7s cubic-bezier(0.16,1,0.3,1);
+        }
+        .btn-draw:hover svg rect { stroke-dashoffset: 0; }
+        .btn-draw:hover { color: var(--accent); }
+
+        /* ===== 5. TEXT SCRAMBLE ===== */
+        .btn-scramble { overflow: visible; }
+        .btn-scramble .char {
+            display: inline-block;
+            transition: color 0.15s, transform 0.15s;
+        }
+        .btn-scramble:hover .char,
+        .btn-scramble.active .char { color: var(--accent); }
+        .btn-scramble.active .char { animation: charJitter 0.08s linear infinite; }
+        @keyframes charJitter {
+            0% { transform: translateY(0); }
+            25% { transform: translateY(-1px); }
+            75% { transform: translateY(1px); }
+        }
+
+        /* ===== 6. 3D TILT ===== */
+        .btn-tilt { overflow: visible; transform-style: preserve-3d; }
+
+        /* ===== 7. PARTICLE BURST ===== */
+        .btn-particle { overflow: visible; }
+        .btn-particle:hover { color: var(--accent); border-color: var(--accent); }
+        .particle-dot {
+            position: absolute; border-radius: 50%;
+            pointer-events: none; z-index: 10;
+        }
+
+        /* ===== 8. SPLIT REVEAL ===== */
+        .btn-split { border: none; background: transparent; padding: 0; height: 47px; }
+        .btn-split-track { display: flex; flex-direction: column; transition: transform 0.45s cubic-bezier(0.16,1,0.3,1); }
+        .btn-split-track span {
+            display: flex; align-items: center; justify-content: center;
+            height: 47px; padding: 0 30px; white-space: nowrap;
+            font-size: 14px; font-weight: 600; letter-spacing: 0.3px;
+        }
+        .btn-split-track span:first-child {
+            color: var(--fg); border: 1.5px solid rgba(255,99,71,0.25); border-radius: 11px;
+        }
+        .btn-split-track span:last-child {
+            color: var(--bg); background: var(--accent); border-radius: 11px;
+        }
+        .btn-split:hover .btn-split-track { transform: translateY(-47px); }
+
+        /* ===== 9. GRADIENT ORBIT ===== */
+        @property --orbit-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+        .btn-orbit {
+            border: 2px solid transparent;
+            background:
+                linear-gradient(var(--card), var(--card)) padding-box,
+                conic-gradient(from var(--orbit-angle), var(--accent), var(--accent2), var(--accent), var(--accent2), var(--accent)) border-box;
+            border-radius: 11px;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        .btn-orbit:hover { opacity: 1; animation: orbitSpin 2s linear infinite; }
+        @keyframes orbitSpin { to { --orbit-angle: 360deg; } }
+
+        /* ===== 10. ELASTIC ===== */
+        .btn-elastic {
+            transition: transform 0.55s cubic-bezier(0.68,-0.55,0.265,1.55), background 0.3s, color 0.3s, border-color 0.3s;
+        }
+        .btn-elastic:hover { transform: scale(1.18); background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+        /* ===== 11. SPOTLIGHT ===== */
+        .btn-spot { border-color: rgba(255,99,71,0.12); }
+        .btn-spot::before {
+            content: ''; position: absolute; inset: 0; border-radius: 11px;
+            background: radial-gradient(circle 90px at var(--sx,50%) var(--sy,50%), rgba(255,99,71,0.12), transparent);
+            opacity: 0; transition: opacity 0.3s; z-index: -1;
+        }
+        .btn-spot:hover::before { opacity: 1; }
+        .btn-spot:hover { border-color: rgba(255,99,71,0.35); color: var(--accent); }
+
+        /* ===== 12. GLITCH ===== */
+        .btn-glitch { overflow: visible; }
+        .glitch-wrap { position: relative; display: inline-block; }
+        .glitch-wrap::before, .glitch-wrap::after {
+            content: attr(data-text);
+            position: absolute; top: 0; left: 0;
+            width: 100%; opacity: 0; pointer-events: none;
+        }
+        .glitch-wrap::before { color: #ff0040; }
+        .glitch-wrap::after { color: #00e5ff; }
+        .btn-glitch.on .glitch-wrap::before { opacity: 0.7; animation: g1 0.15s linear infinite; }
+        .btn-glitch.on .glitch-wrap::after { opacity: 0.7; animation: g2 0.15s linear infinite; }
+        .btn-glitch.on { border-color: #ff0040; animation: gShake 0.08s linear infinite; }
+        @keyframes g1 {
+            0%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,1px)}
+            25%{clip-path:inset(50% 0 20% 0);transform:translate(3px,-1px)}
+            50%{clip-path:inset(10% 0 70% 0);transform:translate(-2px,2px)}
+            75%{clip-path:inset(60% 0 10% 0);transform:translate(2px,-2px)}
+            100%{clip-path:inset(30% 0 40% 0);transform:translate(-1px,1px)}
+        }
+        @keyframes g2 {
+            0%{clip-path:inset(60% 0 10% 0);transform:translate(3px,-1px)}
+            25%{clip-path:inset(10% 0 70% 0);transform:translate(-3px,1px)}
+            50%{clip-path:inset(50% 0 20% 0);transform:translate(2px,-2px)}
+            75%{clip-path:inset(20% 0 60% 0);transform:translate(-2px,2px)}
+            100%{clip-path:inset(40% 0 30% 0);transform:translate(1px,-1px)}
+        }
+        @keyframes gShake { 0%{transform:translate(0)} 25%{transform:translate(-2px,1px)} 50%{transform:translate(2px,-1px)} 75%{transform:translate(-1px,-1px)} 100%{transform:translate(1px,1px)} }
+
+        /* ===== 13. RADIUS MORPH ===== */
+        .btn-morph {
+            transition: border-radius 0.5s cubic-bezier(0.16,1,0.3,1), background 0.3s, color 0.3s, border-color 0.3s, padding-left 0.5s cubic-bezier(0.16,1,0.3,1), padding-right 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+        .btn-morph:hover { border-radius: 50px; padding-left: 46px; padding-right: 46px; background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+        /* ===== 14. SHADOW ELEVATE ===== */
+        .btn-shadow {
+            transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, color 0.3s;
+        }
+        .btn-shadow:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px -6px rgba(255,99,71,0.12), 0 24px 48px -12px rgba(255,99,71,0.08), 0 48px 72px -18px rgba(255,99,71,0.04);
+            border-color: var(--accent); color: var(--accent);
+        }
+
+        /* ===== 15. CIRCLE REVEAL ===== */
+        .btn-reveal { border: none; }
+        .reveal-fill {
+            position: absolute; inset: 0;
+            background: var(--accent); border-radius: 11px;
+            clip-path: circle(0% at var(--cx,50%) var(--cy,50%));
+            transition: clip-path 0.55s cubic-bezier(0.16,1,0.3,1);
+            z-index: -1;
+        }
+        .btn-reveal:hover .reveal-fill { clip-path: circle(150% at var(--cx,50%) var(--cy,50%)); }
+        .btn-reveal:hover { color: var(--bg); }
+
+        /* ===== 16. ICON SLIDE ===== */
+        .btn-icon { overflow: hidden; }
+        .btn-icon-inner {
+            display: flex; align-items: center; gap: 0;
+            transition: gap 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        .btn-icon-inner .ico {
+            display: inline-flex; margin-left: 0;
+            transform: translateX(-16px); opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.3s, margin 0.4s cubic-bezier(0.16,1,0.3,1);
+            font-size: 13px;
+        }
+        .btn-icon:hover .btn-icon-inner { gap: 10px; }
+        .btn-icon:hover .ico { transform: translateX(0); opacity: 1; margin-left: 4px; }
+        .btn-icon:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+        /* ===== 17. DIAGONAL FILL ===== */
+        .btn-diag::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 0; height: 0; background: var(--accent);
+            transform: skewX(-20deg); transform-origin: top left;
+            transition: width 0.45s ease, height 0.45s ease;
+            z-index: -1;
+        }
+        .btn-diag:hover::before { width: 220%; height: 220%; }
+        .btn-diag:hover { color: var(--bg); border-color: var(--accent); }
+
+        /* ===== 18. WAVE UNDERLINE ===== */
+        .btn-wave { border: none; background: transparent; padding: 13px 6px; }
+        .btn-wave .wave-line {
+            position: absolute; bottom: 2px; left: 6px;
+            width: 0; height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 2px;
+            transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+        .btn-wave .wave-dot {
+            position: absolute; bottom: -1px;
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--accent);
+            opacity: 0; transform: scale(0);
+            transition: opacity 0.3s 0.2s, transform 0.3s 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .btn-wave:hover .wave-line { width: calc(100% - 12px); }
+        .btn-wave:hover .wave-dot { opacity: 1; transform: scale(1); }
+        .btn-wave:hover { color: var(--accent); }
+
+        /* ===== Footer ===== */
+        .page-footer {
+            position: relative; z-index: 1;
+            text-align: center; padding: 0 24px 56px;
+            color: var(--muted); font-size: 12px;
+        }
+        .page-footer span { color: rgba(255,99,71,0.5); }
+
+        /* ===== Reduced motion ===== */
+        @media(prefers-reduced-motion:reduce) {
+            *,*::before,*::after { animation-duration:0.01ms!important; transition-duration:0.01ms!important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background -->
+    <div class="bg-orb bg-orb--1" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb--2" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb--3" aria-hidden="true"></div>
+    <div class="dot-grid" aria-hidden="true"></div>
+
+    <!-- Header -->
+    <header class="page-header">
+        <h1>Button <span class="accent-word">Hover</span> Effects</h1>
+        <p>A curated collection of 18 interactive micro-interactions, each built with pure CSS and minimal JavaScript</p>
+        <div class="badge"><i class="fa-solid fa-circle"></i> Best experienced on desktop with a cursor</div>
+    </header>
+
+    <!-- Grid -->
+    <main class="effects-grid" role="list">
+
+        <!-- 1. Magnetic -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">01</span>
+            <button class="btn btn-magnetic" aria-label="Magnetic pull effect">Hover Me</button>
+            <span class="cell-label">Magnetic Pull</span>
+        </div>
+
+        <!-- 2. Liquid Fill -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">02</span>
+            <button class="btn btn-liquid" aria-label="Liquid fill effect">Hover Me</button>
+            <span class="cell-label">Liquid Fill</span>
+        </div>
+
+        <!-- 3. Neon Pulse -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">03</span>
+            <button class="btn btn-neon" aria-label="Neon pulse effect">Hover Me</button>
+            <span class="cell-label">Neon Pulse</span>
+        </div>
+
+        <!-- 4. Border Draw -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">04</span>
+            <button class="btn btn-draw" aria-label="Border draw effect">
+                Hover Me
+                <svg viewBox="0 0 200 47" preserveAspectRatio="none"><rect x="1" y="1" width="198" height="45"/></svg>
+            </button>
+            <span class="cell-label">Border Draw</span>
+        </div>
+
+        <!-- 5. Text Scramble -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">05</span>
+            <button class="btn btn-scramble" data-text="Hover Me" aria-label="Text scramble effect">Hover Me</button>
+            <span class="cell-label">Text Scramble</span>
+        </div>
+
+        <!-- 6. 3D Tilt -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">06</span>
+            <button class="btn btn-tilt" aria-label="3D tilt effect">Hover Me</button>
+            <span class="cell-label">3D Tilt</span>
+        </div>
+
+        <!-- 7. Particle Burst -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">07</span>
+            <button class="btn btn-particle" aria-label="Particle burst effect">Hover Me</button>
+            <span class="cell-label">Particle Burst</span>
+        </div>
+
+        <!-- 8. Split Reveal -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">08</span>
+            <button class="btn btn-split" aria-label="Split reveal effect">
+                <div class="btn-split-track">
+                    <span>Hover Me</span>
+                    <span>Gotcha</span>
+                </div>
+            </button>
+            <span class="cell-label">Split Reveal</span>
+        </div>
+
+        <!-- 9. Gradient Orbit -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">09</span>
+            <button class="btn btn-orbit" aria-label="Gradient orbit effect">Hover Me</button>
+            <span class="cell-label">Gradient Orbit</span>
+        </div>
+
+        <!-- 10. Elastic -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">10</span>
+            <button class="btn btn-elastic" aria-label="Elastic bounce effect">Hover Me</button>
+            <span class="cell-label">Elastic Bounce</span>
+        </div>
+
+        <!-- 11. Spotlight -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">11</span>
+            <button class="btn btn-spot" aria-label="Cursor spotlight effect">Hover Me</button>
+            <span class="cell-label">Cursor Spotlight</span>
+        </div>
+
+        <!-- 12. Glitch -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">12</span>
+            <button class="btn btn-glitch" aria-label="Glitch effect">
+                <span class="glitch-wrap" data-text="Hover Me">Hover Me</span>
+            </button>
+            <span class="cell-label">Glitch Distort</span>
+        </div>
+
+        <!-- 13. Radius Morph -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">13</span>
+            <button class="btn btn-morph" aria-label="Radius morph effect">Hover Me</button>
+            <span class="cell-label">Radius Morph</span>
+        </div>
+
+        <!-- 14. Shadow Elevate -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">14</span>
+            <button class="btn btn-shadow" aria-label="Shadow elevate effect">Hover Me</button>
+            <span class="cell-label">Shadow Elevate</span>
+        </div>
+
+        <!-- 15. Circle Reveal -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">15</span>
+            <button class="btn btn-reveal" aria-label="Circle reveal effect">
+                <span class="reveal-fill"></span>
+                Hover Me
+            </button>
+            <span class="cell-label">Circle Reveal</span>
+        </div>
+
+        <!-- 16. Icon Slide -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">16</span>
+            <button class="btn btn-icon" aria-label="Icon slide effect">
+                <span class="btn-icon-inner">
+                    <span>Hover Me</span>
+                    <i class="fa-solid fa-arrow-right ico"></i>
+                </span>
+            </button>
+            <span class="cell-label">Icon Slide</span>
+        </div>
+
+        <!-- 17. Diagonal Fill -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">17</span>
+            <button class="btn btn-diag" aria-label="Diagonal fill effect">Hover Me</button>
+            <span class="cell-label">Diagonal Fill</span>
+        </div>
+
+        <!-- 18. Wave Underline -->
+        <div class="cell" role="listitem">
+            <span class="cell-num">18</span>
+            <button class="btn btn-wave" aria-label="Wave underline effect">
+                Hover Me
+                <span class="wave-line"></span>
+                <span class="wave-dot"></span>
+            </button>
+            <span class="cell-label">Wave Underline</span>
+        </div>
+
+    </main>
+
+    <footer class="page-footer">
+        <span>18 effects</span> &mdash; CSS transitions, keyframes, and minimal JavaScript
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        /* ===================================================
+           Scroll reveal — cells fade in with stagger
+        =================================================== */
+        const cells = document.querySelectorAll('.cell');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    // Stagger based on position in parent
+                    const idx = Array.from(cells).indexOf(entry.target);
+                    setTimeout(() => entry.target.classList.add('visible'), idx * 60);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        cells.forEach(c => observer.observe(c));
+
+        /* ===================================================
+           1. MAGNETIC PULL
+           Button follows cursor within a proximity radius
+        =================================================== */
+        const magneticBtn = document.querySelector('.btn-magnetic');
+        magneticBtn.addEventListener('mousemove', (e) => {
+            const r = magneticBtn.getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            const cy = r.top + r.height / 2;
+            const dx = e.clientX - cx;
+            const dy = e.clientY - cy;
+            magneticBtn.style.transform = `translate(${dx * 0.35}px, ${dy * 0.35}px)`;
+        });
+        magneticBtn.addEventListener('mouseleave', () => {
+            magneticBtn.style.transform = 'translate(0, 0)';
+        });
+
+        /* ===================================================
+           5. TEXT SCRAMBLE
+           Characters randomize on hover, then resolve
+        =================================================== */
+        const scrambleBtn = document.querySelector('.btn-scramble');
+        const originalText = scrambleBtn.dataset.text;
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&';
+        let scrambleFrame = null;
+
+        // Build character spans
+        function buildChars() {
+            scrambleBtn.innerHTML = '';
+            for (let i = 0; i < originalText.length; i++) {
+                const span = document.createElement('span');
+                span.className = 'char';
+                span.textContent = originalText[i];
+                scrambleBtn.appendChild(span);
+            }
+        }
+        buildChars();
+
+        scrambleBtn.addEventListener('mouseenter', () => {
+            scrambleBtn.classList.add('active');
+            let iterations = 0;
+            const maxIter = originalText.length;
+
+            function frame() {
+                const spans = scrambleBtn.querySelectorAll('.char');
+                spans.forEach((span, i) => {
+                    if (i < iterations) {
+                        span.textContent = originalText[i];
+                    } else {
+                        span.textContent = chars[Math.floor(Math.random() * chars.length)];
+                    }
+                });
+                iterations += 0.5;
+                if (iterations <= maxIter) {
+                    scrambleFrame = requestAnimationFrame(frame);
+                } else {
+                    scrambleBtn.classList.remove('active');
+                }
+            }
+            scrambleFrame = requestAnimationFrame(frame);
+        });
+
+        scrambleBtn.addEventListener('mouseleave', () => {
+            cancelAnimationFrame(scrambleFrame);
+            scrambleBtn.classList.remove('active');
+            buildChars();
+        });
+
+        /* ===================================================
+           6. 3D TILT
+           Perspective rotation following cursor position
+        =================================================== */
+        const tiltBtn = document.querySelector('.btn-tilt');
+        tiltBtn.addEventListener('mousemove', (e) => {
+            const r = tiltBtn.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;  // -0.5 to 0.5
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            tiltBtn.style.transform = `perspective(400px) rotateY(${x * 25}deg) rotateX(${-y * 25}deg) scale(1.05)`;
+        });
+        tiltBtn.addEventListener('mouseleave', () => {
+            tiltBtn.style.transform = 'perspective(400px) rotateY(0) rotateX(0) scale(1)';
+            tiltBtn.style.transition = 'transform 0.5s cubic-bezier(0.16,1,0.3,1)';
+            setTimeout(() => { tiltBtn.style.transition = ''; }, 500);
+        });
+        tiltBtn.addEventListener('mouseenter', () => {
+            tiltBtn.style.transition = 'none';
+        });
+
+        /* ===================================================
+           7. PARTICLE BURST
+           DOM particles explode outward on hover
+        =================================================== */
+        const particleBtn = document.querySelector('.btn-particle');
+        let particleLock = false;
+
+        particleBtn.addEventListener('mouseenter', (e) => {
+            if (particleLock) return;
+            particleLock = true;
+
+            const cell = particleBtn.closest('.cell');
+            const btnRect = particleBtn.getBoundingClientRect();
+            const cellRect = cell.getBoundingClientRect();
+            const cx = btnRect.left - cellRect.left + btnRect.width / 2;
+            const cy = btnRect.top - cellRect.top + btnRect.height / 2;
+            const colors = ['#ff6347', '#fbbf24', '#ff8c69', '#ffa07a', '#ffe4b5', '#ffffff'];
+
+            for (let i = 0; i < 28; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'particle-dot';
+                const size = 2 + Math.random() * 4;
+                dot.style.width = size + 'px';
+                dot.style.height = size + 'px';
+                dot.style.background = colors[Math.floor(Math.random() * colors.length)];
+                dot.style.left = cx + 'px';
+                dot.style.top = cy + 'px';
+                cell.appendChild(dot);
+
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 50 + Math.random() * 80;
+                const dx = Math.cos(angle) * dist;
+                const dy = Math.sin(angle) * dist;
+                const dur = 500 + Math.random() * 400;
+
+                dot.animate([
+                    { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+                    { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0)`, opacity: 0 }
+                ], { duration: dur, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)' }).onfinish = () => dot.remove();
+            }
+
+            setTimeout(() => { particleLock = false; }, 300);
+        });
+
+        /* ===================================================
+           11. CURSOR SPOTLIGHT
+           Radial gradient follows mouse inside the button
+        =================================================== */
+        const spotBtn = document.querySelector('.btn-spot');
+        spotBtn.addEventListener('mousemove', (e) => {
+            const r = spotBtn.getBoundingClientRect();
+            spotBtn.style.setProperty('--sx', ((e.clientX - r.left) / r.width * 100) + '%');
+            spotBtn.style.setProperty('--sy', ((e.clientY - r.top) / r.height * 100) + '%');
+        });
+
+        /* ===================================================
+           12. GLITCH
+           Rapid clip-path + transform jitter on hover
+        =================================================== */
+        const glitchBtn = document.querySelector('.btn-glitch');
+        glitchBtn.addEventListener('mouseenter', () => glitchBtn.classList.add('on'));
+        glitchBtn.addEventListener('mouseleave', () => glitchBtn.classList.remove('on'));
+
+        /* ===================================================
+           15. CIRCLE REVEAL
+           clip-path circle expands from cursor entry point
+        =================================================== */
+        const revealBtn = document.querySelector('.btn-reveal');
+        revealBtn.addEventListener('mouseenter', (e) => {
+            const r = revealBtn.getBoundingClientRect();
+            revealBtn.style.setProperty('--cx', ((e.clientX - r.left) / r.width * 100) + '%');
+            revealBtn.style.setProperty('--cy', ((e.clientY - r.top) / r.height * 100) + '%');
+        });
+
+    });
+    </script>
+</body>
+</html>
