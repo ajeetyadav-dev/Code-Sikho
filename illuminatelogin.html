@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Illuminate — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #080706;
+    --bg-warm: #0e0c09;
+    --fg: #f0e8d8;
+    --muted: #7a7060;
+    --amber: #ffb740;
+    --amber-deep: #ff8c00;
+    --gold: #ffd700;
+    --card-bg: rgba(18,16,12,0.92);
+    --border: rgba(255,183,64,0.12);
+    --glow: rgba(255,183,64,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ===== DARK ROOM — INITIAL STATE ===== */
+  .room {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    z-index: 1;
+    transition: opacity 0.8s ease;
+  }
+  .room.hidden { opacity: 0; pointer-events: none; }
+
+  /* Ambient dust in dark */
+  .dust-canvas {
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none;
+  }
+
+  /* ===== THE BULB ===== */
+  .bulb-assembly {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    transform-origin: top center;
+  }
+  .bulb-assembly:hover { transform: rotate(3deg); }
+  .bulb-assembly.swing { animation: swingBulb 2s ease-in-out; }
+  @keyframes swingBulb {
+    0% { transform: rotate(0deg); }
+    15% { transform: rotate(12deg); }
+    30% { transform: rotate(-10deg); }
+    45% { transform: rotate(7deg); }
+    60% { transform: rotate(-5deg); }
+    75% { transform: rotate(3deg); }
+    90% { transform: rotate(-1deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  /* Wire */
+  .wire {
+    width: 2px; height: 120px;
+    background: linear-gradient(180deg, #3a3530, #5a5040);
+    margin: 0 auto;
+    position: relative;
+  }
+  .wire::before {
+    content: '';
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #2a2520; border: 1px solid #3a3530;
+  }
+
+  /* Bulb cap */
+  .bulb-cap {
+    width: 36px; height: 22px;
+    background: linear-gradient(180deg, #8a7a60, #5a4a30, #3a2a18);
+    margin: 0 auto;
+    border-radius: 4px 4px 2px 2px;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .bulb-cap::before {
+    content: '';
+    position: absolute; top: 4px; left: 3px; right: 3px;
+    height: 2px; background: rgba(255,255,255,0.08);
+    border-radius: 1px;
+    box-shadow: 0 5px 0 rgba(255,255,255,0.06), 0 10px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Bulb glass */
+  .bulb-glass {
+    width: 80px; height: 90px;
+    margin: -4px auto 0;
+    position: relative;
+  }
+  .bulb-glass svg { width: 100%; height: 100%; }
+  .bulb-fill {
+    fill: rgba(255,183,64,0.04);
+    transition: fill 0.6s, filter 0.6s;
+  }
+  .bulb-stroke {
+    fill: none;
+    stroke: rgba(255,183,64,0.08);
+    stroke-width: 1.5;
+    transition: stroke 0.6s;
+  }
+  .bulb-assembly:hover .bulb-fill {
+    fill: rgba(255,183,64,0.08);
+  }
+  .bulb-assembly:hover .bulb-stroke {
+    stroke: rgba(255,183,64,0.2);
+  }
+
+  /* Filament */
+  .filament {
+    stroke: rgba(255,183,64,0.05);
+    stroke-width: 1.2;
+    fill: none;
+    transition: stroke 0.8s, filter 0.8s;
+  }
+  .bulb-assembly:hover .filament {
+    stroke: rgba(255,183,64,0.2);
+  }
+
+  /* Glow under bulb (off) */
+  .bulb-glow-off {
+    position: absolute;
+    bottom: -10px; left: 50%; transform: translateX(-50%);
+    width: 100px; height: 40px;
+    background: radial-gradient(ellipse, rgba(255,183,64,0.02) 0%, transparent 70%);
+    transition: all 0.8s;
+  }
+  .bulb-assembly:hover .bulb-glow-off {
+    background: radial-gradient(ellipse, rgba(255,183,64,0.06) 0%, transparent 70%);
+    width: 140px; height: 60px;
+  }
+
+  /* Hint text */
+  .hint {
+    margin-top: 3rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 3px;
+    opacity: 0;
+    animation: fadeHint 3s ease-in-out 1.5s forwards;
+    text-align: center;
+  }
+  @keyframes fadeHint {
+    0% { opacity: 0; transform: translateY(8px); }
+    30% { opacity: 0.6; }
+    100% { opacity: 0.4; transform: translateY(0); }
+  }
+
+  /* Floating dust motes (CSS) */
+  .mote {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: rgba(255,220,150,0.15);
+    border-radius: 50%;
+    animation: driftMote linear infinite;
+    pointer-events: none;
+  }
+  @keyframes driftMote {
+    0% { opacity: 0; transform: translateY(0) translateX(0); }
+    15% { opacity: 0.4; }
+    85% { opacity: 0.15; }
+    100% { opacity: 0; transform: translateY(-120px) translateX(30px); }
+  }
+
+  /* ===== LIGHT BURST — OVERLAY ===== */
+  .light-burst {
+    position: fixed; inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .light-burst.active { animation: burstIn 1.2s ease-out forwards; }
+  @keyframes burstIn {
+    0% { opacity: 0; }
+    5% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .light-ring {
+    position: absolute;
+    top: 35%; left: 50%;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--amber);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  .light-burst.active .light-ring {
+    animation: ringExpand 1.2s ease-out forwards;
+  }
+  .light-burst.active .light-ring:nth-child(1) { animation-delay: 0s; }
+  .light-burst.active .light-ring:nth-child(2) { animation-delay: 0.1s; border-color: var(--gold); }
+  .light-burst.active .light-ring:nth-child(3) { animation-delay: 0.2s; border-color: var(--amber-deep); }
+  .light-burst.active .light-ring:nth-child(4) { animation-delay: 0.35s; border-color: var(--amber); }
+  .light-burst.active .light-ring:nth-child(5) { animation-delay: 0.5s; border-color: var(--gold); }
+
+  @keyframes ringExpand {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+    100% { transform: translate(-50%, -50%) scale(200); opacity: 0; }
+  }
+
+  .light-flash {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 50% 35%, rgba(255,200,80,0.3) 0%, transparent 60%);
+    opacity: 0; z-index: 49; pointer-events: none;
+  }
+  .light-flash.active { animation: flashIn 1s ease-out forwards; }
+  @keyframes flashIn {
+    0% { opacity: 0; }
+    8% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== LIT ROOM — LOGIN STATE ===== */
+  .lit-room {
+    position: fixed; inset: 0;
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lit-room.active { opacity: 1; pointer-events: auto; }
+
+  /* Warm radial light from top */
+  .lit-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(255,183,64,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 60% at 50% 10%, rgba(255,140,0,0.04) 0%, transparent 80%),
+      linear-gradient(180deg, #12100a 0%, var(--bg) 60%);
+  }
+
+  /* Lit bulb (small, top) */
+  .lit-bulb {
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    z-index: 2;
+  }
+  .lit-bulb .wire { height: 60px; }
+  .lit-bulb .bulb-glass { width: 40px; height: 46px; }
+  .lit-bulb .bulb-cap { width: 20px; height: 14px; }
+  .lit-bulb .bulb-fill {
+    fill: rgba(255,183,64,0.5) !important;
+    filter: drop-shadow(0 0 20px rgba(255,183,64,0.6));
+  }
+  .lit-bulb .bulb-stroke {
+    stroke: rgba(255,183,64,0.5) !important;
+  }
+  .lit-bulb .filament {
+    stroke: rgba(255,200,100,0.9) !important;
+    filter: drop-shadow(0 0 6px rgba(255,183,64,0.8));
+  }
+  .lit-bulb .bulb-glow-off {
+    width: 200px !important; height: 120px !important;
+    background: radial-gradient(ellipse, rgba(255,183,64,0.2) 0%, transparent 70%) !important;
+    bottom: -20px !important;
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+  }
+
+  /* Light cone from bulb */
+  .light-cone {
+    position: absolute;
+    top: 80px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 300px solid transparent;
+    border-right: 300px solid transparent;
+    border-top: 600px solid rgba(255,183,64,0.015);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ===== LOGIN CARD ===== */
+  .login-card {
+    position: relative;
+    width: 420px; max-width: 92vw;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem 2.2rem 2rem;
+    backdrop-filter: blur(30px);
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(255,183,64,0.04),
+      0 0 80px rgba(255,183,64,0.04);
+    z-index: 5;
+    transform: translateY(30px) scale(0.95);
+    opacity: 0;
+    transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .lit-room.active .login-card {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    transition-delay: 0.5s;
+  }
+
+  .login-header { text-align: center; margin-bottom: 2rem; }
+  .login-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem; font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--amber);
+    margin-bottom: 0.4rem;
+    text-shadow: 0 0 30px rgba(255,183,64,0.2);
+  }
+  .login-subtitle {
+    font-size: 0.82rem; color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Input groups */
+  .input-group {
+    position: relative;
+    margin-bottom: 1.2rem;
+  }
+  .input-group label {
+    display: block;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .input-wrap {
+    position: relative;
+    display: flex; align-items: center;
+  }
+  .input-wrap i.field-icon {
+    position: absolute; left: 14px;
+    color: var(--muted); font-size: 0.85rem;
+    transition: color 0.3s;
+    pointer-events: none;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding: 0.8rem 2.8rem 0.8rem 2.8rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,183,64,0.08);
+    border-radius: 10px;
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+  }
+  .input-wrap input::placeholder { color: rgba(122,112,96,0.6); }
+  .input-wrap input:focus {
+    border-color: rgba(255,183,64,0.3);
+    background: rgba(255,183,64,0.03);
+    box-shadow: 0 0 20px rgba(255,183,64,0.06), inset 0 0 20px rgba(255,183,64,0.02);
+  }
+  .input-wrap input:focus ~ i.field-icon,
+  .input-wrap input:focus + i.field-icon { color: var(--amber); }
+  .input-wrap input:focus ~ .field-icon { color: var(--amber); }
+
+  /* Password toggle */
+  .pw-toggle {
+    position: absolute; right: 12px;
+    background: none; border: none;
+    color: var(--muted); font-size: 0.85rem;
+    cursor: pointer; transition: color 0.3s;
+    padding: 4px;
+  }
+  .pw-toggle:hover { color: var(--amber); }
+
+  /* Validation message */
+  .field-msg {
+    font-size: 0.7rem;
+    margin-top: 0.3rem;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.3s;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .field-msg.show { opacity: 1; transform: translateY(0); }
+  .field-msg.error { color: #ff6b6b; }
+  .field-msg.success { color: var(--green, #4ade80); }
+
+  /* Options row */
+  .options-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .remember {
+    display: flex; align-items: center; gap: 0.5rem;
+    cursor: pointer; font-size: 0.8rem; color: var(--muted);
+    transition: color 0.3s;
+  }
+  .remember:hover { color: var(--fg); }
+  .custom-check {
+    width: 18px; height: 18px;
+    border: 1.5px solid rgba(255,183,64,0.2);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .custom-check i {
+    font-size: 0.55rem; color: #000;
+    opacity: 0; transform: scale(0);
+    transition: all 0.25s;
+  }
+  .remember.checked .custom-check {
+    background: var(--amber);
+    border-color: var(--amber);
+    box-shadow: 0 0 10px rgba(255,183,64,0.3);
+  }
+  .remember.checked .custom-check i { opacity: 1; transform: scale(1); }
+
+  .forgot {
+    font-size: 0.78rem; color: var(--amber);
+    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .forgot::after {
+    content: ''; position: absolute;
+    bottom: -2px; left: 0; width: 0; height: 1px;
+    background: var(--amber);
+    transition: width 0.3s;
+  }
+  .forgot:hover::after { width: 100%; }
+
+  /* Login button */
+  .login-btn {
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, var(--amber), var(--amber-deep));
+    border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; font-weight: 700;
+    letter-spacing: 1px;
+    color: #0a0806;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(255,183,64,0.2);
+  }
+  .login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255,183,64,0.35);
+  }
+  .login-btn:active { transform: translateY(0); }
+  .login-btn .btn-text { position: relative; z-index: 1; transition: opacity 0.3s; }
+  .login-btn .btn-loader {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .login-btn.loading .btn-text { opacity: 0; }
+  .login-btn.loading .btn-loader { opacity: 1; }
+  .login-btn.loading { pointer-events: none; }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2.5px solid rgba(10,8,6,0.2);
+    border-top-color: #0a0806;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Shine sweep on button */
+  .login-btn::after {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+  .login-btn:hover::after { left: 120%; }
+
+  /* Divider */
+  .divider {
+    display: flex; align-items: center; gap: 1rem;
+    margin: 1.4rem 0;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: rgba(255,183,64,0.08);
+  }
+  .divider span {
+    font-size: 0.7rem; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* Social buttons */
+  .social-row { display: flex; gap: 0.7rem; }
+  .social-btn {
+    flex: 1;
+    padding: 0.7rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,183,64,0.08);
+    border-radius: 10px;
+    color: var(--fg); font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  }
+  .social-btn span { font-size: 0.75rem; font-weight: 500; }
+  .social-btn:hover {
+    border-color: rgba(255,183,64,0.2);
+    background: rgba(255,183,64,0.04);
+    transform: translateY(-1px);
+  }
+
+  /* Signup link */
+  .signup-link {
+    text-align: center;
+    margin-top: 1.4rem;
+    font-size: 0.82rem; color: var(--muted);
+  }
+  .signup-link a {
+    color: var(--amber); text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .signup-link a:hover { text-shadow: 0 0 12px rgba(255,183,64,0.3); }
+
+  /* Back button */
+  .back-btn {
+    position: absolute;
+    bottom: 2rem; left: 50%; transform: translateX(-50%);
+    background: none; border: 1px solid rgba(255,183,64,0.1);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem; letter-spacing: 1px;
+    padding: 0.5rem 1.2rem; border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.5s 1.5s, all 0.3s;
+  }
+  .lit-room.active .back-btn { opacity: 1; }
+  .back-btn:hover {
+    border-color: rgba(255,183,64,0.3);
+    color: var(--amber);
+    background: rgba(255,183,64,0.04);
+  }
+
+  /* ===== WELCOME STATE ===== */
+  .welcome {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 1rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.8s;
+  }
+  .welcome.active { opacity: 1; pointer-events: auto; }
+  .welcome-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber), var(--amber-deep));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: #0a0806;
+    box-shadow: 0 0 60px rgba(255,183,64,0.3);
+    animation: welcomePop 0.6s cubic-bezier(0.23, 1, 0.32, 1) 0.3s both;
+  }
+  @keyframes welcomePop {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .welcome h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.5rem; font-weight: 600;
+    letter-spacing: 4px; color: var(--fg);
+    animation: fadeUp 0.6s ease 0.5s both;
+  }
+  .welcome p {
+    font-size: 0.9rem; color: var(--muted);
+    animation: fadeUp 0.6s ease 0.7s both;
+  }
+  .welcome .welcome-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 40% at 50% 40%, rgba(255,183,64,0.06) 0%, transparent 70%),
+      var(--bg);
+  }
+  @keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(15px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== FLOATING PARTICLES (lit room) ===== */
+  .lit-particles {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 0;
+    overflow: hidden;
+  }
+  .lit-particle {
+    position: absolute;
+    width: 3px; height: 3px;
+    background: var(--amber);
+    border-radius: 50%;
+    opacity: 0;
+    animation: floatLitParticle linear infinite;
+  }
+  @keyframes floatLitParticle {
+    0% { opacity: 0; transform: translateY(0); }
+    10% { opacity: 0.4; }
+    90% { opacity: 0.1; }
+    100% { opacity: 0; transform: translateY(-300px) translateX(20px); }
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 500px) {
+    .login-card { padding: 2rem 1.4rem 1.5rem; }
+    .login-logo { font-size: 1.6rem; }
+    .social-btn span { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.1s !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Dust canvas (dark room ambient) -->
+<canvas class="dust-canvas" id="dustCanvas"></canvas>
+
+<!-- ===== DARK ROOM ===== -->
+<div class="room" id="darkRoom">
+  <!-- Floating motes -->
+  <div id="motes"></div>
+
+  <!-- The Bulb -->
+  <div class="bulb-assembly" id="bulb" role="button" aria-label="Click to turn on the light" tabindex="0">
+    <div class="wire"></div>
+    <div class="bulb-cap"></div>
+    <div class="bulb-glass">
+      <svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+        <path class="bulb-fill" d="M20 30 Q20 5 40 5 Q60 5 60 30 Q60 55 40 70 Q20 55 20 30 Z"/>
+        <path class="bulb-stroke" d="M20 30 Q20 5 40 5 Q60 5 60 30 Q60 55 40 70 Q20 55 20 30 Z"/>
+        <path class="filament" d="M30 55 Q35 35 30 20 M40 58 Q40 30 45 15 M50 55 Q45 35 50 20"/>
+      </svg>
+      <div class="bulb-glow-off"></div>
+    </div>
+  </div>
+
+  <p class="hint">click the bulb</p>
+</div>
+
+<!-- ===== LIGHT BURST ===== -->
+<div class="light-burst" id="lightBurst">
+  <div class="light-ring"></div>
+  <div class="light-ring"></div>
+  <div class="light-ring"></div>
+  <div class="light-ring"></div>
+  <div class="light-ring"></div>
+</div>
+<div class="light-flash" id="lightFlash"></div>
+
+<!-- ===== LIT ROOM + LOGIN ===== -->
+<div class="lit-room" id="litRoom">
+  <div class="lit-bg"></div>
+
+  <!-- Lit bulb at top -->
+  <div class="lit-bulb">
+    <div class="wire"></div>
+    <div class="bulb-cap"></div>
+    <div class="bulb-glass">
+      <svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+        <path class="bulb-fill" d="M20 30 Q20 5 40 5 Q60 5 60 30 Q60 55 40 70 Q20 55 20 30 Z"/>
+        <path class="bulb-stroke" d="M20 30 Q20 5 40 5 Q60 5 60 30 Q60 55 40 70 Q20 55 20 30 Z"/>
+        <path class="filament" d="M30 55 Q35 35 30 20 M40 58 Q40 30 45 15 M50 55 Q45 35 50 20"/>
+      </svg>
+      <div class="bulb-glow-off"></div>
+    </div>
+  </div>
+
+  <div class="light-cone"></div>
+
+  <!-- Floating lit particles -->
+  <div class="lit-particles" id="litParticles"></div>
+
+  <!-- Login Card -->
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">ILLUMINATE</div>
+      <p class="login-subtitle">Step into the light</p>
+    </div>
+
+    <form id="loginForm" novalidate autocomplete="off">
+      <div class="input-group">
+        <label for="email">Email</label>
+        <div class="input-wrap">
+          <i class="fa-regular fa-envelope field-icon"></i>
+          <input type="email" id="email" placeholder="your@email.com" required>
+        </div>
+        <div class="field-msg" id="emailMsg"></div>
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock field-icon"></i>
+          <input type="password" id="password" placeholder="Enter your password" required minlength="6">
+          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Toggle password visibility">
+            <i class="fa-regular fa-eye"></i>
+          </button>
+        </div>
+        <div class="field-msg" id="pwMsg"></div>
+      </div>
+
+      <div class="options-row">
+        <div class="remember" id="rememberMe" role="checkbox" aria-checked="false" tabindex="0">
+          <div class="custom-check"><i class="fa-solid fa-check"></i></div>
+          <span>Remember me</span>
+        </div>
+        <a href="#" class="forgot" onclick="event.preventDefault(); showToast('Password reset link sent')">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="login-btn" id="loginBtn">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-loader"><div class="spinner"></div></span>
+      </button>
+    </form>
+
+    <div class="divider"><span>or continue with</span></div>
+
+    <div class="social-row">
+      <button class="social-btn" onclick="showToast('Connecting to Google...')">
+        <i class="fa-brands fa-google"></i><span>Google</span>
+      </button>
+      <button class="social-btn" onclick="showToast('Connecting to GitHub...')">
+        <i class="fa-brands fa-github"></i><span>GitHub</span>
+      </button>
+      <button class="social-btn" onclick="showToast('Connecting to Apple...')">
+        <i class="fa-brands fa-apple"></i><span>Apple</span>
+      </button>
+    </div>
+
+    <div class="signup-link">
+      Don't have an account? <a href="#" onclick="event.preventDefault(); showToast('Redirecting to signup...')">Create one</a>
+    </div>
+  </div>
+
+  <button class="back-btn" id="backBtn">
+    <i class="fa-solid fa-arrow-left" style="margin-right:6px;font-size:0.65rem"></i> Turn off
+  </button>
+</div>
+
+<!-- ===== WELCOME ===== -->
+<div class="welcome" id="welcome">
+  <div class="welcome-bg"></div>
+  <div class="welcome-icon"><i class="fa-solid fa-check"></i></div>
+  <h2>Welcome Back</h2>
+  <p>Redirecting to your dashboard...</p>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// ===== ELEMENTS =====
+const darkRoom = document.getElementById('darkRoom');
+const bulb = document.getElementById('bulb');
+const lightBurst = document.getElementById('lightBurst');
+const lightFlash = document.getElementById('lightFlash');
+const litRoom = document.getElementById('litRoom');
+const backBtn = document.getElementById('backBtn');
+const loginForm = document.getElementById('loginForm');
+const loginBtn = document.getElementById('loginBtn');
+const emailInput = document.getElementById('email');
+const pwInput = document.getElementById('password');
+const pwToggle = document.getElementById('pwToggle');
+const rememberMe = document.getElementById('rememberMe');
+const emailMsg = document.getElementById('emailMsg');
+const pwMsg = document.getElementById('pwMsg');
+const welcome = document.getElementById('welcome');
+const toastEl = document.getElementById('toast');
+
+let isLit = false;
+
+// ===== DUST CANVAS (dark room) =====
+const dustCanvas = document.getElementById('dustCanvas');
+const dCtx = dustCanvas.getContext('2d');
+let dustParticles = [];
+
+function initDust() {
+  dustCanvas.width = window.innerWidth;
+  dustCanvas.height = window.innerHeight;
+  dustParticles = [];
+  for (let i = 0; i < 60; i++) {
+    dustParticles.push({
+      x: Math.random() * dustCanvas.width,
+      y: Math.random() * dustCanvas.height,
+      r: 0.5 + Math.random() * 1.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -0.1 - Math.random() * 0.2,
+      alpha: Math.random() * 0.15
+    });
+  }
+}
+initDust();
+window.addEventListener('resize', initDust);
+
+function drawDust() {
+  dCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
+  if (!isLit) {
+    dustParticles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y < -10) { p.y = dustCanvas.height + 10; p.x = Math.random() * dustCanvas.width; }
+      if (p.x < -10) p.x = dustCanvas.width + 10;
+      if (p.x > dustCanvas.width + 10) p.x = -10;
+      dCtx.beginPath();
+      dCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      dCtx.fillStyle = `rgba(200,180,140,${p.alpha})`;
+      dCtx.fill();
+    });
+  }
+  requestAnimationFrame(drawDust);
+}
+drawDust();
+
+// ===== CSS MOTES =====
+const motesContainer = document.getElementById('motes');
+for (let i = 0; i < 12; i++) {
+  const m = document.createElement('div');
+  m.className = 'mote';
+  m.style.left = (20 + Math.random() * 60) + '%';
+  m.style.top = (30 + Math.random() * 50) + '%';
+  m.style.animationDuration = (5 + Math.random() * 8) + 's';
+  m.style.animationDelay = (Math.random() * 6) + 's';
+  m.style.width = m.style.height = (1 + Math.random() * 2) + 'px';
+  darkRoom.insertBefore(m, darkRoom.firstChild);
+}
+
+// ===== LIT PARTICLES =====
+const litP = document.getElementById('litParticles');
+for (let i = 0; i < 20; i++) {
+  const p = document.createElement('div');
+  p.className = 'lit-particle';
+  p.style.left = (20 + Math.random() * 60) + '%';
+  p.style.top = (40 + Math.random() * 50) + '%';
+  p.style.animationDuration = (6 + Math.random() * 10) + 's';
+  p.style.animationDelay = (Math.random() * 8) + 's';
+  p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+  litP.appendChild(p);
+}
+
+// ===== TURN ON LIGHT =====
+function turnOn() {
+  if (isLit) return;
+  isLit = true;
+
+  // Swing bulb
+  bulb.classList.add('swing');
+
+  // Light burst
+  setTimeout(() => {
+    lightBurst.classList.add('active');
+    lightFlash.classList.add('active');
+  }, 200);
+
+  // Hide dark room, show lit room
+  setTimeout(() => {
+    darkRoom.classList.add('hidden');
+  }, 600);
+
+  setTimeout(() => {
+    litRoom.classList.add('active');
+  }, 400);
+
+  // Clean up burst
+  setTimeout(() => {
+    lightBurst.classList.remove('active');
+    lightFlash.classList.remove('active');
+  }, 1500);
+}
+
+// ===== TURN OFF LIGHT =====
+function turnOff() {
+  isLit = false;
+  litRoom.classList.remove('active');
+
+  setTimeout(() => {
+    darkRoom.classList.remove('hidden');
+    bulb.classList.remove('swing');
+  }, 500);
+}
+
+bulb.addEventListener('click', turnOn);
+bulb.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); turnOn(); } });
+backBtn.addEventListener('click', turnOff);
+
+// ===== PASSWORD TOGGLE =====
+pwToggle.addEventListener('click', () => {
+  const isPassword = pwInput.type === 'password';
+  pwInput.type = isPassword ? 'text' : 'password';
+  pwToggle.innerHTML = isPassword
+    ? '<i class="fa-regular fa-eye-slash"></i>'
+    : '<i class="fa-regular fa-eye"></i>';
+});
+
+// ===== REMEMBER ME =====
+let remembered = false;
+rememberMe.addEventListener('click', () => {
+  remembered = !remembered;
+  rememberMe.classList.toggle('checked', remembered);
+  rememberMe.setAttribute('aria-checked', remembered);
+});
+rememberMe.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rememberMe.click(); }
+});
+
+// ===== FIELD VALIDATION =====
+function showMsg(el, type, text) {
+  el.className = 'field-msg show ' + type;
+  el.innerHTML = `<i class="fa-solid fa-${type === 'error' ? 'circle-exclamation' : 'circle-check'}" style="font-size:0.6rem"></i> ${text}`;
+}
+function hideMsg(el) { el.className = 'field-msg'; }
+
+function validateEmail(val) {
+  if (!val) { showMsg(emailMsg, 'error', 'Email is required'); return false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { showMsg(emailMsg, 'error', 'Please enter a valid email'); return false; }
+  showMsg(emailMsg, 'success', 'Looks good');
+  return true;
+}
+
+function validatePassword(val) {
+  if (!val) { showMsg(pwMsg, 'error', 'Password is required'); return false; }
+  if (val.length < 6) { showMsg(pwMsg, 'error', 'Minimum 6 characters'); return false; }
+  showMsg(pwMsg, 'success', 'Strong enough');
+  return true;
+}
+
+emailInput.addEventListener('input', () => {
+  if (emailInput.value) validateEmail(emailInput.value);
+  else hideMsg(emailMsg);
+});
+emailInput.addEventListener('blur', () => {
+  if (emailInput.value) validateEmail(emailInput.value);
+});
+
+pwInput.addEventListener('input', () => {
+  if (pwInput.value) validatePassword(pwInput.value);
+  else hideMsg(pwMsg);
+});
+pwInput.addEventListener('blur', () => {
+  if (pwInput.value) validatePassword(pwInput.value);
+});
+
+// ===== FORM SUBMIT =====
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const eValid = validateEmail(emailInput.value);
+  const pValid = validatePassword(pwInput.value);
+
+  if (!eValid || !pValid) {
+    // Shake the card
+    const card = document.querySelector('.login-card');
+    card.style.animation = 'shakeCard 0.4s ease';
+    setTimeout(() => card.style.animation = '', 400);
+    return;
+  }
+
+  // Loading state
+  loginBtn.classList.add('loading');
+
+  // Simulate auth
+  setTimeout(() => {
+    loginBtn.classList.remove('loading');
+    litRoom.classList.remove('active');
+    setTimeout(() => {
+      welcome.classList.add('active');
+    }, 300);
+  }, 1800);
+});
+
+// Shake keyframes (injected)
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = `
+  @keyframes shakeCard {
+    0%, 100% { transform: translateX(0) scale(1); }
+    15% { transform: translateX(-8px) scale(1); }
+    30% { transform: translateX(7px) scale(1); }
+    45% { transform: translateX(-6px) scale(1); }
+    60% { transform: translateX(5px) scale(1); }
+    75% { transform: translateX(-3px) scale(1); }
+    90% { transform: translateX(2px) scale(1); }
+  }
+`;
+document.head.appendChild(shakeStyle);
+
+// ===== TOAST =====
+let toastTimer;
+function showToast(msg) {
+  toastEl.textContent = '> ' + msg;
+  toastEl.className = 'toast show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.className = 'toast', 2500);
+}
+</script>
+</body>
+</html>

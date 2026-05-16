@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLITCHFLIX — Cybernetic Stream</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #050508;
+    --bg-card: #0c0c14;
+    --fg: #e0e0f0;
+    --muted: #5a5a7a;
+    --cyan: #00f0ff;
+    --magenta: #ff0066;
+    --green: #00ff88;
+    --yellow: #ffe600;
+    --radius: 4px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Share Tech Mono', monospace;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ===== SCANLINE OVERLAY ===== */
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none; z-index: 9998;
+  }
+
+  /* ===== DATA RAIN CANVAS ===== */
+  #dataRain {
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none; opacity: 0.15;
+  }
+
+  /* ===== NAV ===== */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.8rem 2.5rem;
+    background: linear-gradient(180deg, rgba(5,5,8,0.95) 60%, transparent);
+    border-bottom: 1px solid rgba(0,240,255,0.05);
+  }
+  nav.scrolled {
+    background: rgba(5,5,8,0.98);
+    backdrop-filter: blur(20px);
+    border-bottom-color: rgba(0,240,255,0.12);
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem; font-weight: 900;
+    letter-spacing: 6px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    cursor: pointer;
+    position: relative;
+  }
+  .logo::after {
+    content: 'GLITCHFLIX';
+    position: absolute; left: 2px; top: 1px;
+    background: linear-gradient(90deg, var(--magenta), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0; transition: opacity 0.1s;
+  }
+  .logo:hover::after { opacity: 0.6; }
+  .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase;
+    transition: all 0.3s; position: relative;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+  .nav-links a.active { color: var(--cyan); }
+  .nav-links a.active::after {
+    content: ''; position: absolute;
+    bottom: -6px; left: 0; right: 0; height: 1px;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  .nav-right { display: flex; align-items: center; gap: 1.2rem; }
+  .nav-icon {
+    color: var(--muted); font-size: 0.95rem;
+    cursor: pointer; transition: all 0.3s;
+  }
+  .nav-icon:hover { color: var(--cyan); text-shadow: 0 0 12px var(--cyan); transform: scale(1.1); }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 2px;
+    border: 1px solid var(--cyan);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; color: var(--cyan); cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 0 8px rgba(0,240,255,0.15);
+  }
+  .avatar:hover { box-shadow: 0 0 16px rgba(0,240,255,0.4); background: rgba(0,240,255,0.08); }
+
+  /* ===== HERO ===== */
+  .hero {
+    position: relative; height: 80vh; min-height: 500px; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: -10px;
+    background: url('https://picsum.photos/seed/cyberpunk-neon-city/1920/1080') center/cover;
+    filter: brightness(0.35) saturate(1.4) hue-rotate(10deg);
+    transition: transform 10s ease-out;
+  }
+  .hero:hover .hero-bg { transform: scale(1.04); }
+  .hero-gradient {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(0deg, var(--bg) 0%, rgba(5,5,8,0.5) 40%, transparent 60%),
+      linear-gradient(90deg, rgba(5,5,8,0.9) 0%, rgba(5,5,8,0.3) 45%, transparent 70%);
+  }
+  /* Glitch bars on hero */
+  .hero-glitch {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .glitch-bar {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: var(--cyan); opacity: 0;
+    animation: glitchBar 4s ease-in-out infinite;
+  }
+  .glitch-bar:nth-child(2) { background: var(--magenta); animation-delay: 1.5s; animation-duration: 3.5s; }
+  .glitch-bar:nth-child(3) { background: var(--green); animation-delay: 3s; animation-duration: 5s; }
+  @keyframes glitchBar {
+    0%, 100% { opacity: 0; transform: translateY(0); }
+    10% { opacity: 0.6; }
+    12% { opacity: 0; transform: translateY(40px); }
+    14% { opacity: 0.4; transform: translateY(120px); }
+    16% { opacity: 0; }
+  }
+
+  .hero-content { position: absolute; bottom: 14%; left: 2.5rem; max-width: 500px; z-index: 2; }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-size: 0.65rem; font-weight: 600; color: var(--cyan);
+    text-transform: uppercase; letter-spacing: 4px; margin-bottom: 0.8rem;
+    text-shadow: 0 0 10px rgba(0,240,255,0.5);
+  }
+  .hero-tag::before {
+    content: '//'; color: var(--magenta);
+  }
+  .hero-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3.8rem; font-weight: 900; line-height: 1;
+    letter-spacing: 4px; margin-bottom: 0.8rem;
+    color: var(--fg);
+    position: relative;
+  }
+  .hero-title .glitch-text {
+    position: relative;
+  }
+  .hero-title .glitch-text::before,
+  .hero-title .glitch-text::after {
+    content: attr(data-text);
+    position: absolute; left: 0; top: 0;
+    width: 100%; height: 100%;
+  }
+  .hero-title .glitch-text::before {
+    color: var(--cyan);
+    z-index: -1;
+    animation: glitch1 3s infinite linear alternate-reverse;
+  }
+  .hero-title .glitch-text::after {
+    color: var(--magenta);
+    z-index: -2;
+    animation: glitch2 2s infinite linear alternate-reverse;
+  }
+  @keyframes glitch1 {
+    0%, 90%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+    92% { clip-path: inset(20% 0 40% 0); transform: translate(-3px, 1px); }
+    94% { clip-path: inset(60% 0 10% 0); transform: translate(3px, -1px); }
+    96% { clip-path: inset(30% 0 50% 0); transform: translate(-2px, 2px); }
+  }
+  @keyframes glitch2 {
+    0%, 88%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+    90% { clip-path: inset(50% 0 20% 0); transform: translate(3px, -2px); }
+    93% { clip-path: inset(10% 0 70% 0); transform: translate(-3px, 1px); }
+    95% { clip-path: inset(70% 0 5% 0); transform: translate(2px, -1px); }
+  }
+
+  .hero-desc {
+    font-size: 0.85rem; color: rgba(224,224,240,0.6);
+    line-height: 1.7; margin-bottom: 1.2rem;
+  }
+  .hero-buttons { display: flex; gap: 0.6rem; }
+  .btn-cyber, .btn-ghost {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1.8rem; border: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.3s; position: relative;
+    overflow: hidden;
+  }
+  .btn-cyber {
+    background: var(--cyan); color: #000;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+  .btn-cyber:hover { box-shadow: 0 0 30px rgba(0,240,255,0.4); transform: scale(1.03); }
+  .btn-ghost {
+    background: transparent; color: var(--fg);
+    border: 1px solid rgba(0,240,255,0.3);
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+  .btn-ghost:hover { border-color: var(--cyan); background: rgba(0,240,255,0.06); }
+
+  /* ===== CONTENT ===== */
+  .content {
+    position: relative; z-index: 5;
+    margin-top: -80px; padding-bottom: 3rem;
+  }
+  .row { margin-bottom: 2.5rem; position: relative; }
+  .row-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2.5rem; margin-bottom: 0.6rem;
+  }
+  .row-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--muted);
+    position: relative;
+  }
+  .row-title::before {
+    content: '>'; color: var(--cyan); margin-right: 0.5rem;
+    text-shadow: 0 0 8px var(--cyan);
+  }
+  .row-explore {
+    font-size: 0.65rem; color: var(--muted); cursor: pointer;
+    letter-spacing: 1px; transition: color 0.3s;
+  }
+  .row-explore:hover { color: var(--cyan); }
+
+  .cards-track {
+    display: flex; gap: 8px; padding: 20px 2.5rem 30px;
+    overflow-x: auto; scroll-behavior: smooth;
+    scrollbar-width: none;
+  }
+  .cards-track::-webkit-scrollbar { display: none; }
+
+  /* ===== THE CARD — GLITCH EDITION ===== */
+  .card {
+    flex-shrink: 0; width: 220px;
+    position: relative; cursor: pointer;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), z-index 0s 0.4s;
+    z-index: 1;
+    border-radius: 2px;
+  }
+  .card:hover {
+    z-index: 100;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), z-index 0s 0s;
+  }
+
+  .card-img-wrap {
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    overflow: hidden; border-radius: 2px;
+    background: var(--bg-card);
+    border: 1px solid rgba(0,240,255,0.04);
+    transition: border-color 0.4s;
+  }
+  .card:hover .card-img-wrap {
+    border-color: rgba(0,240,255,0.2);
+    box-shadow: 0 0 20px rgba(0,240,255,0.1), inset 0 0 20px rgba(0,240,255,0.03);
+  }
+
+  .card-img-wrap img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: filter 0.5s, transform 0.6s;
+    filter: saturate(0.8) brightness(0.85);
+  }
+  .card:hover .card-img-wrap img {
+    filter: saturate(1.3) brightness(0.5) contrast(1.1);
+    transform: scale(1.08);
+  }
+
+  /* RGB Split layers */
+  .card-rgb-r, .card-rgb-b {
+    position: absolute; inset: 0;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.3s;
+    mix-blend-mode: screen;
+  }
+  .card-rgb-r {
+    background: rgba(255,0,102,0.15);
+    mix-blend-mode: multiply;
+  }
+  .card-rgb-b {
+    background: rgba(0,240,255,0.15);
+  }
+  .card:hover .card-rgb-r {
+    opacity: 1;
+    animation: rgbShiftR 0.3s ease-out forwards;
+  }
+  .card:hover .card-rgb-b {
+    opacity: 1;
+    animation: rgbShiftB 0.3s ease-out forwards;
+  }
+  @keyframes rgbShiftR {
+    0% { transform: translate(0); }
+    30% { transform: translate(-3px, 1px); }
+    100% { transform: translate(-2px, 0.5px); }
+  }
+  @keyframes rgbShiftB {
+    0% { transform: translate(0); }
+    30% { transform: translate(3px, -1px); }
+    100% { transform: translate(2px, -0.5px); }
+  }
+
+  /* Holographic sheen */
+  .card-holo {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      var(--holo-angle, 120deg),
+      transparent 20%,
+      rgba(0,240,255,0.08) 35%,
+      rgba(255,0,102,0.08) 45%,
+      rgba(0,255,136,0.06) 55%,
+      rgba(255,230,0,0.08) 65%,
+      transparent 80%
+    );
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+  .card:hover .card-holo { opacity: 1; }
+
+  /* Glitch noise overlay */
+  .card-noise {
+    position: absolute; inset: 0;
+    opacity: 0; transition: opacity 0.15s;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+  .card:hover .card-noise {
+    opacity: 0.3;
+    animation: noiseFlicker 0.15s steps(3) infinite;
+  }
+  @keyframes noiseFlicker {
+    0% { transform: translate(0,0); }
+    33% { transform: translate(-1px, 1px); }
+    66% { transform: translate(1px, -1px); }
+    100% { transform: translate(0,0); }
+  }
+
+  /* Scanline on card */
+  .card-scanlines {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 1px,
+      rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px
+    );
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .card:hover .card-scanlines { opacity: 1; }
+
+  /* Match badge */
+  .card-match {
+    position: absolute; top: 6px; left: 6px;
+    font-size: 0.6rem; font-weight: 700;
+    padding: 2px 6px; letter-spacing: 1px;
+    background: rgba(0,0,0,0.7);
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,0.2);
+    opacity: 0; transform: translateY(-4px);
+    transition: all 0.2s 0.05s;
+  }
+  .card:hover .card-match { opacity: 1; transform: translateY(0); }
+
+  /* Type badge */
+  .card-type {
+    position: absolute; top: 6px; right: 6px;
+    font-size: 0.5rem; font-weight: 700;
+    padding: 2px 5px; letter-spacing: 1px;
+    opacity: 0; transition: opacity 0.2s 0.1s;
+    text-transform: uppercase;
+  }
+  .card:hover .card-type { opacity: 1; }
+  .type-series { background: var(--cyan); color: #000; }
+  .type-film { background: var(--magenta); color: #fff; }
+
+  /* ===== TERMINAL INFO PANEL ===== */
+  .card-terminal {
+    position: absolute; top: calc(100% + 4px);
+    left: -4px; right: -4px;
+    background: rgba(8,8,16,0.96);
+    border: 1px solid rgba(0,240,255,0.15);
+    border-radius: 2px;
+    padding: 0.5rem 0.6rem 0.6rem;
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.95);
+    transform-origin: top center;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    pointer-events: none;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(0,240,255,0.05);
+  }
+  .card:hover .card-terminal {
+    opacity: 1; transform: translateY(0) scaleY(1); pointer-events: auto;
+  }
+
+  .terminal-header {
+    display: flex; align-items: center; gap: 0.4rem;
+    margin-bottom: 0.4rem; padding-bottom: 0.3rem;
+    border-bottom: 1px solid rgba(0,240,255,0.08);
+  }
+  .terminal-dots {
+    display: flex; gap: 3px;
+  }
+  .terminal-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .terminal-dots span:nth-child(1) { background: var(--magenta); }
+  .terminal-dots span:nth-child(2) { background: var(--yellow); }
+  .terminal-dots span:nth-child(3) { background: var(--green); }
+  .terminal-path {
+    font-size: 0.5rem; color: var(--muted);
+    letter-spacing: 1px; flex: 1; text-align: center;
+  }
+
+  .terminal-actions {
+    display: flex; gap: 3px; margin-bottom: 0.4rem;
+  }
+  .t-btn {
+    flex: 1; height: 26px;
+    border: 1px solid rgba(0,240,255,0.2);
+    background: rgba(0,240,255,0.04);
+    color: var(--cyan); font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 1px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .t-btn:hover {
+    background: rgba(0,240,255,0.12);
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0,240,255,0.15);
+  }
+  .t-btn.t-play {
+    background: var(--cyan); color: #000;
+    border-color: var(--cyan); font-weight: 700;
+  }
+  .t-btn.t-play:hover { box-shadow: 0 0 20px rgba(0,240,255,0.3); }
+
+  .terminal-line {
+    font-size: 0.58rem; line-height: 1.6; color: var(--muted);
+    display: flex; gap: 0.3rem;
+  }
+  .terminal-line .prompt { color: var(--cyan); }
+  .terminal-line .val { color: var(--fg); }
+  .terminal-line .val-green { color: var(--green); }
+  .terminal-line .val-magenta { color: var(--magenta); }
+
+  .terminal-tags {
+    display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.2rem;
+  }
+  .terminal-tag {
+    font-size: 0.5rem; padding: 1px 5px;
+    border: 1px solid rgba(255,0,102,0.2);
+    color: var(--magenta); letter-spacing: 0.5px;
+  }
+
+  /* Glitch flash on card enter */
+  .card-glitch-flash {
+    position: absolute; inset: 0;
+    background: var(--cyan); opacity: 0;
+    pointer-events: none; z-index: 10;
+    mix-blend-mode: overlay;
+  }
+  .card:hover .card-glitch-flash {
+    animation: glitchFlash 0.4s ease-out;
+  }
+  @keyframes glitchFlash {
+    0% { opacity: 0.6; }
+    10% { opacity: 0; }
+    15% { opacity: 0.3; }
+    20% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* Neon ambient glow */
+  .card::after {
+    content: ''; position: absolute;
+    inset: -25px; border-radius: 8px;
+    background: radial-gradient(ellipse at center, rgba(0,240,255,0.2) 0%, transparent 60%);
+    opacity: 0; z-index: -1; pointer-events: none;
+    transition: opacity 0.5s;
+  }
+  .card:hover::after { opacity: 0.25; }
+
+  /* Rank — cyberpunk style */
+  .card-rank {
+    position: absolute; bottom: -4px; left: -10px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 5rem; font-weight: 900;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(0,240,255,0.1);
+    z-index: -1; pointer-events: none;
+    transition: all 0.3s;
+  }
+  .card:hover .card-rank {
+    -webkit-text-stroke-color: rgba(0,240,255,0.06);
+    text-shadow: 0 0 30px rgba(0,240,255,0.05);
+  }
+
+  /* ===== SCROLL ARROWS ===== */
+  .scroll-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 40px; height: 70%;
+    background: rgba(5,5,8,0.85);
+    border: 1px solid rgba(0,240,255,0.08);
+    color: var(--cyan); font-size: 1rem;
+    cursor: pointer; z-index: 50;
+    opacity: 0; transition: all 0.3s;
+    display: flex; align-items: center; justify-content: center;
+    clip-path: polygon(0 0, 100% 8px, 100% calc(100% - 8px), 0 100%);
+  }
+  .row:hover .scroll-arrow { opacity: 1; }
+  .scroll-arrow:hover {
+    background: rgba(0,240,255,0.08);
+    border-color: rgba(0,240,255,0.2);
+  }
+  .scroll-arrow.left { left: 0; }
+  .scroll-arrow.right { right: 0; clip-path: polygon(0 8px, 100% 0, 100% 100%, 0 calc(100% - 8px)); }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: rgba(8,8,16,0.95);
+    border: 1px solid rgba(0,240,255,0.2);
+    color: var(--cyan); padding: 0.7rem 1.4rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem; letter-spacing: 1px;
+    z-index: 9999; opacity: 0;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(0,240,255,0.08);
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast::before { content: '> '; color: var(--green); }
+
+  /* ===== MODAL ===== */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 3000;
+    background: rgba(0,0,0,0.9);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 5vh; overflow-y: auto;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    width: 92%; max-width: 800px;
+    background: var(--bg-card);
+    border: 1px solid rgba(0,240,255,0.12);
+    border-radius: 4px; overflow: hidden;
+    transform: translateY(30px) scale(0.97);
+    transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 0 60px rgba(0,240,255,0.06), 0 30px 80px rgba(0,0,0,0.7);
+    margin-bottom: 5vh;
+  }
+  .modal-backdrop.open .modal-box { transform: translateY(0) scale(1); }
+  .modal-hero { position: relative; height: 320px; overflow: hidden; }
+  .modal-hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4) saturate(1.3); }
+  .modal-hero-grad { position: absolute; inset: 0; background: linear-gradient(0deg, var(--bg-card) 0%, transparent 50%); }
+  .modal-close {
+    position: absolute; top: 12px; right: 12px;
+    width: 32px; height: 32px;
+    border: 1px solid rgba(0,240,255,0.3);
+    background: rgba(5,5,8,0.8); color: var(--cyan);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; transition: all 0.2s;
+  }
+  .modal-close:hover { background: rgba(0,240,255,0.1); border-color: var(--cyan); }
+  .modal-body { padding: 0 2rem 2rem; margin-top: -50px; position: relative; z-index: 2; }
+  .modal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem; font-weight: 900;
+    letter-spacing: 3px; margin-bottom: 0.5rem;
+    color: var(--fg);
+  }
+  .modal-meta {
+    display: flex; gap: 1rem; font-size: 0.75rem;
+    color: var(--muted); margin-bottom: 1rem; flex-wrap: wrap;
+    align-items: center;
+  }
+  .modal-meta .g { color: var(--green); }
+  .modal-rating-badge {
+    border: 1px solid rgba(0,240,255,0.2);
+    padding: 0 6px; font-size: 0.65rem; color: var(--cyan);
+  }
+  .modal-btns { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
+  .modal-btn {
+    padding: 0.6rem 1.4rem; border: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 2px; cursor: pointer; transition: all 0.25s;
+    display: flex; align-items: center; gap: 0.4rem;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .modal-btn.primary { background: var(--cyan); color: #000; }
+  .modal-btn.primary:hover { box-shadow: 0 0 24px rgba(0,240,255,0.4); }
+  .modal-btn.sec { background: transparent; color: var(--cyan); border: 1px solid rgba(0,240,255,0.25); }
+  .modal-btn.sec:hover { background: rgba(0,240,255,0.06); }
+  .modal-desc {
+    font-size: 0.82rem; color: rgba(224,224,240,0.6);
+    line-height: 1.7; margin-bottom: 1rem;
+  }
+  .modal-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .modal-tag {
+    font-size: 0.6rem; padding: 2px 8px;
+    border: 1px solid rgba(255,0,102,0.2);
+    color: var(--magenta); letter-spacing: 0.5px;
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 0.6rem 1rem; }
+    .nav-links { display: none; }
+    .hero-content { left: 1rem; bottom: 12%; max-width: 92%; }
+    .hero-title { font-size: 2.2rem; }
+    .cards-track { padding: 15px 1rem 25px; gap: 6px; }
+    .card { width: 150px; }
+    .card:hover { transform: scale(1.3) !important; }
+    .row-header { padding: 0 1rem; }
+    .scroll-arrow { display: none; }
+    .modal-hero { height: 200px; }
+    .modal-body { padding: 0 1rem 1.5rem; }
+    .modal-title { font-size: 1.4rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="dataRain"></canvas>
+
+<nav id="navbar">
+  <div class="nav-left">
+    <div class="logo">GLITCHFLIX</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Series</a></li>
+      <li><a href="#">Films</a></li>
+      <li><a href="#">Neural</a></li>
+    </ul>
+  </div>
+  <div class="nav-right">
+    <i class="fa-solid fa-magnifying-glass nav-icon"></i>
+    <i class="fa-solid fa-signal nav-icon"></i>
+    <div class="avatar">NX</div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-gradient"></div>
+  <div class="hero-glitch">
+    <div class="glitch-bar" style="top:20%"></div>
+    <div class="glitch-bar" style="top:55%"></div>
+    <div class="glitch-bar" style="top:78%"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-tag">Neural Original</div>
+    <h1 class="hero-title">
+      <span class="glitch-text" data-text="NEON VOID">NEON VOID</span>
+    </h1>
+    <p class="hero-desc">In a city where memories are currency, a black-market memory thief discovers a memory that doesn't belong to anyone — past, present, or future. The more she uncovers, the more reality rewrites itself around her.</p>
+    <div class="hero-buttons">
+      <button class="btn-cyber" onclick="showToast('INITIALIZING STREAM')"><i class="fa-solid fa-play"></i> Execute</button>
+      <button class="btn-ghost" onclick="openModal(shows[0])"><i class="fa-solid fa-terminal"></i> Inspect</button>
+    </div>
+  </div>
+</section>
+
+<main class="content" id="content"></main>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const shows = [
+  { title:"Neon Void", match:97, year:2025, rating:"TV-MA", tags:["Cyberpunk","Thriller","Sci-Fi"], type:"series", seed:"neon-void", desc:"In a city where memories are currency, a black-market memory thief discovers a memory that doesn't belong to anyone." },
+  { title:"Synthetic Blood", match:94, year:2024, rating:"TV-MA", tags:["Horror","Sci-Fi"], type:"series", seed:"synthetic-blood", desc:"Lab-grown blood becomes sentient and begins rewriting the DNA of everyone who receives transfusions." },
+  { title:"Ghost Protocol X", match:91, year:2025, rating:"TV-14", tags:["Espionage","Action"], type:"series", seed:"ghost-protocol-x", desc:"Agents discover their own agency has been infiltrated by an AI that's been running it for years." },
+  { title:"Chrome Dreams", match:88, year:2024, rating:"TV-MA", tags:["Drama","Cyberpunk"], type:"film", seed:"chrome-dreams", desc:"A dying android spends its last 72 hours experiencing everything it was built to suppress: emotion." },
+  { title:"Void Walker", match:96, year:2025, rating:"TV-MA", tags:["Dark Fantasy","Horror"], type:"series", seed:"void-walker", desc:"Between dimensions lies a corridor. Something walks it. And it's learned to knock." },
+  { title:"Pulse", match:89, year:2024, rating:"TV-14", tags:["Sci-Fi","Mystery"], type:"series", seed:"pulse-cyber", desc:"Every electronic device in the world starts receiving the same signal — a heartbeat that's not human." },
+  { title:"Red Wire", match:93, year:2025, rating:"TV-MA", tags:["Thriller","Political"], type:"film", seed:"red-wire", desc:"A journalist finds a single red wire connecting every corruption scandal of the decade to one source." },
+  { title:"Decay", match:85, year:2024, rating:"TV-MA", tags:["Horror","Body"], type:"film", seed:"decay-horror", desc:"A biologist watches her own cells mutate on a molecular level — and she's still conscious." },
+  { title:"Signal Lost", match:90, year:2025, rating:"TV-14", tags:["Post-Apocalyptic","Sci-Fi"], type:"series", seed:"signal-lost", desc:"After all satellite communication dies, a ham radio operator receives a transmission from tomorrow." },
+  { title:"Ash Algorithm", match:87, year:2024, rating:"TV-MA", tags:["Tech","Thriller"], type:"series", seed:"ash-algo", desc:"An algorithm designed to predict crime begins causing it — perfectly, undetectably, at scale." },
+  { title:"Fractal", match:92, year:2025, rating:"TV-MA", tags:["Psychological","Sci-Fi"], type:"film", seed:"fractal-mind", desc:"A mathematician discovers that her consciousness is a fractal — and she's only one level deep." },
+  { title:"Dead Channel", match:84, year:2024, rating:"TV-14", tags:["Mystery","Supernatural"], type:"series", seed:"dead-channel", desc:"A TV repairman keeps finding the same static channel on every set — and it shows a room that matches his own." },
+  { title:"Iron Lattice", match:91, year:2025, rating:"TV-MA", tags:["War","Mech"], type:"series", seed:"iron-lattice", desc:"Mech pilots discover their machines are synced not to their brains, but to their fears." },
+  { title:"Coral Mind", match:88, year:2024, rating:"TV-PG", tags:["Nature","Sci-Fi"], type:"film", seed:"coral-mind", desc:"A reef ecosystem develops a collective intelligence and begins solving problems no individual organism could." },
+  { title:"Zero Day", match:95, year:2025, rating:"TV-MA", tags:["Cyberpunk","Heist"], type:"series", seed:"zero-day-heist", desc:"The most dangerous hack in history wasn't data theft — it was rewriting a single law in the legal code." },
+  { title:"Phantom Thread", match:86, year:2024, rating:"TV-14", tags:["Mystery","Period"], type:"film", seed:"phantom-thread-cyber", desc:"In Victorian London, a seamstress embroiders messages into fabric that predict murders before they happen." },
+  { title:"Glass Ocean", match:90, year:2025, rating:"TV-MA", tags:["Sci-Fi","Thriller"], type:"series", seed:"glass-ocean", desc:"The ocean turns transparent overnight. What's visible at the bottom changes everything." },
+  { title:"Wormhole", match:93, year:2024, rating:"TV-MA", tags:["Space","Horror"], type:"film", seed:"wormhole-horror", desc:"A probe returns from a wormhole with footage of Earth — but the Earth in the footage is 200 years in the future and empty." },
+  { title:"Moth Code", match:82, year:2025, rating:"TV-14", tags:["Conspiracy","Tech"], type:"series", seed:"moth-code", desc:"A pattern in moth flight paths encodes a message that's been broadcast since the Cretaceous era." },
+  { title:"Black Static", match:89, year:2024, rating:"TV-MA", tags:["Horror","Radio"], type:"film", seed:"black-static", desc:"A radio astronomer picks up a signal that, when played backward, is the sound of her own breathing." },
+];
+
+const rowConfigs = [
+  { label: "System_Recommended", ids: [0,1,2,3,4,5,6,7,8,9], ranked: true },
+  { label: "Neural_Originals", ids: [10,11,12,13,14,15,16,17,18,19], ranked: false },
+  { label: "High_Signal_Thrillers", ids: [2,6,9,14,16,10,5,1,4,7], ranked: false },
+  { label: "Deep_Space_Anomalies", ids: [17,5,10,0,14,8,3,11], ranked: false },
+];
+
+const content = document.getElementById('content');
+
+rowConfigs.forEach((cfg, ri) => {
+  const row = document.createElement('section');
+  row.className = 'row';
+  row.innerHTML = `
+    <div class="row-header">
+      <h2 class="row-title">${cfg.label}</h2>
+      <span class="row-explore">SEE_ALL <i class="fa-solid fa-angle-right" style="font-size:0.55rem"></i></span>
+    </div>
+    <div style="position:relative">
+      <button class="scroll-arrow left" onclick="scrollRow(this,-1)" aria-label="Scroll left"><i class="fa-solid fa-chevron-left"></i></button>
+      <div class="cards-track" id="track-${ri}"></div>
+      <button class="scroll-arrow right" onclick="scrollRow(this,1)" aria-label="Scroll right"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+  `;
+  content.appendChild(row);
+
+  const track = row.querySelector('.cards-track');
+
+  cfg.ids.forEach((id, i) => {
+    const s = shows[id];
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('tabindex', '0');
+
+    const rankHTML = cfg.ranked ? `<span class="card-rank">${String(i+1).padStart(2,'0')}</span>` : '';
+    const typeClass = s.type === 'series' ? 'type-series' : 'type-film';
+
+    card.innerHTML = `
+      ${rankHTML}
+      <div class="card-img-wrap">
+        <img src="https://picsum.photos/seed/${s.seed}/460/259" alt="${s.title}" loading="lazy">
+        <div class="card-rgb-r"></div>
+        <div class="card-rgb-b"></div>
+        <div class="card-holo"></div>
+        <div class="card-noise"></div>
+        <div class="card-scanlines"></div>
+        <div class="card-glitch-flash"></div>
+        <span class="card-match">${s.match}%</span>
+        <span class="card-type ${typeClass}">${s.type}</span>
+      </div>
+      <div class="card-terminal">
+        <div class="terminal-header">
+          <div class="terminal-dots"><span></span><span></span><span></span></div>
+          <span class="terminal-path">~/stream/${s.seed}</span>
+        </div>
+        <div class="terminal-actions">
+          <button class="t-btn t-play" onclick="event.stopPropagation();showToast('STREAMING: ${s.title}')"><i class="fa-solid fa-play" style="font-size:0.5rem"></i> RUN</button>
+          <button class="t-btn" onclick="event.stopPropagation();showToast('QUEUED')"><i class="fa-solid fa-plus" style="font-size:0.5rem"></i> ADD</button>
+          <button class="t-btn" onclick="event.stopPropagation();showToast('LIKED')"><i class="fa-solid fa-heart" style="font-size:0.5rem"></i> LIKE</button>
+          <button class="t-btn" onclick="event.stopPropagation();openModal(shows[${id}])"><i class="fa-solid fa-expand" style="font-size:0.5rem"></i></button>
+        </div>
+        <div class="terminal-line"><span class="prompt">$</span> match: <span class="val-green">${s.match}%</span></div>
+        <div class="terminal-line"><span class="prompt">$</span> year: <span class="val">${s.year}</span></div>
+        <div class="terminal-line"><span class="prompt">$</span> class: <span class="val-magenta">${s.rating}</span></div>
+        <div class="terminal-tags">
+          ${s.tags.map(t => `<span class="terminal-tag">${t}</span>`).join('')}
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => openModal(shows[id]));
+
+    // 3D tilt + holographic angle tracking
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const rotY = ((x - cx) / cx) * 10;
+      const rotX = ((cy - y) / cy) * 7;
+      const angle = Math.atan2(y - cy, x - cx) * (180 / Math.PI) + 180;
+      card.style.transform = `scale(1.5) perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(15px)`;
+      card.style.setProperty('--holo-angle', angle + 'deg');
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+    });
+
+    track.appendChild(card);
+  });
+});
+
+// ===== SCROLL =====
+function scrollRow(btn, dir) {
+  btn.parentElement.querySelector('.cards-track').scrollBy({ left: dir * 750, behavior: 'smooth' });
+}
+
+// ===== NAVBAR =====
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 30), { passive: true });
+
+// ===== TOAST =====
+let tt;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== MODAL =====
+const mb = document.getElementById('modalBackdrop');
+const mBox = document.getElementById('modalBox');
+
+function openModal(s) {
+  mBox.innerHTML = `
+    <div class="modal-hero">
+      <img src="https://picsum.photos/seed/${s.seed}-wide/1200/500" alt="${s.title}">
+      <div class="modal-hero-grad"></div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <h2 class="modal-title">${s.title}</h2>
+      <div class="modal-meta">
+        <span class="g">${s.match}% Match</span>
+        <span>${s.year}</span>
+        <span class="modal-rating-badge">${s.rating}</span>
+        <span>${s.type.toUpperCase()}</span>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-btn primary" onclick="showToast('STREAMING: ${s.title}')"><i class="fa-solid fa-play"></i> Execute</button>
+        <button class="modal-btn sec" onclick="showToast('QUEUED')"><i class="fa-solid fa-plus"></i> Queue</button>
+        <button class="modal-btn sec" onclick="showToast('LIKED')"><i class="fa-solid fa-heart"></i> Like</button>
+      </div>
+      <p class="modal-desc">${s.desc}</p>
+      <div class="modal-tags">
+        ${s.tags.map(t => `<span class="modal-tag">${t}</span>`).join('')}
+      </div>
+    </div>
+  `;
+  mb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  mb.classList.remove('open');
+  document.body.style.overflow = '';
+}
+mb.addEventListener('click', e => { if (e.target === mb) closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ===== DATA RAIN (Matrix-style but subtle) =====
+const canvas = document.getElementById('dataRain');
+const ctx = canvas.getContext('2d');
+let cols, drops;
+const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF';
+
+function initRain() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const fontSize = 12;
+  cols = Math.floor(canvas.width / fontSize);
+  drops = Array(cols).fill(0).map(() => Math.random() * -50);
+}
+initRain();
+window.addEventListener('resize', initRain);
+
+function drawRain() {
+  ctx.fillStyle = 'rgba(5,5,8,0.06)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = '12px Share Tech Mono';
+
+  for (let i = 0; i < cols; i++) {
+    const char = chars[Math.floor(Math.random() * chars.length)];
+    const x = i * 12;
+    const y = drops[i] * 12;
+
+    // Mostly cyan, occasionally magenta or green
+    const r = Math.random();
+    if (r > 0.95) ctx.fillStyle = 'rgba(255,0,102,0.6)';
+    else if (r > 0.9) ctx.fillStyle = 'rgba(0,255,136,0.5)';
+    else ctx.fillStyle = 'rgba(0,240,255,0.3)';
+
+    ctx.fillText(char, x, y);
+
+    if (y > canvas.height && Math.random() > 0.985) {
+      drops[i] = 0;
+    }
+    drops[i] += 0.4 + Math.random() * 0.3;
+  }
+  requestAnimationFrame(drawRain);
+}
+drawRain();
+</script>
+</body>
+</html>
