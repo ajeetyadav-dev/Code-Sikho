@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cursor Effects That Feel Illegal</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #111111;
+    --fg: #f0efe8;
+    --muted: #5a5950;
+    --accent: #c8ff00;
+    --accent2: #ff3d5a;
+    --accent3: #00e5ff;
+    --card: rgba(20,20,18,0.9);
+    --border: rgba(200,255,0,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none !important; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ===== CUSTOM CURSOR ===== */
+  .cursor-dot {
+    position: fixed;
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: difference;
+    box-shadow: 0 0 10px var(--accent), 0 0 30px rgba(200,255,0,0.3);
+  }
+  .cursor-dot.hovering {
+    width: 50px; height: 50px;
+    background: rgba(200,255,0,0.15);
+    box-shadow: 0 0 20px rgba(200,255,0,0.2);
+    mix-blend-mode: normal;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 40px; height: 40px;
+    border: 1.5px solid rgba(200,255,0,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99998;
+    transform: translate(-50%, -50%);
+    transition: width 0.35s cubic-bezier(0.23,1,0.32,1), height 0.35s cubic-bezier(0.23,1,0.32,1), border-color 0.3s, opacity 0.3s;
+  }
+  .cursor-ring.hovering {
+    width: 60px; height: 60px;
+    border-color: rgba(200,255,0,0.15);
+    opacity: 0.5;
+  }
+  .cursor-ring.clicking {
+    width: 30px; height: 30px;
+    border-color: var(--accent2);
+  }
+
+  /* ===== PARTICLE TRAIL CANVAS ===== */
+  #trailCanvas {
+    position: fixed; inset: 0;
+    z-index: 99990; pointer-events: none;
+  }
+
+  /* ===== CLICK RIPPLES ===== */
+  .click-ripple {
+    position: fixed;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    pointer-events: none;
+    z-index: 99991;
+    transform: translate(-50%, -50%) scale(0);
+    animation: rippleOut 0.7s ease-out forwards;
+  }
+  @keyframes rippleOut {
+    0% { transform: translate(-50%,-50%) scale(0); opacity: 0.8; }
+    100% { transform: translate(-50%,-50%) scale(1); opacity: 0; }
+  }
+
+  /* ===== BACKGROUND DOT GRID ===== */
+  #gridCanvas {
+    position: fixed; inset: 0;
+    z-index: 0; pointer-events: none;
+  }
+
+  /* ===== SECTIONS ===== */
+  section {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 4rem 2rem;
+  }
+
+  /* ===== HERO ===== */
+  .hero { overflow: hidden; }
+  .hero-label {
+    font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 1.5rem;
+    opacity: 0; animation: heroIn 0.8s ease 0.3s forwards;
+  }
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 800; line-height: 1;
+    text-align: center; margin-bottom: 1.5rem;
+    opacity: 0; animation: heroIn 0.8s ease 0.5s forwards;
+  }
+  .hero-title .word { display: inline-block; margin: 0 0.15em; position: relative; }
+  .hero-title .char {
+    display: inline-block;
+    transition: transform 0.3s cubic-bezier(0.23,1,0.32,1), color 0.3s;
+    transition-delay: calc(var(--i) * 0.02s);
+  }
+  .hero-title .char.pushed {
+    transform: translateY(-8px) rotate(calc(var(--push-dir, 1) * 5deg));
+    color: var(--accent);
+  }
+  .hero-sub {
+    font-size: 1.1rem; color: var(--muted);
+    text-align: center; max-width: 500px;
+    line-height: 1.7; font-weight: 300;
+    opacity: 0; animation: heroIn 0.8s ease 0.7s forwards;
+  }
+  .scroll-hint {
+    position: absolute; bottom: 2rem;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    color: var(--muted); font-size: 0.7rem; letter-spacing: 2px;
+    opacity: 0; animation: heroIn 0.8s ease 1.2s forwards;
+  }
+  .scroll-line {
+    width: 1px; height: 40px;
+    background: linear-gradient(180deg, var(--accent), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%,100% { opacity: 0.3; transform: scaleY(0.6); }
+    50% { opacity: 1; transform: scaleY(1); }
+  }
+  @keyframes heroIn {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== SECTION LABELS ===== */
+  .sec-label {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.5rem;
+    text-align: center;
+  }
+  .sec-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800; text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  /* ===== MAGNETIC BUTTONS ===== */
+  .magnetic-grid {
+    display: flex; flex-wrap: wrap;
+    gap: 1.2rem; justify-content: center;
+    max-width: 700px;
+  }
+  .mag-btn {
+    position: relative;
+    padding: 1rem 2.2rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem; font-weight: 600;
+    letter-spacing: 1px;
+    border: 1px solid var(--border);
+    border-radius: 60px;
+    background: var(--card);
+    color: var(--fg);
+    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+    overflow: hidden;
+  }
+  .mag-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(200,255,0,0.1) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+    border-radius: 60px;
+  }
+  .mag-btn:hover::before { opacity: 1; }
+  .mag-btn:hover {
+    border-color: rgba(200,255,0,0.3);
+    box-shadow: 0 0 30px rgba(200,255,0,0.06);
+  }
+  .mag-btn .btn-fill {
+    position: absolute; inset: 0;
+    background: var(--accent);
+    border-radius: 60px;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.4s cubic-bezier(0.23,1,0.32,1);
+    z-index: 0;
+  }
+  .mag-btn:hover .btn-fill { transform: scaleY(1); }
+  .mag-btn span { position: relative; z-index: 1; transition: color 0.3s; }
+  .mag-btn:hover span { color: #0a0a0a; }
+  .mag-btn i { margin-right: 0.4rem; }
+
+  /* ===== TEXT SCRAMBLE ===== */
+  .scramble-zone {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 2rem;
+    max-width: 700px;
+  }
+  .scramble-line {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.4rem, 3.5vw, 2.5rem);
+    font-weight: 700;
+    text-align: center;
+    position: relative;
+    padding: 0.5rem 1rem;
+  }
+  .scramble-line .scramble-char {
+    display: inline-block;
+    transition: color 0.1s;
+  }
+  .scramble-line .scramble-char.decoded { color: var(--accent); }
+  .scramble-line .scramble-char.scrambling { color: var(--accent3); }
+  .scramble-line .proximity-bar {
+    position: absolute; bottom: 0; left: 50%;
+    height: 2px; background: var(--accent);
+    transform: translateX(-50%) scaleX(0);
+    transition: transform 0.3s;
+    border-radius: 1px;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* ===== 3D TILT CARDS ===== */
+  .tilt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem; max-width: 900px; width: 100%;
+    padding: 0 1rem;
+  }
+  .tilt-card {
+    position: relative;
+    aspect-ratio: 4/3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    transition: border-color 0.4s, box-shadow 0.4s;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .tilt-card:hover {
+    border-color: rgba(200,255,0,0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(200,255,0,0.04);
+  }
+  .tilt-card img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.5s, filter 0.5s;
+    filter: saturate(0.7) brightness(0.7);
+  }
+  .tilt-card:hover img {
+    transform: scale(1.08);
+    filter: saturate(1.1) brightness(0.8);
+  }
+  /* Spotlight */
+  .tilt-spotlight {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle 200px at var(--sx, 50%) var(--sy, 50%), rgba(200,255,0,0.08) 0%, transparent 100%);
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .tilt-card:hover .tilt-spotlight { opacity: 1; }
+  .tilt-card-content {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 1.2rem;
+    background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+    transform: translateY(10px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+  }
+  .tilt-card:hover .tilt-card-content { transform: translateY(0); opacity: 1; }
+  .tilt-card-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.2rem; }
+  .tilt-card-desc { font-size: 0.75rem; color: var(--muted); }
+
+  /* Glare overlay */
+  .tilt-glare {
+    position: absolute; inset: 0;
+    background: linear-gradient(var(--glare-angle, 120deg), transparent 30%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 55%, transparent 70%);
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .tilt-card:hover .tilt-glare { opacity: 1; }
+
+  /* ===== REPULSION FIELD ===== */
+  .repulsion-zone {
+    position: relative;
+    width: 100%; max-width: 600px;
+    height: 400px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  .repel-dot {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: transform 0.15s ease-out, box-shadow 0.3s;
+    box-shadow: 0 0 6px rgba(200,255,0,0.2);
+  }
+  .repel-dot.disturbed {
+    background: var(--accent2);
+    box-shadow: 0 0 12px rgba(255,61,90,0.4);
+  }
+  .repulsion-label {
+    position: absolute; bottom: 1rem; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem; color: var(--muted);
+    letter-spacing: 2px; text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  /* ===== GRAVITY WELL ===== */
+  .gravity-zone {
+    position: relative;
+    width: 100%; max-width: 600px;
+    height: 400px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  .gravity-dot {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .gravity-label {
+    position: absolute; bottom: 1rem; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem; color: var(--muted);
+    letter-spacing: 2px; text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  /* ===== GLOW TRAIL SECTION ===== */
+  .glow-text {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 6vw, 5rem);
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.1;
+    -webkit-text-stroke: 1px rgba(200,255,0,0.15);
+    color: transparent;
+    position: relative;
+  }
+  .glow-canvas-wrap {
+    position: relative;
+    width: 100%; max-width: 700px;
+    aspect-ratio: 2/1;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  #glowCanvas {
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 3rem 2rem;
+    font-size: 0.75rem; color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 600px) {
+    .tilt-grid { grid-template-columns: 1fr; max-width: 350px; }
+    .repulsion-zone, .gravity-zone { height: 300px; }
+    .mag-btn { padding: 0.8rem 1.5rem; font-size: 0.78rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.1s !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Trail Canvas -->
+<canvas id="trailCanvas"></canvas>
+
+<!-- Grid Canvas -->
+<canvas id="gridCanvas"></canvas>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <span class="hero-label">// Interactive Experience</span>
+  <h1 class="hero-title" id="heroTitle"></h1>
+  <p class="hero-sub">Move your cursor. Click everywhere. Every pixel reacts to you. Nothing on this page is static — including the things you think are.</p>
+  <div class="scroll-hint">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ===== MAGNETIC BUTTONS ===== -->
+<section>
+  <div class="sec-label">002 — Magnetic Field</div>
+  <h2 class="sec-title">Buttons That Want You</h2>
+  <div class="magnetic-grid" id="magGrid">
+    <div class="mag-btn" data-magnetic><div class="btn-fill"></div><span><i class="fa-solid fa-bolt"></i> Explore</span></div>
+    <div class="mag-btn" data-magnetic><div class="btn-fill"></div><span><i class="fa-solid fa-rocket"></i> Launch</span></div>
+    <div class="mag-btn" data-magnetic><div class="btn-fill"></div><span><i class="fa-solid fa-wand-magic-sparkles"></i> Create</span></div>
+    <div class="mag-btn" data-magnetic><div class="btn-fill"></div><span><i class="fa-solid fa-ghost"></i> Discover</span></div>
+    <div class="mag-btn" data-magnetic><div class="btn-fill"></div><span><i class="fa-solid fa-fire"></i> Ignite</span></div>
+    <div class="mag-btn" data-magnetic><div class="btn-fill"></div><span><i class="fa-solid fa-atom"></i> Transform</span></div>
+  </div>
+</section>
+
+<!-- ===== TEXT SCRAMBLE ===== -->
+<section>
+  <div class="sec-label">003 — Neural Decode</div>
+  <h2 class="sec-title">Text That Reads You</h2>
+  <div class="scramble-zone" id="scrambleZone">
+    <div class="scramble-line" data-text="The cursor is not a pointer — it is a probe">The cursor is not a pointer — it is a probe</div>
+    <div class="scramble-line" data-text="Every movement leaves a trace of intention">Every movement leaves a trace of intention</div>
+    <div class="scramble-line" data-text="Click to create ripples in digital space">Click to create ripples in digital space</div>
+    <div class="scramble-line" data-text="Reality responds to observation">Reality responds to observation</div>
+  </div>
+</section>
+
+<!-- ===== 3D TILT CARDS ===== -->
+<section>
+  <div class="sec-label">004 — Spatial Depth</div>
+  <h2 class="sec-title">Cards With Physics</h2>
+  <div class="tilt-grid" id="tiltGrid">
+    <div class="tilt-card" data-tilt>
+      <img src="https://picsum.photos/seed/cursor-abyss/600/450" alt="Abyss" loading="lazy">
+      <div class="tilt-spotlight"></div>
+      <div class="tilt-glare"></div>
+      <div class="tilt-card-content">
+        <div class="tilt-card-title">The Abyss Gazes Back</div>
+        <div class="tilt-card-desc">Interactive 3D perspective</div>
+      </div>
+    </div>
+    <div class="tilt-card" data-tilt>
+      <img src="https://picsum.photos/seed/cursor-neon/600/450" alt="Neon" loading="lazy">
+      <div class="tilt-spotlight"></div>
+      <div class="tilt-glare"></div>
+      <div class="tilt-card-content">
+        <div class="tilt-card-title">Neon Decay</div>
+        <div class="tilt-card-desc">Spotlight + glare effect</div>
+      </div>
+    </div>
+    <div class="tilt-card" data-tilt>
+      <img src="https://picsum.photos/seed/cursor-fracture/600/450" alt="Fracture" loading="lazy">
+      <div class="tilt-spotlight"></div>
+      <div class="tilt-glare"></div>
+      <div class="tilt-card-content">
+        <div class="tilt-card-title">Fracture Lines</div>
+        <div class="tilt-card-desc">Holographic sheen tracking</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== REPULSION ===== -->
+<section>
+  <div class="sec-label">005 — Repulsion Field</div>
+  <h2 class="sec-title">Dots That Fear You</h2>
+  <div class="repulsion-zone" id="repulsionZone">
+    <span class="repulsion-label">Move your cursor inside</span>
+  </div>
+</section>
+
+<!-- ===== GRAVITY WELL ===== -->
+<section>
+  <div class="sec-label">006 — Gravity Well</div>
+  <h2 class="sec-title">Particles That Need You</h2>
+  <div class="gravity-zone" id="gravityZone">
+    <span class="gravity-label">Your cursor is the attractor</span>
+  </div>
+</section>
+
+<!-- ===== GLOW TRAIL ===== -->
+<section>
+  <div class="sec-label">007 — Light Painting</div>
+  <h2 class="sec-title">Draw With Light</h2>
+  <div class="glow-text">LEAVE YOUR MARK</div>
+  <br><br>
+  <div class="glow-canvas-wrap">
+    <canvas id="glowCanvas"></canvas>
+  </div>
+</section>
+
+<footer>Built with raw math — no libraries, no frameworks, just vectors and vibes</footer>
+
+<script>
+// =============================================
+// GLOBAL STATE
+// =============================================
+const mouse = { x: -100, y: -100, px: -100, py: -100, speed: 0 };
+let isHovering = false;
+let isClicking = false;
+
+document.addEventListener('mousemove', e => {
+  mouse.px = mouse.x;
+  mouse.py = mouse.y;
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  mouse.speed = Math.hypot(mouse.x - mouse.px, mouse.y - mouse.py);
+});
+document.addEventListener('mousedown', () => {
+  isClicking = true;
+  cursorRing.classList.add('clicking');
+  spawnRipple(mouse.x, mouse.y);
+});
+document.addEventListener('mouseup', () => {
+  isClicking = false;
+  cursorRing.classList.remove('clicking');
+});
+
+// Hover detection
+document.addEventListener('mouseover', e => {
+  const t = e.target.closest('[data-magnetic], .mag-btn, .tilt-card, a, button, input');
+  if (t) { isHovering = true; cursorDot.classList.add('hovering'); cursorRing.classList.add('hovering'); }
+});
+document.addEventListener('mouseout', e => {
+  const t = e.target.closest('[data-magnetic], .mag-btn, .tilt-card, a, button, input');
+  if (t) { isHovering = false; cursorDot.classList.remove('hovering'); cursorRing.classList.remove('hovering'); }
+});
+
+// =============================================
+// CUSTOM CURSOR (lerp follow)
+// =============================================
+const cursorDot = document.getElementById('cursorDot');
+const cursorRing = document.getElementById('cursorRing');
+let dotX = -100, dotY = -100, ringX = -100, ringY = -100;
+
+function updateCursor() {
+  dotX += (mouse.x - dotX) * 0.35;
+  dotY += (mouse.y - dotY) * 0.35;
+  ringX += (mouse.x - ringX) * 0.12;
+  ringY += (mouse.y - ringY) * 0.12;
+  cursorDot.style.left = dotX + 'px';
+  cursorDot.style.top = dotY + 'px';
+  cursorRing.style.left = ringX + 'px';
+  cursorRing.style.top = ringY + 'px';
+  requestAnimationFrame(updateCursor);
+}
+updateCursor();
+
+// =============================================
+// CLICK RIPPLES
+// =============================================
+function spawnRipple(x, y) {
+  const r = document.createElement('div');
+  r.className = 'click-ripple';
+  const size = 80 + Math.random() * 60;
+  r.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;border-color:${Math.random()>0.5?'var(--accent)':'var(--accent3)'}`;
+  document.body.appendChild(r);
+  setTimeout(() => r.remove(), 700);
+}
+
+// =============================================
+// PARTICLE TRAIL
+// =============================================
+const trailCvs = document.getElementById('trailCanvas');
+const trailCtx = trailCvs.getContext('2d');
+let trailParticles = [];
+
+function resizeTrail() { trailCvs.width = innerWidth; trailCvs.height = innerHeight; }
+resizeTrail();
+addEventListener('resize', resizeTrail);
+
+function spawnTrailParticle() {
+  if (mouse.x < 0) return;
+  const count = Math.min(3, Math.ceil(mouse.speed / 8));
+  for (let i = 0; i < count; i++) {
+    trailParticles.push({
+      x: mouse.x + (Math.random()-0.5)*6,
+      y: mouse.y + (Math.random()-0.5)*6,
+      vx: (Math.random()-0.5)*2,
+      vy: (Math.random()-0.5)*2 - 0.5,
+      life: 1,
+      decay: 0.015 + Math.random()*0.02,
+      size: 1.5 + Math.random()*3,
+      hue: 70 + Math.random()*30 // lime range
+    });
+  }
+}
+
+function drawTrail() {
+  trailCtx.clearRect(0, 0, trailCvs.width, trailCvs.height);
+  spawnTrailParticle();
+  for (let i = trailParticles.length - 1; i >= 0; i--) {
+    const p = trailParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy -= 0.02; // slight upward drift
+    p.life -= p.decay;
+    if (p.life <= 0) { trailParticles.splice(i, 1); continue; }
+    trailCtx.beginPath();
+    trailCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    trailCtx.fillStyle = `hsla(${p.hue}, 100%, 65%, ${p.life * 0.6})`;
+    trailCtx.fill();
+    // glow
+    trailCtx.beginPath();
+    trailCtx.arc(p.x, p.y, p.size * p.life * 3, 0, Math.PI * 2);
+    trailCtx.fillStyle = `hsla(${p.hue}, 100%, 65%, ${p.life * 0.08})`;
+    trailCtx.fill();
+  }
+  requestAnimationFrame(drawTrail);
+}
+drawTrail();
+
+// =============================================
+// BACKGROUND DOT GRID (displacement)
+// =============================================
+const gridCvs = document.getElementById('gridCanvas');
+const gridCtx = gridCvs.getContext('2d');
+let gridDots = [];
+const GRID_SPACING = 40;
+
+function initGrid() {
+  gridCvs.width = innerWidth;
+  gridCvs.height = innerHeight;
+  gridDots = [];
+  const cols = Math.ceil(gridCvs.width / GRID_SPACING) + 1;
+  const rows = Math.ceil(gridCvs.height / GRID_SPACING) + 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      gridDots.push({
+        ox: c * GRID_SPACING,
+        oy: r * GRID_SPACING,
+        x: c * GRID_SPACING,
+        y: r * GRID_SPACING,
+      });
+    }
+  }
+}
+initGrid();
+addEventListener('resize', initGrid);
+
+function drawGrid() {
+  gridCtx.clearRect(0, 0, gridCvs.width, gridCvs.height);
+  const radius = 80;
+  for (const d of gridDots) {
+    const dx = mouse.x - d.ox;
+    const dy = mouse.y - d.oy;
+    const dist = Math.hypot(dx, dy);
+    if (dist < radius) {
+      const force = (1 - dist / radius) * 18;
+      const angle = Math.atan2(dy, dx);
+      d.x = d.ox - Math.cos(angle) * force;
+      d.y = d.oy - Math.sin(angle) * force;
+    } else {
+      d.x += (d.ox - d.x) * 0.1;
+      d.y += (d.oy - d.y) * 0.1;
+    }
+    const alpha = dist < radius ? 0.15 + (1 - dist/radius) * 0.25 : 0.06;
+    gridCtx.beginPath();
+    gridCtx.arc(d.x, d.y, dist < radius ? 1.5 : 1, 0, Math.PI * 2);
+    gridCtx.fillStyle = `rgba(200,255,0,${alpha})`;
+    gridCtx.fill();
+  }
+  requestAnimationFrame(drawGrid);
+}
+drawGrid();
+
+// =============================================
+// HERO TEXT — CHAR PUSH
+// =============================================
+const heroTitle = document.getElementById('heroTitle');
+const heroWords = ["Cursor", "Effects", "That", "Feel", "Illegal"];
+heroWords.forEach(word => {
+  const wSpan = document.createElement('span');
+  wSpan.className = 'word';
+  word.split('').forEach((ch, i) => {
+    const cSpan = document.createElement('span');
+    cSpan.className = 'char';
+    cSpan.textContent = ch;
+    cSpan.style.setProperty('--i', i);
+    cSpan.style.setProperty('--push-dir', Math.random() > 0.5 ? 1 : -1);
+    wSpan.appendChild(cSpan);
+  });
+  heroTitle.appendChild(wSpan);
+});
+
+// Push chars on cursor proximity
+function updateHeroChars() {
+  const chars = heroTitle.querySelectorAll('.char');
+  chars.forEach(ch => {
+    const rect = ch.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(mouse.x - cx, mouse.y - cy);
+    if (dist < 60) {
+      ch.classList.add('pushed');
+    } else {
+      ch.classList.remove('pushed');
+    }
+  });
+  requestAnimationFrame(updateHeroChars);
+}
+updateHeroChars();
+
+// =============================================
+// MAGNETIC BUTTONS
+// =============================================
+const magBtns = document.querySelectorAll('[data-magnetic]');
+magBtns.forEach(btn => {
+  btn.addEventListener('mousemove', e => {
+    const rect = btn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.hypot(dx, dy);
+    const pull = Math.max(0, 1 - dist / 200) * 15;
+    const tx = (dx / dist) * pull;
+    const ty = (dy / dist) * pull;
+    btn.style.transform = `translate(${tx}px, ${ty}px)`;
+    btn.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%');
+    btn.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%');
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = '';
+  });
+  btn.addEventListener('click', () => {
+    spawnRipple(mouse.x, mouse.y);
+  });
+});
+
+// =============================================
+// TEXT SCRAMBLE
+// =============================================
+const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?<>';
+const scrambleLines = document.querySelectorAll('.scramble-line');
+
+scrambleLines.forEach(line => {
+  const text = line.dataset.text;
+  // Wrap each char
+  let html = '';
+  text.split('').forEach((ch, i) => {
+    const span = `<span class="scramble-char" data-i="${i}" data-char="${ch === ' ' ? '&nbsp;' : ch}">${ch === ' ' ? '&nbsp;' : ch}</span>`;
+    html += span;
+  });
+  html += '<div class="proximity-bar"></div>';
+  line.innerHTML = html;
+});
+
+function updateScramble() {
+  scrambleLines.forEach(line => {
+    const rect = line.getBoundingClientRect();
+    const lineCx = rect.left + rect.width / 2;
+    const lineCy = rect.top + rect.height / 2;
+    const dist = Math.hypot(mouse.x - lineCx, mouse.y - lineCy);
+    const proximity = Math.max(0, 1 - dist / 300);
+    const bar = line.querySelector('.proximity-bar');
+    bar.style.width = (rect.width * proximity) + 'px';
+    bar.style.transform = `translateX(-50%) scaleX(${proximity})`;
+
+    const chars = line.querySelectorAll('.scramble-char');
+    chars.forEach(ch => {
+      const i = parseInt(ch.dataset.i);
+      const charRect = ch.getBoundingClientRect();
+      const charDist = Math.hypot(mouse.x - (charRect.left + charRect.width/2), mouse.y - (charRect.top + charRect.height/2));
+
+      if (charDist < 80) {
+        // Scramble
+        if (Math.random() > 0.6) {
+          ch.textContent = scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+          ch.classList.add('scrambling');
+          ch.classList.remove('decoded');
+        }
+      } else if (proximity > 0.3) {
+        // Decode from left to right
+        const decodeThreshold = (1 - proximity) * chars.length;
+        if (i < decodeThreshold) {
+          ch.textContent = ch.dataset.char === '&nbsp;' ? '\u00A0' : ch.dataset.char;
+          ch.classList.remove('scrambling');
+          ch.classList.add('decoded');
+        } else if (Math.random() > 0.7) {
+          ch.textContent = scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+          ch.classList.add('scrambling');
+          ch.classList.remove('decoded');
+        }
+      } else {
+        ch.textContent = ch.dataset.char === '&nbsp;' ? '\u00A0' : ch.dataset.char;
+        ch.classList.remove('scrambling', 'decoded');
+      }
+    });
+  });
+  requestAnimationFrame(updateScramble);
+}
+updateScramble();
+
+// =============================================
+// 3D TILT CARDS
+// =============================================
+const tiltCards = document.querySelectorAll('[data-tilt]');
+tiltCards.forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rotY = ((x - cx) / cx) * 15;
+    const rotX = ((cy - y) / cy) * 15;
+    card.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.04,1.04,1.04)`;
+    card.style.setProperty('--sx', (x / rect.width * 100) + '%');
+    card.style.setProperty('--sy', (y / rect.height * 100) + '%');
+    const angle = Math.atan2(y - cy, x - cx) * (180/Math.PI) + 180;
+    card.style.setProperty('--glare-angle', angle + 'deg');
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+  });
+});
+
+// =============================================
+// REPULSION DOTS
+// =============================================
+const repZone = document.getElementById('repulsionZone');
+const repDots = [];
+for (let i = 0; i < 80; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'repel-dot';
+  const x = 20 + Math.random() * (repZone.offsetWidth - 40 || 500);
+  const y = 20 + Math.random() * (repZone.offsetHeight - 40 || 350);
+  dot.style.left = x + 'px';
+  dot.style.top = y + 'px';
+  dot.dataset.ox = x;
+  dot.dataset.oy = y;
+  repZone.appendChild(dot);
+  repDots.push(dot);
+}
+
+function updateRepulsion() {
+  const zRect = repZone.getBoundingClientRect();
+  const mx = mouse.x - zRect.left;
+  const my = mouse.y - zRect.top;
+  const inside = mx > 0 && mx < zRect.width && my > 0 && my < zRect.height;
+
+  repDots.forEach(dot => {
+    const ox = parseFloat(dot.dataset.ox);
+    const oy = parseFloat(dot.dataset.oy);
+    if (inside) {
+      const dx = mx - ox;
+      const dy = my - oy;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const radius = 120;
+      if (dist < radius) {
+        const force = (1 - dist / radius) * 50;
+        const angle = Math.atan2(dy, dx);
+        const nx = ox - Math.cos(angle) * force;
+        const ny = oy - Math.sin(angle) * force;
+        dot.style.transform = `translate(${nx - ox}px, ${ny - oy}px)`;
+        dot.classList.add('disturbed');
+      } else {
+        dot.style.transform = '';
+        dot.classList.remove('disturbed');
+      }
+    } else {
+      dot.style.transform = '';
+      dot.classList.remove('disturbed');
+    }
+  });
+  requestAnimationFrame(updateRepulsion);
+}
+updateRepulsion();
+
+// =============================================
+// GRAVITY WELL
+// =============================================
+const gravZone = document.getElementById('gravityZone');
+const gravDots = [];
+for (let i = 0; i < 60; i++) {
+  gravDots.push({
+    x: Math.random() * 600,
+    y: Math.random() * 400,
+    vx: (Math.random()-0.5)*2,
+    vy: (Math.random()-0.5)*2,
+    size: 3 + Math.random()*5,
+    hue: 60 + Math.random()*40,
+    el: null
+  });
+}
+gravDots.forEach(d => {
+  const el = document.createElement('div');
+  el.className = 'gravity-dot';
+  el.style.width = d.size + 'px';
+  el.style.height = d.size + 'px';
+  el.style.background = `hsl(${d.hue}, 100%, 60%)`;
+  el.style.boxShadow = `0 0 ${d.size*2}px hsla(${d.hue},100%,60%,0.3)`;
+  gravZone.appendChild(el);
+  d.el = el;
+});
+
+function updateGravity() {
+  const zRect = gravZone.getBoundingClientRect();
+  const mx = mouse.x - zRect.left;
+  const my = mouse.y - zRect.top;
+  const inside = mx > 0 && mx < zRect.width && my > 0 && my < zRect.height;
+  const w = zRect.width || 600;
+  const h = zRect.height || 400;
+
+  gravDots.forEach(d => {
+    if (inside) {
+      const dx = mx - d.x;
+      const dy = my - d.y;
+      const dist = Math.max(10, Math.hypot(dx, dy));
+      const force = 200 / (dist * dist) * 5;
+      d.vx += (dx / dist) * force;
+      d.vy += (dy / dist) * force;
+    }
+    // Damping
+    d.vx *= 0.97;
+    d.vy *= 0.97;
+    d.x += d.vx;
+    d.y += d.vy;
+    // Bounce
+    if (d.x < 0) { d.x = 0; d.vx *= -0.6; }
+    if (d.x > w) { d.x = w; d.vx *= -0.6; }
+    if (d.y < 0) { d.y = 0; d.vy *= -0.6; }
+    if (d.y > h) { d.y = h; d.vy *= -0.6; }
+    d.el.style.transform = `translate(${d.x}px, ${d.y}px)`;
+  });
+  requestAnimationFrame(updateGravity);
+}
+updateGravity();
+
+// =============================================
+// GLOW CANVAS (light painting)
+// =============================================
+const glowCvs = document.getElementById('glowCanvas');
+const glowCtx = glowCvs.getContext('2d');
+let glowDrawing = false;
+let glowRect;
+
+function resizeGlow() {
+  glowRect = glowCvs.parentElement.getBoundingClientRect();
+  glowCvs.width = glowRect.width;
+  glowCvs.height = glowRect.height;
+}
+resizeGlow();
+addEventListener('resize', resizeGlow);
+
+glowCvs.parentElement.addEventListener('mouseenter', () => glowDrawing = true);
+glowCvs.parentElement.addEventListener('mouseleave', () => glowDrawing = false);
+
+// Slow fade
+function drawGlow() {
+  glowCtx.fillStyle = 'rgba(10,10,10,0.02)';
+  glowCtx.fillRect(0, 0, glowCvs.width, glowCvs.height);
+
+  if (glowDrawing) {
+    const lx = mouse.x - glowRect.left;
+    const ly = mouse.y - glowRect.top;
+    if (lx > 0 && lx < glowCvs.width && ly > 0 && ly < glowCvs.height) {
+      // Core
+      glowCtx.beginPath();
+      glowCtx.arc(lx, ly, 4, 0, Math.PI*2);
+      glowCtx.fillStyle = 'rgba(200,255,0,0.9)';
+      glowCtx.fill();
+      // Inner glow
+      const g1 = glowCtx.createRadialGradient(lx, ly, 0, lx, ly, 20);
+      g1.addColorStop(0, 'rgba(200,255,0,0.4)');
+      g1.addColorStop(1, 'rgba(200,255,0,0)');
+      glowCtx.fillStyle = g1;
+      glowCtx.fillRect(lx-20, ly-20, 40, 40);
+      // Outer glow
+      const g2 = glowCtx.createRadialGradient(lx, ly, 0, lx, ly, 60);
+      g2.addColorStop(0, 'rgba(200,255,0,0.1)');
+      g2.addColorStop(1, 'rgba(200,255,0,0)');
+      glowCtx.fillStyle = g2;
+      glowCtx.fillRect(lx-60, ly-60, 120, 120);
+    }
+  }
+  requestAnimationFrame(drawGlow);
+}
+drawGlow();
+
+// =============================================
+// INTERSECTION OBSERVER — animate sections on scroll
+// =============================================
+const sections = document.querySelectorAll('section');
+sections.forEach(s => {
+  s.style.opacity = '0';
+  s.style.transform = 'translateY(40px)';
+  s.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+});
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.opacity = '1';
+      e.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.15 });
+sections.forEach(s => observer.observe(s));
+// Don't hide hero
+sections[0].style.opacity = '1';
+sections[0].style.transform = 'none';
+</script>
+</body>
+</html>
