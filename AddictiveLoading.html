@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Addictive Loading</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06060a; --bg2: #0c0c12; --fg: #f0efe8; --muted: #555;
+    --accent: #e8a838; --accent-g: rgba(232,168,56,0.3);
+    --card: #101016; --border: rgba(255,255,255,0.06);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; overflow-x: hidden;
+  }
+  body::before {
+    content:''; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  header {
+    position: relative; z-index: 2; text-align: center;
+    padding: 3.5rem 2rem 1.5rem;
+  }
+  header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    letter-spacing: -1px; margin-bottom: .4rem;
+  }
+  header h1 em { font-style: normal; color: var(--accent); }
+  header p { font-size: .85rem; color: var(--muted); font-weight: 300; }
+
+  main { position: relative; z-index: 2; width: 100%; max-width: 540px; padding: 0 1.5rem 4rem; }
+
+  /* Stage */
+  .stage-wrap {
+    position: relative; width: 100%; aspect-ratio: 1;
+    border-radius: 20px; overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 0 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
+  }
+  .stage-wrap canvas { width: 100%; height: 100%; display: block; }
+  .stage-wrap.shake { animation: shk .35s ease; }
+  @keyframes shk {
+    0%,100%{transform:translate(0)} 25%{transform:translate(-2px,1px)}
+    50%{transform:translate(2px,-1px)} 75%{transform:translate(-1px,2px)}
+  }
+
+  /* Replay overlay */
+  .replay-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: .8rem;
+    background: rgba(6,6,10,0.5); backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .4s;
+  }
+  .replay-overlay.show { opacity: 1; pointer-events: auto; }
+  .replay-btn {
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 2px solid var(--accent); background: rgba(232,168,56,0.08);
+    color: var(--accent); font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .3s;
+    animation: repPulse 2s ease-in-out infinite;
+  }
+  .replay-btn:hover {
+    background: var(--accent); color: #000;
+    box-shadow: 0 0 30px var(--accent-g);
+    transform: scale(1.08);
+  }
+  @keyframes repPulse {
+    0%,100%{box-shadow:0 0 0 0 var(--accent-g)} 50%{box-shadow:0 0 0 10px transparent}
+  }
+  .replay-label { font-size: .7rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  /* Progress */
+  .progress-track {
+    width: 100%; height: 3px; background: rgba(255,255,255,0.04);
+    border-radius: 2px; margin-top: 1rem; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%; border-radius: 2px;
+    background: var(--accent);
+    transition: width .05s linear, background .4s;
+    box-shadow: 0 0 10px var(--accent-g);
+  }
+
+  /* Mode pills */
+  .mode-pills {
+    display: flex; flex-wrap: wrap; gap: .5rem;
+    justify-content: center; margin-top: 1.5rem;
+  }
+  .pill {
+    padding: .5rem 1.1rem; border-radius: 100px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: .72rem; font-weight: 600; letter-spacing: .5px;
+    cursor: pointer; transition: all .3s;
+  }
+  .pill:hover { border-color: rgba(255,255,255,0.12); color: var(--fg); }
+  .pill.active {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(232,168,56,0.06);
+    box-shadow: 0 0 16px rgba(232,168,56,0.08);
+  }
+
+  /* Info */
+  .info-row { text-align: center; margin-top: 1.2rem; }
+  .desc {
+    font-size: .82rem; color: var(--muted); line-height: 1.6;
+    font-weight: 300; min-height: 2.4em;
+    transition: opacity .3s;
+  }
+  .stats {
+    font-size: .68rem; color: rgba(255,255,255,0.15);
+    letter-spacing: 1px; margin-top: .4rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Mode accent colors */
+  .mode-liquid ~ .progress-track .progress-fill { background: #22d3a8; box-shadow: 0 0 10px rgba(34,211,168,0.3); }
+  .mode-liquid ~ .mode-pills .pill.active { border-color: #22d3a8; color: #22d3a8; background: rgba(34,211,168,0.06); box-shadow: 0 0 16px rgba(34,211,168,0.08); }
+  .mode-morph ~ .progress-track .progress-fill { background: #f472b6; box-shadow: 0 0 10px rgba(244,114,182,0.3); }
+  .mode-morph ~ .mode-pills .pill.active { border-color: #f472b6; color: #f472b6; background: rgba(244,114,182,0.06); box-shadow: 0 0 16px rgba(244,114,182,0.08); }
+  .mode-cascade ~ .progress-track .progress-fill { background: #facc15; box-shadow: 0 0 10px rgba(250,204,21,0.3); }
+  .mode-cascade ~ .mode-pills .pill.active { border-color: #facc15; color: #facc15; background: rgba(250,204,21,0.06); box-shadow: 0 0 16px rgba(250,204,21,0.08); }
+  .mode-pulse ~ .progress-track .progress-fill { background: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.3); }
+  .mode-pulse ~ .mode-pills .pill.active { border-color: #38bdf8; color: #38bdf8; background: rgba(56,189,248,0.06); box-shadow: 0 0 16px rgba(56,189,248,0.08); }
+  .mode-orbit ~ .progress-track .progress-fill { background: #a78bfa; box-shadow: 0 0 10px rgba(167,139,250,0.3); }
+  .mode-orbit ~ .mode-pills .pill.active { border-color: #a78bfa; color: #a78bfa; background: rgba(167,139,250,0.06); box-shadow: 0 0 16px rgba(167,139,250,0.08); }
+  .mode-vortex .replay-btn { border-color: var(--accent); color: var(--accent); background: rgba(232,168,56,0.08); }
+  .mode-vortex .replay-btn:hover { background: var(--accent); }
+  .mode-liquid .replay-btn { border-color: #22d3a8; color: #22d3a8; background: rgba(34,211,168,0.08); }
+  .mode-liquid .replay-btn:hover { background: #22d3a8; }
+  .mode-morph .replay-btn { border-color: #f472b6; color: #f472b6; background: rgba(244,114,182,0.08); }
+  .mode-morph .replay-btn:hover { background: #f472b6; }
+  .mode-cascade .replay-btn { border-color: #facc15; color: #facc15; background: rgba(250,204,21,0.08); }
+  .mode-cascade .replay-btn:hover { background: #facc15; }
+  .mode-pulse .replay-btn { border-color: #38bdf8; color: #38bdf8; background: rgba(56,189,248,0.08); }
+  .mode-pulse .replay-btn:hover { background: #38bdf8; }
+  .mode-orbit .replay-btn { border-color: #a78bfa; color: #a78bfa; background: rgba(167,139,250,0.08); }
+  .mode-orbit .replay-btn:hover { background: #a78bfa; }
+
+  @media(max-width:500px) {
+    header { padding: 2.5rem 1.5rem 1rem; }
+    .mode-pills { gap: .4rem; }
+    .pill { padding: .4rem .8rem; font-size: .65rem; }
+  }
+  @media(prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.05s!important; }
+  }
+</style>
+</head>
+<body class="mode-vortex">
+
+<header>
+  <h1>This Loading Is <em>Addictive</em></h1>
+  <p>Six animations you can't stop watching</p>
+</header>
+
+<main>
+  <div class="stage-wrap" id="stageWrap">
+    <canvas id="stage"></canvas>
+    <div class="replay-overlay" id="replayOverlay">
+      <button class="replay-btn" id="replayBtn" aria-label="Replay animation"><i class="fa-solid fa-rotate-right"></i></button>
+      <span class="replay-label">Replay</span>
+    </div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+  <div class="mode-pills" id="modePills">
+    <button class="pill active" data-mode="vortex">Vortex</button>
+    <button class="pill" data-mode="liquid">Liquid</button>
+    <button class="pill" data-mode="morph">Morph</button>
+    <button class="pill" data-mode="cascade">Cascade</button>
+    <button class="pill" data-mode="pulse">Pulse</button>
+    <button class="pill" data-mode="orbit">Orbit</button>
+  </div>
+  <div class="info-row">
+    <p class="desc" id="desc">Particles spiral into the void — then explode outward</p>
+    <p class="stats" id="stats"></p>
+  </div>
+</main>
+
+<script>
+// ===== HELPERS =====
+const lerp = (a,b,t) => a+(b-a)*t;
+const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+const easeIO = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+const TAU = Math.PI*2;
+
+// ===== CANVAS SETUP =====
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+let W, H, CX, CY;
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio, 2);
+  W = r.width; H = r.height;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CX = W/2; CY = H/2;
+}
+resize(); addEventListener('resize', resize);
+
+// ===== STATE =====
+let mode = 'vortex';
+let running = false, completing = false;
+let startTime = 0, completeTime = 0;
+let progress = 0;
+const DUR = 4800;
+let data = {}; // mode-specific state
+
+const DESCS = {
+  vortex: 'Particles spiral into the void — then explode outward',
+  liquid: 'Physics-based fluid fills the vessel with satisfying wobble',
+  morph: 'Watch geometry evolve from chaos to perfection',
+  cascade: 'A wave of dots triggers in a satisfying domino pattern',
+  pulse: 'Concentric rings accelerate toward a dramatic crescendo',
+  orbit: 'Orbital paths decay and converge into a singularity'
+};
+
+const COLORS = {
+  vortex: [35,90,60], liquid: [168,75,52], morph: [330,80,68],
+  cascade: [48,95,58], pulse: [200,85,65], orbit: [258,75,72]
+};
+
+// ===== UI REFS =====
+const stageWrap = document.getElementById('stageWrap');
+const replayOverlay = document.getElementById('replayOverlay');
+const replayBtn = document.getElementById('replayBtn');
+const progFill = document.getElementById('progFill');
+const descEl = document.getElementById('desc');
+const statsEl = document.getElementById('stats');
+const pills = document.querySelectorAll('.pill');
+
+// ===== MODE SWITCH =====
+function setMode(m) {
+  mode = m;
+  document.body.className = 'mode-'+m;
+  pills.forEach(p => p.classList.toggle('active', p.dataset.mode === m));
+  descEl.textContent = DESCS[m];
+  startAnim();
+}
+pills.forEach(p => p.addEventListener('click', () => setMode(p.dataset.mode)));
+replayBtn.addEventListener('click', startAnim);
+
+function startAnim() {
+  resize();
+  running = true; completing = false;
+  startTime = performance.now();
+  progress = 0;
+  replayOverlay.classList.remove('show');
+  progFill.style.width = '0%';
+  initMode();
+}
+
+// ===== INIT FUNCTIONS =====
+function initMode() {
+  data = {};
+  const c = COLORS[mode];
+  if (mode === 'vortex') {
+    data.particles = Array.from({length:180}, () => {
+      const a = Math.random()*TAU, r = 100+Math.random()*100;
+      return { a, r, or: r, spd: .008+Math.random()*.015, sz: 1.5+Math.random()*3, h: c[0]+Math.random()*30-15, trail:[] };
+    });
+    data.exploded = false;
+  }
+  else if (mode === 'liquid') {
+    data.bubbles = Array.from({length:15}, () => ({
+      x: CX-80+Math.random()*160, y: CY+80, vy: -.3-Math.random()*.8,
+      sz: 2+Math.random()*4, phase: Math.random()*TAU
+    }));
+  }
+  else if (mode === 'morph') {
+    data.verts = 80;
+  }
+  else if (mode === 'cascade') {
+    const cols = 13, rows = 13, gap = Math.min(W,H)*0.058;
+    const ox = CX - (cols-1)*gap/2, oy = CY - (rows-1)*gap/2;
+    data.dots = [];
+    for (let r=0;r<rows;r++) for (let cc=0;cc<cols;cc++) {
+      data.dots.push({ x:ox+cc*gap, y:oy+r*gap, col:cc, row:r, diag:cc+r, filled:false, fillT:-1, scale:0 });
+    }
+    data.order = [...data.dots.keys()].sort((a,b)=>data.dots[a].diag-data.dots[b].diag);
+  }
+  else if (mode === 'pulse') {
+    data.rings = []; data.lastSpawn = 0;
+  }
+  else if (mode === 'orbit') {
+    data.orbiters = Array.from({length:8}, (_,i) => ({
+      a: (i/8)*TAU, r: 60+i*18, or: 60+i*18,
+      spd: (.4+i*.15)*(Math.random()>.5?1:-1),
+      sz: 4+i*1.5, h: c[0]+i*12, trail:[]
+    }));
+    data.merged = false;
+  }
+}
+
+// ===== DRAW FUNCTIONS =====
+function drawVortex(p, t) {
+  const c = COLORS.vortex;
+  // Converge phase
+  if (p < 0.85) {
+    const cp = easeIO(p / 0.85);
+    data.particles.forEach(pt => {
+      pt.a += pt.spd * (1 + cp * 3);
+      pt.r = lerp(pt.or, 0, cp);
+      const x = CX + Math.cos(pt.a)*pt.r;
+      const y = CY + Math.sin(pt.a)*pt.r;
+      pt.trail.push({x,y});
+      if (pt.trail.length > 12) pt.trail.shift();
+      // Trail
+      pt.trail.forEach((tr,i) => {
+        const a = (i/pt.trail.length)*0.3;
+        ctx.beginPath(); ctx.arc(tr.x,tr.y,pt.sz*.5,0,TAU);
+        ctx.fillStyle = `hsla(${pt.h},${c[1]}%,${c[2]}%,${a})`;
+        ctx.fill();
+      });
+      // Core
+      drawGlow(x,y,pt.sz*3,pt.h,c[1],c[2],0.3);
+      ctx.beginPath(); ctx.arc(x,y,pt.sz,0,TAU);
+      ctx.fillStyle = `hsl(${pt.h},${c[1]}%,${c[2]}%)`;
+      ctx.fill();
+    });
+  }
+  // Explode phase
+  else if (!data.exploded) {
+    data.exploded = true;
+    data.particles.forEach(pt => {
+      pt.vx = Math.cos(pt.a)*12; pt.vy = Math.sin(pt.a)*12;
+      pt.x = CX; pt.y = CY;
+    });
+  }
+  if (data.exploded) {
+    const ep = (p - 0.85) / 0.15;
+    data.particles.forEach(pt => {
+      pt.x += pt.vx; pt.y += pt.vy;
+      pt.vx *= 0.97; pt.vy *= 0.97;
+      const a = Math.max(0, 1 - ep*1.2);
+      drawGlow(pt.x,pt.y,pt.sz*4,pt.h,c[1],c[2],a*0.2);
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.sz*a,0,TAU);
+      ctx.fillStyle = `hsla(${pt.h},${c[1]}%,${c[2]}%,${a})`;
+      ctx.fill();
+    });
+    // Center flash
+    drawGlow(CX,CY,80*ep,c[0],c[1],c[2],(1-ep)*0.4);
+  }
+}
+
+function drawLiquid(p, t) {
+  const c = COLORS.liquid;
+  const radius = Math.min(W,H)*0.32;
+  const fillH = easeIO(p) * radius * 2;
+  const time = t * 0.001;
+
+  // Clip circle
+  ctx.save();
+  ctx.beginPath(); ctx.arc(CX,CY,radius,0,TAU); ctx.clip();
+
+  // Filled liquid
+  const waveY = CY + radius - fillH;
+  ctx.beginPath();
+  ctx.moveTo(CX-radius, CY+radius+2);
+  for (let x = CX-radius; x <= CX+radius; x+=2) {
+    const rel = (x-(CX-radius))/(radius*2);
+    const w1 = Math.sin(rel*TAU*1.5 + time*2.5)*7*(1-p*0.5);
+    const w2 = Math.sin(rel*TAU*2.5 - time*3)*3;
+    const w3 = Math.sin(rel*TAU*4 + time*1.8)*1.5;
+    ctx.lineTo(x, waveY + w1 + w2 + w3);
+  }
+  ctx.lineTo(CX+radius, CY+radius+2);
+  ctx.closePath();
+  const lg = ctx.createLinearGradient(0,waveY,0,CY+radius);
+  lg.addColorStop(0, `hsla(${c[0]},${c[1]}%,${c[2]+15}%,0.7)`);
+  lg.addColorStop(1, `hsla(${c[0]},${c[1]}%,${c[2]-10}%,0.9)`);
+  ctx.fillStyle = lg;
+  ctx.fill();
+
+  // Surface highlight
+  ctx.beginPath();
+  for (let x = CX-radius; x <= CX+radius; x+=2) {
+    const rel = (x-(CX-radius))/(radius*2);
+    const w1 = Math.sin(rel*TAU*1.5 + time*2.5)*7*(1-p*0.5);
+    const w2 = Math.sin(rel*TAU*2.5 - time*3)*3;
+    const w3 = Math.sin(rel*TAU*4 + time*1.8)*1.5;
+    const y = waveY + w1 + w2 + w3;
+    x===CX-radius ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = `hsla(${c[0]},${c[1]}%,${c[2]+25}%,0.5)`;
+  ctx.lineWidth = 2; ctx.stroke();
+
+  // Bubbles
+  data.bubbles.forEach(b => {
+    b.y += b.vy;
+    b.x += Math.sin(time*2+b.phase)*0.3;
+    const surfY = waveY + Math.sin(((b.x-(CX-radius))/(radius*2))*TAU*1.5+time*2.5)*7*(1-p*0.5);
+    if (b.y < surfY + 10) {
+      b.y = CY + radius - 5;
+      b.x = CX - 80 + Math.random()*160;
+    }
+    if (b.y > surfY) {
+      ctx.beginPath(); ctx.arc(b.x,b.y,b.sz,0,TAU);
+      ctx.fillStyle = `hsla(${c[0]},${c[1]}%,${c[2]+30}%,0.25)`;
+      ctx.fill();
+      ctx.strokeStyle = `hsla(${c[0]},${c[1]}%,${c[2]+40}%,0.35)`;
+      ctx.lineWidth = .5; ctx.stroke();
+    }
+  });
+  ctx.restore();
+
+  // Circle outline
+  ctx.beginPath(); ctx.arc(CX,CY,radius,0,TAU);
+  ctx.strokeStyle = `hsla(${c[0]},${c[1]}%,${c[2]}%,0.2)`;
+  ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Glow at top of liquid
+  drawGlow(CX, waveY, radius*0.6, c[0], c[1], c[2], 0.08);
+}
+
+function shapeR(angle, idx) {
+  const R = Math.min(W,H)*0.3;
+  switch(idx) {
+    case 0: return R*(0.5+0.5*Math.cos(3*angle)); // triangle
+    case 1: return R/(Math.max(.001,Math.abs(Math.cos(angle)),Math.abs(Math.sin(angle)))); // square
+    case 2: return R*(0.5+0.5*Math.cos(5*angle)); // pentagon
+    case 3: return R*(0.5+0.5*Math.cos(6*angle)); // hexagon
+    case 4: return R; // circle
+  }
+}
+
+function drawMorph(p, t) {
+  const c = COLORS.morph;
+  const n = data.verts;
+  const sp = p * 4;
+  const si = clamp(Math.floor(sp),0,3);
+  const st = sp - si;
+  const et = easeIO(st);
+  const time = t*0.001;
+
+  ctx.beginPath();
+  for (let i=0;i<=n;i++) {
+    const a = (i/n)*TAU - Math.PI/2;
+    const r = lerp(shapeR(a,si), shapeR(a,si+1), et);
+    const wobble = Math.sin(a*3+time*2)*3*(1-p);
+    const x = CX+Math.cos(a)*(r+wobble);
+    const y = CY+Math.sin(a)*(r+wobble);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  // Fill glow
+  const fg = ctx.createRadialGradient(CX,CY,0,CX,CY,Math.min(W,H)*0.35);
+  fg.addColorStop(0, `hsla(${c[0]},${c[1]}%,${c[2]}%,0.08)`);
+  fg.addColorStop(1, `hsla(${c[0]},${c[1]}%,${c[2]}%,0)`);
+  ctx.fillStyle = fg; ctx.fill();
+  // Stroke
+  ctx.strokeStyle = `hsla(${c[0]},${c[1]}%,${c[2]}%,0.7)`;
+  ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = `hsla(${c[0]},${c[1]}%,${c[2]+20}%,0.2)`;
+  ctx.lineWidth = 6; ctx.stroke();
+
+  // Vertex dots at key points
+  const keyN = si + 3;
+  for (let i=0;i<keyN;i++) {
+    const a = (i/keyN)*TAU - Math.PI/2;
+    const r = lerp(shapeR(a,si), shapeR(a,si+1), et);
+    const x = CX+Math.cos(a)*r;
+    const y = CY+Math.sin(a)*r;
+    drawGlow(x,y,12,c[0],c[1],c[2],0.3);
+    ctx.beginPath(); ctx.arc(x,y,3,0,TAU);
+    ctx.fillStyle = `hsl(${c[0]},${c[1]}%,${c[2]+15}%)`;
+    ctx.fill();
+  }
+}
+
+function drawCascade(p, t) {
+  const c = COLORS.cascade;
+  const fillCount = Math.floor(p * data.order.length);
+  const time = t*0.001;
+
+  data.order.forEach((idx,i) => {
+    const d = data.dots[idx];
+    if (i < fillCount) {
+      if (!d.filled) { d.filled = true; d.fillT = time; }
+      const age = time - d.fillT;
+      // Overshoot scale
+      const s = age < 0.3 ? 1 + Math.sin(age/0.3*Math.PI)*0.5 : 1;
+      d.scale = lerp(d.scale, s, 0.15);
+      const glow = Math.max(0, 1 - age*2);
+      if (glow > 0) drawGlow(d.x,d.y,18,c[0],c[1],c[2],glow*0.25);
+    }
+    const sz = 3 * d.scale;
+    const alpha = d.filled ? 0.9 : 0.08;
+    ctx.beginPath(); ctx.arc(d.x,d.y,Math.max(0.5,sz),0,TAU);
+    ctx.fillStyle = `hsla(${c[0]},${c[1]}%,${c[2]}%,${alpha})`;
+    ctx.fill();
+  });
+
+  // Wave front indicator
+  if (p < 1) {
+    const frontIdx = data.order[fillCount-1];
+    if (frontIdx !== undefined) {
+      const fd = data.dots[frontIdx];
+      drawGlow(fd.x,fd.y,25,c[0],c[1],c[2]+15,0.15);
+    }
+  }
+}
+
+function drawPulse(p, t) {
+  const elapsed = t;
+  const interval = lerp(450, 60, easeIO(p));
+  if (elapsed - data.lastSpawn > interval && p < 0.95) {
+    data.rings.push({ birth:elapsed, hue: (elapsed*0.12)%360 });
+    data.lastSpawn = elapsed;
+  }
+  data.rings = data.rings.filter(r => {
+    const age = (elapsed - r.birth)/1000;
+    if (age > 2.5) return false;
+    const maxR = Math.min(W,H)*0.48;
+    const radius = age * maxR * lerp(0.4,1,easeIO(p));
+    const alpha = Math.max(0, (1-age/2.5)*0.6);
+    ctx.beginPath(); ctx.arc(CX,CY,Math.max(1,radius),0,TAU);
+    ctx.strokeStyle = `hsla(${r.hue},80%,65%,${alpha})`;
+    ctx.lineWidth = lerp(2.5, 0.8, age/2.5);
+    ctx.stroke();
+    // Soft inner glow
+    if (age < 0.3) {
+      drawGlow(CX,CY,radius*0.5,r.hue,80,65,(0.3-age)*0.15);
+    }
+    return true;
+  });
+  // Center dot
+  drawGlow(CX,CY,20,200,85,65,0.15+Math.sin(t*0.005)*0.05);
+  ctx.beginPath(); ctx.arc(CX,CY,4,0,TAU);
+  ctx.fillStyle = `hsla(200,85%,75%,0.8)`; ctx.fill();
+}
+
+function drawOrbit(p, t) {
+  const c = COLORS.orbit;
+  const cp = easeIO(p);
+  const time = t*0.001;
+
+  if (!data.merged) {
+    // Orbit paths (faint)
+    data.orbiters.forEach(o => {
+      const r = lerp(o.or, 0, cp);
+      ctx.beginPath(); ctx.arc(CX,CY,Math.max(1,r),0,TAU);
+      ctx.strokeStyle = `hsla(${o.h},${c[1]}%,${c[2]}%,0.04)`;
+      ctx.lineWidth = 1; ctx.stroke();
+    });
+
+    data.orbiters.forEach(o => {
+      o.a += o.spd * 0.02 * (1 + cp*2);
+      o.r = lerp(o.or, 0, cp);
+      const x = CX + Math.cos(o.a)*o.r;
+      const y = CY + Math.sin(o.a)*o.r;
+      o.trail.push({x,y});
+      if (o.trail.length > 25) o.trail.shift();
+      // Trail
+      o.trail.forEach((tr,i) => {
+        const a = (i/o.trail.length)*0.2;
+        ctx.beginPath(); ctx.arc(tr.x,tr.y,o.sz*0.4,0,TAU);
+        ctx.fillStyle = `hsla(${o.h},${c[1]}%,${c[2]}%,${a})`;
+        ctx.fill();
+      });
+      // Glow + dot
+      drawGlow(x,y,o.sz*3,o.h,c[1],c[2],0.25);
+      ctx.beginPath(); ctx.arc(x,y,o.sz,0,TAU);
+      ctx.fillStyle = `hsl(${o.h},${c[1]}%,${c[2]+15}%)`;
+      ctx.fill();
+    });
+
+    if (cp > 0.98) data.merged = true;
+  } else {
+    // Merged glow
+    const mp = clamp((cp-0.98)/0.02, 0, 1);
+    const pulse = 1 + Math.sin(time*4)*0.15;
+    drawGlow(CX,CY,60*pulse,c[0],c[1],c[2],mp*0.3);
+    ctx.beginPath(); ctx.arc(CX,CY,8*pulse,0,TAU);
+    ctx.fillStyle = `hsla(${c[0]},${c[1]}%,${c[2]+20}%,${mp})`;
+    ctx.fill();
+    // Fade trails
+    data.orbiters.forEach(o => {
+      o.trail.forEach((tr,i) => {
+        const a = (i/o.trail.length)*0.15*mp;
+        ctx.beginPath(); ctx.arc(tr.x,tr.y,o.sz*0.3,0,TAU);
+        ctx.fillStyle = `hsla(${o.h},${c[1]}%,${c[2]}%,${a})`;
+        ctx.fill();
+      });
+    });
+  }
+}
+
+// ===== GLOW HELPER =====
+function drawGlow(x, y, r, h, s, l, a) {
+  r = Math.max(1, r);
+  const g = ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0, `hsla(${h},${s}%,${l}%,${a})`);
+  g.addColorStop(1, `hsla(${h},${s}%,${l}%,0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill();
+}
+
+// ===== COMPLETION CHECKMARK =====
+function drawCompletion(elapsed) {
+  const cp = clamp(elapsed/1200, 0, 1);
+  const c = COLORS[mode];
+
+  // Flash
+  if (elapsed < 300) {
+    const fa = (1 - elapsed/300) * 0.15;
+    ctx.fillStyle = `hsla(${c[0]},${c[1]}%,${c[2]}%,${fa})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // Checkmark circle
+  const circleP = clamp(cp*2, 0, 1);
+  const circleE = 1 - Math.pow(1-circleP, 3);
+  ctx.beginPath();
+  ctx.arc(CX, CY-10, 28, -Math.PI/2, -Math.PI/2 + TAU*circleE);
+  ctx.strokeStyle = `hsl(${c[0]},${c[1]}%,${c[2]}%)`;
+  ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.stroke();
+  drawGlow(CX,CY-10,40,c[0],c[1],c[2],circleE*0.15);
+
+  // Checkmark
+  if (cp > 0.4) {
+    const chkP = clamp((cp-0.4)/0.5, 0, 1);
+    const chkE = 1 - Math.pow(1-chkP, 3);
+    ctx.beginPath();
+    ctx.moveTo(CX-11, CY-10);
+    ctx.lineTo(CX-3, CY);
+    ctx.lineTo(CX+13, CY-16);
+    ctx.setLineDash([28]);
+    ctx.lineDashOffset = 28*(1-chkE);
+    ctx.strokeStyle = `hsl(${c[0]},${c[1]}%,${c[2]+10}%)`;
+    ctx.lineWidth = 3; ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ===== MAIN LOOP =====
+function render(ts) {
+  ctx.clearRect(0,0,W,H);
+
+  if (running && !completing) {
+    const elapsed = ts - startTime;
+    progress = clamp(elapsed / DUR, 0, 1);
+    progFill.style.width = (progress*100)+'%';
+    statsEl.textContent = `${(progress*100).toFixed(0)}% — ${Math.round(elapsed)}ms`;
+
+    // Milestone pulses at 25/50/75%
+    [0.25,0.5,0.75].forEach(m => {
+      if (Math.abs(progress-m) < 0.008) {
+        progFill.style.filter = 'brightness(1.5)';
+        setTimeout(()=> progFill.style.filter = '', 150);
+      }
+    });
+
+    // Draw mode
+    switch(mode) {
+      case 'vortex': drawVortex(progress, elapsed); break;
+      case 'liquid': drawLiquid(progress, elapsed); break;
+      case 'morph': drawMorph(progress, elapsed); break;
+      case 'cascade': drawCascade(progress, elapsed); break;
+      case 'pulse': drawPulse(progress, elapsed); break;
+      case 'orbit': drawOrbit(progress, elapsed); break;
+    }
+
+    if (progress >= 1) {
+      completing = true;
+      completeTime = ts;
+      stageWrap.classList.add('shake');
+      setTimeout(()=>stageWrap.classList.remove('shake'), 400);
+    }
+  }
+
+  if (completing) {
+    drawCompletion(ts - completeTime);
+    if (ts - completeTime > 1500) {
+      running = false;
+      replayOverlay.classList.add('show');
+    }
+  }
+
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+// ===== AUTO START =====
+setTimeout(() => startAnim(), 600);
+</script>
+</body>
+</html>

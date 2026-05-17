@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expensive Buttons</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #08080a;
+    --bg2: #0e0e12;
+    --fg: #f2efe6;
+    --muted: #6e6b60;
+    --gold: #c9a84c;
+    --gold-light: #e8d48b;
+    --gold-dark: #8a6d2b;
+    --rose: #c4727f;
+    --emerald: #3dab8e;
+    --cream: #f5f0e1;
+    --border: rgba(201,168,76,0.1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:'Outfit',sans-serif;
+    min-height:100vh;overflow-x:hidden;
+    cursor:default;
+  }
+
+  /* ===== AMBIENT ===== */
+  .ambient{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 40% 30% at 30% 20%, rgba(201,168,76,0.03) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 70% 80%, rgba(196,114,127,0.02) 0%, transparent 70%);
+  }
+  .noise{
+    position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.03;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ===== CUSTOM CURSOR ===== */
+  .cur{position:fixed;width:6px;height:6px;background:var(--gold);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;box-shadow:0 0 10px rgba(201,168,76,0.4);mix-blend-mode:difference}
+  .cur.h{width:40px;height:40px;background:rgba(201,168,76,0.1);mix-blend-mode:normal;box-shadow:none}
+  let{position:fixed;width:30px;height:30px;border:1px solid rgba(201,168,76,0.25);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .35s,height .35s,border-color .3s}
+  let.h{width:50px;height:50px;border-color:rgba(201,168,76,0.08)}
+
+  /* ===== HEADER ===== */
+  header{position:relative;z-index:2;text-align:center;padding:6rem 2rem 2rem}
+  header .tag{font-size:.6rem;font-weight:700;letter-spacing:6px;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;opacity:0;animation:fU .8s ease .2s forwards}
+  header h1{font-family:'Playfair Display',serif;font-size:clamp(2.8rem,7vw,5.5rem);font-weight:800;line-height:1.05;margin-bottom:1rem;opacity:0;animation:fU .8s ease .4s forwards}
+  header h1 em{font-style:normal;color:var(--gold);position:relative}
+  header h1 em::after{content:'';position:absolute;bottom:4px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);border-radius:1px}
+  header p{font-size:1rem;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.8;font-weight:300;opacity:0;animation:fU .8s ease .6s forwards}
+  @keyframes fU{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+
+  /* ===== SECTIONS ===== */
+  .sec{position:relative;z-index:2;padding:4rem 2rem}
+  .sec-inner{max-width:900px;margin:0 auto}
+  .sec-label{font-size:.55rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;text-align:center}
+  .sec-title{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;text-align:center;margin-bottom:3rem;color:var(--cream)}
+  .btn-row{display:flex;flex-wrap:wrap;gap:2rem;justify-content:center;align-items:center}
+
+  /* ===== BASE BUTTON STYLES ===== */
+  .btn{
+    position:relative;
+    padding:1rem 2.8rem;
+    font-family:'Outfit',sans-serif;
+    font-size:.85rem;font-weight:600;
+    letter-spacing:1.5px;text-transform:uppercase;
+    border:none;outline:none;
+    color:var(--fg);
+    background:none;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ============================================
+     BUTTON 1 — LIQUID GOLD FILL
+     ============================================ */
+  .btn-liquid{
+    border:1.5px solid var(--gold-dark);
+    border-radius:60px;
+    letter-spacing:3px;
+    padding:1.1rem 3rem;
+  }
+  .btn-liquid .liq-fill{
+    position:absolute;inset:-2px;
+    border-radius:62px;
+    background:linear-gradient(135deg,var(--gold),var(--gold-light),var(--gold-dark));
+    transform:scaleY(0);
+    transform-origin:bottom center;
+    transition:transform .5s cubic-bezier(.23,1,.32,1);
+    z-index:0;
+  }
+  .btn-liquid:hover .liq-fill{transform:scaleY(1)}
+  .btn-liquid .liq-shine{
+    position:absolute;top:0;left:-100%;width:60%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);
+    transition:left .6s .2s;z-index:1;
+    border-radius:60px;
+  }
+  .btn-liquid:hover .liq-shine{left:140%}
+  .btn-liquid span{position:relative;z-index:2;transition:color .4s}
+  .btn-liquid:hover span{color:#0a0806}
+
+  /* ============================================
+     BUTTON 2 — ROTATING GRADIENT BORDER
+     ============================================ */
+  .btn-aurora{
+    padding:1.1rem 3rem;border-radius:60px;
+    letter-spacing:3px;
+  }
+  .btn-aurora::before{
+    content:'';position:absolute;inset:-2px;
+    border-radius:62px;padding:2px;
+    background:conic-gradient(from var(--angle,0deg),var(--gold),var(--rose),var(--emerald),var(--gold-light),var(--gold));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    opacity:0;transition:opacity .5s;
+    animation:auroraSpin 3s linear infinite;
+  }
+  .btn-aurora:hover::before{opacity:1}
+  @keyframes auroraSpin{to{--angle:360deg}}
+  @property --angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+  .btn-aurora::after{
+    content:'';position:absolute;inset:0;
+    border-radius:60px;
+    background:var(--bg);
+    z-index:0;
+  }
+  .btn-aurora span{position:relative;z-index:1;transition:text-shadow .5s,color .3s}
+  .btn-aurora:hover span{color:var(--gold-light);text-shadow:0 0 20px rgba(201,168,76,0.3)}
+
+  /* ============================================
+     BUTTON 3 — PARTICLE BURST
+     ============================================ */
+  .btn-burst{
+    border:1.5px solid var(--gold-dark);
+    border-radius:60px;
+    letter-spacing:3px;padding:1.1rem 3rem;
+  }
+  .btn-burst canvas{position:absolute;inset:0;pointer-events:none;z-index:3}
+  .btn-burst span{position:relative;z-index:2;transition:all .3s}
+  .btn-burst:hover span{color:var(--gold-light);text-shadow:0 0 15px rgba(201,168,76,0.3)}
+  .btn-burst:hover{border-color:var(--gold);box-shadow:0 0 30px rgba(201,168,76,0.06)}
+
+  /* ============================================
+     BUTTON 4 — 3D LUXURY PRESS
+     ============================================ */
+  .btn-3d{
+    font-family:'Playfair Display',serif;
+    font-size:1rem;font-weight:700;
+    letter-spacing:2px;
+    text-transform:none;
+    padding:1.2rem 3rem;
+    border-radius:4px;
+    background:linear-gradient(180deg,var(--gold-light) 0%,var(--gold) 50%,var(--gold-dark) 100%);
+    color:#0a0806;
+    box-shadow:
+      0 1px 0 var(--gold-light) inset,
+      0 -2px 0 var(--gold-dark) inset,
+      0 4px 0 #5a4418,
+      0 6px 0 #3d2d10,
+      0 8px 20px rgba(0,0,0,0.5);
+    transform:translateY(0);
+    transition:all .15s;
+  }
+  .btn-3d:hover{transform:translateY(-1px);box-shadow:0 1px 0 var(--gold-light) inset,0 -2px 0 var(--gold-dark) inset,0 4px 0 #5a4418,0 6px 0 #3d2d10,0 12px 30px rgba(0,0,0,0.5)}
+  .btn-3d:active{transform:translateY(3px);box-shadow:0 1px 0 var(--gold-light) inset,0 -2px 0 var(--gold-dark) inset,0 1px 0 #5a4418,0 10px 20px rgba(0,0,0,0.4)}
+
+  /* ============================================
+     BUTTON 5 — TEXT REVEAL SCRAMBLE
+     ============================================ */
+  .btn-scramble{
+    border:1px solid var(--border);
+    border-radius:4px;
+    letter-spacing:4px;
+    padding:1.1rem 3rem;
+    background:var(--bg2);
+  }
+  .btn-scramble:hover{border-color:rgba(201,168,76,0.2);background:rgba(201,168,76,0.03)}
+  .btn-scramble .sc-char{display:inline-block;transition:color .1s}
+
+  /* ============================================
+     BUTTON 6 — MAGNETIC PULL
+     ============================================ */
+  .btn-magnetic{
+    border:1.5px solid var(--rose);
+    border-radius:60px;
+    letter-spacing:3px;padding:1.1rem 3rem;
+    color:var(--rose);
+    transition:border-color .3s,box-shadow .3s,color .3s;
+  }
+  .btn-magnetic:hover{border-color:var(--rose);box-shadow:0 0 30px rgba(196,114,127,0.08)}
+  .btn-magnetic .mag-glow{
+    position:absolute;inset:0;border-radius:60px;
+    background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(196,114,127,0.1) 0%,transparent 60%);
+    opacity:0;transition:opacity .3s;
+  }
+  .btn-magnetic:hover .mag-glow{opacity:1}
+  .btn-magnetic span{position:relative;z-index:1}
+
+  /* ============================================
+     BUTTON 7 — ELASTIC MORPH
+     ============================================ */
+  .btn-elastic{
+    border:1.5px solid var(--emerald);
+    border-radius:60px;
+    letter-spacing:3px;padding:1.1rem 3rem;
+    color:var(--emerald);
+  }
+  .btn-elastic span{position:relative;z-index:1;display:inline-block;transition:transform .4s cubic-bezier(.23,1,.32,1),letter-spacing .4s}
+  .btn-elastic:hover span{transform:scaleX(1.1);letter-spacing:5px}
+
+  /* ============================================
+     BUTTON 8 — OUTLINE DRAW
+     ============================================ */
+  .btn-draw{
+    border-radius:4px;
+    letter-spacing:3px;padding:1.1rem 3rem;
+    color:var(--cream);
+  }
+  .btn-draw svg.draw-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .btn-draw svg.draw-svg rect{
+    fill:none;stroke:var(--gold);stroke-width:1.5;
+    stroke-dasharray:400;stroke-dashoffset:400;
+    transition:stroke-dashoffset .6s cubic-bezier(.23,1,.32,1);
+  }
+  .btn-draw:hover svg.draw-svg rect{stroke-dashoffset:0}
+  .btn-draw span{position:relative;z-index:1}
+
+  /* ===== RIPPLE OVERLAY ===== */
+  .ripple-fx{
+    position:absolute;border-radius:50%;
+    background:rgba(201,168,76,0.2);
+    transform:scale(0);
+    animation:ripFx .6s ease-out forwards;
+    pointer-events:none;z-index:5;
+  }
+  @keyframes ripFx{to{transform:scale(4);opacity:0}}
+
+  /* ===== SECTION LABEL WITH LINE ===== */
+  .sec-divider{
+    display:flex;align-items:center;gap:1.5rem;
+    max-width:200px;margin:0 auto 3rem;
+  }
+  .sec-divider::before,.sec-divider::after{
+    content:'';flex:1;height:1px;
+    background:linear-gradient(90deg,transparent,var(--border),transparent);
+  }
+  .sec-divider span{
+    font-size:.55rem;font-weight:700;
+    letter-spacing:5px;text-transform:uppercase;
+    color:var(--muted);white-space:nowrap;
+  }
+
+  /* ===== CLICK COUNTER ===== */
+  .click-stats{
+    position:fixed;bottom:2rem;right:2rem;z-index:100;
+    background:rgba(14,14,18,0.9);
+    border:1px solid var(--border);
+    border-radius:12px;padding:1rem 1.4rem;
+    backdrop-filter:blur(20px);
+    font-size:.72rem;color:var(--muted);
+    letter-spacing:1px;
+    opacity:0;animation:fU .8s ease 1s forwards;
+  }
+  .click-stats .num{
+    font-family:'Playfair Display',serif;
+    font-size:1.8rem;font-weight:800;
+    color:var(--gold);display:block;
+    line-height:1;
+  }
+
+  @media(max-width:600px){
+    .btn{padding:.9rem 2rem;font-size:.75rem}
+    .btn-3d{padding:1rem 2rem;font-size:.9rem}
+    .btn-row{gap:1.2rem}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.1s!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+<div class="noise"></div>
+<div class="cur" id="cur"></div>
+<div class="let" id="let"></div>
+
+<header>
+  <div class="tag">Interaction Design Study</div>
+  <h1>Buttons That Look <em>Expensive</em></h1>
+  <p>Koi button nahi — ye experience hai. Har ek click ke andar dusri duniya hai. Hover karo, click karo, mehsoos karo.</p>
+</header>
+
+<!-- ===== 1. LIQUID GOLD ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>001</span></div>
+    <div class="sec-title">Liquid Gold Fill</div>
+    <div class="btn-row">
+      <button class="btn btn-liquid" data-ripple>
+        <div class="liq-fill"></div>
+        <div class="liq-shine"></div>
+        <span>Discover</span>
+      </button>
+      <button class="btn btn-liquid" data-ripple>
+        <div class="liq-fill"></div>
+        <div class="liq-shine"></div>
+        <span>Explore</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. AURORA BORDER ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>002</span></div>
+    <div class="sec-title">Rotating Aurora Border</div>
+    <div class="btn-row">
+      <button class="btn btn-aurora" data-ripple><span>Enter the Vault</span></button>
+      <button class="btn btn-aurora" data-ripple><span>Unlock Access</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. PARTICLE BURST ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>003</span></div>
+    <div class="sec-title">Particle Explosion</div>
+    <div class="btn-row">
+      <button class="btn btn-burst" id="burstBtn1"><canvas></canvas><span>Ignite</span></button>
+      <button class="btn btn-burst" id="burstBtn2"><canvas></canvas><span>Detonate</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. 3D PRESS ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>004</span></div>
+    <div class="sec-title">Physical Depth Press</div>
+    <div class="btn-row">
+      <button class="btn btn-3d" data-ripple>Purchase Now</button>
+      <button class="btn btn-3d" data-ripple>Add to Cart</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5. SCRAMBLE ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>005</span></div>
+    <div class="sec-title">Neural Text Decode</div>
+    <div class="btn-row">
+      <button class="btn btn-scramble" data-text="INITIALIZE">INITIALIZE</button>
+      <button class="btn btn-scramble" data-text="EXECUTE">EXECUTE</button>
+      <button class="btn btn-scramble" data-text="TERMINATE">TERMINATE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. MAGNETIC ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>006</span></div>
+    <div class="sec-title">Magnetic Pull Field</div>
+    <div class="btn-row">
+      <button class="btn btn-magnetic" data-magnetic data-ripple>
+        <div class="mag-glow"></div>
+        <span>Attract</span>
+      </button>
+      <button class="btn btn-magnetic" data-magnetic data-ripple>
+        <div class="mag-glow"></div>
+        <span>Engage</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7. ELASTIC ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>007</span></div>
+    <div class="sec-title">Elastic Morph</div>
+    <div class="btn-row">
+      <button class="btn btn-elastic" data-ripple><span>Stretch</span></button>
+      <button class="btn btn-elastic" data-ripple><span>Expand</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8. OUTLINE DRAW ===== -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-divider"><span>008</span></div>
+    <div class="sec-title">Stroke Reveal</div>
+    <div class="btn-row">
+      <button class="btn btn-draw" data-ripple>
+        <svg class="draw-svg" preserveAspectRatio="none"><rect x="1" y="1" rx="3" ry="3"/></svg>
+        <span>Reveal</span>
+      </button>
+      <button class="btn btn-draw" data-ripple>
+        <svg class="draw-svg" preserveAspectRatio="none"><rect x="1" y="1" rx="3" ry="3"/></svg>
+        <span>Unveil</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Click Counter -->
+<div class="click-stats" id="clickStats">
+  <span class="num" id="clickNum">0</span>
+  interactions
+</div>
+
+<script>
+// ===== GLOBAL MOUSE =====
+const m = {x:-100,y:-100};
+const cur = document.getElementById('cur');
+const letEl = document.getElementById('let');
+let cx=-100,cy=-100,lx=-100,ly=-100;
+let hovering=false;
+
+document.addEventListener('mousemove',e=>{
+  m.x=e.clientX;m.y=e.clientY;
+});
+document.addEventListener('mouseover',e=>{
+  if(e.target.closest('.btn')){hovering=true;cur.classList.add('h');letEl.classList.add('h')}
+});
+document.addEventListener('mouseout',e=>{
+  if(e.target.closest('.btn')){hovering=false;cur.classList.remove('h');letEl.classList.remove('h')}
+});
+
+(function cursorLoop(){
+  cx+=(m.x-cx)*.3;cy+=(m.y-cy)*.3;
+  lx+=(m.x-lx)*.1;ly+=(m.y-ly)*.1;
+  cur.style.left=cx+'px';cur.style.top=cy+'px';
+  letEl.style.left=lx+'px';letEl.style.top=ly+'px';
+  requestAnimationFrame(cursorLoop);
+})();
+
+// ===== CLICK COUNTER =====
+let clickCount=0;
+const clickNum=document.getElementById('clickNum');
+
+// ===== RIPPLE EFFECT =====
+document.querySelectorAll('[data-ripple]').forEach(btn=>{
+  btn.addEventListener('click',e=>{
+    const r=btn.getBoundingClientRect();
+    const sz=Math.max(r.width,r.height)*2;
+    const rip=document.createElement('div');
+    rip.className='ripple-fx';
+    rip.style.cssText=`width:${sz}px;height:${sz}px;left:${e.clientX-r.left-sz/2}px;top:${e.clientY-r.top-sz/2}px`;
+    btn.appendChild(rip);
+    setTimeout(()=>rip.remove(),600);
+    clickCount++;clickNum.textContent=clickCount;
+  });
+});
+
+// ===== PARTICLE BURST BUTTONS =====
+['burstBtn1','burstBtn2'].forEach(id=>{
+  const btn=document.getElementById(id);
+  const cvs=btn.querySelector('canvas');
+  const ctx=cvs.getContext('2d');
+  let particles=[];
+
+  function resize(){const r=btn.getBoundingClientRect();cvs.width=r.width;cvs.height=r.height}
+  resize();addEventListener('resize',resize);
+
+  btn.addEventListener('click',e=>{
+    const r=btn.getBoundingClientRect();
+    const ex=e.clientX-r.left;
+    const ey=e.clientY-r.top;
+    for(let i=0;i<40;i++){
+      const angle=Math.random()*Math.PI*2;
+      const speed=2+Math.random()*6;
+      const hue=40+Math.random()*20;
+      particles.push({
+        x:ex,y:ey,
+        vx:Math.cos(angle)*speed,
+        vy:Math.sin(angle)*speed,
+        life:1,
+        decay:.015+Math.random()*.02,
+        size:2+Math.random()*3,
+        hue
+      });
+    }
+    clickCount++;clickNum.textContent=clickCount;
+  });
+
+  (function drawBurst(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx;p.y+=p.vy;
+      p.vy+=0.08;p.vx*=.99;
+      p.life-=p.decay;
+      if(p.life<=0){particles.splice(i,1);continue}
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},80%,60%,${p.life})`;
+      ctx.fill();
+      // glow
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*p.life*3,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},80%,60%,${p.life*0.1})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(drawBurst);
+  })();
+});
+
+// ===== TEXT SCRAMBLE =====
+const scramChars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@!%&';
+document.querySelectorAll('.btn-scramble').forEach(btn=>{
+  const text=btn.dataset.text;
+  let scrambled=false;
+  let interval;
+
+  function scramble(){
+    const chars=btn.querySelectorAll('.sc-char');
+    chars.forEach(c=>{
+      if(Math.random()>.5)c.textContent=scramChars[Math.floor(Math.random()*scramChars.length)];
+    });
+  }
+  function decode(){
+    const chars=btn.querySelectorAll('.sc-char');
+    chars.forEach((c,i)=>{
+      setTimeout(()=>{
+        c.textContent=text[i];
+        c.style.color='var(--gold)';
+        setTimeout(()=>c.style.color='',300);
+      },i*40);
+    });
+  }
+
+  // Wrap chars
+  let html='';
+  text.split('').forEach(ch=>html+=`<span class="sc-char">${ch}</span>`);
+  btn.innerHTML=html;
+
+  btn.addEventListener('mouseenter',()=>{
+    scrambled=true;
+    interval=setInterval(scramble,60);
+    setTimeout(decode,400);
+  });
+  btn.addEventListener('mouseleave',()=>{
+    scrambled=false;
+    clearInterval(interval);
+    btn.querySelectorAll('.sc-char').forEach((c,i)=>{
+      c.textContent=text[i];c.style.color='';
+    });
+  });
+  btn.addEventListener('click',()=>{
+    clickCount++;clickNum.textContent=clickCount;
+  });
+});
+
+// ===== MAGNETIC BUTTONS =====
+document.querySelectorAll('[data-magnetic]').forEach(btn=>{
+  btn.addEventListener('mousemove',e=>{
+    const r=btn.getBoundingClientRect();
+    const cx=r.left+r.width/2;
+    const cy=r.top+r.height/2;
+    const dx=e.clientX-cx;
+    const dy=e.clientY-cy;
+    const dist=Math.hypot(dx,dy);
+    const pull=Math.max(0,1-dist/200)*12;
+    const tx=(dx/(dist||1))*pull;
+    const ty=(dy/(dist||1))*pull;
+    btn.style.transform=`translate(${tx}px,${ty}px)`;
+    btn.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');
+    btn.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%');
+  });
+  btn.addEventListener('mouseleave',()=>{
+    btn.style.transform='';
+  });
+});
+
+// ===== DRAW SVG BUTTONS — set dasharray =====
+document.querySelectorAll('.btn-draw').forEach(btn=>{
+  const svg=btn.querySelector('.draw-svg');
+  const rect=svg.querySelector('rect');
+  // Wait for layout
+  requestAnimationFrame(()=>{
+    const r=btn.getBoundingClientRect();
+    const peri=2*(r.width+r.height);
+    rect.style.strokeDasharray=peri;
+    rect.style.strokeDashoffset=peri;
+  });
+});
+
+// ===== SECTION REVEAL =====
+const secs=document.querySelectorAll('.sec');
+secs.forEach(s=>{
+  s.style.opacity='0';s.style.transform='translateY(30px)';
+  s.style.transition='opacity .7s ease, transform .7s ease';
+});
+const sObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)'}});
+},{threshold:0.1});
+secs.forEach(s=>sObs.observe(s));
+
+// ===== 3D BUTTON HOVER TILT =====
+document.querySelectorAll('.btn-3d').forEach(btn=>{
+  btn.addEventListener('mousemove',e=>{
+    const r=btn.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width-.5;
+    const y=(e.clientY-r.top)/r.height-.5;
+    btn.style.transform=`translateY(-1px) rotateX(${-y*4}deg) rotateY(${x*4}deg)`;
+  });
+  btn.addEventListener('mouseleave',()=>{
+    btn.style.transform='';
+  });
+});
+</script>
+</body>
+</html>
