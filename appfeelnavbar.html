@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App-Feel Navbar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0b0b0f; --bg2: #111118; --fg: #eeeae0; --muted: #6b6760;
+    --accent: #e8734a; --accent-l: #f09470; --accent-d: #c45530;
+    --teal: #38c9a0; --gold: #e0b040; --rose: #d45868;
+    --card: #14141c; --border: rgba(255,255,255,0.06);
+    --nav-h: 64px; --sidebar-w: 260px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+  /* ===== TOP NAV ===== */
+  .topnav{
+    position:fixed;top:0;left:0;right:0;z-index:1000;
+    height:var(--nav-h);display:flex;align-items:center;
+    padding:0 1.5rem;gap:0;
+    transition:background .4s,box-shadow .4s,border-color .4s;
+    border-bottom:1px solid transparent;
+  }
+  .topnav.scrolled{
+    background:rgba(11,11,15,.92);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-bottom-color:var(--border);
+    box-shadow:0 4px 30px rgba(0,0,0,0.3);
+  }
+
+  /* Logo */
+  .nav-logo{
+    display:flex;align-items:center;gap:.6rem;
+    margin-right:2rem;flex-shrink:0;
+  }
+  .nav-logo-icon{
+    width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-d));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Instrument Serif',serif;font-size:1.2rem;color:#fff;font-weight:700;
+    transition:transform .3s,box-shadow .3s;
+  }
+  .nav-logo:hover .nav-logo-icon{transform:rotate(-8deg) scale(1.08);box-shadow:0 0 20px rgba(232,115,74,0.3)}
+  .nav-logo-text{font-family:'Instrument Serif',serif;font-size:1.25rem;letter-spacing:-.5px}
+
+  /* Nav items with animated pill */
+  .nav-items{display:flex;align-items:center;gap:2px;position:relative;flex-shrink:0}
+  .nav-item{
+    padding:.45rem 1rem;border-radius:8px;
+    font-size:.82rem;font-weight:500;color:var(--muted);
+    cursor:pointer;position:relative;z-index:1;
+    transition:color .3s;white-space:nowrap;
+    user-select:none;
+  }
+  .nav-item:hover{color:var(--fg)}
+  .nav-item.active{color:var(--fg)}
+  .nav-item i{margin-right:.35rem;font-size:.75rem}
+  /* Animated pill indicator */
+  .nav-pill{
+    position:absolute;top:50%;height:calc(100% - 10px);
+    border-radius:8px;
+    background:rgba(232,115,74,.1);
+    border:1px solid rgba(232,115,74,.15);
+    transform:translateY(-50%);
+    transition:left .4s cubic-bezier(.23,1,.32,1),width .4s cubic-bezier(.23,1,.32,1);
+    z-index:0;pointer-events:none;
+  }
+
+  /* Spacer */
+  .nav-spacer{flex:1}
+
+  /* Nav actions */
+  .nav-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+
+  /* Search morph */
+  .search-wrap{position:relative;display:flex;align-items:center}
+  .search-input{
+    width:0;padding:0;border:none;outline:none;
+    background:transparent;color:var(--fg);
+    font-family:'DM Sans',sans-serif;font-size:.85rem;
+    transition:width .4s cubic-bezier(.23,1,.32,1),padding .4s,background .4s;
+    border-radius:8px;
+  }
+  .search-input.open{
+    width:220px;padding:.5rem .9rem;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--border);
+  }
+  .search-input.open:focus{border-color:rgba(232,115,74,0.3);background:rgba(232,115,74,0.04)}
+  .search-input::placeholder{color:var(--muted)}
+  .search-btn{
+    width:36px;height:36px;border-radius:8px;border:none;
+    background:transparent;color:var(--muted);
+    font-size:.9rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .3s;flex-shrink:0;
+  }
+  .search-btn:hover{color:var(--fg);background:rgba(255,255,255,0.04)}
+  .search-btn.active{color:var(--accent)}
+
+  /* Notification bell */
+  .notif-wrap{position:relative}
+  .notif-btn{
+    width:36px;height:36px;border-radius:8px;border:none;
+    background:transparent;color:var(--muted);
+    font-size:.9rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .3s;position:relative;
+  }
+  .notif-btn:hover{color:var(--fg);background:rgba(255,255,255,0.04)}
+  .notif-badge{
+    position:absolute;top:4px;right:4px;
+    min-width:16px;height:16px;border-radius:8px;
+    background:var(--accent);color:#fff;
+    font-size:.55rem;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 4px;
+    animation:badgePop .4s cubic-bezier(.23,1,.32,1);
+  }
+  @keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+  .notif-btn:hover .notif-badge{animation:badgeWiggle .4s ease}
+  @keyframes badgeWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+
+  /* Notification dropdown */
+  .notif-dropdown{
+    position:absolute;top:calc(100% + 8px);right:0;
+    width:340px;background:var(--card);
+    border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    opacity:0;pointer-events:none;
+    transform:translateY(-8px) scale(.97);
+    transition:all .3s cubic-bezier(.23,1,.32,1);
+    overflow:hidden;z-index:100;
+  }
+  .notif-dropdown.open{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+  .notif-dd-header{padding:1rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .notif-dd-header span{font-weight:700;font-size:.88rem}
+  .notif-dd-mark{font-size:.7rem;color:var(--accent);cursor:pointer;transition:color .3s;background:none;border:none;font-family:'DM Sans',sans-serif}
+  .notif-dd-mark:hover{color:var(--accent-l)}
+  .notif-item{
+    display:flex;gap:.8rem;padding:1rem 1.2rem;
+    border-bottom:1px solid var(--border);
+    cursor:pointer;transition:background .2s;
+  }
+  .notif-item:last-child{border-bottom:none}
+  .notif-item:hover{background:rgba(255,255,255,0.02)}
+  .notif-item.unread{background:rgba(232,115,74,0.03)}
+  .notif-avatar{width:36px;height:36px;border-radius:10px;object-fit:cover;flex-shrink:0}
+  .notif-body{flex:1;min-width:0}
+  .notif-text{font-size:.8rem;line-height:1.5;color:var(--fg)}
+  .notif-text strong{font-weight:600}
+  .notif-time{font-size:.65rem;color:var(--muted);margin-top:2px}
+  .notif-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:6px}
+
+  /* Divider */
+  .nav-vdiv{width:1px;height:24px;background:var(--border);margin:0 6px;flex-shrink:0}
+
+  /* Sidebar toggle */
+  .sidebar-toggle{
+    width:36px;height:36px;border-radius:8px;border:none;
+    background:transparent;color:var(--muted);
+    font-size:.95rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .3s;flex-shrink:0;
+  }
+  .sidebar-toggle:hover{color:var(--fg);background:rgba(255,255,255,0.04)}
+  .sidebar-toggle.active{color:var(--accent)}
+
+  /* User avatar */
+  .user-wrap{position:relative}
+  .user-btn{
+    display:flex;align-items:center;gap:.5rem;
+    padding:4px 8px 4px 4px;border-radius:10px;border:none;
+    background:transparent;cursor:pointer;
+    transition:background .3s;
+  }
+  .user-btn:hover{background:rgba(255,255,255,0.04)}
+  .user-avatar{
+    width:32px;height:32px;border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-d));
+    display:flex;align-items:center;justify-content:center;
+    font-size:.75rem;font-weight:700;color:#fff;
+    transition:box-shadow .3s;
+  }
+  .user-btn:hover .user-avatar{box-shadow:0 0 12px rgba(232,115,74,0.3)}
+  .user-chevron{
+    font-size:.55rem;color:var(--muted);
+    transition:transform .3s;
+  }
+  .user-btn.open .user-chevron{transform:rotate(180deg)}
+
+  /* User dropdown */
+  .user-dropdown{
+    position:absolute;top:calc(100% + 8px);right:0;
+    width:240px;background:var(--card);
+    border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    opacity:0;pointer-events:none;
+    transform:translateY(-8px) scale(.97);
+    transition:all .3s cubic-bezier(.23,1,.32,1);
+    overflow:hidden;z-index:100;
+    padding:.5rem;
+  }
+  .user-dropdown.open{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+  .user-dd-item{
+    display:flex;align-items:center;gap:.7rem;
+    padding:.6rem .8rem;border-radius:8px;
+    font-size:.82rem;color:var(--muted);
+    cursor:pointer;transition:all .2s;
+  }
+  .user-dd-item:hover{background:rgba(255,255,255,0.04);color:var(--fg)}
+  .user-dd-item i{width:18px;text-align:center;font-size:.85rem}
+  .user-dd-divider{height:1px;background:var(--border);margin:.4rem 0}
+  .user-dd-item.danger{color:var(--rose)}
+  .user-dd-item.danger:hover{background:rgba(212,88,104,0.06)}
+
+  /* ===== MOBILE HAMBURGER ===== */
+  .hamburger{display:none;width:36px;height:36px;border:none;background:transparent;cursor:pointer;padding:8px;flex-direction:column;justify-content:center;gap:5px}
+  .hamburger span{display:block;width:100%;height:2px;background:var(--fg);border-radius:2px;transition:all .35s cubic-bezier(.23,1,.32,1);transform-origin:center}
+  .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+  .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+  /* Mobile menu */
+  .mobile-menu{
+    display:none;position:fixed;top:var(--nav-h);left:0;right:0;
+    background:rgba(11,11,15,.97);backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    padding:1rem 1.5rem;z-index:999;
+    transform:translateY(-100%);opacity:0;
+    transition:all .4s cubic-bezier(.23,1,.32,1);
+  }
+  .mobile-menu.open{transform:translateY(0);opacity:1}
+  .mobile-menu .mob-item{
+    display:flex;align-items:center;gap:.8rem;
+    padding:.8rem 0;font-size:.9rem;color:var(--muted);
+    cursor:pointer;transition:color .3s;
+    border-bottom:1px solid var(--border);
+  }
+  .mobile-menu .mob-item:last-child{border-bottom:none}
+  .mobile-menu .mob-item:hover,.mobile-menu .mob-item.active{color:var(--fg)}
+  .mobile-menu .mob-item.active{color:var(--accent)}
+  .mobile-menu .mob-item i{width:20px;text-align:center}
+
+  /* ===== SIDEBAR ===== */
+  .sidebar{
+    position:fixed;top:var(--nav-h);left:0;
+    width:var(--sidebar-w);height:calc(100vh - var(--nav-h));
+    background:rgba(14,14,22,0.95);
+    backdrop-filter:blur(20px);
+    border-right:1px solid var(--border);
+    z-index:900;
+    transform:translateX(-100%);
+    transition:transform .45s cubic-bezier(.23,1,.32,1);
+    padding:1.5rem 1rem;
+    overflow-y:auto;
+  }
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-section{margin-bottom:1.8rem}
+  .sidebar-label{font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:0 .6rem;margin-bottom:.5rem}
+  .sidebar-item{
+    display:flex;align-items:center;gap:.7rem;
+    padding:.55rem .7rem;border-radius:8px;
+    font-size:.82rem;color:var(--muted);
+    cursor:pointer;transition:all .2s;
+  }
+  .sidebar-item:hover{background:rgba(255,255,255,0.03);color:var(--fg)}
+  .sidebar-item.active{background:rgba(232,115,74,0.08);color:var(--accent)}
+  .sidebar-item i{width:18px;text-align:center;font-size:.85rem}
+  .sidebar-item .sb-badge{
+    margin-left:auto;font-size:.6rem;font-weight:700;
+    background:var(--accent);color:#fff;
+    padding:1px 7px;border-radius:10px;
+  }
+
+  /* ===== MAIN CONTENT ===== */
+  .main{
+    margin-top:var(--nav-h);
+    padding:2.5rem 2rem 4rem;
+    transition:margin-left .45s cubic-bezier(.23,1,.32,1);
+    max-width:1100px;
+  }
+  .main.shifted{margin-left:var(--sidebar-w)}
+
+  /* Page header */
+  .page-header{margin-bottom:2.5rem}
+  .page-breadcrumb{font-size:.72rem;color:var(--muted);margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem}
+  .page-breadcrumb span.bc-active{color:var(--accent)}
+  .page-title{font-family:'Instrument Serif',serif;font-size:clamp(2rem,4vw,3rem);letter-spacing:-1px;margin-bottom:.4rem}
+  .page-desc{font-size:.9rem;color:var(--muted);line-height:1.7;font-weight:300;max-width:600px}
+
+  /* Content cards */
+  .content-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem}
+  .content-card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:14px;overflow:hidden;
+    transition:transform .4s cubic-bezier(.23,1,.32,1),border-color .4s,box-shadow .4s;
+  }
+  .content-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,0.08);box-shadow:0 16px 40px rgba(0,0,0,0.3)}
+  .content-card-img{height:160px;overflow:hidden;position:relative}
+  .content-card-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s;filter:brightness(.85) saturate(.9)}
+  .content-card:hover .content-card-img img{transform:scale(1.06);filter:brightness(1) saturate(1.1)}
+  .content-card-tag{
+    position:absolute;top:.8rem;left:.8rem;
+    font-size:.6rem;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;padding:3px 8px;border-radius:6px;
+  }
+  .content-card-body{padding:1.2rem}
+  .content-card-title{font-weight:700;font-size:.95rem;margin-bottom:.3rem}
+  .content-card-desc{font-size:.78rem;color:var(--muted);line-height:1.6;margin-bottom:.8rem}
+  .content-card-meta{display:flex;align-items:center;justify-content:space-between;font-size:.7rem;color:var(--muted)}
+
+  /* Tab bar (sub-nav) */
+  .tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:2rem;position:relative}
+  .tab-item{
+    padding:.7rem 1.2rem;font-size:.82rem;font-weight:500;
+    color:var(--muted);cursor:pointer;transition:color .3s;
+    position:relative;z-index:1;
+  }
+  .tab-item:hover{color:var(--fg)}
+  .tab-item.active{color:var(--fg)}
+  .tab-underline{
+    position:absolute;bottom:-1px;height:2px;
+    background:var(--accent);border-radius:2px 2px 0 0;
+    transition:left .4s cubic-bezier(.23,1,.32,1),width .4s cubic-bezier(.23,1,.32,1);
+  }
+
+  /* ===== BACKDROP ===== */
+  .backdrop{
+    position:fixed;inset:0;z-index:899;
+    background:rgba(0,0,0,0.4);opacity:0;pointer-events:none;
+    transition:opacity .35s;
+  }
+  .backdrop.show{opacity:1;pointer-events:auto}
+
+  /* ===== PAGE TRANSITION ===== */
+  .page-content{opacity:1;transform:translateY(0);transition:opacity .35s,transform .35s}
+  .page-content.switching{opacity:0;transform:translateY(12px)}
+
+  @media(max-width:860px){
+    .nav-items{display:none}
+    .sidebar-toggle{display:none}
+    .hamburger{display:flex}
+    .mobile-menu{display:block}
+    .notif-dropdown{right:-60px;width:300px}
+    .user-dropdown{right:-40px}
+  }
+  @media(max-width:500px){
+    .main{padding:2rem 1rem 3rem}
+    .content-grid{grid-template-columns:1fr}
+    .notif-dropdown{right:-80px;width:280px}
+    .user-dropdown{right:-60px;width:220px}
+    .search-input.open{width:140px}
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.1s!important}}
+</style>
+</head>
+<body>
+
+<!-- BACKDROP -->
+<div class="backdrop" id="backdrop"></div>
+
+<!-- TOP NAV -->
+<nav class="topnav" id="topnav">
+  <div class="nav-logo" id="logoLink">
+    <div class="nav-logo-icon">K</div>
+    <span class="nav-logo-text">Kinetic</span>
+  </div>
+
+  <div class="nav-items" id="navItems">
+    <div class="nav-pill" id="navPill"></div>
+    <div class="nav-item active" data-page="dashboard"><i class="fa-solid fa-grid-2"></i>Dashboard</div>
+    <div class="nav-item" data-page="projects"><i class="fa-solid fa-folder-open"></i>Projects</div>
+    <div class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-mixed"></i>Analytics</div>
+    <div class="nav-item" data-page="team"><i class="fa-solid fa-users"></i>Team</div>
+    <div class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i>Settings</div>
+  </div>
+
+  <div class="nav-spacer"></div>
+
+  <div class="nav-actions">
+    <div class="search-wrap" id="searchWrap">
+      <input class="search-input" id="searchInput" type="text" placeholder="Search anything...">
+      <button class="search-btn" id="searchBtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </div>
+
+    <div class="notif-wrap" id="notifWrap">
+      <button class="notif-btn" id="notifBtn" aria-label="Notifications">
+        <i class="fa-solid fa-bell"></i>
+        <span class="notif-badge" id="notifBadge">3</span>
+      </button>
+      <div class="notif-dropdown" id="notifDD">
+        <div class="notif-dd-header"><span>Notifications</span><button class="notif-dd-mark" id="markAllRead">Mark all read</button></div>
+        <div class="notif-item unread">
+          <img class="notif-avatar" src="https://picsum.photos/seed/nav-av1/72/72" alt="">
+          <div class="notif-body"><div class="notif-text"><strong>Sarah Chen</strong> commented on your design review</div><div class="notif-time">2 min ago</div></div>
+          <div class="notif-dot"></div>
+        </div>
+        <div class="notif-item unread">
+          <img class="notif-avatar" src="https://picsum.photos/seed/nav-av2/72/72" alt="">
+          <div class="notif-body"><div class="notif-text"><strong>Build #847</strong> deployed to production successfully</div><div class="notif-time">18 min ago</div></div>
+          <div class="notif-dot"></div>
+        </div>
+        <div class="notif-item unread">
+          <img class="notif-avatar" src="https://picsum.photos/seed/nav-av3/72/72" alt="">
+          <div class="notif-body"><div class="notif-text"><strong>Marcus</strong> invited you to Project Aurora</div><div class="notif-time">1 hour ago</div></div>
+          <div class="notif-dot"></div>
+        </div>
+        <div class="notif-item">
+          <img class="notif-avatar" src="https://picsum.photos/seed/nav-av4/72/72" alt="">
+          <div class="notif-body"><div class="notif-text">Weekly report is ready for download</div><div class="notif-time">Yesterday</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-vdiv"></div>
+
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fa-solid fa-bars-staggered"></i></button>
+
+    <div class="user-wrap" id="userWrap">
+      <button class="user-btn" id="userBtn" aria-label="User menu">
+        <div class="user-avatar">JD</div>
+        <i class="fa-solid fa-chevron-down user-chevron"></i>
+      </button>
+      <div class="user-dropdown" id="userDD">
+        <div class="user-dd-item"><i class="fa-regular fa-user"></i> Profile</div>
+        <div class="user-dd-item"><i class="fa-solid fa-sliders"></i> Preferences</div>
+        <div class="user-dd-item"><i class="fa-regular fa-credit-card"></i> Billing</div>
+        <div class="user-dd-item"><i class="fa-solid fa-palette"></i> Appearance</div>
+        <div class="user-dd-divider"></div>
+        <div class="user-dd-item danger"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</div>
+      </div>
+    </div>
+
+    <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mob-item active" data-page="dashboard"><i class="fa-solid fa-grid-2"></i> Dashboard</div>
+  <div class="mob-item" data-page="projects"><i class="fa-solid fa-folder-open"></i> Projects</div>
+  <div class="mob-item" data-page="analytics"><i class="fa-solid fa-chart-mixed"></i> Analytics</div>
+  <div class="mob-item" data-page="team"><i class="fa-solid fa-users"></i> Team</div>
+  <div class="mob-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Workspace</div>
+    <div class="sidebar-item active"><i class="fa-solid fa-house"></i> Home</div>
+    <div class="sidebar-item"><i class="fa-solid fa-inbox"></i> Inbox <span class="sb-badge">12</span></div>
+    <div class="sidebar-item"><i class="fa-regular fa-calendar"></i> Schedule</div>
+    <div class="sidebar-item"><i class="fa-solid fa-thumbtack"></i> Pinned</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Projects</div>
+    <div class="sidebar-item"><i class="fa-solid fa-circle" style="font-size:.4rem;color:var(--accent)"></i> Aurora <span class="sb-badge">3</span></div>
+    <div class="sidebar-item"><i class="fa-solid fa-circle" style="font-size:.4rem;color:var(--teal)"></i> Nebula</div>
+    <div class="sidebar-item"><i class="fa-solid fa-circle" style="font-size:.4rem;color:var(--gold)"></i> Vertex</div>
+    <div class="sidebar-item"><i class="fa-solid fa-circle" style="font-size:.4rem;color:var(--rose)"></i> Prism</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Favorites</div>
+    <div class="sidebar-item"><i class="fa-regular fa-star"></i> Design System</div>
+    <div class="sidebar-item"><i class="fa-regular fa-star"></i> API Docs</div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main" id="mainContent">
+  <div class="page-content" id="pageContent">
+    <!-- Content injected by JS -->
+  </div>
+</main>
+
+<script>
+// ===== DATA =====
+const pages = {
+  dashboard: {
+    breadcrumb: ['Home', 'Dashboard'],
+    title: 'Welcome back, Jordan',
+    desc: 'Here\'s what\'s happening across your projects today.',
+    tabs: ['Overview', 'Recent', 'Starred'],
+    cards: [
+      { img:'dash-1', tag:'Design', tagColor:'var(--accent)', title:'Homepage Redesign', desc:'Updated the hero section with new illustration set', meta:'2h ago · 4 comments', views:'1.2k' },
+      { img:'dash-2', tag:'Development', tagColor:'var(--teal)', title:'API v3 Migration', desc:'Migrated 47 endpoints to new REST architecture', meta:'5h ago · 12 comments', views:'890' },
+      { img:'dash-3', tag:'Research', tagColor:'var(--gold)', title:'User Interview Synthesis', desc:'Compiled findings from 24 user sessions into themes', meta:'1d ago · 8 comments', views:'650' },
+      { img:'dash-4', tag:'Marketing', tagColor:'var(--rose)', title:'Launch Campaign Assets', desc:'Finalized social media graphics and copy for Q2 launch', meta:'2d ago · 2 comments', views:'430' },
+      { img:'dash-5', tag:'Design', tagColor:'var(--accent)', title:'Component Library v2', desc:'Added 18 new components with dark mode support', meta:'3d ago · 15 comments', views:'2.1k' },
+      { img:'dash-6', tag:'Development', tagColor:'var(--teal)', title:'Performance Audit', desc:'Reduced bundle size by 34% with tree shaking', meta:'4d ago · 6 comments', views:'780' },
+    ]
+  },
+  projects: {
+    breadcrumb: ['Home', 'Projects'],
+    title: 'Your Projects',
+    desc: 'Manage and track all active projects across your workspace.',
+    tabs: ['All', 'Active', 'Archived'],
+    cards: [
+      { img:'proj-1', tag:'Active', tagColor:'var(--teal)', title:'Project Aurora', desc:'Next-gen design system with 200+ components', meta:'8 members · Updated 2h ago', views:'--' },
+      { img:'proj-2', tag:'Active', tagColor:'var(--teal)', title:'Project Nebula', desc:'Real-time collaboration engine for design teams', meta:'5 members · Updated 6h ago', views:'--' },
+      { img:'proj-3', tag:'Active', tagColor:'var(--teal)', title:'Project Vertex', desc:'3D visualization toolkit for data storytelling', meta:'3 members · Updated 1d ago', views:'--' },
+      { img:'proj-4', tag:'Archived', tagColor:'var(--muted)', title:'Project Prism', desc:'Color palette generator with accessibility scoring', meta:'2 members · Archived', views:'--' },
+      { img:'proj-5', tag:'Active', tagColor:'var(--teal)', title:'Project Flux', desc:'Animation library for micro-interactions', meta:'4 members · Updated 3d ago', views:'--' },
+      { img:'proj-6', tag:'Active', tagColor:'var(--teal)', title:'Project Echo', desc:'Voice interface prototyping toolkit', meta:'6 members · Updated 5d ago', views:'--' },
+    ]
+  },
+  analytics: {
+    breadcrumb: ['Home', 'Analytics'],
+    title: 'Analytics Overview',
+    desc: 'Track performance metrics and user engagement across all projects.',
+    tabs: ['7 Days', '30 Days', '90 Days'],
+    cards: [
+      { img:'ana-1', tag:'Metric', tagColor:'var(--accent)', title:'Page Views', desc:'Total page views across all published pages this period', meta:'+12.4% from last period', views:'48.2k' },
+      { img:'ana-2', tag:'Metric', tagColor:'var(--teal)', title:'Engagement Rate', desc:'Average time on site and interaction depth per session', meta:'+3.8% from last period', views:'4:32' },
+      { img:'ana-3', tag:'Metric', tagColor:'var(--gold)', title:'Conversion Funnel', desc:'Sign-up to activation funnel performance breakdown', meta:'+8.1% from last period', views:'12.6%' },
+      { img:'ana-4', tag:'Metric', tagColor:'var(--rose)', title:'Bounce Rate', desc:'Percentage of single-page sessions across all pages', meta:'-5.2% from last period', views:'32.1%' },
+      { img:'ana-5', tag:'Metric', tagColor:'var(--accent)', title:'Active Users', desc:'Daily and monthly active user counts with trend data', meta:'+18.7% from last period', views:'8.4k' },
+      { img:'ana-6', tag:'Metric', tagColor:'var(--teal)', title:'Error Rate', desc:'Frontend and API error rates with severity breakdown', meta:'-22.3% from last period', views:'0.04%' },
+    ]
+  },
+  team: {
+    breadcrumb: ['Home', 'Team'],
+    title: 'Team Members',
+    desc: 'Manage your team, roles, and permissions in one place.',
+    tabs: ['All', 'Admins', 'Members'],
+    cards: [
+      { img:'team-1', tag:'Admin', tagColor:'var(--accent)', title:'Sarah Chen', desc:'Lead Designer · 14 active projects', meta:'Online now', views:'--' },
+      { img:'team-2', tag:'Admin', tagColor:'var(--accent)', title:'Marcus Rivera', desc:'Senior Engineer · 9 active projects', meta:'Online now', views:'--' },
+      { img:'team-3', tag:'Member', tagColor:'var(--teal)', title:'Aiko Tanaka', desc:'Product Manager · 7 active projects', meta:'2h ago', views:'--' },
+      { img:'team-4', tag:'Member', tagColor:'var(--teal)', title:'David Park', desc:'Frontend Developer · 5 active projects', meta:'Online now', views:'--' },
+      { img:'team-5', tag:'Member', tagColor:'var(--teal)', title:'Elena Volkov', desc:'UX Researcher · 6 active projects', meta:'1d ago', views:'--' },
+      { img:'team-6', tag:'Member', tagColor:'var(--teal)', title:'James Okafor', desc:'DevOps Engineer · 4 active projects', meta:'3h ago', views:'--' },
+    ]
+  },
+  settings: {
+    breadcrumb: ['Home', 'Settings'],
+    title: 'Settings',
+    desc: 'Configure your workspace preferences and account settings.',
+    tabs: ['General', 'Security', 'Integrations'],
+    cards: [
+      { img:'set-1', tag:'Profile', tagColor:'var(--accent)', title:'Account Settings', desc:'Name, email, avatar, and timezone configuration', meta:'Last updated 3d ago', views:'--' },
+      { img:'set-2', tag:'Security', tagColor:'var(--rose)', title:'Authentication', desc:'Two-factor auth, session management, and login history', meta:'2FA enabled', views:'--' },
+      { img:'set-3', tag:'Workspace', tagColor:'var(--teal)', title:'Workspace Config', desc:'Default views, notification preferences, and themes', meta:'3 workspaces', views:'--' },
+      { img:'set-4', tag:'API', tagColor:'var(--gold)', title:'API Keys', desc:'Manage API tokens and rate limits for integrations', meta:'4 active keys', views:'--' },
+      { img:'set-5', tag:'Billing', tagColor:'var(--accent)', title:'Subscription', desc:'Plan details, usage, invoices, and payment methods', meta:'Pro plan', views:'--' },
+      { img:'set-6', tag:'Data', tagColor:'var(--teal)', title:'Data & Privacy', desc:'Export, deletion, and data retention settings', meta:'GDPR compliant', views:'--' },
+    ]
+  }
+};
+
+// ===== REFS =====
+const topnav = document.getElementById('topnav');
+const navPill = document.getElementById('navPill');
+const navItems = document.querySelectorAll('.nav-items .nav-item');
+const mobItems = document.querySelectorAll('.mobile-menu .mob-item');
+const searchBtn = document.getElementById('searchBtn');
+const searchInput = document.getElementById('searchInput');
+const notifBtn = document.getElementById('notifBtn');
+const notifDD = document.getElementById('notifDD');
+const notifBadge = document.getElementById('notifBadge');
+const markAllRead = document.getElementById('markAllRead');
+const userBtn = document.getElementById('userBtn');
+const userDD = document.getElementById('userDD');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+const mainContent = document.getElementById('mainContent');
+const pageContent = document.getElementById('pageContent');
+
+let currentPage = 'dashboard';
+let sidebarOpen = false;
+let searchOpen = false;
+let notifOpen = false;
+let userOpen = false;
+let mobileOpen = false;
+let activeTab = 0;
+
+// ===== SCROLL — nav bg =====
+addEventListener('scroll', () => {
+  topnav.classList.toggle('scrolled', scrollY > 20);
+}, { passive: true });
+
+// ===== NAV PILL — animate to active item =====
+function updatePill() {
+  const activeEl = document.querySelector(`.nav-items .nav-item[data-page="${currentPage}"]`);
+  if (!activeEl) return;
+  const navRect = document.getElementById('navItems').getBoundingClientRect();
+  const elRect = activeEl.getBoundingClientRect();
+  navPill.style.left = (elRect.left - navRect.left) + 'px';
+  navPill.style.width = elRect.width + 'px';
+}
+// Initial + resize
+setTimeout(updatePill, 50);
+addEventListener('resize', updatePill);
+
+// ===== NAV ITEM CLICK =====
+function switchPage(page) {
+  if (page === currentPage) return;
+  currentPage = page;
+
+  // Update nav items
+  navItems.forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  mobItems.forEach(m => m.classList.toggle('active', m.dataset.page === page));
+  updatePill();
+
+  // Animate page content
+  pageContent.classList.add('switching');
+  setTimeout(() => {
+    activeTab = 0;
+    renderPage();
+    pageContent.classList.remove('switching');
+  }, 300);
+
+  // Close mobile menu
+  closeMobile();
+}
+
+navItems.forEach(n => n.addEventListener('click', () => switchPage(n.dataset.page)));
+mobItems.forEach(m => m.addEventListener('click', () => switchPage(m.dataset.page)));
+
+// ===== SEARCH =====
+searchBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  searchOpen = !searchOpen;
+  searchInput.classList.toggle('open', searchOpen);
+  searchBtn.classList.toggle('active', searchOpen);
+  if (searchOpen) searchInput.focus();
+  else searchInput.blur();
+});
+searchInput.addEventListener('blur', () => {
+  if (!searchInput.value) {
+    searchOpen = false;
+    searchInput.classList.remove('open');
+    searchBtn.classList.remove('active');
+  }
+});
+searchInput.addEventListener('click', e => e.stopPropagation());
+
+// ===== NOTIFICATIONS =====
+notifBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  notifOpen = !notifOpen;
+  notifDD.classList.toggle('open', notifOpen);
+  closeOthers('notif');
+});
+markAllRead.addEventListener('click', () => {
+  document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+  document.querySelectorAll('.notif-dot').forEach(el => el.remove());
+  notifBadge.style.display = 'none';
+});
+
+// ===== USER MENU =====
+userBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  userOpen = !userOpen;
+  userDD.classList.toggle('open', userOpen);
+  userBtn.classList.toggle('open', userOpen);
+  closeOthers('user');
+});
+
+// ===== SIDEBAR =====
+sidebarToggle.addEventListener('click', () => {
+  sidebarOpen = !sidebarOpen;
+  sidebar.classList.toggle('open', sidebarOpen);
+  sidebarToggle.classList.toggle('active', sidebarOpen);
+  backdrop.classList.toggle('show', sidebarOpen);
+  setTimeout(updatePill, 500);
+});
+backdrop.addEventListener('click', closeSidebar);
+
+function closeSidebar() {
+  sidebarOpen = false;
+  sidebar.classList.remove('open');
+  sidebarToggle.classList.remove('active');
+  backdrop.classList.remove('show');
+  setTimeout(updatePill, 500);
+}
+
+// ===== HAMBURGER =====
+hamburger.addEventListener('click', () => {
+  mobileOpen = !mobileOpen;
+  hamburger.classList.toggle('open', mobileOpen);
+  mobileMenu.classList.toggle('open', mobileOpen);
+});
+
+function closeMobile() {
+  mobileOpen = false;
+  hamburger.classList.remove('open');
+  mobileMenu.classList.remove('open');
+}
+
+// ===== CLOSE OTHERS =====
+function closeOthers(except) {
+  if (except !== 'notif' && notifOpen) { notifOpen = false; notifDD.classList.remove('open'); }
+  if (except !== 'user' && userOpen) { userOpen = false; userDD.classList.remove('open'); userBtn.classList.remove('open'); }
+}
+
+// Close all dropdowns on outside click
+document.addEventListener('click', () => {
+  if (notifOpen) { notifOpen = false; notifDD.classList.remove('open'); }
+  if (userOpen) { userOpen = false; userDD.classList.remove('open'); userBtn.classList.remove('open'); }
+});
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeOthers();
+    closeMobile();
+    closeSidebar();
+    if (searchOpen) { searchOpen = false; searchInput.classList.remove('open'); searchBtn.classList.remove('active'); searchInput.blur(); }
+  }
+});
+
+// ===== SIDEBAR ITEMS =====
+document.querySelectorAll('.sidebar-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// ===== RENDER PAGE =====
+function renderPage() {
+  const data = pages[currentPage];
+  if (!data) return;
+
+  const tabNames = data.tabs;
+  let html = `
+    <div class="page-header">
+      <div class="page-breadcrumb">
+        ${data.breadcrumb.map((b,i) => i < data.breadcrumb.length-1
+          ? `<span>${b}</span><i class="fa-solid fa-chevron-right" style="font-size:.45rem;color:var(--muted)"></i>`
+          : `<span class="bc-active">${b}</span>`
+        ).join('')}
+      </div>
+      <h1 class="page-title">${data.title}</h1>
+      <p class="page-desc">${data.desc}</p>
+    </div>
+    <div class="tab-bar" id="tabBar">
+      ${tabNames.map((t,i) => `<div class="tab-item${i===activeTab?' active':''}" data-tab="${i}">${t}</div>`).join('')}
+      <div class="tab-underline" id="tabUnderline"></div>
+    </div>
+    <div class="content-grid" id="contentGrid">
+      ${data.cards.map(c => `
+        <div class="content-card" style="animation:cardIn .5s cubic-bezier(.23,1,.32,1) ${Math.random()*.3}s both">
+          <div class="content-card-img">
+            <img src="https://picsum.photos/seed/${c.img}/600/320" alt="${c.title}" loading="lazy">
+            <span class="content-card-tag" style="background:${c.tagColor}22;color:${c.tagColor}">${c.tag}</span>
+          </div>
+          <div class="content-card-body">
+            <div class="content-card-title">${c.title}</div>
+            <div class="content-card-desc">${c.desc}</div>
+            <div class="content-card-meta">
+              <span>${c.meta}</span>
+              ${c.views !== '--' ? `<span><i class="fa-regular fa-eye" style="margin-right:3px"></i>${c.views}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  pageContent.innerHTML = html;
+
+  // Update tab underline
+  requestAnimationFrame(() => {
+    const tabBar = document.getElementById('tabBar');
+    const underline = document.getElementById('tabUnderline');
+    const activeTabEl = tabBar?.querySelector('.tab-item.active');
+    if (activeTabEl && underline) {
+      const tr = tabBar.getBoundingClientRect();
+      const er = activeTabEl.getBoundingClientRect();
+      underline.style.left = (er.left - tr.left) + 'px';
+      underline.style.width = er.width + 'px';
+    }
+  });
+
+  // Tab clicks
+  document.querySelectorAll('.tab-item').forEach(t => {
+    t.addEventListener('click', () => {
+      activeTab = parseInt(t.dataset.tab);
+      document.querySelectorAll('.tab-item').forEach(tt => tt.classList.remove('active'));
+      t.classList.add('active');
+      // Re-render with shuffle
+      const grid = document.getElementById('contentGrid');
+      const cards = [...grid.children];
+      cards.sort(() => Math.random() - 0.5);
+      cards.forEach((c,i) => {
+        c.style.animation = 'none';
+        c.offsetHeight;
+        c.style.animation = `cardIn .4s cubic-bezier(.23,1,.32,1) ${i*0.05}s both`;
+      });
+      // Update underline
+      requestAnimationFrame(() => {
+        const tb = document.getElementById('tabBar');
+        const ul = document.getElementById('tabUnderline');
+        const at = tb?.querySelector('.tab-item.active');
+        if (at && ul) {
+          const tbr = tb.getBoundingClientRect();
+          const ar = at.getBoundingClientRect();
+          ul.style.left = (ar.left - tbr.left) + 'px';
+          ul.style.width = ar.width + 'px';
+        }
+      });
+    });
+  });
+}
+
+// Card enter animation
+const cardStyle = document.createElement('style');
+cardStyle.textContent = `@keyframes cardIn{0%{opacity:0;transform:translateY(16px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}`;
+document.head.appendChild(cardStyle);
+
+// Initial render
+renderPage();
+</script>
+</body>
+</html>

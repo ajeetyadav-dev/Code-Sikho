@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One CSS Trick — Premium UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #07070a; --bg2: #0d0d12; --fg: #f0ede4; --muted: #5e5b52;
+    --accent: #d4a843; --accent-l: #ecd07a; --accent-d: #9a7428;
+    --rose: #c9616a; --teal: #3cb89a; --blue: #5a9fd4;
+    --card: #0f0f16; --border: rgba(255,255,255,0.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:'DM Sans',sans-serif;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.02;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ===== NAV ===== */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:.9rem 2.5rem;display:flex;align-items:center;justify-content:space-between;background:rgba(7,7,10,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+  .nav-logo{font-family:'Instrument Serif',serif;font-size:1.4rem;letter-spacing:-.5px}
+  .nav-logo span{color:var(--accent)}
+  .nav-links{display:flex;gap:1.8rem;list-style:none}
+  .nav-links a{text-decoration:none;color:var(--muted);font-size:.8rem;font-weight:500;transition:color .3s;position:relative}
+  .nav-links a:hover{color:var(--fg)}
+  .nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1.5px;background:var(--accent);transition:width .4s;border-radius:1px}
+  .nav-links a:hover::after{width:100%}
+
+  /* ===== HERO ===== */
+  .hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 2rem 4rem}
+  .hero-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;border:1px solid var(--border);border-radius:100px;font-size:.65rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:2rem;background:rgba(212,168,67,.03)}
+  .hero h1{font-family:'Instrument Serif',serif;font-size:clamp(2.5rem,7vw,5.5rem);line-height:1.05;letter-spacing:-2px;margin-bottom:1rem}
+  .hero h1 .trick{color:var(--accent);font-style:italic;position:relative}
+  .hero h1 .trick::after{content:'';position:absolute;bottom:2px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);border-radius:1px}
+  .hero p{font-size:1.05rem;color:var(--muted);max-width:540px;line-height:1.8;font-weight:300;margin-bottom:2.5rem}
+  .scroll-cue{position:absolute;bottom:2rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;color:var(--muted);font-size:.65rem;letter-spacing:2px;text-transform:uppercase;animation:fadeFloat 3s ease-in-out infinite}
+  .scroll-line{width:1px;height:30px;background:linear-gradient(180deg,var(--accent),transparent)}
+  @keyframes fadeFloat{0%,100%{opacity:.4;transform:translateY(0)}50%{opacity:.8;transform:translateY(6px)}}
+
+  /* ===== DEMO CIRCLE IN HERO ===== */
+  .hero-demo{position:relative;width:220px;height:220px;margin-bottom:2.5rem}
+  .demo-circle{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--rose),var(--teal),var(--blue),var(--accent));padding:3px;animation:spinSlow 8s linear infinite}
+  @keyframes spinSlow{to{transform:rotate(360deg)}}
+  .demo-circle-inner{width:100%;height:100%;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  .demo-circle-inner code{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-align:center;line-height:1.6;opacity:.9}
+  /* THE MASK COMPOSITE TRICK on the circle */
+  .demo-spot{
+    position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle 80px at var(--mx,50%) var(--my,50%),#000 0%,#000 100%);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,var(--spot,#000);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    padding:3px;
+    --spot:radial-gradient(circle 80px at var(--mx,50%) var(--my,50%),#000 0%,#000 100%);
+    opacity:0;transition:opacity .4s;pointer-events:none;
+  }
+  .hero-demo:hover .demo-spot{opacity:1}
+
+  /* ===== SECTIONS ===== */
+  .sec{position:relative;z-index:1;padding:5rem 2rem}
+  .sec-inner{max-width:1000px;margin:0 auto}
+  .sec-head{margin-bottom:3rem}
+  .sec-num{font-family:'Instrument Serif',serif;font-size:.9rem;color:var(--accent);margin-bottom:.4rem}
+  .sec-title{font-family:'Instrument Serif',serif;font-size:clamp(1.8rem,4vw,2.8rem);letter-spacing:-1px;line-height:1.15;margin-bottom:.5rem}
+  .sec-desc{font-size:.85rem;color:var(--muted);line-height:1.7;font-weight:300;max-width:600px}
+  .sec-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--accent);background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.1);padding:3px 10px;border-radius:4px;margin-top:.8rem;letter-spacing:.5px}
+
+  /* ===== TRICK 1: SPOTLIGHT BORDERS ===== */
+  .spot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+  .spot-card{
+    position:relative;background:var(--card);border-radius:16px;padding:2rem;
+    border:1px solid var(--border);min-height:240px;
+    display:flex;flex-direction:column;transition:transform .4s cubic-bezier(.23,1,.32,1);
+  }
+  .spot-card:hover{transform:translateY(-4px)}
+  /* THE TRICK */
+  .spot-card::before{
+    content:'';position:absolute;inset:0;border-radius:16px;
+    background:conic-gradient(from var(--angle,0deg),var(--accent),var(--rose),var(--teal),var(--accent));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,radial-gradient(circle 200px at var(--mx,50%) var(--my,50%),#000 0%,#000 100%);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    padding:1.5px;pointer-events:none;
+    opacity:0;transition:opacity .4s;
+  }
+  .spot-card:hover::before{opacity:1}
+  .spot-card .card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:1rem}
+  .spot-card .card-title{font-weight:700;font-size:1rem;margin-bottom:.4rem;position:relative;z-index:1}
+  .spot-card .card-desc{font-size:.8rem;color:var(--muted);line-height:1.7;flex:1;position:relative;z-index:1}
+  .spot-card .card-arrow{display:flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:600;color:var(--muted);position:relative;z-index:1;transition:color .3s,gap .3s;margin-top:1rem}
+  .spot-card:hover .card-arrow{color:var(--accent);gap:.7rem}
+
+  /* ===== TRICK 2: DARKNESS REVEAL ===== */
+  .reveal-box{
+    position:relative;border-radius:20px;overflow:hidden;
+    min-height:360px;background:var(--card);
+    border:1px solid var(--border);
+    display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+  }
+  .reveal-cell{
+    position:relative;padding:2rem 1.5rem;
+    display:flex;flex-direction:column;justify-content:center;
+    border-right:1px solid var(--border);
+    overflow:hidden;
+  }
+  .reveal-cell:last-child{border-right:none}
+  .reveal-cell .cell-num{font-family:'Instrument Serif',serif;font-size:2.5rem;color:var(--muted);margin-bottom:.5rem;position:relative;z-index:1}
+  .reveal-cell .cell-title{font-weight:700;font-size:.95rem;margin-bottom:.3rem;position:relative;z-index:1;color:var(--muted);transition:color .1s}
+  .reveal-cell .cell-desc{font-size:.75rem;color:var(--muted);line-height:1.6;position:relative;z-index:1;opacity:.4;transition:opacity .1s}
+  /* THE TRICK — darkness mask that clears near cursor */
+  .reveal-cell::after{
+    content:'';position:absolute;inset:0;
+    background:rgba(7,7,10,.92);
+    -webkit-mask:radial-gradient(circle 120px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    mask:radial-gradient(circle 120px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    pointer-events:none;z-index:2;
+    transition:background .3s;
+  }
+  .reveal-box:hover .reveal-cell::after{background:rgba(7,7,10,.88)}
+  .reveal-cell:hover .cell-title{color:var(--fg) !important}
+  .reveal-cell:hover .cell-desc{opacity:1 !important}
+  .reveal-cell:hover .cell-num{color:var(--accent) !important}
+
+  /* ===== TRICK 3: TEXT SPOTLIGHT ===== */
+  .text-spot-zone{
+    position:relative;padding:3rem 2rem;border-radius:20px;
+    background:var(--card);border:1px solid var(--border);
+    overflow:hidden;min-height:280px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .text-spot-main{
+    font-family:'Instrument Serif',serif;font-size:clamp(2rem,5vw,4rem);
+    text-align:center;line-height:1.2;letter-spacing:-1px;
+    color:var(--fg);position:relative;z-index:1;
+  }
+  /* THE TRICK — spotlight mask on text container */
+  .text-spot-zone::after{
+    content:'';position:absolute;inset:0;
+    background:var(--card);
+    -webkit-mask:radial-gradient(ellipse 150px 100px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    mask:radial-gradient(ellipse 150px 100px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    pointer-events:none;z-index:2;
+  }
+  .text-spot-hint{
+    position:absolute;bottom:1.5rem;font-size:.68rem;color:var(--muted);
+    letter-spacing:1px;text-transform:uppercase;z-index:3;
+    opacity:.6;
+  }
+
+  /* ===== TRICK 4: IMAGE LIGHT LEAK ===== */
+  .img-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+  .img-cell{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:4/3}
+  .img-cell img{width:100%;height:100%;object-fit:cover;filter:brightness(.35) saturate(.6);transition:filter .5s}
+  .img-cell:hover img{filter:brightness(.9) saturate(1.1)}
+  /* THE TRICK — darkness layer with mask hole */
+  .img-cell::after{
+    content:'';position:absolute;inset:0;
+    background:rgba(7,7,10,.55);
+    -webkit-mask:radial-gradient(circle 160px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    mask:radial-gradient(circle 160px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    pointer-events:none;transition:background .3s;
+    mix-blend-mode:multiply;
+  }
+  .img-cell .img-leak{
+    position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle 120px at var(--mx,50%) var(--my,50%),rgba(212,168,67,.08) 0%,transparent 100%);
+    mix-blend-mode:screen;opacity:0;transition:opacity .4s;
+  }
+  .img-cell:hover .img-leak{opacity:1}
+  .img-cell .img-label{
+    position:absolute;bottom:1rem;left:1.2rem;z-index:3;
+    font-weight:600;font-size:.85rem;opacity:0;
+    transform:translateY(6px);transition:all .4s;
+  }
+  .img-cell:hover .img-label{opacity:1;transform:translateY(0)}
+
+  /* ===== TRICK 5: GLASS CUTOUT ===== */
+  .glass-demo{
+    position:relative;border-radius:20px;overflow:hidden;
+    min-height:400px;
+    background:url('https://picsum.photos/seed/glass-demo-bg/1200/600') center/cover;
+  }
+  .glass-demo::before{
+    content:'';position:absolute;inset:0;
+    background:rgba(7,7,10,.7);
+  }
+  .glass-panel{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:80%;max-width:500px;padding:3rem;border-radius:20px;
+    background:rgba(15,15,22,.6);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.08);
+    z-index:2;
+  }
+  /* THE TRICK — clear hole in frosted glass */
+  .glass-panel::after{
+    content:'';position:absolute;inset:0;border-radius:20px;
+    background:rgba(15,15,22,.6);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,radial-gradient(circle 80px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    padding:1px;pointer-events:none;
+    opacity:0;transition:opacity .3s;
+  }
+  .glass-panel:hover::after{opacity:1}
+  .glass-panel h3{font-family:'Instrument Serif',serif;font-size:1.6rem;margin-bottom:.6rem;position:relative;z-index:1}
+  .glass-panel p{font-size:.82rem;color:var(--muted);line-height:1.7;position:relative;z-index:1}
+
+  /* ===== TRICK 6: BUTTON GLOW ===== */
+  .btn-row{display:flex;flex-wrap:wrap;gap:1.2rem;justify-content:center}
+  .glow-btn{
+    position:relative;padding:1rem 2.5rem;border:none;border-radius:60px;
+    font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;
+    letter-spacing:.5px;cursor:pointer;overflow:hidden;
+    color:var(--fg);background:var(--card);
+    transition:transform .2s,box-shadow .2s;
+  }
+  .glow-btn:hover{transform:translateY(-2px)}
+  /* THE TRICK on buttons */
+  .glow-btn::before{
+    content:'';position:absolute;inset:0;border-radius:60px;
+    background:conic-gradient(from var(--angle,0deg),var(--accent),var(--rose),var(--teal),var(--accent));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,radial-gradient(circle 120px at var(--mx,50%) var(--my,50%),#000 0%,#000 100%);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    padding:1.5px;pointer-events:none;
+    opacity:0;transition:opacity .4s;
+  }
+  .glow-btn:hover::before{opacity:1}
+  .glow-btn span{position:relative;z-index:1}
+  .glow-btn.amber:hover{box-shadow:0 8px 30px rgba(212,168,67,.12)}
+  .glow-btn.rose:hover{box-shadow:0 8px 30px rgba(201,97,106,.12)}
+  .glow-btn.teal:hover{box-shadow:0 8px 30px rgba(60,184,154,.12)}
+
+  /* ===== TRICK 7: CODE BLOCK ===== */
+  .code-block{
+    position:relative;border-radius:16px;overflow:hidden;
+    background:#0c0c14;border:1px solid var(--border);
+  }
+  .code-header{display:flex;align-items:center;gap:.5rem;padding:1rem 1.2rem;border-bottom:1px solid var(--border)}
+  .code-dot{width:10px;height:10px;border-radius:50%}
+  .code-dot.r{background:#ff5f57}.code-dot.y{background:#ffbd2e}.code-dot.g{background:#28c840}
+  .code-filename{margin-left:.5rem;font-size:.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .code-body{padding:1.5rem;overflow-x:auto}
+  .code-body pre{font-family:'JetBrains Mono',monospace;font-size:.75rem;line-height:1.9;color:#b8b4a8;white-space:pre}
+  .code-body .kw{color:#c9616a}.code-body .prop{color:#d4a843}.code-body .val{color:#3cb89a}.code-body .cmt{color:#444;font-style:italic}.code-body .fn{color:#5a9fd4}.code-body .str{color:#8aba6a}
+
+  /* ===== REVEAL ANIMATION ===== */
+  .reveal{opacity:0;transform:translateY(30px);transition:opacity .8s ease,transform .8s ease}
+  .reveal.visible{opacity:1;transform:translateY(0)}
+
+  footer{position:relative;z-index:1;text-align:center;padding:3rem 2rem;font-size:.7rem;color:var(--muted);letter-spacing:1px;border-top:1px solid var(--border)}
+
+  @media(max-width:768px){
+    .nav-links{display:none}
+    .reveal-box{grid-template-columns:1fr;min-height:auto}
+    .reveal-cell{border-right:none;border-bottom:1px solid var(--border)}
+    .reveal-cell:last-child{border-bottom:none}
+    .img-row{grid-template-columns:1fr}
+    .glass-panel{width:90%;padding:2rem 1.5rem}
+    .btn-row{gap:.8rem}
+    .glow-btn{padding:.8rem 1.8rem;font-size:.78rem}
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.1s!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">mask<span>.</span>composite</div>
+  <ul class="nav-links">
+    <li><a href="#trick1">Borders</a></li>
+    <li><a href="#trick2">Reveal</a></li>
+    <li><a href="#trick3">Text</a></li>
+    <li><a href="#trick4">Images</a></li>
+    <li><a href="#trick5">Glass</a></li>
+    <li><a href="#trick6">Buttons</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><i class="fa-solid fa-wand-magic-sparkles" style="font-size:.55rem"></i> CSS Property Deep Dive</div>
+  <div class="hero-demo" id="heroDemo">
+    <div class="demo-circle">
+      <div class="demo-circle-inner">
+        <code>mask-composite:<br>exclude</code>
+      </div>
+    </div>
+    <div class="demo-spot" id="heroSpot"></div>
+  </div>
+  <h1>One CSS Trick<br>= Premium <span class="trick">UI</span></h1>
+  <p>The single property that Linear, Vercel, and Stripe use to make their interfaces feel alive. No JavaScript rendering. No canvas. Just one line of CSS.</p>
+  <div class="scroll-cue"><span>Scroll to explore</span><div class="scroll-line"></div></div>
+</section>
+
+<!-- TRICK 1: SPOTLIGHT BORDERS -->
+<section class="sec" id="trick1">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">01 / 06</div>
+      <h2 class="sec-title">Gradient Borders That Follow Your Cursor</h2>
+      <p class="sec-desc">The border only glows where you hover — not the entire perimeter. A conic gradient masked to a radial spotlight.</p>
+      <div class="sec-tag">mask-composite: exclude + conic-gradient</div>
+    </div>
+    <div class="spot-grid" id="spotGrid">
+      <div class="spot-card">
+        <div class="card-icon" style="background:rgba(212,168,67,.06);color:var(--accent)"><i class="fa-solid fa-border-top-left"></i></div>
+        <div class="card-title">Selective Glow</div>
+        <div class="card-desc">Only the border segment near your cursor lights up. The rest stays invisible. No JS rendering required.</div>
+        <div class="card-arrow">See how <i class="fa-solid fa-arrow-right" style="font-size:.6rem"></i></div>
+      </div>
+      <div class="spot-card">
+        <div class="card-icon" style="background:rgba(201,97,106,.06);color:var(--rose)"><i class="fa-solid fa-palette"></i></div>
+        <div class="card-title">Any Gradient</div>
+        <div class="card-desc">Conic, linear, radial — any gradient works as the border source. The mask handles the spotlight cutout.</div>
+        <div class="card-arrow">See how <i class="fa-solid fa-arrow-right" style="font-size:.6rem"></i></div>
+      </div>
+      <div class="spot-card">
+        <div class="card-icon" style="background:rgba(60,184,154,.06);color:var(--teal)"><i class="fa-solid fa-bolt"></i></div>
+        <div class="card-title">Zero Performance Cost</div>
+        <div class="card-desc">CSS compositing runs on the GPU. No requestAnimationFrame, no canvas redraws. Just set two custom properties on mousemove.</div>
+        <div class="card-arrow">See how <i class="fa-solid fa-arrow-right" style="font-size:.6rem"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRICK 2: DARKNESS REVEAL -->
+<section class="sec" id="trick2">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">02 / 06</div>
+      <h2 class="sec-title">Content Hidden in Darkness</h2>
+      <p class="sec-desc">A semi-transparent black layer covers everything — but a radial mask cuts a hole at your cursor position, revealing the content beneath.</p>
+      <div class="sec-tag">mask: radial-gradient (inverted)</div>
+    </div>
+    <div class="reveal-box" id="revealBox">
+      <div class="reveal-cell"><div class="cell-num">01</div><div class="cell-title">Fast</div><div class="cell-desc">Sub-millisecond render times with GPU compositing</div></div>
+      <div class="reveal-cell"><div class="cell-num">02</div><div class="cell-title">Lightweight</div><div class="cell-desc">Zero JavaScript. Pure CSS with two custom properties</div></div>
+      <div class="reveal-cell"><div class="cell-num">03</div><div class="cell-title">Universal</div><div class="cell-desc">Works on cards, images, text, buttons — any element</div></div>
+      <div class="reveal-cell"><div class="cell-num">04</div><div class="cell-title">Composable</div><div class="cell-desc">Stack multiple mask layers for complex effects</div></div>
+      <div class="reveal-cell"><div class="cell-num">05</div><div class="cell-title">Responsive</div><div class="cell-desc">Radius scales with viewport using CSS clamp</div></div>
+      <div class="reveal-cell"><div class="cell-num">06</div><div class="cell-title">Accessible</div><div class="cell-desc">Content remains readable and selectable at all times</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRICK 3: TEXT SPOTLIGHT -->
+<section class="sec" id="trick3">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">03 / 06</div>
+      <h2 class="sec-title">Text That Appears as You Explore</h2>
+      <p class="sec-desc">The text is fully rendered but invisible — a mask layer the same color as the background covers it, with a radial cutout at the cursor.</p>
+      <div class="sec-tag">mask on ::after pseudo-element</div>
+    </div>
+    <div class="text-spot-zone" id="textSpot">
+      <div class="text-spot-main">The best UI<br>feels like it's<br>responding to you</div>
+      <span class="text-spot-hint">Move your cursor to reveal</span>
+    </div>
+  </div>
+</section>
+
+<!-- TRICK 4: IMAGE LIGHT LEAK -->
+<section class="sec" id="trick4">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">04 / 06</div>
+      <h2 class="sec-title">Images That Light Up Under Your Cursor</h2>
+      <p class="sec-desc">Images stay dark until you arrive. A darkness mask with a radial hole clears the way. A screen-blended amber leak adds warmth.</p>
+      <div class="sec-tag">mask + mix-blend-mode: multiply / screen</div>
+    </div>
+    <div class="img-row" id="imgRow">
+      <div class="img-cell">
+        <img src="https://picsum.photos/seed/mask-arch2/600/450" alt="Architecture" loading="lazy">
+        <div class="img-leak"></div>
+        <div class="img-label">Concrete Horizons</div>
+      </div>
+      <div class="img-cell">
+        <img src="https://picsum.photos/seed/mask-forest2/600/450" alt="Forest" loading="lazy">
+        <div class="img-leak"></div>
+        <div class="img-label">Emerald Canopy</div>
+      </div>
+      <div class="img-cell">
+        <img src="https://picsum.photos/seed/mask-ocean2/600/450" alt="Ocean" loading="lazy">
+        <div class="img-leak"></div>
+        <div class="img-label">Tidal Shift</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRICK 5: GLASS CUTOUT -->
+<section class="sec" id="trick5">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">05 / 06</div>
+      <h2 class="sec-title">Frosted Glass With a Transparent Hole</h2>
+      <p class="sec-desc">The glass panel blurs the background — but a clear circle follows your cursor, letting you see through unblurred. mask-composite cuts a hole in the frosted layer.</p>
+      <div class="sec-tag">backdrop-filter + mask-composite: exclude</div>
+    </div>
+    <div class="glass-demo">
+      <div class="glass-panel" id="glassPanel">
+        <h3>See Through the Glass</h3>
+        <p>Move your cursor over this panel. The frosted glass effect has a clear hole that follows you — created by masking out a radial section of the backdrop-filter layer. The background image shows through clearly where you point.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRICK 6: BUTTON GLOW -->
+<section class="sec" id="trick6">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">06 / 06</div>
+      <h2 class="sec-title">Buttons With Cursor-Tracked Border Glow</h2>
+      <p class="sec-desc">Same trick, applied to buttons. A spinning conic gradient border that only appears near your cursor position. Each button can have different gradient colors.</p>
+      <div class="sec-tag">conic-gradient + mask-composite: exclude</div>
+    </div>
+    <div class="btn-row" id="btnRow">
+      <button class="glow-btn amber"><span>Get Started</span></button>
+      <button class="glow-btn rose"><span>Explore</span></button>
+      <button class="glow-btn teal"><span>Learn More</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- THE CODE -->
+<section class="sec">
+  <div class="sec-inner reveal">
+    <div class="sec-head">
+      <div class="sec-num">The Recipe</div>
+      <h2 class="sec-title">The Entire Trick in 6 Lines</h2>
+      <p class="sec-desc">This is all it takes. One pseudo-element, one mask with two layers, one compositing operation.</p>
+    </div>
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <span class="code-filename">premium-ui.css</span>
+      </div>
+      <div class="code-body"><pre><span class="cmt">/* The One Trick */</span>
+<span class="kw">.element</span>::before {
+  <span class="prop">background</span>: <span class="fn">conic-gradient</span>(<span class="val">from 0deg, gold, rose, teal, gold</span>);
+  <span class="prop">-webkit-mask</span>:
+    <span class="fn">linear-gradient</span>(<span class="val">#fff 0 0</span>) <span class="val">content-box</span>,
+    <span class="fn">radial-gradient</span>(<span class="val">circle 150px at var(--mx) var(--my), #000</span>);
+  <span class="prop">-webkit-mask-composite</span>: <span class="val">xor</span>;      <span class="cmt">/* THIS IS THE LINE */</span>
+  <span class="prop">mask-composite</span>: <span class="val">exclude</span>;          <span class="cmt">/* Standard property   */</span>
+  <span class="prop">padding</span>: <span class="val">1.5px</span>;                    <span class="cmt">/* Border thickness    */</span>
+}
+
+<span class="cmt">/* JavaScript — just set two variables */</span>
+el.<span class="fn">addEventListener</span>(<span class="str">'mousemove'</span>, e => {
+  <span class="kw">const</span> r = el.<span class="fn">getBoundingClientRect</span>();
+  el.style.<span class="fn">setProperty</span>(<span class="str">'--mx'</span>, (e.clientX - r.left) + <span class="str">'px'</span>);
+  el.style.<span class="fn">setProperty</span>(<span class="str">'--my'</span>, (e.clientY - r.top) + <span class="str">'px'</span>);
+});</pre></div>
+    </div>
+  </div>
+</section>
+
+<footer>mask-composite: exclude — the one trick premium UIs are built on</footer>
+
+<script>
+// ===== CURSOR TRACKING — set --mx --my on all trick elements =====
+const trickEls = document.querySelectorAll(
+  '#heroDemo, #spotGrid .spot-card, #revealBox .reveal-cell, #textSpot, #imgRow .img-cell, #glassPanel, #btnRow .glow-btn'
+);
+
+trickEls.forEach(el => {
+  el.addEventListener('mousemove', e => {
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  });
+});
+
+// ===== ANGLE for conic gradients =====
+let angle = 0;
+(function spinAngle() {
+  angle = (angle + 0.3) % 360;
+  document.querySelectorAll('.spot-card, .glow-btn').forEach(el => {
+    el.style.setProperty('--angle', angle + 'deg');
+  });
+  requestAnimationFrame(spinAngle);
+})();
+
+// ===== SCROLL REVEAL =====
+const reveals = document.querySelectorAll('.reveal');
+const rObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+reveals.forEach(el => rObs.observe(el));
+
+// ===== SMOOTH NAV =====
+document.querySelectorAll('.nav-links a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// ===== REVEAL BOX — hover state class on parent for cell styles =====
+const revealBox = document.getElementById('revealBox');
+revealBox.addEventListener('mouseenter', () => revealBox.classList.add('hovered'));
+revealBox.addEventListener('mouseleave', () => revealBox.classList.remove('hovered'));
+</script>
+</body>
+</html>
