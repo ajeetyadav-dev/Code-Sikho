@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Normal Cards Are DEAD</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{--bg:#09090d;--bg2:#10101a;--fg:#f0ede4;--muted:#585550;--accent:#ff6b35;--teal:#00d4aa;--rose:#e8475f;--gold:#e8b830;--lime:#a8e040;--card:#13131e;--border:rgba(255,255,255,.06);--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:'DM Sans',sans-serif;overflow-x:hidden;cursor:default}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.02;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ===== HERO ===== */
+.hero{position:relative;z-index:1;min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 2rem 3rem}
+.hero-label{font-size:.6rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--accent);margin-bottom:1.5rem;opacity:0;animation:fU .8s ease .2s forwards}
+.hero h1{font-family:'Instrument Serif',serif;font-size:clamp(2.8rem,8vw,7rem);line-height:.92;letter-spacing:-3px;margin-bottom:1rem;opacity:0;animation:fU .8s ease .4s forwards}
+.hero h1 .dead{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--rose);text-decoration-thickness:3px;position:relative}
+.hero h1 .dead::after{content:'DEAD';position:absolute;left:0;top:0;opacity:0;color:var(--fg);text-decoration:none}
+.hero h1 .alive{color:var(--accent);position:relative;overflow:hidden;display:inline-block}
+.hero h1 .alive::after{content:'';position:absolute;bottom:4px;left:0;right:0;height:3px;background:var(--accent);border-radius:2px;transform:scaleX(0);animation:lineIn .6s ease 1.2s forwards;box-shadow:0 0 12px rgba(255,107,53,.3)}
+@keyframes lineIn{to{transform:scaleX(1)}}
+.hero p{font-size:1rem;color:var(--muted);max-width:520px;line-height:1.8;font-weight:300;opacity:0;animation:fU .8s ease .6s forwards}
+@keyframes fU{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+.scroll-cue{position:absolute;bottom:2rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;color:var(--muted);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;animation:scP 3s ease-in-out infinite;opacity:0;animation-delay:1.5s;animation-fill-mode:forwards}
+.scroll-line{width:1px;height:25px;background:linear-gradient(180deg,var(--accent),transparent)}
+@keyframes scP{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:.7;transform:translateY(5px)}}
+
+/* ===== GALLERY ===== */
+.gallery{position:relative;z-index:1;padding:0 2rem 6rem;max-width:1200px;margin:0 auto}
+.gallery-head{text-align:center;margin-bottom:3rem}
+.gallery-head .sec-num{font-size:.65rem;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem;opacity:0;animation:fU .8s ease .8s forwards}
+.gallery-head h2{font-family:'Instrument Serif',serif;font-size:clamp(1.4rem,3vw,2rem);letter-spacing:-.5px;color:var(--muted);opacity:0;animation:fU .8s ease .9s forwards}
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+
+/* ===== SHARED CARD ===== */
+.card{position:relative;border-radius:var(--radius);overflow:visible;opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.card.vis{opacity:1;transform:translateY(0)}
+.card-visual{position:relative;width:100%;aspect-ratio:5/4;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;background:var(--bg2)}
+.card-visual img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:filter .5s}
+.card-body{padding:1.2rem 1.4rem 1.4rem}
+.card-tag{display:inline-block;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:.5rem}
+.card-title{font-weight:700;font-size:.95rem;margin-bottom:.25rem}
+.card-desc{font-size:.76rem;color:var(--muted);line-height:1.6}
+.card-label{position:absolute;top:12px;left:12px;z-index:10;font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:600;letter-spacing:1px;color:var(--muted);background:rgba(0,0,0,.5);backdrop-filter:blur(8px);padding:3px 8px;border-radius:4px;transition:opacity .3s;pointer-events:none}
+.card:hover .card-label{opacity:0}
+
+/* ===== 1. SHATTER CARD ===== */
+.shatter-card{background:var(--card);border:1px solid var(--border)}
+.shatter-card .shard-wrap{position:absolute;inset:0;z-index:2}
+.shard{position:absolute;inset:0;overflow:hidden;clip-path:inset(var(--t) var(--r) var(--b) var(--l));transition:transform .55s cubic-bezier(.23,1,.32,1) var(--d,0ms),opacity .4s var(--d,0ms);will-change:transform}
+.shard img{position:absolute;top:-6%;left:-6%;width:112%;height:112%;object-fit:cover;pointer-events:none}
+.shatter-card:hover .shard{transform:translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(.9);opacity:.4}
+.shatter-reveal{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .4s .15s;overflow:hidden}
+.shatter-reveal img{width:100%;height:100%;object-fit:cover;filter:hue-rotate(30deg) saturate(1.4) brightness(.8)}
+.shatter-card:hover .shatter-reveal{opacity:1}
+
+/* ===== 2. DEPTH CARD ===== */
+.depth-card{background:var(--card);border:1px solid var(--border)}
+.depth-wrap{position:relative;perspective:900px;transform-style:preserve-3d}
+.depth-layer{position:absolute;inset:0;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;transition:transform .65s cubic-bezier(.23,1,.32,1);will-change:transform}
+.depth-bg{z-index:1;background:linear-gradient(135deg,#0d2020,#0a1a2a,#1a1030)}
+.depth-img{z-index:2}
+.depth-tint{z-index:3;background:rgba(0,212,170,.08);opacity:0;transition:opacity .5s}
+.depth-content{z-index:4;position:absolute;bottom:0;left:0;right:0;padding:1.2rem 1.4rem;transform:translateZ(25px) translateY(0);transition:transform .65s cubic-bezier(.23,1,.32,1);will-change:transform}
+.depth-card:hover .depth-bg{transform:translateZ(-40px) scale(1.08)}
+.depth-card:hover .depth-tint{opacity:1;transform:translateZ(10px)}
+.depth-card:hover .depth-content{transform:translateZ(35px) translateY(-6px)}
+.depth-accent{position:absolute;z-index:5;width:60px;height:60px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,170,.15),transparent);top:20%;right:15%;opacity:0;transition:opacity .5s .1s,transform .5s .1s;transform:translateZ(50px) scale(.5)}
+.depth-card:hover .depth-accent{opacity:1;transform:translateZ(50px) scale(1)}
+
+/* ===== 3. GLITCH CARD ===== */
+.glitch-card{background:var(--card);border:1px solid var(--border)}
+.glitch-visual{position:relative;background:url('https://picsum.photos/seed/glitch-tech/600/480') center/cover;transition:filter .3s}
+.glitch-visual::before,.glitch-visual::after{content:'';position:absolute;inset:0;background:inherit;opacity:0;transition:opacity .15s;pointer-events:none}
+.glitch-card:hover .glitch-visual::before{opacity:1;mix-blend-mode:multiply;background-color:rgba(255,0,60,.3);animation:glR .25s steps(2) infinite;transform:translate(-3px,-1px)}
+.glitch-card:hover .glitch-visual::after{opacity:1;mix-blend-mode:screen;background-color:rgba(0,255,120,.2);animation:glB .2s steps(2) infinite;transform:translate(3px,1px)}
+@keyframes glR{0%{clip-path:inset(0 0 80% 0);transform:translate(-3px,-1px)}25%{clip-path:inset(15% 0 55% 0);transform:translate(2px,1px)}50%{clip-path:inset(55% 0 25% 0);transform:translate(-4px,0)}75%{clip-path:inset(0 0 0 0);transform:translate(0,0)}100%{clip-path:inset(0 0 80% 0);transform:translate(-3px,-1px)}}
+@keyframes glB{0%{clip-path:inset(80% 0 0 0);transform:translate(3px,1px)}25%{clip-path:inset(40% 0 30% 0);transform:translate(-2px,-1px)}50%{clip-path:inset(10% 0 70% 0);transform:translate(4px,0)}75%{clip-path:inset(0 0 0 0);transform:translate(0,0)}100%{clip-path:inset(80% 0 0 0);transform:translate(3px,1px)}}
+.glitch-scanlines{position:absolute;inset:0;z-index:3;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,transparent 2px);opacity:0;transition:opacity .3s;pointer-events:none}
+.glitch-card:hover .glitch-scanlines{opacity:1}
+.glitch-flash{position:absolute;inset:0;z-index:4;background:rgba(255,255,255,.08);opacity:0;pointer-events:none;transition:opacity .1s}
+.glitch-card:hover .glitch-flash{animation:glFlash .15s ease .1s}
+@keyframes glFlash{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+
+/* ===== 4. SPOTLIGHT CARD ===== */
+.spotlight-card{background:var(--card);border:1px solid var(--border)}
+.spotlight-visual{position:relative;overflow:hidden;filter:brightness(.12) saturate(0);transition:filter .6s}
+.spotlight-visual img{width:100%;height:100%;object-fit:cover;display:block}
+.spotlight-card:hover .spotlight-visual{filter:brightness(1) saturate(1.1)}
+.spotlight-mask{position:absolute;inset:0;z-index:3;background:var(--card);mask:radial-gradient(circle 150px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);-webkit-mask:radial-gradient(circle 150px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);pointer-events:none}
+.spot-border{position:absolute;inset:0;border-radius:var(--radius);background:conic-gradient(from 0deg,var(--gold),var(--accent),var(--gold));mask:linear-gradient(#fff 0 0) content-box,radial-gradient(circle 150px at var(--mx,50%) var(--my,50%),#000 0%,#000 100%);-webkit-mask-composite:xor;mask-composite:exclude;padding:1.5px;pointer-events:none;opacity:0;transition:opacity .4s;z-index:4}
+.spotlight-card:hover .spot-border{opacity:1}
+
+/* ===== 5. MAGNETIC CARD ===== */
+.magnetic-card{background:var(--card);border:1px solid var(--border);transition:transform .12s ease-out,box-shadow .4s}
+.magnetic-card:hover{box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.mag-glow{position:absolute;inset:0;border-radius:var(--radius);background:radial-gradient(circle 200px at var(--mx,50%) var(--my,50%),rgba(232,71,95,.07) 0%,transparent 100%);opacity:0;transition:opacity .4s;pointer-events:none;z-index:1}
+.magnetic-card:hover .mag-glow{opacity:1}
+.mag-border{position:absolute;inset:0;border-radius:var(--radius);background:conic-gradient(from var(--angle,0deg),var(--rose),#ff8a5c,var(--rose));mask:linear-gradient(#fff 0 0) content-box,radial-gradient(circle 200px at var(--mx,50%) var(--my,50%),#000 0%,#000 100%);-webkit-mask-composite:xor;mask-composite:exclude;padding:1.5px;pointer-events:none;opacity:0;transition:opacity .4s;z-index:5}
+.magnetic-card:hover .mag-border{opacity:1}
+
+/* ===== 6. PULSE CARD ===== */
+.pulse-card{background:var(--card);border:1px solid var(--border);animation:breathe 3.5s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 1px var(--border),0 0 20px rgba(168,224,64,0);transform:scale(1)}50%{box-shadow:0 0 0 1px rgba(168,224,64,.12),0 0 35px rgba(168,224,64,.05);transform:scale(1.004)}}
+.pulse-card:hover{animation:bFast 1.5s ease-in-out infinite}
+@keyframes bFast{0%,100%{box-shadow:0 0 0 1.5px rgba(168,224,64,.3),0 0 50px rgba(168,224,64,.1);transform:scale(1)}50%{box-shadow:0 0 0 2px rgba(168,224,64,.4),0 0 70px rgba(168,224,64,.18);transform:scale(1.006)}}
+.pulse-ring{position:absolute;inset:-15px;border:1px solid rgba(168,224,64,.08);border-radius:calc(var(--radius) + 4px);opacity:0;pointer-events:none}
+.pulse-card:hover .pulse-ring{animation:pRing 2s ease-out infinite}
+.pulse-card:hover .pulse-ring:nth-child(2){animation-delay:.6s}
+.pulse-card:hover .pulse-ring:nth-child(3){animation-delay:1.2s}
+@keyframes pRing{0%{transform:scale(.96);opacity:.5}100%{transform:scale(1.08);opacity:0}}
+.pulse-particle{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--lime);opacity:0;pointer-events:none;z-index:6}
+.pulse-card:hover .pulse-particle{animation:pFloat 2s ease-out var(--d,0ms) infinite}
+@keyframes pFloat{0%{opacity:0;transform:translateY(0) scale(.4)}15%{opacity:.7}100%{opacity:0;transform:translateY(-90px) translateX(var(--dx,0px)) scale(0)}}
+
+@media(max-width:960px){.card-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.card-grid{grid-template-columns:1fr}.gallery{padding:0 1rem 4rem}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.05s!important}}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-label">Interactive Gallery</div>
+  <h1>Normal Cards Are <span class="dead">DEAD</span><br><span class="alive">Try This Instead</span></h1>
+  <p>Six cards. Six different realities. Hover each one and watch the dead come alive.</p>
+  <div class="scroll-cue"><span>Scroll</span><div class="scroll-line"></div></div>
+</section>
+
+<main class="gallery">
+  <div class="gallery-head"><div class="sec-num">Six Effects</div><h2>Hover to resurrect</h2></div>
+  <div class="card-grid" id="cardGrid"></div>
+</main>
+
+<script>
+// ===== DATA =====
+const CARDS = [
+  { type:'shatter', label:'01 / Shatter', title:'Fragment Burst', desc:'Image explodes into shards on hover and reveals a different reality beneath the fragments.', tag:'Break', color:'var(--accent)', img:'shatter-city', reveal:'shatter-neon' },
+  { type:'depth', label:'02 / Depth', title:'Layer Separation', desc:'Five layers separate in Z-space, creating a parallax depth illusion you can feel.', tag:'3D', color:'var(--teal)', img:'depth-mountain' },
+  { type:'glitch', label:'03 / Glitch', title:'Digital Corruption', desc:'RGB channels split, scanlines appear, and reality stutters like a broken transmission.', tag:'Corrupt', color:'var(--rose)', img:'glitch-tech' },
+  { type:'spotlight', label:'04 / Spotlight', desc:'The card is pitch black — until your cursor becomes the only light source that reveals it.', tag:'Reveal', color:'var(--gold)', img:'spotlight-arch' },
+  { type:'magnetic', label:'05 / Magnetic', desc:'The card physically pulls toward your cursor, tilts in 3D, and its border lights up at the nearest point.', tag:'Attract', color:'var(--rose)', img:'magnetic-wave' },
+  { type:'pulse', label:'06 / Alive', desc:'This card breathes. It pulses. It emits particles. It never stops. And it intensifies when you hover.', tag:'Living', color:'var(--lime)', img:'pulse-forest' },
+];
+
+const grid = document.getElementById('cardGrid');
+
+// ===== BUILD CARDS =====
+CARDS.forEach((c, ci) => {
+  const card = document.createElement('div');
+  card.className = `card ${c.type}-card`;
+  card.style.transitionDelay = (ci * .08) + 's';
+
+  let visualHTML = '';
+  let extraHTML = '';
+
+  if (c.type === 'shatter') {
+    visualHTML = `
+      <div class="shard-wrap" id="shardWrap${ci}"></div>
+      <div class="shatter-reveal"><img src="https://picsum.photos/seed/${c.reveal}/600/480" alt=""></div>
+    `;
+  } else if (c.type === 'depth') {
+    visualHTML = `
+      <div class="depth-wrap">
+        <div class="depth-layer depth-bg"></div>
+        <div class="depth-layer depth-img"><img src="https://picsum.photos/seed/${c.img}/600/480" alt=""></div>
+        <div class="depth-layer depth-tint"></div>
+        <div class="depth-accent"></div>
+        <div class="depth-layer depth-content">
+          <span class="card-tag" style="background:rgba(0,212,170,.1);color:var(--teal)">${c.tag}</span>
+          <div class="card-title">${c.title}</div>
+          <div class="card-desc">${c.desc}</div>
+        </div>
+      </div>
+    `;
+  } else if (c.type === 'glitch') {
+    visualHTML = `
+      <div class="glitch-visual" style="background-image:url('https://picsum.photos/seed/${c.img}/600/480')"></div>
+      <div class="glitch-scanlines"></div>
+      <div class="glitch-flash"></div>
+    `;
+  } else if (c.type === 'spotlight') {
+    visualHTML = `
+      <div class="spotlight-visual"><img src="https://picsum.photos/seed/${c.img}/600/480" alt=""></div>
+      <div class="spotlight-mask"></div>
+      <div class="spot-border"></div>
+    `;
+  } else if (c.type === 'magnetic') {
+    visualHTML = `
+      <div class="mag-glow"></div>
+      <div class="mag-border"></div>
+      <img src="https://picsum.photos/seed/${c.img}/600/480" alt="" style="width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:2;border-radius:var(--radius) var(--radius) 0 0">
+    `;
+  } else if (c.type === 'pulse') {
+    for (let i = 0; i < 16; i++) {
+      const side = Math.floor(i / 4); // 0=top, 1=right, 2=bottom, 3=left
+      let x, y;
+      if (side === 0) { x = 10 + (i % 4) * 25; y = -5; }
+      else if (side === 1) { x = 105; y = 15 + (i % 4) * 25; }
+      else if (side === 2) { x = 10 + (i % 4) * 25; y = 105; }
+      else { x = -5; y = 15 + (i % 4) * 25; }
+      extraHTML += `<div class="pulse-particle" style="left:${x}%;top:${y}%;--d:${i * 120}ms;--dx:${(Math.random()-.5)*30}px"></div>`;
+    }
+    extraHTML += `<div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-ring"></div>`;
+    visualHTML = `<img src="https://picsum.photos/seed/${c.img}/600/480" alt="" style="width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:2;border-radius:var(--radius) var(--radius) 0 0">`;
+  }
+
+  const bodyHTML = (c.type === 'depth') ? '' : `
+    <div class="card-body">
+      <span class="card-tag" style="background:${c.color}18;color:${c.color}">${c.tag}</span>
+      <div class="card-title">${c.title}</div>
+      <div class="card-desc">${c.desc}</div>
+    </div>
+  `;
+
+  card.innerHTML = `
+    <div class="card-label">${c.label}</div>
+    <div class="card-visual">${visualHTML}</div>
+    ${bodyHTML}${extraHTML}
+  `;
+
+  grid.appendChild(card);
+
+  // ===== SHATTER: Generate fragments =====
+  if (c.type === 'shatter') {
+    const wrap = card.querySelector('.shard-wrap');
+    const cols = 5, rows = 4;
+    for (let r = 0; r < rows; r++) {
+      for (let cl = 0; cl < cols; cl++) {
+        const shard = document.createElement('div');
+        shard.className = 'shard';
+        const t = (r / rows * 100).toFixed(1);
+        const ri = ((cols - cl - 1) / cols * 100).toFixed(1);
+        const b = ((rows - r - 1) / rows * 100).toFixed(1);
+        const l = (cl / cols * 100).toFixed(1);
+        shard.style.cssText = `--t:${t}%;--r:${ri}%;--b:${b}%;--l:${l}%`;
+        // Scatter direction: away from center
+        const bx = (cl - (cols-1)/2) / ((cols-1)/2 || 1);
+        const by = (r - (rows-1)/2) / ((rows-1)/2 || 1);
+        shard.style.setProperty('--tx', (bx * (50 + Math.random()*40)).toFixed(0) + 'px');
+        shard.style.setProperty('--ty', (by * (50 + Math.random()*40)).toFixed(0) + 'px');
+        shard.style.setProperty('--rot', ((Math.random()-.5) * 30).toFixed(0) + 'deg');
+        const dist = Math.hypot(bx, by);
+        shard.style.setProperty('--d', (dist * 40).toFixed(0) + 'ms');
+        shard.innerHTML = `<img src="https://picsum.photos/seed/${c.img}/600/480" alt="">`;
+        wrap.appendChild(shard);
+      }
+    }
+  }
+
+  // ===== MAGNETIC: Angle spin =====
+  if (c.type === 'magnetic') {
+    let angle = 0;
+    (function spinAngle() {
+      angle = (angle + 0.4) % 360;
+      card.style.setProperty('--angle', angle + 'deg');
+      requestAnimationFrame(spinAngle);
+    })();
+  }
+
+  // ===== INTERACTIONS =====
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    card.style.setProperty('--mx', mx + 'px');
+    card.style.setProperty('--my', my + 'px');
+
+    if (c.type === 'magnetic') {
+      const cx = r.width / 2, cy = r.height / 2;
+      const dx = mx - cx, dy = my - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const pull = Math.max(0, 1 - dist / 250) * 16;
+      card.style.transform = `translate(${(dx/dist)*pull}px, ${(dy/dist)*pull}px)`;
+    }
+
+    if (c.type === 'depth') {
+      const cx = r.width / 2, cy = r.height * .4;
+      const dx = (mx - cx) / cx;
+      const dy = (my - cy) / cy;
+      const layers = card.querySelectorAll('.depth-layer');
+      if (layers[0]) layers[0].style.transform = `translateZ(${-40 - dx*5}px) scale(${1.08 + Math.abs(dx)*.03})`;
+      if (layers[1]) layers[1].style.transform = `translateZ(${dx*3}px)`;
+      if (layers[2]) layers[2].style.transform = `translateZ(${10 + dx*5}px)`;
+      if (layers[3]) layers[3].style.transform = `translateZ(${25 + dx*8}px) translateY(${dy*-4}px)`;
+    }
+  });
+
+  card.addEventListener('mouseleave', () => {
+    if (c.type === 'magnetic') card.style.transform = '';
+    if (c.type === 'depth') {
+      card.querySelectorAll('.depth-layer').forEach(l => l.style.transform = '');
+    }
+  });
+});
+
+// ===== SCROLL REVEAL =====
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.card').forEach(c => obs.observe(c));
+document.querySelectorAll('.gallery-head > *').forEach(e => obs.observe(e));
+</script>
+</body>
+</html>

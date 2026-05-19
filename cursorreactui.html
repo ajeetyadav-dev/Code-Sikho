@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cursor Reactive UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{--bg:#0a0a0e;--bg2:#101018;--fg:#f0ede4;--muted:#5a5750;--accent:#ff6b35;--accent-l:#ff8f60;--accent-d:#cc4a18;--teal:#00d4aa;--rose:#e8475f;--gold:#e8b830;--card:#13131c;--border:rgba(255,255,255,0.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:'DM Sans',sans-serif;overflow-x:hidden;cursor:none}
+
+/* ===== GLOBAL CURSOR ===== */
+.cursor-core{position:fixed;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);mix-blend-mode:difference;box-shadow:0 0 14px rgba(255,107,53,0.5),0 0 40px rgba(255,107,53,0.15);transition:width .25s,height .25s}
+.cursor-core.expand{width:50px;height:50px;mix-blend-mode:normal;box-shadow:none;background:rgba(255,107,53,0.08);border:1.5px solid rgba(255,107,53,0.2)}
+.cursor-ring{position:fixed;width:40px;height:40px;border:1px solid rgba(255,107,53,0.2);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .4s cubic-bezier(.23,1,.32,1),height .4s cubic-bezier(.23,1,.32,1),border-color .3s}
+
+/* ===== GLOBAL LIGHT (follows cursor on page) ===== */
+#globalLight{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.6}
+
+/* ===== SECTIONS ===== */
+section{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:5rem 2rem;overflow:hidden}
+.sec-label{font-size:.6rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem}
+.sec-title{font-family:'Instrument Serif',serif;font-size:clamp(2rem,4.5vw,3.5rem);letter-spacing:-1.5px;text-align:center;margin-bottom:.5rem}
+.sec-desc{font-size:.88rem;color:var(--muted);text-align:center;max-width:520px;line-height:1.7;font-weight:300;margin-bottom:3rem}
+
+/* ===== HERO — TEXT REPULSION ===== */
+.hero{min-height:100vh;position:relative}
+.hero-text{font-family:'Instrument Serif',serif;font-size:clamp(3rem,9vw,8rem);line-height:.95;text-align:center;letter-spacing:-3px;position:relative;z-index:2;user-select:none}
+.hero-text .h-char{display:inline-block;transition:transform .15s ease-out,color .15s;will-change:transform}
+.hero-text .h-char.pushed{color:var(--accent)}
+.hero-sub{font-size:1rem;color:var(--muted);text-align:center;max-width:480px;line-height:1.8;font-weight:300;margin-top:1.5rem;position:relative;z-index:2}
+.scroll-cue{position:absolute;bottom:2rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;color:var(--muted);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;animation:scPulse 3s ease-in-out infinite;z-index:2}
+.scroll-line{width:1px;height:30px;background:linear-gradient(180deg,var(--accent),transparent)}
+@keyframes scPulse{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:.7;transform:translateY(6px)}}
+
+/* ===== DYNAMIC SHADOW SECTION ===== */
+.shadow-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:800px;width:100%}
+.shadow-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;min-height:200px;display:flex;flex-direction:column;transition:border-color .4s;transform-style:preserve-3d;will-change:transform}
+.shadow-card:hover{border-color:rgba(255,255,255,0.1)}
+.shadow-card .sc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:1rem}
+.shadow-card .sc-title{font-weight:700;font-size:1rem;margin-bottom:.3rem}
+.shadow-card .sc-desc{font-size:.78rem;color:var(--muted);line-height:1.6;flex:1}
+/* Dynamic shadow — positioned by JS */
+.shadow-card .sc-shadow{position:absolute;inset:0;border-radius:16px;pointer-events:none;z-index:-1;transition:box-shadow .1s}
+
+/* ===== GRAVITY WELL CANVAS ===== */
+.gravity-wrap{position:relative;width:100%;max-width:900px;aspect-ratio:16/9;border-radius:20px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
+.gravity-wrap canvas{width:100%;height:100%;display:block}
+.gravity-hint{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);font-size:.65rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;pointer-events:none;opacity:.6}
+
+/* ===== LASER TEXT REVEAL ===== */
+.laser-zone{position:relative;width:100%;max-width:800px;padding:3rem 2rem;border-radius:20px;background:var(--card);border:1px solid var(--border);overflow:hidden}
+.laser-text{font-family:'Instrument Serif',serif;font-size:clamp(1.6rem,4vw,3rem);line-height:1.3;text-align:center;letter-spacing:-1px;color:var(--fg);position:relative;z-index:1}
+.laser-text .lr-char{display:inline-block;transition:color .05s,text-shadow .05s}
+.laser-text .lr-char.lit{color:var(--accent);text-shadow:0 0 20px rgba(255,107,53,0.4)}
+/* Mask overlay */
+.laser-zone::after{content:'';position:absolute;inset:0;background:var(--card);-webkit-mask:radial-gradient(ellipse 120px 90px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);mask:radial-gradient(ellipse 120px 90px at var(--mx,50%) var(--my,50%),transparent 0%,#000 100%);pointer-events:none;z-index:2}
+
+/* ===== MAGNETIC BUTTONS ===== */
+.mag-row{display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center}
+.mag-btn{position:relative;padding:1rem 2.5rem;border:1.5px solid var(--border);border-radius:60px;background:var(--card);color:var(--fg);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.5px;cursor:none;transition:border-color .3s,box-shadow .3s;overflow:hidden}
+.mag-btn .mag-fill{position:absolute;inset:0;border-radius:60px;background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,107,53,0.1) 0%,transparent 60%);opacity:0;transition:opacity .3s}
+.mag-btn:hover .mag-fill{opacity:1}
+.mag-btn:hover{border-color:rgba(255,107,53,0.25);box-shadow:0 0 30px rgba(255,107,53,0.06)}
+.mag-btn i{margin-right:.4rem}
+.mag-btn .btn-ripple{position:absolute;border-radius:50%;background:rgba(255,107,53,0.15);transform:scale(0);animation:ripBtn .6s ease-out forwards;pointer-events:none}
+@keyframes ripBtn{to{transform:scale(4);opacity:0}}
+
+/* ===== LIVING DOT GRID ===== */
+.living-grid-wrap{position:relative;width:100%;max-width:900px;aspect-ratio:16/9;border-radius:20px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
+.living-grid-wrap canvas{width:100%;height:100%;display:block}
+.grid-hint{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);font-size:.65rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;pointer-events:none;opacity:.6}
+
+/* ===== REVEAL ===== */
+.rv{opacity:0;transform:translateY(30px);transition:opacity .8s ease,transform .8s ease}
+.rv.vis{opacity:1;transform:translateY(0)}
+
+/* ===== FOOTER ===== */
+footer{position:relative;z-index:1;text-align:center;padding:3rem 2rem;font-size:.7rem;color:var(--muted);letter-spacing:1px;border-top:1px solid var(--border)}
+
+@media(max-width:768px){
+  .shadow-grid{grid-template-columns:1fr}
+  .mag-row{gap:1rem}
+  .mag-btn{padding:.8rem 1.8rem;font-size:.78rem}
+  .gravity-wrap,.living-grid-wrap{aspect-ratio:4/3}
+}
+@media(max-width:480px){
+  .mag-btn i{display:none}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.05s!important}}
+</style>
+</head>
+<body>
+
+<div class="cursor-core" id="curCore"></div>
+<div class="cursor-ring" id="curRing"></div>
+<canvas id="globalLight"></canvas>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text" id="heroText">REACT</div>
+  <p class="hero-sub">Every pixel responds to your presence. Nothing on this page is static — including the space between elements.</p>
+  <div class="scroll-cue"><span>Explore</span><div class="scroll-line"></div></div>
+</section>
+
+<!-- DYNAMIC SHADOWS -->
+<section class="shadow-sec">
+  <div class="rv"><div class="sec-label">01 — Light Source</div></div>
+  <h2 class="sec-title rv">Your cursor is the sun</h2>
+  <p class="sec-desc rv">Move around these cards. The shadow shifts based on cursor position — as if light is emitting from where you point.</p>
+  <div class="shadow-grid rv" id="shadowGrid">
+    <div class="shadow-card"><div class="sc-shadow"></div><div class="sc-icon" style="background:rgba(255,107,53,.08);color:var(--accent)"><i class="fa-solid fa-sun"></i></div><div class="sc-title">Dynamic Lighting</div><div class="sc-desc">Shadows move in real-time based on cursor position relative to each card.</div></div>
+    <div class="shadow-card"><div class="sc-shadow"></div><div class="sc-icon" style="background:rgba(0,212,170,.08);color:var(--teal)"><i class="fa-solid fa-cube"></i></div><div class="sc-title">3D Depth</div><div class="sc-desc">Each card has independent shadow calculation for realistic spatial perception.</div></div>
+    <div class="shadow-card"><div class="sc-shadow"></div><div class="sc-icon" style="background:rgba(232,184,48,.08);color:var(--gold)"><i class="fa-solid fa-layer-group"></i></div><div class="sc-title">Multi-Layer</div><div class="sc-desc">Combine with tilt, glow, and spotlight for maximum depth illusion.</div></div>
+  </div>
+</section>
+
+<!-- GRAVITY WELL -->
+<section class="gravity-sec">
+  <div class="rv"><div class="sec-label">02 — Gravity Well</div></div>
+  <h2 class="sec-title rv">Particles can't escape you</h2>
+  <p class="sec-desc rv">300 particles orbit, drift, and get pulled toward your cursor. Move fast to scatter them. Hold still to watch them converge.</p>
+  <div class="gravity-wrap rv" id="gravWrap">
+    <canvas id="gravCanvas"></canvas>
+    <span class="gravity-hint">Move your cursor inside</span>
+  </div>
+</section>
+
+<!-- LASER TEXT -->
+<section class="laser-sec">
+  <div class="rv"><div class="sec-label">03 — Laser Reveal</div></div>
+  <h2 class="sec-title rv">Text revealed by light</h2>
+  <p class="sec-desc rv">The paragraph below is fully rendered but hidden behind a mask. Your cursor is the flashlight that reveals it.</p>
+  <div class="laser-zone rv" id="laserZone">
+    <div class="laser-text" id="laserText">The most powerful interfaces don't just display information — they respond to intention. Every cursor movement carries meaning: hesitation, confidence, exploration, decision. When UI acknowledges these micro-signals, the boundary between tool and partner dissolves. This is the future of interaction design: interfaces that read you as clearly as you read them.</div>
+  </div>
+</section>
+
+<!-- MAGNETIC BUTTONS -->
+<section class="mag-sec">
+  <div class="rv"><div class="sec-label">04 — Magnetic Pull</div></div>
+  <h2 class="sec-title rv">Buttons that follow you home</h2>
+  <p class="sec-desc rv">These buttons physically pull toward your cursor using inverse-distance force. Click to see the ripple burst from the exact point of contact.</p>
+  <div class="mag-row rv" id="magRow">
+    <button class="mag-btn" data-mag><div class="mag-fill"></div><i class="fa-solid fa-bolt"></i>Ignite</button>
+    <button class="mag-btn" data-mag><div class="mag-fill"></div><i class="fa-solid fa-rocket"></i>Launch</button>
+    <button class="mag-btn" data-mag><div class="mag-fill"></div><i class="fa-solid fa-wand-magic-sparkles"></i>Create</button>
+    <button class="mag-btn" data-mag><div class="mag-fill"></div><i class="fa-solid fa-ghost"></i>Discover</button>
+    <button class="mag-btn" data-mag><div class="mag-fill"></div><i class="fa-solid fa-fire"></i>Burn</button>
+  </div>
+</section>
+
+<!-- LIVING GRID -->
+<section class="grid-sec">
+  <div class="rv"><div class="sec-label">05 — Living Grid</div></div>
+  <h2 class="sec-title rv">A surface that breathes</h2>
+  <p class="sec-desc rv">Each dot deforms, shifts color, and changes size based on cursor proximity. The grid ripples outward like water.</p>
+  <div class="living-grid-wrap rv" id="gridWrap">
+    <canvas id="gridCanvas"></canvas>
+    <span class="grid-hint">Move across the surface</span>
+  </div>
+</section>
+
+<footer>Every pixel reacts — no frameworks, no libraries, raw math</footer>
+
+<script>
+// ===== GLOBAL MOUSE =====
+const M = { x: -200, y: -200 };
+document.addEventListener('mousemove', e => { M.x = e.clientX; M.y = e.clientY; });
+document.addEventListener('touchmove', e => { M.x = e.touches[0].clientX; M.y = e.touches[0].clientY; }, { passive: true });
+
+// ===== CUSTOM CURSOR =====
+const curCore = document.getElementById('curCore');
+const curRing = document.getElementById('curRing');
+let cx = -200, cy = -200, rx = -200, ry = -200;
+(function curLoop() {
+  cx += (M.x - cx) * .25; cy += (M.y - cy) * .25;
+  rx += (M.x - rx) * .08; ry += (M.y - ry) * .08;
+  curCore.style.left = cx + 'px'; curCore.style.top = cy + 'px';
+  curRing.style.left = rx + 'px'; curRing.style.top = ry + 'px';
+  requestAnimationFrame(curLoop);
+})();
+// Expand on interactive elements
+document.addEventListener('mouseover', e => {
+  if (e.target.closest('button,a,.mag-btn,.shadow-card')) curCore.classList.add('expand');
+});
+document.addEventListener('mouseout', e => {
+  if (e.target.closest('button,a,.mag-btn,.shadow-card')) curCore.classList.remove('expand');
+});
+
+// ===== GLOBAL LIGHT CANVAS =====
+const glCvs = document.getElementById('globalLight');
+const glCtx = glCvs.getContext('2d');
+function resizeGL() { glCvs.width = innerWidth; glCvs.height = innerHeight; }
+resizeGL(); addEventListener('resize', resizeGL);
+(function drawGL() {
+  glCtx.clearRect(0, 0, glCvs.width, glCvs.height);
+  const g = glCtx.createRadialGradient(M.x, M.y, 0, M.x, M.y, 400);
+  g.addColorStop(0, 'rgba(255,107,53,0.025)');
+  g.addColorStop(1, 'rgba(255,107,53,0)');
+  glCtx.fillStyle = g;
+  glCtx.fillRect(0, 0, glCvs.width, glCvs.height);
+  requestAnimationFrame(drawGL);
+})();
+
+// ===== HERO TEXT REPULSION =====
+const heroText = document.getElementById('heroText');
+const heroChars = [];
+'REACT'.split('').forEach((ch, i) => {
+  const span = document.createElement('span');
+  span.className = 'h-char';
+  span.textContent = ch;
+  span.style.setProperty('--i', i);
+  heroText.appendChild(span);
+  heroChars.push(span);
+});
+(function heroLoop() {
+  heroChars.forEach(ch => {
+    const r = ch.getBoundingClientRect();
+    const charCx = r.left + r.width / 2;
+    const charCy = r.top + r.height / 2;
+    const dx = M.x - charCx;
+    const dy = M.y - charCy;
+    const dist = Math.hypot(dx, dy);
+    const maxDist = 200;
+    if (dist < maxDist && dist > 0) {
+      const force = (1 - dist / maxDist) * 35;
+      const angle = Math.atan2(dy, dx);
+      ch.style.transform = `translate(${Math.cos(angle) * -force}px, ${Math.sin(angle) * -force}px)`;
+      ch.classList.add('pushed');
+    } else {
+      ch.style.transform = '';
+      ch.classList.remove('pushed');
+    }
+  });
+  requestAnimationFrame(heroLoop);
+})();
+
+// ===== DYNAMIC SHADOWS =====
+const shadowCards = document.querySelectorAll('.shadow-card');
+(function shadowLoop() {
+  shadowCards.forEach(card => {
+    const shadow = card.querySelector('.sc-shadow');
+    const r = card.getBoundingClientRect();
+    const cardCx = r.left + r.width / 2;
+    const cardCy = r.top + r.height / 2;
+    const dx = M.x - cardCx;
+    const dy = M.y - cardCy;
+    const dist = Math.max(100, Math.hypot(dx, dy));
+    // Shadow offset is AWAY from cursor (opposite direction)
+    const sx = (dx / dist) * 25;
+    const sy = (dy / dist) * 25;
+    const blur = 30 + (1 - Math.min(1, dist / 500)) * 20;
+    const spread = 0;
+    const alpha = 0.15 + (1 - Math.min(1, dist / 400)) * 0.2;
+    shadow.style.boxShadow = `${sx}px ${sy}px ${blur}px ${spread}px rgba(0,0,0,${alpha})`;
+  });
+  requestAnimationFrame(shadowLoop);
+})();
+
+// ===== GRAVITY WELL =====
+const gravCvs = document.getElementById('gravCanvas');
+const gravCtx = gravCvs.getContext('2d');
+let gravW, gravH, particles = [];
+
+function resizeGrav() {
+  const r = gravCvs.parentElement.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio, 2);
+  gravW = r.width; gravH = r.height;
+  gravCvs.width = gravW * dpr; gravCvs.height = gravH * dpr;
+  gravCvs.style.width = gravW + 'px'; gravCvs.style.height = gravH + 'px';
+  gravCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeGrav(); addEventListener('resize', () => { resizeGrav(); initParticles(); });
+
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < 300; i++) {
+    particles.push({
+      x: Math.random() * gravW, y: Math.random() * gravH,
+      vx: (Math.random() - .5) * 1.5, vy: (Math.random() - .5) * 1.5,
+      sz: 1.5 + Math.random() * 2.5,
+      hue: 15 + Math.random() * 30, // warm range
+      life: 1
+    });
+  }
+}
+initParticles();
+
+(function drawGrav() {
+  gravCtx.clearRect(0, 0, gravW, gravH);
+  const wr = gravCvs.parentElement.getBoundingClientRect();
+  const mx = M.x - wr.left;
+  const my = M.y - wr.top;
+  const inside = mx > 0 && mx < gravW && my > 0 && my < gravH;
+
+  particles.forEach(p => {
+    if (inside) {
+      const dx = mx - p.x;
+      const dy = my - p.y;
+      const dist = Math.max(10, Math.hypot(dx, dy));
+      const force = Math.min(2.5, 150 / (dist * dist) * 3);
+      p.vx += (dx / dist) * force;
+      p.vy += (dy / dist) * force;
+    }
+    // Gentle drift
+    p.vx += (Math.random() - .5) * 0.1;
+    p.vy += (Math.random() - .5) * 0.1;
+    p.vx *= 0.985;
+    p.vy *= 0.985;
+    p.x += p.vx;
+    p.y += p.vy;
+    // Bounce
+    if (p.x < 0) { p.x = 0; p.vx *= -.7; }
+    if (p.x > gravW) { p.x = gravW; p.vx *= -.7; }
+    if (p.y < 0) { p.y = 0; p.vy *= -.7; }
+    if (p.y > gravH) { p.y = gravH; p.vy *= -.7; }
+
+    const speed = Math.hypot(p.vx, p.vy);
+    const brightness = 50 + Math.min(20, speed * 5);
+    const alpha = 0.4 + Math.min(0.5, speed * 0.1);
+
+    // Glow
+    const grd = gravCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.sz * 4);
+    grd.addColorStop(0, `hsla(${p.hue},90%,${brightness}%,${alpha * 0.15})`);
+    grd.addColorStop(1, `hsla(${p.hue},90%,${brightness}%,0)`);
+    gravCtx.fillStyle = grd;
+    gravCtx.fillRect(p.x - p.sz * 4, p.y - p.sz * 4, p.sz * 8, p.sz * 8);
+
+    // Core
+    gravCtx.beginPath();
+    gravCtx.arc(p.x, p.y, Math.max(0.5, p.sz), 0, Math.PI * 2);
+    gravCtx.fillStyle = `hsla(${p.hue},85%,${brightness + 10}%,${alpha})`;
+    gravCtx.fill();
+  });
+
+  // Cursor glow inside canvas
+  if (inside) {
+    const cg = gravCtx.createRadialGradient(mx, my, 0, mx, my, 60);
+    cg.addColorStop(0, 'rgba(255,107,53,0.08)');
+    cg.addColorStop(1, 'rgba(255,107,53,0)');
+    gravCtx.fillStyle = cg;
+    gravCtx.beginPath();
+    gravCtx.arc(mx, my, 60, 0, Math.PI * 2);
+    gravCtx.fill();
+  }
+
+  requestAnimationFrame(drawGrav);
+})();
+
+// ===== LASER TEXT =====
+const laserZone = document.getElementById('laserZone');
+const laserText = document.getElementById('laserText');
+const laserChars = [];
+laserText.textContent.split('').forEach((ch, i) => {
+  const span = document.createElement('span');
+  span.className = 'lr-char';
+  span.textContent = ch === ' ' ? '\u00A0' : ch;
+  laserText.appendChild(span);
+  laserChars.push(span);
+});
+
+(function laserLoop() {
+  const zr = laserZone.getBoundingClientRect();
+  const mx = M.x - zr.left;
+  const my = M.y - zr.top;
+  laserZone.style.setProperty('--mx', mx + 'px');
+  laserZone.style.setProperty('--my', my + 'px');
+
+  laserChars.forEach(ch => {
+    const cr = ch.getBoundingClientRect();
+    const cx = cr.left + cr.width / 2;
+    const cy = cr.top + cr.height / 2;
+    const dist = Math.hypot(M.x - cx, M.y - cy);
+    ch.classList.toggle('lit', dist < 90);
+  });
+  requestAnimationFrame(laserLoop);
+})();
+
+// ===== MAGNETIC BUTTONS =====
+document.querySelectorAll('[data-mag]').forEach(btn => {
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    const bcx = r.left + r.width / 2;
+    const bcy = r.top + r.height / 2;
+    const dx = e.clientX - bcx;
+    const dy = e.clientY - bcy;
+    const dist = Math.hypot(dx, dy);
+    const pull = Math.max(0, 1 - dist / 200) * 14;
+    const tx = (dx / (dist || 1)) * pull;
+    const ty = (dy / (dist || 1)) * pull;
+    btn.style.transform = `translate(${tx}px, ${ty}px)`;
+    btn.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+    btn.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+  });
+  btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  btn.addEventListener('click', e => {
+    const r = btn.getBoundingClientRect();
+    const sz = 60;
+    const rip = document.createElement('div');
+    rip.className = 'btn-ripple';
+    rip.style.cssText = `width:${sz}px;height:${sz}px;left:${e.clientX - r.left - sz/2}px;top:${e.clientY - r.top - sz/2}px`;
+    btn.appendChild(rip);
+    setTimeout(() => rip.remove(), 600);
+  });
+});
+
+// ===== LIVING DOT GRID =====
+const gridCvs = document.getElementById('gridCanvas');
+const gridCtx = gridCvs.getContext('2d');
+let gridW, gridH, dots = [];
+const GRID_SP = 22;
+
+function resizeGrid() {
+  const r = gridCvs.parentElement.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio, 2);
+  gridW = r.width; gridH = r.height;
+  gridCvs.width = gridW * dpr; gridCvs.height = gridH * dpr;
+  gridCvs.style.width = gridW + 'px'; gridCvs.style.height = gridH + 'px';
+  gridCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Reinit dots
+  dots = [];
+  const cols = Math.ceil(gridW / GRID_SP);
+  const rows = Math.ceil(gridH / GRID_SP);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      dots.push({
+        ox: col * GRID_SP + GRID_SP / 2,
+        oy: row * GRID_SP + GRID_SP / 2,
+        x: col * GRID_SP + GRID_SP / 2,
+        y: row * GRID_SP + GRID_SP / 2,
+        sz: 2, targetSz: 2
+      });
+    }
+  }
+}
+resizeGrid(); addEventListener('resize', resizeGrid);
+
+(function drawGrid() {
+  gridCtx.clearRect(0, 0, gridW, gridH);
+  const wr = gridCvs.parentElement.getBoundingClientRect();
+  const mx = M.x - wr.left;
+  const my = M.y - wr.top;
+  const radius = 150;
+  const radiusSq = radius * radius;
+
+  dots.forEach(d => {
+    const dx = mx - d.ox;
+    const dy = my - d.oy;
+    const distSq = dx * dx + dy * dy;
+
+    if (distSq < radiusSq) {
+      const dist = Math.sqrt(distSq);
+      const force = (1 - dist / radius);
+      // Push outward
+      const angle = Math.atan2(dy, dx);
+      const push = force * 12;
+      d.x = d.ox - Math.cos(angle) * push;
+      d.y = d.oy - Math.sin(angle) * push;
+      d.targetSz = 2 + force * 4;
+    } else {
+      d.x += (d.ox - d.x) * 0.1;
+      d.y += (d.oy - d.y) * 0.1;
+      d.targetSz = 2;
+    }
+    d.sz += (d.targetSz - d.sz) * 0.15;
+
+    // Color: warm near cursor, cool far
+    const hue = distSq < radiusSq ? 15 + (1 - Math.sqrt(distSq) / radius) * 20 : 220;
+    const sat = distSq < radiusSq ? 90 : 30;
+    const lit = distSq < radiusSq ? 55 + (1 - Math.sqrt(distSq) / radius) * 20 : 35;
+    const alpha = distSq < radiusSq ? 0.6 + (1 - Math.sqrt(distSq) / radius) * 0.4 : 0.12;
+
+    gridCtx.beginPath();
+    gridCtx.arc(d.x, d.y, Math.max(0.5, d.sz), 0, Math.PI * 2);
+    gridCtx.fillStyle = `hsla(${hue},${sat}%,${lit}%,${alpha})`;
+    gridCtx.fill();
+
+    // Glow for close dots
+    if (distSq < radiusSq * 0.4) {
+      const ga = (1 - Math.sqrt(distSq) / (radius * 0.63)) * 0.15;
+      gridCtx.beginPath();
+      gridCtx.arc(d.x, d.y, d.sz * 3, 0, Math.PI * 2);
+      gridCtx.fillStyle = `hsla(${hue},90%,55%,${ga})`;
+      gridCtx.fill();
+    }
+  });
+
+  // Cursor glow
+  if (mx > 0 && mx < gridW && my > 0 && my < gridH) {
+    const cg = gridCtx.createRadialGradient(mx, my, 0, mx, my, radius * 0.6);
+    cg.addColorStop(0, 'rgba(255,107,53,0.04)');
+    cg.addColorStop(1, 'rgba(255,107,53,0)');
+    gridCtx.fillStyle = cg;
+    gridCtx.beginPath();
+    gridCtx.arc(mx, my, radius * 0.6, 0, Math.PI * 2);
+    gridCtx.fill();
+  }
+
+  requestAnimationFrame(drawGrid);
+})();
+
+// ===== SCROLL REVEAL =====
+const rvs = document.querySelectorAll('.rv');
+const rvObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+}, { threshold: 0.1 });
+rvs.forEach(el => rvObs.observe(el));
+</script>
+</body>
+</html>
