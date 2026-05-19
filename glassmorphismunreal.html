@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glassmorphism — Unreal</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#07080c;--fg:#eee9da;--muted:#6b6560;
+  --teal:#00d4aa;--teal-d:#009977;--amber:#e8a830;--amber-d:#c48a18;
+  --rose:#e05060;--violet:#8a5cf5;--sky:#40b8e0;
+  --glass:rgba(255,255,255,.04);--glass-hi:rgba(255,255,255,.08);
+  --glass-border:rgba(255,255,255,.07);--glass-hi-border:rgba(255,255,255,.14);
+  --blur:blur(24px);--blur-hi:blur(40px);
+  --radius:18px;--radius-sm:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ===== ANIMATED BG ORBS ===== */
+.bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;will-change:transform}
+.orb-1{width:500px;height:500px;background:radial-gradient(circle,rgba(0,212,170,.18),transparent 70%);top:-10%;left:-5%;animation:orbFloat1 20s ease-in-out infinite}
+.orb-2{width:450px;height:450px;background:radial-gradient(circle,rgba(232,168,48,.12),transparent 70%);bottom:-8%;right:-5%;animation:orbFloat2 25s ease-in-out infinite}
+.orb-3{width:350px;height:350px;background:radial-gradient(circle,rgba(224,80,96,.1),transparent 70%);top:40%;left:50%;animation:orbFloat3 18s ease-in-out infinite}
+.orb-4{width:300px;height:300px;background:radial-gradient(circle,rgba(138,92,245,.08),transparent 70%);top:10%;right:20%;animation:orbFloat1 22s ease-in-out infinite reverse}
+.orb-5{width:400px;height:400px;background:radial-gradient(circle,rgba(64,184,224,.08),transparent 70%);bottom:20%;left:30%;animation:orbFloat2 20s ease-in-out infinite reverse}
+@keyframes orbFloat1{0%,100%{transform:translate(0,0)}33%{transform:translate(60px,40px)}66%{transform:translate(-30px,-50px)}}
+@keyframes orbFloat2{0%,100%{transform:translate(0,0)}33%{transform:translate(-50px,30px)}66%{transform:translate(40px,-40px)}}
+@keyframes orbFloat3{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,-30px)}}
+
+/* ===== GLASS MIXINS ===== */
+.glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius)}
+.glass-hi{background:var(--glass-hi);backdrop-filter:var(--blur-hi);-webkit-backdrop-filter:var(--blur-hi);border:1px solid var(--glass-hi-border);border-radius:var(--radius)}
+.glass-sm{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius-sm)}
+
+/* ===== PRISMATIC HOVER — the star trick ===== */
+.prism{position:relative;overflow:hidden}
+.prism::before{content:'';position:absolute;inset:-1px;border-radius:inherit;background:conic-gradient(from var(--angle,0deg),var(--teal),var(--sky),var(--violet),var(--rose),var(--amber),var(--teal));opacity:0;transition:opacity .5s;z-index:0;pointer-events:none}
+.prism:hover::before{opacity:1}
+.prism::after{content:'';position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none}
+.prism-sm::after{background:var(--glass)}
+.prism::after{background:var(--glass-hi);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+/* Inner content must be above the gradient */
+.prism>*{position:relative;z-index:2}
+
+/* ===== LAYOUT ===== */
+.app{position:relative;z-index:1;display:flex;min-height:100vh}
+.sidebar{width:270px;flex-shrink:0;padding:1.5rem 1rem;border-right:1px solid var(--glass-border);display:flex;flex-direction:column;gap:1rem;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+.main{flex:1;padding:1.5rem 2rem 3rem;overflow-y:auto}
+
+/* ===== SIDEBAR ===== */
+.sb-brand{display:flex;align-items:center;gap:.6rem;padding:.6rem;border-radius:var(--radius-sm);background:rgba(255,255,255,.03);border:1px solid var(--glass-border)}
+.sb-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal-d));display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:1.2rem;color:#fff;font-weight:700}
+.sb-name{font-family:'Instrument Serif',serif;font-size:1.15rem;letter-spacing:-.5px}
+.sb-nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.sb-label{font-size:.55rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);padding:0 .7rem;margin:.8rem 0 .4rem}
+.sb-item{display:flex;align-items:center;gap:.7rem;padding:.55rem .7rem;border-radius:var(--radius-sm);font-size:.8rem;color:var(--muted);cursor:pointer;transition:all .25s;position:relative}
+.sb-item:hover{background:rgba(255,255,255,.04);color:var(--fg)}
+.sb-item.active{background:rgba(0,212,170,.08);color:var(--teal)}
+.sb-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:2.5px;background:var(--teal);border-radius:2px}
+.sb-item i{width:18px;text-align:center;font-size:.85rem}
+.sb-badge{margin-left:auto;font-size:.55rem;font-weight:700;background:var(--teal);color:#000;padding:1px 7px;border-radius:8px}
+.sb-bottom{padding-top:.5rem;border-top:1px solid var(--glass-border);display:flex;flex-direction:column;gap:2px}
+.sb-user{display:flex;align-items:center;gap:.6rem;padding:.5rem;border-radius:var(--radius-sm);cursor:pointer;transition:background .2s}
+.sb-user:hover{background:rgba(255,255,255,.04)}
+.sb-avatar{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--teal),var(--amber));display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff}
+.sb-uname{font-size:.8rem;font-weight:600}
+.sb-urole{font-size:.65rem;color:var(--muted)}
+
+/* ===== MAIN HEADER ===== */
+.main-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.main-title{font-family:'Instrument Serif',serif;font-size:clamp(1.5rem,3vw,2.2rem);letter-spacing:-.5px}
+.main-title em{font-style:normal;color:var(--teal)}
+.header-actions{display:flex;gap:.5rem;align-items:center}
+.hdr-search{position:relative}
+.hdr-search input{width:200px;padding:.5rem .8rem .5rem 2rem;background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:10px;color:var(--fg);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none;transition:all .3s}
+.hdr-search input:focus{border-color:rgba(0,212,170,.3);background:rgba(0,212,170,.04)}
+.hdr-search input::placeholder{color:var(--muted)}
+.hdr-search i{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);font-size:.75rem;color:var(--muted);pointer-events:none;transition:color .3s}
+.hdr-search input:focus+i{color:var(--teal)}
+.hdr-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);backdrop-filter:var(--blur);color:var(--muted);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s;position:relative}
+.hdr-btn:hover{border-color:var(--glass-hi-border);color:var(--fg)}
+.hdr-btn .notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--rose)}
+
+/* ===== STAT CARDS ===== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.stat-card{padding:1.2rem;position:relative;transition:transform .4s cubic-bezier(.23,1,.32,1)}
+.stat-card:hover{transform:translateY(-3px)}
+.stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem;margin-bottom:.7rem}
+.stat-value{font-family:'Instrument Serif',serif;font-size:1.6rem;letter-spacing:-.5px;line-height:1;margin-bottom:.15rem}
+.stat-label{font-size:.7rem;color:var(--muted);letter-spacing:.5px}
+.stat-change{font-size:.65rem;margin-top:.3rem;display:flex;align-items:center;gap:.3rem}
+.stat-change.up{color:var(--teal)}.stat-change.down{color:var(--rose)}
+
+/* ===== SECTION LABEL ===== */
+.sec-label{font-size:.6rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+
+/* ===== FEATURE CARDS ===== */
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-bottom:2rem}
+.feat-card{padding:1.5rem;min-height:180px;display:flex;flex-direction:column;transition:transform .4s cubic-bezier(.23,1,.32,1),box-shadow .4s}
+.feat-card:hover{transform:translateY(-4px);box-shadow:0 16px 50px rgba(0,0,0,.25)}
+.feat-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;margin-bottom:.8rem}
+.feat-title{font-weight:700;font-size:.92rem;margin-bottom:.3rem}
+.feat-desc{font-size:.75rem;color:var(--muted);line-height:1.6;flex:1}
+.feat-arrow{display:flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;color:var(--muted);margin-top:.7rem;transition:color .3s,gap .3s}
+.feat-card:hover .feat-arrow{color:var(--teal);gap:.6rem}
+
+/* ===== ACTIVITY TIMELINE ===== */
+.timeline-card{padding:1.5rem;margin-bottom:2rem}
+.tl-item{display:flex;gap:1rem;padding:.8rem 0;border-bottom:1px solid var(--glass-border);align-items:flex-start}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;position:relative}
+.tl-dot::after{content:'';position:absolute;top:50%;left:50%;width:18px;height:1px;background:var(--glass-hi-border);transform:translate(-50%,-50%)}
+.tl-dot::before{content:'';position:absolute;top:50%;left:50%;width:18px;height:1px;background:var(--glass-hi-border);transform:translate(-50%,-50%) translateY(-18px)}
+.tl-item:first-child .tl-dot::before{display:none}
+.tl-avatar{width:34px;height:34px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.tl-body{flex:1;min-width:0}
+.tl-text{font-size:.8rem;line-height:1.6}
+.tl-text strong{font-weight:600}
+.tl-time{font-size:.65rem;color:var(--muted);margin-top:2px}
+
+/* ===== CHART PLACEHOLDER ===== */
+.chart-card{padding:1.5rem;margin-bottom:2rem}
+.chart-card h3{font-size:.9rem;font-weight:700;margin-bottom:1rem}
+.chart-area{position:relative;height:180px;border-radius:var(--radius-sm);background:rgba(255,255,255,.02);overflow:hidden}
+.chart-area canvas{width:100%;height:100%;display:block}
+
+/* ===== FORM CARD ===== */
+.form-card{padding:1.5rem;margin-bottom:2rem}
+.form-card h3{font-size:.9rem;font-weight:700;margin-bottom:1rem}
+.form-row{display:flex;gap:.8rem;margin-bottom:.8rem}
+.form-group{flex:1;position:relative}
+.form-input{width:100%;padding:.6rem .8rem;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--fg);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none;transition:all .3s}
+.form-input:focus{border-color:rgba(0,212,170,.3);background:rgba(0,212,170,.04);box-shadow:0 0 0 3px rgba(0,212,170,.05)}
+.form-input::placeholder{color:rgba(255,255,255,.2)}
+.form-btn{padding:.6rem 1.6rem;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;color:#000;background:linear-gradient(135deg,var(--teal),var(--teal-d));cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.form-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,170,.25)}
+.form-btn::after{content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .5s}
+.form-btn:hover::after{left:130%}
+
+/* ===== PROFILE CARD ===== */
+.profile-card{padding:1.5rem;display:flex;gap:1.2rem;align-items:center;margin-bottom:2rem}
+.profile-avatar{width:72px;height:72px;border-radius:16px;border:2px solid var(--glass-hi-border);object-fit:cover;flex-shrink:0}
+.profile-info{flex:1}
+.profile-name{font-family:'Instrument Serif',serif;font-size:1.4rem;letter-spacing:-.5px;margin-bottom:.1rem}
+.profile-role{font-size:.75rem;color:var(--muted);margin-bottom:.5rem}
+.profile-tags{display:flex;gap:.3rem;flex-wrap:wrap}
+.profile-tag{font-size:.6rem;padding:2px 8px;border-radius:6px;border:1px solid var(--glass-border);color:var(--muted)}
+.profile-actions{display:flex;flex-direction:column;gap:.4rem}
+.profile-action-btn{padding:.5rem 1rem;border:1px solid var(--glass-border);border-radius:10px;background:var(--glass);backdrop-filter:var(--blur);color:var(--fg);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif;text-align:center}
+.profile-action-btn:hover{border-color:var(--glass-hi-border);background:var(--glass-hi)}
+
+/* ===== ANGLE FOR PRISM ===== */
+let{position:relative;z-index:1}
+@media(max-width:1024px){.app{flex-direction:column}.sidebar{width:100%;border-right:none;border-bottom:1px solid var(--glass-border);flex-direction:row;overflow-x:auto;padding:1rem}.sb-nav{flex-direction:row;gap:0}.sb-label{display:none}.sb-bottom{display:none}.main{padding:1rem}.stats-row{grid-template-columns:repeat(2,1fr)}.feature-grid{grid-template-columns:1fr}.form-row{flex-direction:column}}
+@media(max-width:640px){.stats-row{grid-template-columns:1fr}.feature-grid{grid-template-columns:1fr}.profile-card{flex-direction:column;text-align:center}.profile-actions{flex-direction:row}.profile-tags{justify-content:center}.hdr-search input{width:140px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.1s!important}}
+</style>
+</head>
+<body>
+
+<!-- BG ORBS -->
+<div class="bg-canvas">
+  <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+  <div class="orb orb-4"></div><div class="orb orb-5"></div>
+</div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-brand"><div class="sb-icon">G</div><span class="sb-name">Glasswork</span></div>
+    <nav class="sb-nav">
+      <div class="sb-label">Main</div>
+      <div class="sb-item active"><i class="fa-solid fa-house"></i>Dashboard</div>
+      <div class="sb-item"><i class="fa-solid fa-chart-line"></i>Analytics</div>
+      <div class="sb-item"><i class="fa-solid fa-folder-open"></i>Projects <span class="sb-badge">5</span></div>
+      <div class="sb-item"><i class="fa-solid fa-inbox"></i>Inbox <span class="sb-badge">12</span></div>
+      <div class="sb-label">Workspace</div>
+      <div class="sb-item"><i class="fa-solid fa-users"></i>Team</div>
+      <div class="sb-item"><i class="fa-solid fa-calendar"></i>Schedule</div>
+      <div class="sb-item"><i class="fa-solid fa-bookmark"></i>Saved</div>
+      <div class="sb-label">Settings</div>
+      <div class="sb-item"><i class="fa-solid fa-sliders"></i>Preferences</div>
+      <div class="sb-item"><i class="fa-solid fa-shield-halved"></i>Security</div>
+    </nav>
+    <div class="sb-bottom">
+      <div class="sb-user">
+        <div class="sb-avatar">AK</div>
+        <div><div class="sb-uname">IGM Kim</div><div class="sb-urole">Pro Plan</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="main-header">
+      <h1 class="main-title">Welcome back, <em>IGM</em></h1>
+      <div class="header-actions">
+        <div class="hdr-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search..."></div>
+        <button class="hdr-btn prism prism-sm"><i class="fa-solid fa-bell"></i><div class="notif-dot"></div></button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card glass prism prism-sm">
+        <div class="stat-icon" style="background:rgba(0,212,170,.08);color:var(--teal)"><i class="fa-solid fa-eye"></i></div>
+        <div class="stat-value">48.2K</div>
+        <div class="stat-label">Page Views</div>
+        <div class="stat-change up"><i class="fa-solid fa-arrow-up" style="font-size:.5rem"></i> 12.4%</div>
+      </div>
+      <div class="stat-card glass prism prism-sm">
+        <div class="stat-icon" style="background:rgba(232,168,48,.08);color:var(--amber)"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-value">4:32</div>
+        <div class="stat-label">Avg. Session</div>
+        <div class="stat-change up"><i class="fa-solid fa-arrow-up" style="font-size:.5rem"></i> 8.1%</div>
+      </div>
+      <div class="stat-card glass prism prism-sm">
+        <div class="stat-icon" style="background:rgba(224,80,96,.08);color:var(--rose)"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+        <div class="stat-value">12.6%</div>
+        <div class="stat-label">Conversion</div>
+        <div class="stat-change up"><i class="fa-solid fa-arrow-up" style="font-size:.5rem"></i> 3.2%</div>
+      </div>
+      <div class="stat-card glass prism prism-sm">
+        <div class="stat-icon" style="background:rgba(138,92,245,.08);color:var(--violet)"><i class="fa-solid fa-bolt"></i></div>
+        <div class="stat-value">99.9%</div>
+        <div class="stat-label">Uptime</div>
+        <div class="stat-change down"><i class="fa-solid fa-arrow-down" style="font-size:.5rem"></i> 0.01%</div>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-card glass prism prism-sm">
+      <h3>Revenue Trend</h3>
+      <div class="chart-area"><canvas id="chartCanvas"></canvas></div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="sec-label">Quick Actions</div>
+    <div class="feature-grid">
+      <div class="feat-card glass prism">
+        <div class="feat-icon" style="background:rgba(0,212,170,.08);color:var(--teal)"><i class="fa-solid fa-plus"></i></div>
+        <div class="feat-title">New Project</div>
+        <div class="feat-desc">Start a new design project from scratch or a template</div>
+        <div class="feat-arrow">Create <i class="fa-solid fa-arrow-right" style="font-size:.55rem"></i></div>
+      </div>
+      <div class="feat-card glass prism">
+        <div class="feat-icon" style="background:rgba(232,168,48,.08);color:var(--amber)"><i class="fa-solid fa-upload"></i></div>
+        <div class="feat-title">Import Assets</div>
+        <div class="feat-desc">Upload images, icons, and design files to your library</div>
+        <div class="feat-arrow">Upload <i class="fa-solid fa-arrow-right" style="font-size:.55rem"></i></div>
+      </div>
+      <div class="feat-card glass prism">
+        <div class="feat-icon" style="background:rgba(64,184,224,.08);color:var(--sky)"><i class="fa-solid fa-users"></i></div>
+        <div class="feat-title">Invite Team</div>
+        <div class="feat-desc">Add collaborators to your workspace with role-based access</div>
+        <div class="feat-arrow">Invite <i class="fa-solid fa-arrow-right" style="font-size:.55rem"></i></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+      <!-- ACTIVITY -->
+      <div class="timeline-card glass prism prism-sm">
+        <div class="sec-label">Recent Activity</div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--teal)"></div>
+          <img class="tl-avatar" src="https://picsum.photos/seed/glass-av1/68/68" alt="">
+          <div class="tl-body"><div class="tl-text"><strong>Sarah Chen</strong> pushed 3 commits to Design System v2</div><div class="tl-time">12 min ago</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--amber)"></div>
+          <img class="tl-avatar" src="https://picsum.photos/seed/glass-av2/68/68" alt="">
+          <div class="tl-body"><div class="tl-text"><strong>Marcus</strong> exported production build of Project Aurora</div><div class="tl-time">1 hour ago</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--rose)"></div>
+          <img class="tl-avatar" src="https://picsum.photos/seed/glass-av3/68/68" alt="">
+          <div class="tl-body"><div class="tl-text"><strong>Aiko</strong> flagged accessibility issue on Dashboard component</div><div class="tl-time">3 hours ago</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--violet)"></div>
+          <img class="tl-avatar" src="https://picsum.photos/seed/glass-av4/68/68" alt="">
+          <div class="tl-body"><div class="tl-text"><strong>System</strong> completed automated backup of workspace data</div><div class="tl-time">6 hours ago</div></div>
+        </div>
+      </div>
+
+      <!-- PROFILE + FORM -->
+      <div style="display:flex;flex-direction:column;gap:1.2rem">
+        <div class="profile-card glass prism prism-sm">
+          <img class="profile-avatar" src="https://picsum.photos/seed/glass-profile/144/144" alt="">
+          <div class="profile-info">
+            <div class="profile-name">IGM Kim</div>
+            <div class="profile-role">Lead Designer · San Francisco</div>
+            <div class="profile-tags"><span class="profile-tag">UI Design</span><span class="profile-tag">Systems</span><span class="profile-tag">Prototyping</span></div>
+          </div>
+          <div class="profile-actions">
+            <button class="profile-action-btn prism prism-sm">View Profile</button>
+            <button class="profile-action-btn prism prism-sm">Edit Info</button>
+          </div>
+        </div>
+        <div class="form-card glass prism prism-sm">
+          <h3>Quick Note</h3>
+          <div class="form-row">
+            <div class="form-group"><input class="form-input" placeholder="Title..." value="Sprint 14 recap"></div>
+          </div>
+          <textarea class="form-input" style="width:100%;min-height:80px;resize:vertical;font-family:'DM Sans',sans-serif" placeholder="Write your note...">Reviewed all pending PRs. Design system v2 is on track for release next week. Need to sync with engineering on component API changes.</textarea>
+          <div style="display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end">
+            <button class="form-btn">Save Note</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ===== PRISMATIC ANGLE — spin conic gradient =====
+let angle = 0;
+document.querySelectorAll('.prism').forEach(el => {
+  el.style.setProperty('--angle', '0deg');
+});
+(function spinPrism() {
+  angle = (angle + 0.6) % 360;
+  document.querySelectorAll('.prism').forEach(el => {
+    // Only spin if hovered or very close (check via a stored flag)
+    if (el._hovered) el.style.setProperty('--angle', angle + 'deg');
+  });
+  requestAnimationFrame(spinPrism);
+})();
+
+document.querySelectorAll('.prism').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    el._hovered = true;
+    el.style.setProperty('--angle', angle + 'deg');
+  });
+  el.addEventListener('mouseleave', () => {
+    el._hovered = false;
+    // Keep last angle for a nice freeze effect
+  });
+});
+
+// ===== SIDEBAR ITEMS =====
+document.querySelectorAll('.sb-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// ===== CHART =====
+const chartCvs = document.getElementById('chartCanvas');
+const chartCtx = chartCvs.getContext('2d');
+let chartW, chartH;
+
+function resizeChart() {
+  const r = chartCvs.parentElement.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio, 2);
+  chartW = r.width; chartH = r.height;
+  chartCvs.width = chartW * dpr; chartCvs.height = chartH * dpr;
+  chartCvs.style.width = chartW + 'px'; chartCvs.style.height = chartH + 'px';
+  chartCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeChart();
+addEventListener('resize', resizeChart);
+
+const data = [32, 45, 38, 62, 55, 78, 65, 82, 74, 90, 85, 95];
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let chartProgress = 0;
+
+function drawChart() {
+  resizeChart();
+  chartCtx.clearRect(0, 0, chartW, chartH);
+  chartProgress = Math.min(1, chartProgress + 0.02);
+
+  const padL = 40, padR = 10, padT = 10, padB = 25;
+  const cw = chartW - padL - padR;
+  const ch = chartH - padT - padB;
+  const maxVal = 100;
+  const barW = cw / data.length * 0.6;
+  const gap = cw / data.length;
+
+  // Grid lines
+  chartCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+  chartCtx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (ch / 4) * i;
+    chartCtx.beginPath();
+    chartCtx.moveTo(padL, y);
+    chartCtx.lineTo(chartW - padR, y);
+    chartCtx.stroke();
+    // Label
+    chartCtx.fillStyle = 'rgba(255,255,255,0.15)';
+    chartCtx.font = '10px DM Sans';
+    chartCtx.textAlign = 'right';
+    chartCtx.fillText(((4 - i) * 25) + 'k', padL - 6, y + 3);
+  }
+
+  // Bars
+  data.forEach((val, i) => {
+    const animProgress = clamp((chartProgress * data.length - i) / 1, 0, 1);
+    const eased = 1 - Math.pow(1 - animProgress, 3);
+    const barH = (val / maxVal) * ch * eased;
+    const x = padL + gap * i + (gap - barW) / 2;
+    const y = padT + ch - barH;
+
+    // Bar gradient
+    const grad = chartCtx.createLinearGradient(x, y, x, padT + ch);
+    grad.addColorStop(0, 'rgba(0,212,170,0.6)');
+    grad.addColorStop(1, 'rgba(0,212,170,0.08)');
+    chartCtx.fillStyle = grad;
+
+    // Rounded top
+    const r = Math.min(barW / 2, 4);
+    chartCtx.beginPath();
+    chartCtx.moveTo(x, padT + ch);
+    chartCtx.lineTo(x, y + r);
+    chartCtx.arcTo(x, y, x + r, y, r);
+    chartCtx.arcTo(x + barW - r, y, x + barW, y + r, r);
+    chartCtx.lineTo(x + barW, padT + ch);
+    chartCtx.closePath();
+    chartCtx.fill();
+
+    // Glow at top
+    if (animProgress > 0.5) {
+      chartCtx.shadowColor = 'rgba(0,212,170,0.2)';
+      chartCtx.shadowBlur = 12;
+      chartCtx.beginPath();
+      chartCtx.arc(x + barW / 2, y, r, 0, Math.PI * 2);
+      chartCtx.fillStyle = 'rgba(0,212,170,0.4)';
+      chartCtx.fill();
+      chartCtx.shadowBlur = 0;
+    }
+
+    // Month label
+    chartCtx.fillStyle = 'rgba(255,255,255,0.2)';
+    chartCtx.font = '9px DM Sans';
+    chartCtx.textAlign = 'center';
+    chartCtx.fillText(months[i], x + barW / 2, chartH - 4);
+  });
+
+  if (chartProgress < 1) requestAnimationFrame(drawChart);
+}
+
+// Start chart animation when visible
+const chartObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { chartProgress = 0; drawChart(); chartObs.unobserve(e.target); } });
+}, { threshold: 0.3 });
+chartObs.observe(chartCvs.parentElement);
+
+// ===== FORM BUTTON TOAST =====
+document.querySelectorAll('.form-btn, .profile-action-btn, .feat-card, .sb-user').forEach(el => {
+  el.addEventListener('click', () => {
+    const text = el.textContent.trim() || 'Action';
+    showToast(text + ' — saved');
+  });
+});
+
+// ===== SIMPLE TOAST =====
+function showToast(msg) {
+  let t = document.querySelector('.g-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.className = 'g-toast';
+    t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:10000;background:rgba(0,212,170,.12);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,212,170,.2);border-radius:12px;padding:.7rem 1.2rem;font-size:.8rem;color:#fff;font-family:DM Sans,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.3);transform:translateY(20px);opacity:0;transition:all .4s cubic-bezier(.23,1,.32,1);display:flex;align-items:center;gap:.5rem';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = '<i class="fa-solid fa-circle-check" style="color:var(--teal)"></i>' + msg;
+  t.style.transform = 'translateY(0)';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.transform = 'translateY(20px)'; t.style.opacity = '0'; }, 2500);
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+</script>
+</body>
+</html>
