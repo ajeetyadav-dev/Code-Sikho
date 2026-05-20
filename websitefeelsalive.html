@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUMINA</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg: #07070b;
+      --fg: #ede8d8;
+      --muted: #7d7d85;
+
+      --amber: #e89030;
+      --teal: #00d4aa;
+      --coral: #e05068;
+      --violet: #8a5cf5;
+      --sky: #40b8e0;
+
+      --glass: rgba(255,255,255,.04);
+      --glass-border: rgba(255,255,255,.08);
+
+      --r: 18px;
+    }
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+    }
+
+    body{
+      background:var(--bg);
+      color:var(--fg);
+      font-family:'DM Sans',sans-serif;
+      overflow-x:hidden;
+    }
+
+    canvas{
+      position:fixed;
+      inset:0;
+      z-index:0;
+    }
+
+    main,
+    nav,
+    footer{
+      position:relative;
+      z-index:1;
+    }
+
+    /* NAV */
+
+    nav{
+      position:fixed;
+      top:0;
+      width:100%;
+      padding:1rem 2rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      backdrop-filter:blur(20px);
+      background:rgba(7,7,11,.75);
+      border-bottom:1px solid transparent;
+      z-index:100;
+      transition:.3s;
+    }
+
+    nav.scrolled{
+      border-color:var(--glass-border);
+    }
+
+    .logo{
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      font-family:'Instrument Serif',serif;
+      font-size:1.4rem;
+    }
+
+    .logo-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--amber);
+      animation:pulse 2s infinite;
+    }
+
+    @keyframes pulse{
+      50%{
+        box-shadow:0 0 18px var(--amber);
+      }
+    }
+
+    .nav-links{
+      display:flex;
+      list-style:none;
+      gap:2rem;
+    }
+
+    .nav-links a{
+      color:var(--muted);
+      text-decoration:none;
+      font-size:.9rem;
+      transition:.3s;
+    }
+
+    .nav-links a:hover{
+      color:var(--fg);
+    }
+
+    .nav-right{
+      display:flex;
+      gap:.7rem;
+    }
+
+    .nav-btn{
+      width:38px;
+      height:38px;
+      border-radius:10px;
+      border:1px solid var(--glass-border);
+      background:var(--glass);
+      color:var(--fg);
+      cursor:pointer;
+    }
+
+    /* HERO */
+
+    .hero{
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:7rem 2rem;
+    }
+
+    .hero-tag{
+      margin-bottom:2rem;
+      padding:.5rem 1rem;
+      border:1px solid var(--glass-border);
+      border-radius:999px;
+      background:var(--glass);
+      color:var(--teal);
+      font-size:.75rem;
+      letter-spacing:2px;
+      text-transform:uppercase;
+    }
+
+    .hero h1{
+      font-family:'Instrument Serif',serif;
+      font-size:clamp(3rem,10vw,7rem);
+      line-height:.95;
+      letter-spacing:-3px;
+    }
+
+    .hero p{
+      max-width:650px;
+      margin-top:1.5rem;
+      color:var(--muted);
+      line-height:1.8;
+      font-size:1rem;
+    }
+
+    .hero-btns{
+      display:flex;
+      gap:1rem;
+      margin-top:2rem;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    .h-btn{
+      padding:.95rem 2rem;
+      border:none;
+      border-radius:14px;
+      background:var(--amber);
+      color:#000;
+      font-weight:700;
+      cursor:pointer;
+      transition:.3s;
+    }
+
+    .h-btn:hover{
+      transform:translateY(-3px);
+      box-shadow:0 10px 30px rgba(232,144,48,.25);
+    }
+
+    .outline{
+      background:transparent;
+      color:var(--fg);
+      border:1px solid var(--glass-border);
+    }
+
+    /* SECTION */
+
+    .sect{
+      padding:5rem 2rem;
+    }
+
+    .sect-inner{
+      max-width:1150px;
+      margin:auto;
+    }
+
+    .sect-label{
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:4px;
+      font-size:.7rem;
+      margin-bottom:.6rem;
+    }
+
+    .stats-row,
+    .feat-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+      gap:1rem;
+      margin-top:2rem;
+    }
+
+    .card{
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(20px);
+      border-radius:var(--r);
+      padding:1.5rem;
+      transition:.3s;
+    }
+
+    .card:hover{
+      transform:translateY(-5px);
+      box-shadow:0 15px 40px rgba(0,0,0,.3);
+    }
+
+    .stat-icon,
+    .feat-icon{
+      width:48px;
+      height:48px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-bottom:1rem;
+      font-size:1rem;
+    }
+
+    .stat-val{
+      font-size:2rem;
+      font-family:'Instrument Serif',serif;
+    }
+
+    .stat-label{
+      margin-top:.3rem;
+      color:var(--muted);
+    }
+
+    .feat-title{
+      font-weight:700;
+      margin-bottom:.5rem;
+    }
+
+    .feat-desc{
+      color:var(--muted);
+      line-height:1.7;
+      font-size:.95rem;
+    }
+
+    /* TESTIMONIALS */
+
+    .testi-card{
+      margin-top:1rem;
+    }
+
+    .testi-text{
+      font-style:italic;
+      color:#d8d8d8;
+      line-height:1.8;
+      margin-bottom:1rem;
+    }
+
+    .testi-author{
+      display:flex;
+      align-items:center;
+      gap:.8rem;
+    }
+
+    .testi-avatar{
+      width:50px;
+      height:50px;
+      border-radius:50%;
+      object-fit:cover;
+    }
+
+    .testi-role{
+      color:var(--muted);
+      font-size:.85rem;
+    }
+
+    /* CTA */
+
+    .cta{
+      text-align:center;
+      padding:6rem 2rem;
+    }
+
+    .cta-box{
+      max-width:900px;
+      margin:auto;
+      padding:4rem 2rem;
+      border-radius:30px;
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      backdrop-filter:blur(30px);
+    }
+
+    .cta h2{
+      font-family:'Instrument Serif',serif;
+      font-size:clamp(2rem,5vw,4rem);
+      margin-bottom:1rem;
+    }
+
+    .cta p{
+      max-width:600px;
+      margin:auto;
+      color:var(--muted);
+      line-height:1.8;
+    }
+
+    .cta .hero-btns{
+      margin-top:2rem;
+    }
+
+    footer{
+      text-align:center;
+      padding:3rem 2rem;
+      color:var(--muted);
+      border-top:1px solid var(--glass-border);
+    }
+
+    /* TOAST */
+
+    #toast{
+      position:fixed;
+      bottom:2rem;
+      left:50%;
+      transform:translateX(-50%) translateY(40px);
+      background:#111;
+      border:1px solid var(--glass-border);
+      padding:.9rem 1.4rem;
+      border-radius:12px;
+      opacity:0;
+      transition:.4s;
+      z-index:9999;
+    }
+
+    #toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    @media(max-width:768px){
+
+      .nav-links{
+        display:none;
+      }
+
+      .hero h1{
+        font-size:4rem;
+      }
+
+    }
+
+  </style>
+</head>
+
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<nav id="nav">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    LUMINA
+  </div>
+
+  <ul class="nav-links">
+    <li><a href="#">Home</a></li>
+    <li><a href="#">Explore</a></li>
+    <li><a href="#">Library</a></li>
+    <li><a href="#">Community</a></li>
+  </ul>
+
+  <div class="nav-right">
+    <button class="nav-btn">
+      <i class="fa-solid fa-search"></i>
+    </button>
+
+    <button class="nav-btn">
+      <i class="fa-solid fa-bell"></i>
+    </button>
+  </div>
+</nav>
+
+<main>
+
+<section class="hero">
+  <div class="hero-tag">
+    ✦ Interactive Experience
+  </div>
+
+  <h1>This Website<br>Feels Alive</h1>
+
+  <p>
+    An entire page that breathes with you. Every element has subtle motion,
+    depth, glow and interaction.
+  </p>
+
+  <div class="hero-btns">
+    <button class="h-btn" onclick="showToast('Welcome to Lumina')">
+      Get Started
+    </button>
+
+    <button class="h-btn outline" onclick="showToast('Exploring...')">
+      Explore
+    </button>
+  </div>
+</section>
+
+<section class="sect">
+  <div class="sect-inner">
+
+    <div class="sect-label">Live Metrics</div>
+
+    <div class="stats-row">
+
+      <div class="card">
+        <div class="stat-icon" style="background:rgba(0,212,170,.1);color:var(--teal)">
+          <i class="fa-solid fa-eye"></i>
+        </div>
+
+        <div class="stat-val countup" data-target="48247">0</div>
+        <div class="stat-label">Total Views</div>
+      </div>
+
+      <div class="card">
+        <div class="stat-icon" style="background:rgba(232,144,48,.1);color:var(--amber)">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+
+        <div class="stat-val countup" data-target="99">0</div>
+        <div class="stat-label">Performance</div>
+      </div>
+
+      <div class="card">
+        <div class="stat-icon" style="background:rgba(138,92,245,.1);color:var(--violet)">
+          <i class="fa-solid fa-users"></i>
+        </div>
+
+        <div class="stat-val countup" data-target="12400">0</div>
+        <div class="stat-label">Community</div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<section class="sect">
+  <div class="sect-inner">
+
+    <div class="sect-label">Features</div>
+
+    <div class="feat-grid">
+
+      <div class="card">
+        <div class="feat-icon" style="background:rgba(0,212,170,.1);color:var(--teal)">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+
+        <div class="feat-title">Reactive Canvas</div>
+
+        <div class="feat-desc">
+          Organic background animation reacting to cursor movement.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="feat-icon" style="background:rgba(232,144,48,.1);color:var(--amber)">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+
+        <div class="feat-title">Glass UI</div>
+
+        <div class="feat-desc">
+          Layered glassmorphism with blur depth and glow effects.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="feat-icon" style="background:rgba(224,80,96,.1);color:var(--coral)">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+
+        <div class="feat-title">60FPS Motion</div>
+
+        <div class="feat-desc">
+          Lightweight animations with smooth performance.
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<section class="sect">
+  <div class="sect-inner">
+
+    <div class="sect-label">Testimonials</div>
+
+    <div class="card testi-card">
+      <div class="testi-text">
+        “This feels more like an experience than a website.”
+      </div>
+
+      <div class="testi-author">
+        <img class="testi-avatar" src="https://picsum.photos/100?1">
+
+        <div>
+          <div>Sarah Chen</div>
+          <div class="testi-role">Design Lead</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="cta">
+  <div class="cta-box">
+
+    <div class="sect-label">Ready?</div>
+
+    <h2>Start Building</h2>
+
+    <p>
+      Everything runs inside a single HTML file with no frameworks.
+    </p>
+
+    <div class="hero-btns">
+      <button class="h-btn">Get Started</button>
+      <button class="h-btn outline">Read Docs</button>
+    </div>
+
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Built with pure HTML, CSS and JavaScript.
+</footer>
+
+<div id="toast"></div>
+
+<script>
+
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+
+let w,h;
+
+function resize(){
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+
+resize();
+window.addEventListener('resize', resize);
+
+const blobs = [];
+
+for(let i=0;i<6;i++){
+  blobs.push({
+    x:Math.random()*w,
+    y:Math.random()*h,
+    r:120 + Math.random()*120,
+    dx:(Math.random()-.5)*0.5,
+    dy:(Math.random()-.5)*0.5,
+    color:[
+      '#e89030',
+      '#00d4aa',
+      '#8a5cf5',
+      '#e05068'
+    ][i%4]
+  });
+}
+
+function animate(){
+
+  ctx.clearRect(0,0,w,h);
+
+  blobs.forEach(b=>{
+
+    b.x += b.dx;
+    b.y += b.dy;
+
+    if(b.x < -200 || b.x > w+200) b.dx *= -1;
+    if(b.y < -200 || b.y > h+200) b.dy *= -1;
+
+    const g = ctx.createRadialGradient(
+      b.x,b.y,0,
+      b.x,b.y,b.r
+    );
+
+    g.addColorStop(0,b.color+'55');
+    g.addColorStop(1,'transparent');
+
+    ctx.fillStyle = g;
+
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fill();
+
+  });
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+/* TOAST */
+
+function showToast(msg){
+
+  const toast = document.getElementById('toast');
+
+  toast.textContent = msg;
+  toast.classList.add('show');
+
+  clearTimeout(window.toastTimer);
+
+  window.toastTimer = setTimeout(()=>{
+    toast.classList.remove('show');
+  },2000);
+
+}
+
+/* COUNTERS */
+
+document.querySelectorAll('.countup').forEach(el=>{
+
+  const target = Number(el.dataset.target);
+
+  let count = 0;
+
+  const step = target / 80;
+
+  const timer = setInterval(()=>{
+
+    count += step;
+
+    if(count >= target){
+      count = target;
+      clearInterval(timer);
+    }
+
+    el.textContent = Math.floor(count).toLocaleString();
+
+  },20);
+
+});
+
+/* NAV */
+
+window.addEventListener('scroll',()=>{
+
+  document.getElementById('nav')
+    .classList.toggle('scrolled',window.scrollY > 20);
+
+});
+
+</script>
+
+</body>
+</html>

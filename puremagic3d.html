@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PURE MAGIC — Fixed 3D Hover Gallery</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --bg:#06060a;
+  --fg:#eeeae0;
+  --muted:#8b8b92;
+  --card:#101018;
+  --border:rgba(255,255,255,.08);
+
+  --accent:#ff6b35;
+  --teal:#00d4aa;
+  --violet:#9a6cf5;
+  --gold:#e8b830;
+  --sky:#40b8e0;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:'DM Sans',sans-serif;
+  overflow-x:hidden;
+}
+
+/* ================= NAV ================= */
+
+nav{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:100;
+  padding:1rem 2rem;
+  background:rgba(6,6,10,.8);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.logo{
+  font-family:'Syne',sans-serif;
+  font-size:1.4rem;
+  font-weight:800;
+  color:var(--accent);
+}
+
+.nav-links{
+  display:flex;
+  gap:1.5rem;
+  list-style:none;
+}
+
+.nav-links a{
+  color:var(--muted);
+  text-decoration:none;
+  font-size:.85rem;
+  transition:.3s;
+}
+
+.nav-links a:hover{
+  color:white;
+}
+
+/* ================= HERO ================= */
+
+.hero{
+  min-height:90vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:7rem 1rem 3rem;
+}
+
+.hero-tag{
+  color:var(--accent);
+  letter-spacing:4px;
+  font-size:.7rem;
+  margin-bottom:1rem;
+  text-transform:uppercase;
+}
+
+.hero h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(3rem,8vw,6rem);
+  line-height:.95;
+  letter-spacing:-3px;
+  margin-bottom:1rem;
+}
+
+.hero p{
+  max-width:700px;
+  color:var(--muted);
+  line-height:1.8;
+}
+
+/* ================= 3D CUBE ================= */
+
+.hero-3d-stage{
+  width:260px;
+  height:260px;
+  perspective:1000px;
+  margin-bottom:3rem;
+}
+
+.hero-3d-cube{
+  width:100%;
+  height:100%;
+  position:relative;
+  transform-style:preserve-3d;
+  animation:rotateCube 12s linear infinite;
+}
+
+.face{
+  position:absolute;
+  width:260px;
+  height:260px;
+  border:1px solid rgba(255,255,255,.1);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:3rem;
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+  background:rgba(255,255,255,.03);
+  backdrop-filter:blur(10px);
+}
+
+.front  { transform:translateZ(130px); color:var(--accent); }
+.back   { transform:rotateY(180deg) translateZ(130px); }
+.right  { transform:rotateY(90deg) translateZ(130px); }
+.left   { transform:rotateY(-90deg) translateZ(130px); }
+.top    { transform:rotateX(90deg) translateZ(130px); }
+.bottom { transform:rotateX(-90deg) translateZ(130px); }
+
+@keyframes rotateCube{
+  0%{
+    transform:rotateX(-20deg) rotateY(0deg);
+  }
+  100%{
+    transform:rotateX(-20deg) rotateY(360deg);
+  }
+}
+
+/* ================= GRID ================= */
+
+main{
+  max-width:1200px;
+  margin:auto;
+  padding:0 2rem 5rem;
+}
+
+.card-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:2rem;
+}
+
+/* ================= CARD ================= */
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:22px;
+  overflow:hidden;
+  position:relative;
+
+  transform-style:preserve-3d;
+  transition:
+    transform .15s ease,
+    box-shadow .3s ease;
+}
+
+.card:hover{
+  box-shadow:
+    0 30px 60px rgba(0,0,0,.45);
+}
+
+.card-visual{
+  aspect-ratio:16/10;
+  overflow:hidden;
+  position:relative;
+}
+
+.card-visual img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  transition:transform .5s ease;
+}
+
+.card:hover .card-visual img{
+  transform:scale(1.08);
+}
+
+.card-body{
+  padding:1.5rem;
+}
+
+.card-tag{
+  display:inline-block;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  font-size:.7rem;
+  margin-bottom:1rem;
+  font-weight:700;
+}
+
+.card-title{
+  font-size:1.1rem;
+  font-weight:700;
+  margin-bottom:.8rem;
+}
+
+.card-desc{
+  font-size:.9rem;
+  line-height:1.7;
+  color:var(--muted);
+}
+
+.card-arrow{
+  margin-top:1.2rem;
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  color:white;
+  font-size:.85rem;
+}
+
+/* ================= TILT LIGHT ================= */
+
+.tilt-light{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(
+      circle at var(--x) var(--y),
+      rgba(255,255,255,.18),
+      transparent 40%
+    );
+  opacity:0;
+  transition:opacity .25s;
+  pointer-events:none;
+}
+
+.card:hover .tilt-light{
+  opacity:1;
+}
+
+/* ================= FLOAT ELEMENTS ================= */
+
+.float-wrap{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+.float-el{
+  position:absolute;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:rgba(255,255,255,.4);
+
+  opacity:0;
+  transition:.5s;
+}
+
+.float-card:hover .float-el{
+  opacity:1;
+}
+
+.float-card:hover .f1{
+  transform:translate(-40px,-60px);
+}
+
+.float-card:hover .f2{
+  transform:translate(60px,-40px);
+}
+
+.float-card:hover .f3{
+  transform:translate(-50px,40px);
+}
+
+.float-card:hover .f4{
+  transform:translate(40px,50px);
+}
+
+.f1{top:30%;left:20%;}
+.f2{top:50%;right:20%;}
+.f3{bottom:30%;left:30%;}
+.f4{bottom:20%;right:30%;}
+
+/* ================= FLIP CARD ================= */
+
+.flip-card{
+  perspective:1000px;
+}
+
+.flip-inner{
+  position:relative;
+  width:100%;
+  height:100%;
+  transform-style:preserve-3d;
+  transition:transform .8s cubic-bezier(.23,1,.32,1);
+}
+
+.flip-card:hover .flip-inner{
+  transform:rotateY(180deg);
+}
+
+.flip-front,
+.flip-back{
+  position:absolute;
+  inset:0;
+  backface-visibility:hidden;
+}
+
+.flip-back{
+  background:linear-gradient(135deg,#141424,#0e1020);
+  transform:rotateY(180deg);
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:1rem;
+  padding:2rem;
+  text-align:center;
+}
+
+.flip-back h2{
+  font-family:'Syne',sans-serif;
+}
+
+.flip-back p{
+  color:var(--muted);
+  line-height:1.7;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:768px){
+
+  nav{
+    padding:1rem;
+  }
+
+  .nav-links{
+    display:none;
+  }
+
+  main{
+    padding:0 1rem 4rem;
+  }
+
+  .hero{
+    padding-top:6rem;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= NAV ================= -->
+
+<nav>
+  <div class="logo">MAGIC3D</div>
+
+  <ul class="nav-links">
+    <li><a href="#">Tilt</a></li>
+    <li><a href="#">Depth</a></li>
+    <li><a href="#">Holo</a></li>
+    <li><a href="#">Flip</a></li>
+  </ul>
+</nav>
+
+<!-- ================= HERO ================= -->
+
+<section class="hero">
+
+  <div class="hero-tag">
+    Interactive 3D Gallery
+  </div>
+
+  <div class="hero-3d-stage">
+
+    <div class="hero-3d-cube">
+
+      <div class="face front">3D</div>
+      <div class="face back">MAGIC</div>
+      <div class="face left"></div>
+      <div class="face right"></div>
+      <div class="face top"></div>
+      <div class="face bottom"></div>
+
+    </div>
+
+  </div>
+
+  <h1>
+    Pure CSS Magic
+  </h1>
+
+  <p>
+    Smooth GPU accelerated 3D hover effects with tilt,
+    holographic lighting, floating particles and flip
+    animations — all fully responsive and fixed.
+  </p>
+
+</section>
+
+<!-- ================= GRID ================= -->
+
+<main>
+
+  <div class="card-grid">
+
+    <!-- CARD 1 -->
+
+    <div class="card tilt-card">
+
+      <div class="card-visual">
+
+        <img src="https://picsum.photos/600/400?random=1">
+
+        <div class="tilt-light"></div>
+
+      </div>
+
+      <div class="card-body">
+
+        <div class="card-tag"
+             style="background:rgba(255,107,53,.1);color:var(--accent)">
+          INTERACTIVE
+        </div>
+
+        <div class="card-title">
+          Tilt + Dynamic Light
+        </div>
+
+        <div class="card-desc">
+          Card rotates toward cursor position with
+          dynamic radial lighting.
+        </div>
+
+        <div class="card-arrow">
+          Explore <i class="fa-solid fa-arrow-right"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CARD 2 -->
+
+    <div class="card">
+
+      <div class="card-visual">
+
+        <img src="https://picsum.photos/600/400?random=2">
+
+      </div>
+
+      <div class="card-body">
+
+        <div class="card-tag"
+             style="background:rgba(0,212,170,.1);color:var(--teal)">
+          PARALLAX
+        </div>
+
+        <div class="card-title">
+          Depth Layers
+        </div>
+
+        <div class="card-desc">
+          Multiple layers move independently creating
+          cinematic depth.
+        </div>
+
+        <div class="card-arrow">
+          Explore <i class="fa-solid fa-arrow-right"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CARD 3 -->
+
+    <div class="card float-card">
+
+      <div class="card-visual">
+
+        <img src="https://picsum.photos/600/400?random=3">
+
+        <div class="float-wrap">
+          <div class="float-el f1"></div>
+          <div class="float-el f2"></div>
+          <div class="float-el f3"></div>
+          <div class="float-el f4"></div>
+        </div>
+
+      </div>
+
+      <div class="card-body">
+
+        <div class="card-tag"
+             style="background:rgba(64,184,224,.1);color:var(--sky)">
+          FLOATING
+        </div>
+
+        <div class="card-title">
+          Floating Elements
+        </div>
+
+        <div class="card-desc">
+          Orbiting particles animate outward on hover
+          with staggered motion.
+        </div>
+
+        <div class="card-arrow">
+          Explore <i class="fa-solid fa-arrow-right"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CARD 4 FLIP -->
+
+    <div class="card flip-card">
+
+      <div class="flip-inner">
+
+        <div class="flip-front">
+
+          <div class="card-visual">
+            <img src="https://picsum.photos/600/400?random=4">
+          </div>
+
+          <div class="card-body">
+
+            <div class="card-tag"
+                 style="background:rgba(232,184,48,.1);color:var(--gold)">
+              FLIP
+            </div>
+
+            <div class="card-title">
+              3D Flip Card
+            </div>
+
+            <div class="card-desc">
+              Entire card rotates revealing hidden
+              back content.
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="flip-back">
+
+          <i class="fa-solid fa-layer-group"
+             style="font-size:2rem;color:var(--accent)"></i>
+
+          <h2>Transformed</h2>
+
+          <p>
+            The reverse side contains a completely
+            different experience.
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ================= JS ================= -->
+
+<script>
+
+/* ================= TILT EFFECT ================= */
+
+const tiltCards = document.querySelectorAll('.tilt-card');
+
+tiltCards.forEach(card => {
+
+  card.addEventListener('mousemove', e => {
+
+    const rect = card.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = -(y - centerY) / 18;
+    const rotateY = (x - centerX) / 18;
+
+    card.style.transform =
+      `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+
+    const light = card.querySelector('.tilt-light');
+
+    light.style.setProperty('--x', `${x}px`);
+    light.style.setProperty('--y', `${y}px`);
+  });
+
+  card.addEventListener('mouseleave', () => {
+
+    card.style.transform =
+      'rotateX(0deg) rotateY(0deg)';
+  });
+
+});
+
+</script>
+
+</body>
+</html>

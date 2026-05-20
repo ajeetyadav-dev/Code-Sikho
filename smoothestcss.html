@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Smoothest CSS Animation Ever</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050505;
+    --surface: #121212;
+    --text: #F7F8F8;
+    --text-secondary: #8A8F98;
+    --accent: #5E6AD2;
+    --accent-glow: rgba(94, 106, 210, 0.4);
+    --green: #4DAF73;
+    --yellow: #E2B340;
+    --border: rgba(255, 255, 255, 0.08);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-in-out-smooth: cubic-bezier(0.76, 0, 0.24, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ============================================
+     SCROLLBAR
+  ============================================ */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+  /* ============================================
+     GLOBAL REVEAL SYSTEM
+  ============================================ */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.9s var(--ease-out-expo), transform 0.9s var(--ease-out-expo);
+    will-change: opacity, transform;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+  .reveal-delay-5 { transition-delay: 0.5s; }
+  .reveal-delay-6 { transition-delay: 0.6s; }
+
+  /* ============================================
+     NAV
+  ============================================ */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(5, 5, 5, 0.7);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    transition: transform 0.6s var(--ease-out-expo);
+  }
+  nav.hide { transform: translateY(-100%); }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .nav-logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    border-radius: 8px;
+    animation: logoSpin 8s linear infinite;
+    will-change: transform;
+  }
+  @keyframes logoSpin {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(90deg) scale(1.05); }
+    50% { transform: rotate(180deg) scale(1); }
+    75% { transform: rotate(270deg) scale(1.05); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+  .nav-logo span { font-weight: 600; font-size: 16px; letter-spacing: -0.3px; }
+
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    position: relative;
+    transition: color 0.3s ease;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 1.5px;
+    background: var(--accent);
+    transition: width 0.4s var(--ease-out-expo);
+    will-change: width;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a:hover::after { width: 100%; }
+
+  /* ============================================
+     HERO
+  ============================================ */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    padding: 120px 24px 80px;
+    overflow: hidden;
+  }
+
+  /* Floating Orbs Background */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(94, 106, 210, 0.15), transparent 70%);
+    top: 10%; left: -10%;
+    animation: orbFloat1 20s var(--ease-in-out-smooth) infinite;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 70%);
+    bottom: 10%; right: -5%;
+    animation: orbFloat2 18s var(--ease-in-out-smooth) infinite;
+  }
+  .orb-3 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(77, 175, 115, 0.08), transparent 70%);
+    top: 40%; right: 20%;
+    animation: orbFloat3 22s var(--ease-in-out-smooth) infinite;
+  }
+
+  @keyframes orbFloat1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(80px, -40px) scale(1.1); }
+    66% { transform: translate(-30px, 60px) scale(0.95); }
+  }
+  @keyframes orbFloat2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-60px, 30px) scale(1.05); }
+    66% { transform: translate(40px, -50px) scale(0.9); }
+  }
+  @keyframes orbFloat3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(50px, 50px) scale(1.08); }
+    66% { transform: translate(-70px, -20px) scale(0.92); }
+  }
+
+  /* Grain overlay */
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px 8px;
+    background: rgba(94, 106, 210, 0.1);
+    border: 1px solid rgba(94, 106, 210, 0.2);
+    border-radius: 100px;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 32px;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    animation: badgeIn 0.8s 0.3s var(--ease-out-expo) forwards;
+    will-change: opacity, transform;
+  }
+  .badge-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+  @keyframes badgeIn {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 84px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -2.5px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .hero h1 .line {
+    display: block;
+    opacity: 0;
+    transform: translateY(100%);
+    animation: lineUp 1s var(--ease-out-expo) forwards;
+    will-change: opacity, transform;
+  }
+  .hero h1 .line:nth-child(1) { animation-delay: 0.5s; }
+  .hero h1 .line:nth-child(2) { animation-delay: 0.65s; }
+  .hero h1 .line:nth-child(3) { animation-delay: 0.8s; }
+
+  @keyframes lineUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero h1 .gradient-text {
+    background: linear-gradient(135deg, var(--accent) 0%, #8B5CF6 40%, #EC4899 70%, var(--yellow) 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 6s var(--ease-in-out-smooth) infinite;
+  }
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 22px);
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.4;
+    max-width: 560px;
+    margin-bottom: 48px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.8s 1s var(--ease-out-expo) forwards;
+    will-change: opacity, transform;
+  }
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.8s 1.2s var(--ease-out-expo) forwards;
+    will-change: opacity, transform;
+  }
+
+  .btn-primary {
+    padding: 14px 28px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: transform;
+    font-family: inherit;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    will-change: opacity;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+  }
+  .btn-primary:hover::before { opacity: 1; }
+  .btn-primary:active { transform: translateY(0) scale(0.98); }
+
+  .btn-secondary {
+    padding: 14px 28px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.4s var(--ease-spring), border-color 0.4s ease, background 0.4s ease;
+    will-change: transform;
+    font-family: inherit;
+  }
+  .btn-secondary:hover {
+    transform: translateY(-2px) scale(1.03);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .btn-secondary:active { transform: translateY(0) scale(0.98); }
+
+  /* Scroll indicator */
+  .scroll-indicator {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: fadeUp 0.8s 1.6s var(--ease-out-expo) forwards;
+  }
+  .scroll-indicator span {
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .scroll-mouse {
+    width: 24px; height: 38px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    position: relative;
+  }
+  .scroll-mouse::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: 50%;
+    width: 3px; height: 8px;
+    background: var(--text);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    animation: scrollBounce 2s var(--ease-in-out-smooth) infinite;
+    will-change: transform;
+  }
+  @keyframes scrollBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    60% { transform: translateX(-50%) translateY(12px); opacity: 0.3; }
+  }
+
+  /* ============================================
+     SECTION STYLES
+  ============================================ */
+  section {
+    padding: 120px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+  .section-desc {
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* ============================================
+     MORPHING SHAPES
+  ============================================ */
+  .morph-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 64px;
+  }
+  @media (max-width: 768px) {
+    .morph-grid { grid-template-columns: 1fr; }
+  }
+
+  .morph-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.5s var(--ease-out-expo), border-color 0.4s ease;
+    will-change: transform;
+  }
+  .morph-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .morph-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(94, 106, 210, 0.06), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    will-change: opacity;
+  }
+  .morph-card:hover::before { opacity: 1; }
+
+  .morph-card h3 {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    z-index: 1;
+  }
+  .morph-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.6;
+    z-index: 1;
+  }
+
+  .shape-container {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Shape 1: Blob Morph */
+  .blob {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    animation: blobMorph 8s var(--ease-in-out-smooth) infinite;
+    will-change: border-radius, transform;
+    backface-visibility: hidden;
+  }
+  @keyframes blobMorph {
+    0%, 100% {
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+      transform: rotate(0deg) scale(1);
+    }
+    25% {
+      border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+      transform: rotate(90deg) scale(1.05);
+    }
+    50% {
+      border-radius: 50% 60% 30% 40% / 30% 50% 70% 60%;
+      transform: rotate(180deg) scale(1);
+    }
+    75% {
+      border-radius: 40% 30% 60% 50% / 60% 40% 50% 30%;
+      transform: rotate(270deg) scale(1.05);
+    }
+  }
+
+  /* Shape 2: Rotating Rings */
+  .rings {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+  .ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  .ring:nth-child(1) {
+    border-top-color: var(--accent);
+    border-right-color: var(--accent);
+    animation: ringRotate 3s var(--ease-in-out-smooth) infinite;
+  }
+  .ring:nth-child(2) {
+    inset: 12px;
+    border-bottom-color: #8B5CF6;
+    border-left-color: #8B5CF6;
+    animation: ringRotate 3s var(--ease-in-out-smooth) infinite reverse;
+    animation-delay: -0.5s;
+  }
+  .ring:nth-child(3) {
+    inset: 24px;
+    border-top-color: var(--green);
+    animation: ringRotate 3s var(--ease-in-out-smooth) infinite;
+    animation-delay: -1s;
+  }
+  .ring-dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    top: -3px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .ring:nth-child(2) .ring-dot { background: #8B5CF6; box-shadow: 0 0 10px rgba(139,92,246,0.4); bottom: -3px; top: auto; }
+  .ring:nth-child(3) .ring-dot { background: var(--green); box-shadow: 0 0 10px rgba(77,175,115,0.4); }
+
+  @keyframes ringRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Shape 3: Elastic Bounce */
+  .elastic-ball {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, var(--yellow), #F59E0B);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%; left: 50%;
+    animation: elasticBounce 2s var(--ease-in-out-smooth) infinite;
+    will-change: transform;
+    backface-visibility: hidden;
+    box-shadow: 0 0 30px rgba(226, 179, 64, 0.3);
+  }
+  .elastic-shadow {
+    width: 60px; height: 10px;
+    background: rgba(226, 179, 64, 0.2);
+    border-radius: 50%;
+    position: absolute;
+    bottom: 5px; left: 50%;
+    transform: translateX(-50%);
+    animation: shadowPulse 2s var(--ease-in-out-smooth) infinite;
+    will-change: transform, opacity;
+  }
+  @keyframes elasticBounce {
+    0%, 100% { transform: translate(-50%, -80%) scaleY(1) scaleX(1); }
+    40% { transform: translate(-50%, -10%) scaleY(0.7) scaleX(1.3); }
+    50% { transform: translate(-50%, -5%) scaleY(0.6) scaleX(1.4); }
+    60% { transform: translate(-50%, -10%) scaleY(0.7) scaleX(1.3); }
+    80% { transform: translate(-50%, -60%) scaleY(1.1) scaleX(0.9); }
+  }
+  @keyframes shadowPulse {
+    0%, 100% { transform: translateX(-50%) scale(0.6); opacity: 0.3; }
+    45%, 55% { transform: translateX(-50%) scale(1.4); opacity: 0.6; }
+  }
+
+  /* ============================================
+     STAGGERED TEXT REVEAL
+  ============================================ */
+  .text-reveal-section {
+    text-align: center;
+  }
+  .text-reveal-container {
+    margin-top: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .text-reveal-line {
+    font-size: clamp(28px, 5vw, 64px);
+    font-weight: 600;
+    letter-spacing: -2px;
+    line-height: 1.1;
+    overflow: hidden;
+  }
+  .text-reveal-line .word {
+    display: inline-block;
+    overflow: hidden;
+    margin-right: 0.3em;
+  }
+  .text-reveal-line .word span {
+    display: inline-block;
+    transform: translateY(110%);
+    transition: transform 0.7s var(--ease-out-expo);
+    will-change: transform;
+  }
+  .text-reveal-line.revealed .word span {
+    transform: translateY(0);
+  }
+  .word-1 span { transition-delay: 0ms; }
+  .word-2 span { transition-delay: 60ms; }
+  .word-3 span { transition-delay: 120ms; }
+  .word-4 span { transition-delay: 180ms; }
+  .word-5 span { transition-delay: 240ms; }
+  .word-6 span { transition-delay: 300ms; }
+  .word-7 span { transition-delay: 360ms; }
+
+  /* ============================================
+     SMOOTH COUNTER
+  ============================================ */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    background: var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-item {
+    background: var(--surface);
+    padding: 48px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.4s ease;
+  }
+  .stat-item:hover { background: rgba(18, 18, 18, 0.8); }
+  .stat-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    width: 0; height: 2px;
+    background: var(--accent);
+    transition: width 0.5s var(--ease-out-expo), left 0.5s var(--ease-out-expo);
+    will-change: width, left;
+  }
+  .stat-item:hover::after { width: 100%; left: 0; }
+
+  .stat-number {
+    font-size: 48px;
+    font-weight: 600;
+    letter-spacing: -2px;
+    background: linear-gradient(180deg, var(--text) 30%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  /* ============================================
+     LIQUID WAVE
+  ============================================ */
+  .wave-section {
+    position: relative;
+    padding: 0;
+    max-width: 100%;
+    height: 500px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wave-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 24px;
+  }
+  .wave-content h2 {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 600;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+  }
+  .wave-content p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 300;
+  }
+
+  .waves-container {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .wave {
+    position: absolute;
+    bottom: 0;
+    left: -50%;
+    width: 200%;
+    height: 100%;
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  .wave svg {
+    width: 100%;
+    height: 100%;
+  }
+  .wave:nth-child(1) {
+    animation: waveMove1 12s var(--ease-in-out-smooth) infinite;
+    opacity: 0.05;
+  }
+  .wave:nth-child(2) {
+    animation: waveMove2 10s var(--ease-in-out-smooth) infinite;
+    opacity: 0.08;
+  }
+  .wave:nth-child(3) {
+    animation: waveMove3 14s var(--ease-in-out-smooth) infinite;
+    opacity: 0.03;
+  }
+  @keyframes waveMove1 {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    50% { transform: translateX(25%) translateY(-15px); }
+  }
+  @keyframes waveMove2 {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    50% { transform: translateX(-20%) translateY(10px); }
+  }
+  @keyframes waveMove3 {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    50% { transform: translateX(15%) translateY(-20px); }
+  }
+
+  /* ============================================
+     INTERACTIVE CARDS WITH MAGNETIC HOVER
+  ============================================ */
+  .cards-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-top: 64px;
+  }
+  @media (max-width: 768px) {
+    .cards-row { grid-template-columns: 1fr; }
+  }
+
+  .hover-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.5s var(--ease-out-expo), border-color 0.4s ease;
+    will-change: transform;
+  }
+  .hover-card .card-glow {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    transform: translate(-50%, -50%);
+    will-change: opacity, transform;
+    z-index: 0;
+  }
+  .hover-card:hover .card-glow { opacity: 1; }
+  .hover-card:hover { border-color: rgba(255,255,255,0.12); }
+
+  .hover-card .card-content { position: relative; z-index: 1; }
+  .hover-card .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 22px;
+    transition: transform 0.5s var(--ease-spring);
+    will-change: transform;
+  }
+  .hover-card:hover .card-icon { transform: scale(1.1) rotate(-3deg); }
+  .hover-card h3 {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  .hover-card p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .icon-gpu { background: rgba(94, 106, 210, 0.15); }
+  .icon-bezier { background: rgba(139, 92, 246, 0.15); }
+  .icon-layer { background: rgba(77, 175, 115, 0.15); }
+  .icon-ease { background: rgba(226, 179, 64, 0.15); }
+
+  /* ============================================
+     EASING COMPARISON
+  ============================================ */
+  .easing-demo {
+    margin-top: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .easing-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .easing-label {
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .easing-track {
+    flex: 1;
+    height: 40px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .easing-ball {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--accent);
+    opacity: 0.9;
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  .easing-ball.playing-linear { animation: moveBall 2s linear infinite; }
+  .easing-ball.playing-ease { animation: moveBall 2s ease infinite; }
+  .easing-ball.playing-expo { animation: moveBall 2s var(--ease-out-expo) infinite; }
+  .easing-ball.playing-spring { animation: moveBall 2s var(--ease-spring) infinite; }
+  .easing-ball.playing-elastic { animation: moveBall 2s var(--ease-elastic) infinite; }
+
+  @keyframes moveBall {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(calc(100% - 40px)); }
+    100% { transform: translateX(0); }
+  }
+
+  /* ============================================
+     PARTICLE FIELD
+  ============================================ */
+  .particle-section {
+    padding: 120px 0;
+    max-width: 100%;
+  }
+  .particle-canvas-wrap {
+    position: relative;
+    height: 400px;
+    overflow: hidden;
+  }
+  #particleCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .particle-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    pointer-events: none;
+  }
+  .particle-overlay h2 {
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 600;
+    letter-spacing: -1.5px;
+    text-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+  .particle-overlay p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    text-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+
+  /* ============================================
+     HORIZONTAL SCROLL MARQUEE
+  ============================================ */
+  .marquee-section {
+    padding: 60px 0;
+    max-width: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  .marquee-section::before,
+  .marquee-section::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 120px;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .marquee-section::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg), transparent);
+  }
+  .marquee-section::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg), transparent);
+  }
+  .marquee-track {
+    display: flex;
+    gap: 24px;
+    animation: marqueeScroll 30s linear infinite;
+    width: max-content;
+    will-change: transform;
+  }
+  @keyframes marqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-item {
+    flex-shrink: 0;
+    padding: 16px 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 15px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+  .marquee-item:hover {
+    border-color: rgba(255,255,255,0.15);
+    color: var(--text);
+  }
+  .marquee-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* ============================================
+     FOOTER
+  ============================================ */
+  footer {
+    padding: 60px 24px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  footer p {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  footer .footer-accent {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ============================================
+     CUSTOM CURSOR
+  ============================================ */
+  .cursor-dot {
+    position: fixed;
+    width: 8px; height: 8px;
+    background: var(--text);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo), background 0.3s ease;
+    will-change: transform, width, height;
+    mix-blend-mode: difference;
+  }
+  .cursor-dot.hovering {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s var(--ease-out-expo), height 0.4s var(--ease-out-expo), border-color 0.3s ease, opacity 0.3s ease;
+    will-change: transform, width, height;
+  }
+  .cursor-ring.hovering {
+    width: 60px; height: 60px;
+    border-color: var(--accent);
+    opacity: 0.5;
+  }
+
+  @media (hover: none) {
+    .cursor-dot, .cursor-ring { display: none; }
+  }
+
+  /* ============================================
+     PROGRESS BAR
+  ============================================ */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), #8B5CF6, #EC4899);
+    z-index: 101;
+    width: 0%;
+    transition: width 0.1s linear;
+    will-change: width;
+  }
+</style>
+</head>
+<body>
+
+<!-- Grain overlay -->
+<div class="grain"></div>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Custom Cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Nav -->
+<nav id="mainNav">
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    <span>SmoothCSS</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#morph">Morphing</a></li>
+    <li><a href="#easing">Easing</a></li>
+    <li><a href="#cards">Interactions</a></li>
+    <li><a href="#particles">Particles</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="hero-badge">
+    <div class="badge-dot"></div>
+    GPU-Accelerated Only
+  </div>
+
+  <h1>
+    <span class="line">The Smoothest</span>
+    <span class="line"><span class="gradient-text">CSS Animation</span></span>
+    <span class="line">Ever Created</span>
+  </h1>
+
+  <p class="hero-sub">
+    Zero JavaScript animation libraries. Pure CSS transforms, custom cubic-bezier curves, and strategic GPU layer promotion.
+  </p>
+
+  <div class="hero-buttons">
+    <button class="btn-primary" onclick="document.getElementById('morph').scrollIntoView({behavior:'smooth'})">Explore Demos</button>
+    <button class="btn-secondary" onclick="document.getElementById('easing').scrollIntoView({behavior:'smooth'})">See Easing Curves</button>
+  </div>
+
+  <div class="scroll-indicator">
+    <div class="scroll-mouse"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- Marquee -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <div class="marquee-item"><div class="marquee-dot"></div>transform: translate()</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>cubic-bezier(0.16, 1, 0.3, 1)</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>will-change: transform</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>backface-visibility: hidden</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>GPU Composited Layers</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>60fps Guaranteed</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>opacity transitions</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Zero Layout Thrash</div>
+    <!-- Duplicate for seamless loop -->
+    <div class="marquee-item"><div class="marquee-dot"></div>transform: translate()</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>cubic-bezier(0.16, 1, 0.3, 1)</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>will-change: transform</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>backface-visibility: hidden</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>GPU Composited Layers</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>60fps Guaranteed</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>opacity transitions</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Zero Layout Thrash</div>
+  </div>
+</div>
+
+<!-- Morphing Shapes -->
+<section id="morph">
+  <div class="reveal">
+    <div class="section-label">01 — Shape Morphing</div>
+    <div class="section-title">Organic Motion</div>
+    <p class="section-desc">Border-radius keyframes create fluid, organic shape transformations that feel impossibly smooth.</p>
+  </div>
+
+  <div class="morph-grid">
+    <div class="morph-card reveal reveal-delay-1">
+      <div class="shape-container">
+        <div class="blob"></div>
+      </div>
+      <h3>Blob Morph</h3>
+      <p>8-keyframe border-radius animation with synchronized rotation and scale.</p>
+    </div>
+    <div class="morph-card reveal reveal-delay-2">
+      <div class="shape-container">
+        <div class="rings">
+          <div class="ring"><div class="ring-dot"></div></div>
+          <div class="ring"><div class="ring-dot"></div></div>
+          <div class="ring"><div class="ring-dot"></div></div>
+        </div>
+      </div>
+      <h3>Counter-Rotating Rings</h3>
+      <p>Nested rings with alternating directions and staggered timing offsets.</p>
+    </div>
+    <div class="morph-card reveal reveal-delay-3">
+      <div class="shape-container">
+        <div class="elastic-ball"></div>
+        <div class="elastic-shadow"></div>
+      </div>
+      <h3>Elastic Bounce</h3>
+      <p>Squash & stretch physics simulation using only scale transforms.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Staggered Text Reveal -->
+<section class="text-reveal-section">
+  <div class="reveal">
+    <div class="section-label">02 — Text Choreography</div>
+    <div class="section-title">Word-by-Word Reveal</div>
+    <p class="section-desc">Each word slides up with a 60ms stagger delay, creating a cascading wave effect.</p>
+  </div>
+
+  <div class="text-reveal-container">
+    <div class="text-reveal-line" data-reveal>
+      <span class="word word-1"><span>Every</span></span>
+      <span class="word word-2"><span>pixel</span></span>
+      <span class="word word-3"><span>moves</span></span>
+      <span class="word word-4"><span>with</span></span>
+      <span class="word word-5"><span>intention</span></span>
+    </div>
+    <div class="text-reveal-line" data-reveal>
+      <span class="word word-1"><span>Smoothness</span></span>
+      <span class="word word-2"><span>is</span></span>
+      <span class="word word-3"><span>not</span></span>
+      <span class="word word-4"><span>a</span></span>
+      <span class="word word-5"><span>luxury —</span></span>
+      <span class="word word-6"><span>it's</span></span>
+      <span class="word word-7"><span>the standard</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section>
+  <div class="reveal">
+    <div class="section-label">03 — Performance</div>
+    <div class="section-title">Why It's So Smooth</div>
+    <p class="section-desc">These numbers explain the engineering behind the magic.</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-item reveal reveal-delay-1">
+      <div class="stat-number" data-target="0" data-suffix="ms">0ms</div>
+      <div class="stat-label">Layout Recalculations</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-2">
+      <div class="stat-number" data-target="60" data-suffix="fps">0fps</div>
+      <div class="stat-label">Consistent Frame Rate</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-3">
+      <div class="stat-number" data-target="2" data-suffix="">0</div>
+      <div class="stat-label">Animated Properties (max)</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-4">
+      <div class="stat-number" data-target="0" data-suffix="">0</div>
+      <div class="stat-label">JavaScript Dependencies</div>
+    </div>
+  </div>
+</section>
+
+<!-- Liquid Wave -->
+<div class="wave-section">
+  <div class="waves-container">
+    <div class="wave">
+      <svg viewBox="0 0 1440 500" preserveAspectRatio="none">
+        <path fill="rgba(94,106,210,0.3)" d="M0,250 C360,100 720,400 1080,250 C1260,175 1380,300 1440,250 L1440,500 L0,500 Z"/>
+      </svg>
+    </div>
+    <div class="wave">
+      <svg viewBox="0 0 1440 500" preserveAspectRatio="none">
+        <path fill="rgba(139,92,246,0.3)" d="M0,300 C240,150 480,350 720,200 C960,50 1200,350 1440,200 L1440,500 L0,500 Z"/>
+      </svg>
+    </div>
+    <div class="wave">
+      <svg viewBox="0 0 1440 500" preserveAspectRatio="none">
+        <path fill="rgba(236,72,153,0.2)" d="M0,200 C180,350 540,100 900,300 C1080,400 1260,150 1440,300 L1440,500 L0,500 Z"/>
+      </svg>
+    </div>
+  </div>
+  <div class="wave-content">
+    <h2 class="reveal">Liquid Motion</h2>
+    <p class="reveal reveal-delay-1">SVG waves with layered translateX animations create flowing, organic movement.</p>
+  </div>
+</div>
+
+<!-- Interactive Cards -->
+<section id="cards">
+  <div class="reveal">
+    <div class="section-label">04 — Hover Interactions</div>
+    <div class="section-title">Magnetic Cursor Glow</div>
+    <p class="section-desc">Cards respond to your cursor with a radial glow that follows your mouse position.</p>
+  </div>
+
+  <div class="cards-row">
+    <div class="hover-card reveal reveal-delay-1" data-glow>
+      <div class="card-glow"></div>
+      <div class="card-content">
+        <div class="card-icon icon-gpu">⚡</div>
+        <h3>GPU Compositing</h3>
+        <p>Only animating transform and opacity ensures the browser stays on the GPU compositor thread, bypassing the main thread entirely.</p>
+      </div>
+    </div>
+    <div class="hover-card reveal reveal-delay-2" data-glow>
+      <div class="card-glow"></div>
+      <div class="card-content">
+        <div class="card-icon icon-bezier">📈</div>
+        <h3>Custom Easing</h3>
+        <p>Pre-built easing functions like "ease" feel mechanical. Custom cubic-bezier curves like (0.16, 1, 0.3, 1) create organic deceleration.</p>
+      </div>
+    </div>
+    <div class="hover-card reveal reveal-delay-3" data-glow>
+      <div class="card-glow"></div>
+      <div class="card-content">
+        <div class="card-icon icon-layer">🧱</div>
+        <h3>Layer Promotion</h3>
+        <p>will-change and backface-visibility: hidden promote elements to their own compositor layers, eliminating paint bottlenecks.</p>
+      </div>
+    </div>
+    <div class="hover-card reveal reveal-delay-4" data-glow>
+      <div class="card-glow"></div>
+      <div class="card-content">
+        <div class="card-icon icon-ease">🎯</div>
+        <h3>Sub-pixel Precision</h3>
+        <p>Using translate3d() instead of translate() forces sub-pixel rendering on the GPU, eliminating the jitter common with integer snapping.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Easing Comparison -->
+<section id="easing">
+  <div class="reveal">
+    <div class="section-label">05 — Easing Curves</div>
+    <div class="section-title">Feel the Difference</div>
+    <p class="section-desc">Same animation, different easing. Notice how custom curves feel more natural.</p>
+  </div>
+
+  <div class="easing-demo reveal reveal-delay-1">
+    <div class="easing-row">
+      <div class="easing-label">linear</div>
+      <div class="easing-track">
+        <div class="easing-ball playing-linear" style="background: rgba(255,255,255,0.3);"></div>
+      </div>
+    </div>
+    <div class="easing-row">
+      <div class="easing-label">ease</div>
+      <div class="easing-track">
+        <div class="easing-ball playing-ease" style="background: rgba(255,255,255,0.5);"></div>
+      </div>
+    </div>
+    <div class="easing-row">
+      <div class="easing-label">ease-out-expo</div>
+      <div class="easing-track">
+        <div class="easing-ball playing-expo"></div>
+      </div>
+    </div>
+    <div class="easing-row">
+      <div class="easing-label">spring</div>
+      <div class="easing-track">
+        <div class="easing-ball playing-spring" style="background: var(--green);"></div>
+      </div>
+    </div>
+    <div class="easing-row">
+      <div class="easing-label">elastic</div>
+      <div class="easing-track">
+        <div class="easing-ball playing-elastic" style="background: var(--yellow);"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Particle Field -->
+<div class="particle-section" id="particles">
+  <div class="particle-canvas-wrap">
+    <canvas id="particleCanvas"></canvas>
+    <div class="particle-overlay">
+      <h2 class="reveal">Connected Particles</h2>
+      <p class="reveal reveal-delay-1">Move your mouse to interact with the field</p>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <p>Built with pure CSS transforms & opacity — <span class="footer-accent">zero animation libraries</span></p>
+</footer>
+
+<script>
+  // ============================================
+  // CUSTOM CURSOR
+  // ============================================
+  const dot = document.getElementById('cursorDot');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX + 'px';
+    dot.style.top = mouseY + 'px';
+  });
+
+  function animateCursor() {
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+    ring.style.left = ringX + 'px';
+    ring.style.top = ringY + 'px';
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // Hover detection for cursor
+  const hoverTargets = document.querySelectorAll('a, button, .hover-card, .morph-card');
+  hoverTargets.forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      dot.classList.add('hovering');
+      ring.classList.add('hovering');
+    });
+    el.addEventListener('mouseleave', () => {
+      dot.classList.remove('hovering');
+      ring.classList.remove('hovering');
+    });
+  });
+
+  // ============================================
+  // CARD GLOW FOLLOW
+  // ============================================
+  document.querySelectorAll('[data-glow]').forEach(card => {
+    const glow = card.querySelector('.card-glow');
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      glow.style.left = x + 'px';
+      glow.style.top = y + 'px';
+    });
+  });
+
+  // ============================================
+  // SCROLL REVEAL (IntersectionObserver)
+  // ============================================
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // Text reveal lines
+        if (entry.target.hasAttribute('data-reveal')) {
+          entry.target.classList.add('revealed');
+        }
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, [data-reveal]').forEach(el => revealObserver.observe(el));
+
+  // ============================================
+  // NAV HIDE ON SCROLL
+  // ============================================
+  let lastScroll = 0;
+  const nav = document.getElementById('mainNav');
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    if (currentScroll > lastScroll && currentScroll > 100) {
+      nav.classList.add('hide');
+    } else {
+      nav.classList.remove('hide');
+    }
+    lastScroll = currentScroll;
+
+    // Progress bar
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = (currentScroll / docHeight) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+  }, { passive: true });
+
+  // ============================================
+  // PARTICLE CANVAS
+  // ============================================
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let canvasMouseX = 0, canvasMouseY = 0;
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    initParticles();
+  }
+
+  function initParticles() {
+    particles = [];
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const count = Math.min(80, Math.floor((rect.width * rect.height) / 8000));
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * rect.width,
+        y: Math.random() * rect.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 2 + 1,
+        opacity: Math.random() * 0.5 + 0.2
+      });
+    }
+  }
+
+  canvas.parentElement.addEventListener('mousemove', e => {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvasMouseX = e.clientX - rect.left;
+    canvasMouseY = e.clientY - rect.top;
+  });
+
+  function drawParticles() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    particles.forEach((p, i) => {
+      // Mouse repulsion
+      const dx = p.x - canvasMouseX;
+      const dy = p.y - canvasMouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 150 && dist > 0) {
+        const force = (150 - dist) / 150 * 0.02;
+        p.vx += (dx / dist) * force;
+        p.vy += (dy / dist) * force;
+      }
+
+      // Damping
+      p.vx *= 0.99;
+      p.vy *= 0.99;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+
+      // Draw particle
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(94, 106, 210, ${p.opacity})`;
+      ctx.fill();
+
+      // Draw connections
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const cdx = p.x - p2.x;
+        const cdy = p.y - p2.y;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+        if (cdist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(94, 106, 210, ${0.12 * (1 - cdist / 120)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    });
+
+    requestAnimationFrame(drawParticles);
+  }
+
+  resizeCanvas();
+  drawParticles();
+  window.addEventListener('resize', resizeCanvas);
+
+  // ============================================
+  // COUNTER ANIMATION
+  // ============================================
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = parseInt(el.dataset.target);
+        const suffix = el.dataset.suffix || '';
+        if (target === 0) {
+          el.textContent = '0' + suffix;
+          return;
+        }
+        let current = 0;
+        const duration = 1500;
+        const startTime = performance.now();
+
+        function updateCounter(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // ease-out-expo
+          const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+          current = Math.round(eased * target);
+          el.textContent = current + suffix;
+          if (progress < 1) requestAnimationFrame(updateCounter);
+        }
+        requestAnimationFrame(updateCounter);
+        counterObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.stat-number').forEach(el => counterObserver.observe(el));
+</script>
+</body>
+</html>

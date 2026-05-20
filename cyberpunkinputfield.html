@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyberpunk Input Field</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050508;
+    --surface: #0a0a12;
+    --cyan: #00f0ff;
+    --magenta: #ff00e5;
+    --yellow: #ffe600;
+    --green: #39ff14;
+    --red: #ff003c;
+    --cyan-glow: rgba(0, 240, 255, 0.4);
+    --magenta-glow: rgba(255, 0, 229, 0.4);
+    --yellow-glow: rgba(255, 230, 0, 0.3);
+    --text: #e0e0f0;
+    --text-dim: #4a4a6a;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============================================
+     GLOBAL ATMOSPHERE
+  ============================================ */
+  .cyber-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    perspective: 500px;
+    animation: gridPulse 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 998;
+  }
+
+  /* Floating particles */
+  .particle {
+    position: fixed;
+    width: 2px; height: 2px;
+    background: var(--cyan);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+    animation: floatParticle linear infinite;
+  }
+
+  @keyframes floatParticle {
+    0% { opacity: 0; transform: translateY(100vh) scale(0); }
+    10% { opacity: 0.8; }
+    90% { opacity: 0.8; }
+    100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+  }
+
+  /* ============================================
+     MAIN CONTAINER
+  ============================================ */
+  .showcase {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 680px;
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 80px;
+  }
+
+  .header {
+    text-align: center;
+  }
+  .header-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 16px;
+    text-shadow: 0 0 20px var(--cyan-glow);
+    opacity: 0;
+    animation: fadeSlideUp 0.8s 0.2s var(--ease-out-expo) forwards;
+  }
+  .header h1 {
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 600;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s 0.4s var(--ease-out-expo) forwards;
+  }
+  .header h1 .glitch-text {
+    position: relative;
+    display: inline-block;
+    color: var(--text);
+  }
+  .header h1 .glitch-text::before,
+  .header h1 .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.8;
+  }
+  .header h1 .glitch-text::before {
+    color: var(--cyan);
+    animation: glitch1 3s infinite;
+    clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+  }
+  .header h1 .glitch-text::after {
+    color: var(--magenta);
+    animation: glitch2 3s infinite;
+    clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+  }
+
+  @keyframes glitch1 {
+    0%, 90%, 100% { transform: translate(0); }
+    92% { transform: translate(-3px, -1px); }
+    94% { transform: translate(3px, 1px); }
+    96% { transform: translate(-2px, 0); }
+  }
+  @keyframes glitch2 {
+    0%, 88%, 100% { transform: translate(0); }
+    90% { transform: translate(3px, 1px); }
+    93% { transform: translate(-3px, -1px); }
+    95% { transform: translate(2px, 0); }
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============================================
+     THE MAIN CYBERPUNK INPUT — V1
+  ============================================ */
+  .cyber-input-wrapper {
+    width: 100%;
+    position: relative;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s 0.6s var(--ease-out-expo) forwards;
+  }
+
+  .cyber-input-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 0 10px var(--cyan-glow);
+  }
+  .label-bracket {
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+  .label-dot {
+    width: 5px; height: 5px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--cyan-glow);
+    animation: labelPulse 2s ease-in-out infinite;
+  }
+  @keyframes labelPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--cyan-glow); }
+    50% { opacity: 0.4; box-shadow: 0 0 2px var(--cyan-glow); }
+  }
+
+  .cyber-input-container {
+    position: relative;
+    width: 100%;
+    height: 64px;
+    background: rgba(5, 5, 12, 0.8);
+    border: 1px solid rgba(0, 240, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+  }
+  .cyber-input-container:hover {
+    border-color: rgba(0, 240, 255, 0.3);
+  }
+  .cyber-input-container.focused {
+    border-color: var(--cyan);
+    box-shadow:
+      0 0 20px rgba(0, 240, 255, 0.15),
+      0 0 60px rgba(0, 240, 255, 0.05),
+      inset 0 0 20px rgba(0, 240, 255, 0.03);
+  }
+
+  /* Corner accents */
+  .corner {
+    position: absolute;
+    width: 12px; height: 12px;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.4s var(--ease-spring);
+    will-change: opacity, transform;
+  }
+  .cyber-input-container.focused .corner {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .corner-tl { top: -1px; left: -1px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); transform: scale(0); }
+  .corner-tr { top: -1px; right: -1px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); transform: scale(0); }
+  .corner-bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); transform: scale(0); }
+  .corner-br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); transform: scale(0); }
+
+  /* Scanning line */
+  .scan-line {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0;
+    z-index: 4;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  .cyber-input-container.focused .scan-line {
+    opacity: 1;
+    animation: scanDown 2.5s linear infinite;
+  }
+  @keyframes scanDown {
+    0% { transform: translateY(-2px); opacity: 0; }
+    5% { opacity: 0.6; }
+    95% { opacity: 0.6; }
+    100% { transform: translateY(64px); opacity: 0; }
+  }
+
+  /* Glitch overlay */
+  .glitch-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    will-change: opacity;
+  }
+  .cyber-input-container.glitching .glitch-overlay {
+    animation: inputGlitch 0.15s steps(2) 3;
+  }
+  @keyframes inputGlitch {
+    0% { opacity: 0; background: rgba(0, 240, 255, 0.05); transform: translateX(0); }
+    25% { opacity: 1; background: rgba(255, 0, 229, 0.08); transform: translateX(-2px); }
+    50% { opacity: 1; background: rgba(0, 240, 255, 0.06); transform: translateX(3px); }
+    75% { opacity: 1; background: rgba(255, 230, 0, 0.05); transform: translateX(-1px); }
+    100% { opacity: 0; background: transparent; transform: translateX(0); }
+  }
+
+  /* Data stream background */
+  .data-stream {
+    position: absolute;
+    top: 0; right: 0;
+    width: 40%; height: 100%;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .cyber-input-container.focused .data-stream { opacity: 0.15; }
+  .data-stream-inner {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--cyan);
+    line-height: 1.4;
+    white-space: pre;
+    animation: dataScroll 8s linear infinite;
+    will-change: transform;
+  }
+  @keyframes dataScroll {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+
+  /* The actual input */
+  .cyber-input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--text);
+    position: relative;
+    z-index: 5;
+    caret-color: var(--cyan);
+    letter-spacing: 0.5px;
+  }
+  .cyber-input::placeholder {
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    position: absolute;
+    bottom: -24px;
+    left: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: opacity 0.3s ease, transform 0.3s var(--ease-out-expo);
+  }
+  .typing-indicator.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .typing-indicator .char-count {
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+  }
+  .typing-indicator .status-dot {
+    width: 4px; height: 4px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(57, 255, 20, 0.5);
+    animation: statusBlink 1s steps(1) infinite;
+  }
+  @keyframes statusBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* Hex decoration */
+  .hex-deco {
+    position: absolute;
+    bottom: -24px;
+    right: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    opacity: 0.4;
+    letter-spacing: 1px;
+  }
+
+  /* ============================================
+     INPUT VARIANT 2 — MAGENTA BREACH
+  ============================================ */
+  .cyber-input-wrapper.v2 .cyber-input-label {
+    color: var(--magenta);
+    text-shadow: 0 0 10px var(--magenta-glow);
+  }
+  .cyber-input-wrapper.v2 .label-dot {
+    background: var(--magenta);
+    box-shadow: 0 0 8px var(--magenta-glow);
+  }
+  .cyber-input-wrapper.v2 .cyber-input-container {
+    border-color: rgba(255, 0, 229, 0.15);
+    background: rgba(10, 5, 15, 0.8);
+  }
+  .cyber-input-wrapper.v2 .cyber-input-container:hover {
+    border-color: rgba(255, 0, 229, 0.3);
+  }
+  .cyber-input-wrapper.v2 .cyber-input-container.focused {
+    border-color: var(--magenta);
+    box-shadow:
+      0 0 20px rgba(255, 0, 229, 0.15),
+      0 0 60px rgba(255, 0, 229, 0.05),
+      inset 0 0 20px rgba(255, 0, 229, 0.03);
+  }
+  .cyber-input-wrapper.v2 .corner { border-color: var(--magenta); }
+  .cyber-input-wrapper.v2 .scan-line {
+    background: linear-gradient(90deg, transparent, var(--magenta), transparent);
+  }
+  .cyber-input-wrapper.v2 .data-stream-inner { color: var(--magenta); }
+  .cyber-input-wrapper.v2 .cyber-input { caret-color: var(--magenta); }
+  .cyber-input-wrapper.v2 .typing-indicator .char-count {
+    color: var(--magenta);
+    text-shadow: 0 0 8px var(--magenta-glow);
+  }
+
+  /* Breach effect - side slash */
+  .breach-slash {
+    position: absolute;
+    top: -20px;
+    right: 40px;
+    width: 2px;
+    height: calc(100% + 40px);
+    background: linear-gradient(180deg, transparent, var(--magenta), transparent);
+    opacity: 0;
+    z-index: 6;
+    pointer-events: none;
+    transform: rotate(15deg);
+    transition: opacity 0.3s ease;
+    will-change: opacity;
+  }
+  .cyber-input-wrapper.v2 .cyber-input-container.focused .breach-slash {
+    opacity: 0.6;
+    animation: breachFlicker 3s steps(1) infinite;
+  }
+  @keyframes breachFlicker {
+    0%, 40%, 42%, 60%, 100% { opacity: 0.6; }
+    41% { opacity: 0; }
+    61% { opacity: 0.2; }
+  }
+
+  /* ============================================
+     INPUT VARIANT 3 — YELLOW TERMINAL
+  ============================================ */
+  .cyber-input-wrapper.v3 .cyber-input-label {
+    color: var(--yellow);
+    text-shadow: 0 0 10px var(--yellow-glow);
+  }
+  .cyber-input-wrapper.v3 .label-dot {
+    background: var(--yellow);
+    box-shadow: 0 0 8px var(--yellow-glow);
+  }
+  .cyber-input-wrapper.v3 .cyber-input-container {
+    border-color: rgba(255, 230, 0, 0.12);
+    border-radius: 0;
+    background: rgba(8, 8, 5, 0.9);
+  }
+  .cyber-input-wrapper.v3 .cyber-input-container:hover {
+    border-color: rgba(255, 230, 0, 0.25);
+  }
+  .cyber-input-wrapper.v3 .cyber-input-container.focused {
+    border-color: var(--yellow);
+    box-shadow:
+      0 0 20px rgba(255, 230, 0, 0.1),
+      inset 0 0 30px rgba(255, 230, 0, 0.02);
+  }
+  .cyber-input-wrapper.v3 .corner { border-color: var(--yellow); border-width: 1px; }
+  .cyber-input-wrapper.v3 .scan-line {
+    background: linear-gradient(90deg, transparent, var(--yellow), transparent);
+    height: 1px;
+  }
+  .cyber-input-wrapper.v3 .data-stream-inner { color: var(--yellow); }
+  .cyber-input-wrapper.v3 .cyber-input {
+    caret-color: var(--yellow);
+    padding-left: 32px;
+  }
+  .cyber-input-wrapper.v3 .typing-indicator .char-count {
+    color: var(--yellow);
+    text-shadow: 0 0 8px var(--yellow-glow);
+  }
+
+  /* Terminal prompt */
+  .terminal-prompt {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--yellow);
+    z-index: 5;
+    pointer-events: none;
+    text-shadow: 0 0 10px var(--yellow-glow);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .cyber-input-wrapper.v3 .cyber-input-container.focused .terminal-prompt {
+    opacity: 1;
+  }
+
+  /* ============================================
+     SUBMIT BUTTON
+  ============================================ */
+  .cyber-btn-wrap {
+    width: 100%;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s 1.2s var(--ease-out-expo) forwards;
+  }
+  .cyber-btn {
+    width: 100%;
+    height: 56px;
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: color 0.4s ease, box-shadow 0.4s ease;
+    z-index: 1;
+  }
+  .cyber-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--cyan);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s var(--ease-out-expo);
+    z-index: -1;
+    will-change: transform;
+  }
+  .cyber-btn:hover {
+    color: var(--bg);
+    box-shadow: 0 0 30px var(--cyan-glow), 0 0 80px rgba(0, 240, 255, 0.1);
+  }
+  .cyber-btn:hover::before { transform: scaleX(1); }
+  .cyber-btn:active { transform: scale(0.98); }
+
+  /* Button scan line */
+  .cyber-btn::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transition: left 0.6s ease;
+    z-index: 1;
+    will-change: left;
+  }
+  .cyber-btn:hover::after { left: 100%; }
+
+  /* ============================================
+     BOTTOM STATUS BAR
+  ============================================ */
+  .status-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s 1.4s var(--ease-out-expo) forwards;
+  }
+  .status-bar .status-left,
+  .status-bar .status-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .status-live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-live-dot {
+    width: 5px; height: 5px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(57, 255, 20, 0.5);
+    animation: statusBlink 1.5s steps(1) infinite;
+  }
+
+  /* ============================================
+     CORRUPTION EFFECT ON SUBMIT
+  ============================================ */
+  .cyber-input-wrapper.corrupted .cyber-input-container {
+    animation: corruption 0.4s steps(4) 2;
+  }
+  @keyframes corruption {
+    0% { transform: translate(0); filter: hue-rotate(0deg); }
+    25% { transform: translate(-3px, 1px); filter: hue-rotate(90deg); }
+    50% { transform: translate(2px, -2px); filter: hue-rotate(180deg); }
+    75% { transform: translate(-1px, 2px); filter: hue-rotate(270deg); }
+    100% { transform: translate(0); filter: hue-rotate(360deg); }
+  }
+
+  /* Success state */
+  .cyber-input-wrapper.success .cyber-input-container {
+    border-color: var(--green) !important;
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.15), inset 0 0 20px rgba(57, 255, 20, 0.03) !important;
+  }
+  .cyber-input-wrapper.success .corner { border-color: var(--green) !important; }
+  .cyber-input-wrapper.success .scan-line {
+    background: linear-gradient(90deg, transparent, var(--green), transparent) !important;
+  }
+
+  /* ============================================
+     RESPONSIVE
+  ============================================ */
+  @media (max-width: 640px) {
+    .showcase { gap: 60px; padding: 80px 20px; }
+    .cyber-input { font-size: 13px; padding: 0 14px; }
+    .cyber-input-wrapper.v3 .cyber-input { padding-left: 28px; }
+    .terminal-prompt { font-size: 12px; left: 12px; }
+    .status-bar { flex-direction: column; gap: 8px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Atmosphere layers -->
+<div class="cyber-grid"></div>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<!-- Floating particles (generated via JS) -->
+
+<div class="showcase">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-label">// neural interface v4.2.1</div>
+    <h1>
+      <span class="glitch-text" data-text="ACCESS TERMINAL">ACCESS TERMINAL</span>
+    </h1>
+  </div>
+
+  <!-- Input V1 — CYAN NEON -->
+  <div class="cyber-input-wrapper" id="input1">
+    <div class="cyber-input-label">
+      <span class="label-bracket">[</span>
+      <span class="label-dot"></span>
+      Operator ID
+      <span class="label-bracket">]</span>
+    </div>
+    <div class="cyber-input-container">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+      <div class="scan-line"></div>
+      <div class="glitch-overlay"></div>
+      <div class="data-stream">
+        <div class="data-stream-inner">0x4F2A 11001
+0xB7E1 01010
+0x93CF 10011
+0x1DA8 01101
+0xF523 11010
+0x8BC0 00111
+0x6E7F 10100
+0xA294 01010
+0xD316 11100
+0x4F2A 11001
+0xB7E1 01010
+0x93CF 10011
+0x1DA8 01101
+0xF523 11010
+0x8BC0 00111
+0x6E7F 10100
+0xA294 01010
+0xD316 11100</div>
+      </div>
+      <input
+        type="text"
+        class="cyber-input"
+        placeholder="Enter operator identifier..."
+        maxlength="32"
+        autocomplete="off"
+        spellcheck="false"
+      >
+    </div>
+    <div class="typing-indicator">
+      <div class="status-dot"></div>
+      <span>CHARS: <span class="char-count">0</span>/32</span>
+    </div>
+    <div class="hex-deco">0x7F3A</div>
+  </div>
+
+  <!-- Input V2 — MAGENTA BREACH -->
+  <div class="cyber-input-wrapper v2" id="input2">
+    <div class="cyber-input-label">
+      <span class="label-bracket">[</span>
+      <span class="label-dot"></span>
+      Encryption Key
+      <span class="label-bracket">]</span>
+    </div>
+    <div class="cyber-input-container">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+      <div class="scan-line"></div>
+      <div class="glitch-overlay"></div>
+      <div class="breach-slash"></div>
+      <div class="data-stream">
+        <div class="data-stream-inner">█▓▒ ░ ▒▓█
+▒ ░ █▓▒ ░
+░ ▒▓█ ▓▒
+█▓▒ ░ ▒▓
+░ ▒▓█ ▓▒░
+▒ ░ █▓▒ ░
+▓▒ ░ ▒▓█
+█▓▒ ░ ▒▓█
+▒ ░ █▓▒ ░
+░ ▒▓█ ▓▒
+█▓▒ ░ ▒▓
+░ ▒▓█ ▓▒░
+▒ ░ █▓▒ ░
+▓▒ ░ ▒▓█
+█▓▒ ░ ▒▓█</div>
+      </div>
+      <input
+        type="password"
+        class="cyber-input"
+        placeholder="••••••••••••••••"
+        maxlength="64"
+        autocomplete="off"
+        spellcheck="false"
+      >
+    </div>
+    <div class="typing-indicator">
+      <div class="status-dot"></div>
+      <span>ENCRYPTED: <span class="char-count">0</span>/64</span>
+    </div>
+    <div class="hex-deco">0xAE91</div>
+  </div>
+
+  <!-- Input V3 — YELLOW TERMINAL -->
+  <div class="cyber-input-wrapper v3" id="input3">
+    <div class="cyber-input-label">
+      <span class="label-bracket">[</span>
+      <span class="label-dot"></span>
+      Target Node
+      <span class="label-bracket">]</span>
+    </div>
+    <div class="cyber-input-container">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+      <div class="scan-line"></div>
+      <div class="glitch-overlay"></div>
+      <div class="terminal-prompt">$</div>
+      <div class="data-stream">
+        <div class="data-stream-inner">NODE_77::ACTIVE
+NODE_42::ACTIVE
+NODE_19::DORMANT
+NODE_88::ACTIVE
+NODE_03::FIREWALL
+NODE_55::ACTIVE
+NODE_77::ACTIVE
+NODE_42::ACTIVE
+NODE_19::DORMANT
+NODE_88::ACTIVE
+NODE_03::FIREWALL
+NODE_55::ACTIVE</div>
+      </div>
+      <input
+        type="text"
+        class="cyber-input"
+        placeholder="connect://node_..."
+        maxlength="48"
+        autocomplete="off"
+        spellcheck="false"
+      >
+    </div>
+    <div class="typing-indicator">
+      <div class="status-dot"></div>
+      <span>PACKET: <span class="char-count">0</span>/48</span>
+    </div>
+    <div class="hex-deco">0x2DC7</div>
+  </div>
+
+  <!-- Submit -->
+  <div class="cyber-btn-wrap">
+    <button class="cyber-btn" id="submitBtn">
+      ▸ INITIATE BREACH ◂
+    </button>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-left">
+      <div class="status-live">
+        <div class="status-live-dot"></div>
+        <span>LIVE</span>
+      </div>
+      <span>PROTOCOL: AES-256</span>
+    </div>
+    <div class="status-right">
+      <span id="clockDisplay">00:00:00</span>
+      <span>LATENCY: <span id="latencyDisplay">12ms</span></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ============================================
+  // FLOATING PARTICLES
+  // ============================================
+  const body = document.body;
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (Math.random() * 8 + 6) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.width = p.style.height = (Math.random() * 2 + 1) + 'px';
+    const colors = ['#00f0ff', '#ff00e5', '#ffe600', '#39ff14'];
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    body.appendChild(p);
+  }
+
+  // ============================================
+  // INPUT FOCUS / BLUR / TYPING LOGIC
+  // ============================================
+  document.querySelectorAll('.cyber-input-wrapper').forEach(wrapper => {
+    const container = wrapper.querySelector('.cyber-input-container');
+    const input = wrapper.querySelector('.cyber-input');
+    const typingIndicator = wrapper.querySelector('.typing-indicator');
+    const charCount = wrapper.querySelector('.char-count');
+    const maxLen = parseInt(input.maxLength);
+
+    input.addEventListener('focus', () => {
+      container.classList.add('focused');
+      // Trigger initial glitch
+      setTimeout(() => container.classList.add('glitching'), 100);
+      setTimeout(() => container.classList.remove('glitching'), 600);
+    });
+
+    input.addEventListener('blur', () => {
+      container.classList.remove('focused');
+      if (!input.value) typingIndicator.classList.remove('active');
+    });
+
+    input.addEventListener('input', () => {
+      charCount.textContent = input.value.length;
+      typingIndicator.classList.add('active');
+
+      // Random glitch on certain keystrokes
+      if (Math.random() < 0.15) {
+        container.classList.remove('glitching');
+        void container.offsetWidth; // force reflow
+        container.classList.add('glitching');
+        setTimeout(() => container.classList.remove('glitching'), 500);
+      }
+    });
+  });
+
+  // ============================================
+  // SUBMIT — CORRUPTION → SUCCESS SEQUENCE
+  // ============================================
+  const submitBtn = document.getElementById('submitBtn');
+  const wrappers = document.querySelectorAll('.cyber-input-wrapper');
+
+  submitBtn.addEventListener('click', () => {
+    // Corruption phase
+    wrappers.forEach((w, i) => {
+      setTimeout(() => {
+        w.classList.add('corrupted');
+        setTimeout(() => w.classList.remove('corrupted'), 900);
+      }, i * 150);
+    });
+
+    // Success phase
+    setTimeout(() => {
+      wrappers.forEach((w, i) => {
+        setTimeout(() => w.classList.add('success'), i * 200);
+      });
+
+      // Button text change
+      submitBtn.textContent = '▸ BREACH SUCCESSFUL ◂';
+      submitBtn.style.borderColor = 'var(--green)';
+      submitBtn.style.color = 'var(--green)';
+
+      // Reset after delay
+      setTimeout(() => {
+        wrappers.forEach(w => w.classList.remove('success'));
+        submitBtn.textContent = '▸ INITIATE BREACH ◂';
+        submitBtn.style.borderColor = '';
+        submitBtn.style.color = '';
+      }, 3000);
+    }, 800);
+  });
+
+  // ============================================
+  // CLOCK & FAKE LATENCY
+  // ============================================
+  const clockEl = document.getElementById('clockDisplay');
+  const latencyEl = document.getElementById('latencyDisplay');
+
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    clockEl.textContent = h + ':' + m + ':' + s;
+  }
+
+  function updateLatency() {
+    const latency = Math.floor(Math.random() * 20 + 8);
+    latencyEl.textContent = latency + 'ms';
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+  setInterval(updateLatency, 2000);
+</script>
+</body>
+</html>
