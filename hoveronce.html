@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hover Once… Magic Happens</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050505;
+    --surface: #121212;
+    --text: #F7F8F8;
+    --text-secondary: #8A8F98;
+    --accent: #5E6AD2;
+    --accent-glow: rgba(94, 106, 210, 0.4);
+    --magenta: #EC4899;
+    --magenta-glow: rgba(236, 72, 153, 0.4);
+    --cyan: #06B6D4;
+    --cyan-glow: rgba(6, 182, 212, 0.4);
+    --green: #4DAF73;
+    --green-glow: rgba(77, 175, 115, 0.4);
+    --yellow: #E2B340;
+    --yellow-glow: rgba(226, 179, 64, 0.4);
+    --border: rgba(255, 255, 255, 0.08);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  /* ============================================
+     GRAIN
+  ============================================ */
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ============================================
+     HERO
+  ============================================ */
+  .hero {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 60px;
+    position: relative;
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -2.5px;
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: heroIn 1s 0.3s var(--ease-out-expo) forwards;
+  }
+  @keyframes heroIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero h1 .magic-word {
+    position: relative;
+    display: inline-block;
+    cursor: default;
+  }
+  .hero h1 .magic-word .char {
+    display: inline-block;
+    transition: transform 0.5s var(--ease-spring), color 0.3s ease;
+    will-change: transform;
+  }
+  .hero h1 .magic-word:hover .char {
+    animation: charPop 0.6s var(--ease-spring) forwards;
+  }
+  .hero h1 .magic-word .char:nth-child(1) { animation-delay: 0ms; }
+  .hero h1 .magic-word .char:nth-child(2) { animation-delay: 40ms; }
+  .hero h1 .magic-word .char:nth-child(3) { animation-delay: 80ms; }
+  .hero h1 .magic-word .char:nth-child(4) { animation-delay: 120ms; }
+  .hero h1 .magic-word .char:nth-child(5) { animation-delay: 160ms; }
+  .hero h1 .magic-word .char:nth-child(6) { animation-delay: 200ms; }
+
+  @keyframes charPop {
+    0% { transform: translateY(0) scale(1) rotate(0deg); }
+    30% { transform: translateY(-20px) scale(1.3) rotate(-8deg); color: var(--magenta); }
+    60% { transform: translateY(-8px) scale(1.1) rotate(3deg); color: var(--cyan); }
+    100% { transform: translateY(0) scale(1) rotate(0deg); color: var(--text); }
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.5;
+    max-width: 500px;
+    opacity: 0;
+    animation: heroIn 1s 0.5s var(--ease-out-expo) forwards;
+  }
+
+  .scroll-hint {
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: heroIn 1s 0.8s var(--ease-out-expo) forwards;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scroll-arrow {
+    display: inline-block;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  /* ============================================
+     SECTION
+  ============================================ */
+  .magic-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 100px;
+  }
+
+  .effect-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .effect-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-shadow: 0 0 20px var(--accent-glow);
+  }
+  .effect-title {
+    font-size: clamp(28px, 3.5vw, 40px);
+    font-weight: 600;
+    letter-spacing: -1px;
+  }
+  .effect-desc {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    font-weight: 300;
+  }
+
+  /* ============================================
+     EFFECT 1: MAGNETIC 3D TILT CARD
+  ============================================ */
+  .tilt-showcase {
+    display: flex;
+    justify-content: center;
+  }
+  .tilt-card {
+    width: 380px;
+    height: 480px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow 0.5s ease, border-color 0.4s ease;
+    will-change: transform;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  .tilt-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.4), 0 0 60px var(--accent-glow);
+  }
+  .tilt-card .tilt-glow {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+  }
+  .tilt-card:hover .tilt-glow { opacity: 1; }
+
+  .tilt-card .tilt-content {
+    position: relative;
+    z-index: 1;
+    transform: translateZ(40px);
+    transition: transform 0.5s var(--ease-out-expo);
+    will-change: transform;
+  }
+  .tilt-card:hover .tilt-content { transform: translateZ(60px); }
+
+  .tilt-icon {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 28px;
+    transition: transform 0.6s var(--ease-spring);
+    will-change: transform;
+  }
+  .tilt-card:hover .tilt-icon {
+    transform: scale(1.15) rotate(-5deg);
+  }
+  .tilt-card h3 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  .tilt-card p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+  .tilt-tag {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(94, 106, 210, 0.1);
+    border: 1px solid rgba(94, 106, 210, 0.2);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* Floating elements inside tilt card */
+  .tilt-float {
+    position: absolute;
+    border-radius: 12px;
+    opacity: 0.6;
+    transition: transform 0.8s var(--ease-out-expo), opacity 0.5s ease;
+    will-change: transform;
+    z-index: 0;
+  }
+  .tilt-float-1 {
+    width: 60px; height: 60px;
+    background: rgba(139, 92, 246, 0.15);
+    top: 30px; right: 30px;
+    border-radius: 50%;
+  }
+  .tilt-float-2 {
+    width: 40px; height: 40px;
+    background: rgba(236, 72, 153, 0.1);
+    bottom: 60px; left: 20px;
+    border-radius: 10px;
+  }
+  .tilt-float-3 {
+    width: 20px; height: 20px;
+    background: rgba(6, 182, 212, 0.15);
+    bottom: 30px; right: 50px;
+    border-radius: 50%;
+  }
+  .tilt-card:hover .tilt-float-1 { transform: translate(10px, -15px) rotate(20deg); opacity: 0.8; }
+  .tilt-card:hover .tilt-float-2 { transform: translate(15px, -10px) rotate(-15deg); opacity: 0.9; }
+  .tilt-card:hover .tilt-float-3 { transform: translate(-8px, -20px) scale(1.3); opacity: 1; }
+
+  /* ============================================
+     EFFECT 2: TEXT SCRAMBLE REVEAL
+  ============================================ */
+  .scramble-showcase {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .scramble-line {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 600;
+    letter-spacing: -2px;
+    line-height: 1.2;
+    cursor: default;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .scramble-line .s-word {
+    display: inline-flex;
+    margin: 0 0.15em;
+    position: relative;
+  }
+  .scramble-line .s-char {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+    transition: color 0.15s ease, transform 0.3s var(--ease-spring);
+    will-change: color, transform;
+    min-width: 0.6em;
+    text-align: center;
+  }
+  .scramble-line .s-char.decoded {
+    color: var(--text);
+    transform: scale(1.05);
+  }
+  .scramble-line:hover .s-char.decoded {
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan-glow);
+  }
+  .scramble-line .s-char.scrambling {
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .scramble-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    margin-top: 12px;
+    transition: opacity 0.3s ease;
+  }
+  .scramble-showcase:hover .scramble-hint { opacity: 0; }
+
+  /* ============================================
+     EFFECT 3: LIQUID FILL BUTTONS
+  ============================================ */
+  .liquid-showcase {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+  }
+  .liquid-btn {
+    padding: 16px 36px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+    color: var(--text);
+    transition: color 0.5s ease, transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: transform;
+    z-index: 1;
+  }
+  .liquid-btn::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 0%;
+    border-radius: 12px;
+    z-index: -1;
+    transition: height 0.6s var(--ease-out-expo);
+    will-change: height;
+  }
+  .liquid-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    color: #fff;
+  }
+  .liquid-btn:active { transform: translateY(0) scale(0.97); }
+
+  .liquid-btn.cyan::before { background: linear-gradient(135deg, #06B6D4, #0891B2); }
+  .liquid-btn.cyan:hover { box-shadow: 0 10px 40px var(--cyan-glow); }
+  .liquid-btn.cyan:hover::before { height: 100%; }
+
+  .liquid-btn.magenta::before { background: linear-gradient(135deg, #EC4899, #DB2777); }
+  .liquid-btn.magenta:hover { box-shadow: 0 10px 40px var(--magenta-glow); }
+  .liquid-btn.magenta:hover::before { height: 100%; }
+
+  .liquid-btn.green::before { background: linear-gradient(135deg, #4DAF73, #16A34A); }
+  .liquid-btn.green:hover { box-shadow: 0 10px 40px var(--green-glow); }
+  .liquid-btn.green:hover::before { height: 100%; }
+
+  .liquid-btn.yellow::before { background: linear-gradient(135deg, #E2B340, #D97706); }
+  .liquid-btn.yellow:hover { box-shadow: 0 10px 40px var(--yellow-glow); color: var(--bg); }
+  .liquid-btn.yellow:hover::before { height: 100%; }
+
+  /* Liquid wave on top */
+  .liquid-btn::after {
+    content: '';
+    position: absolute;
+    top: -100%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.15), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease, top 0.6s var(--ease-out-expo);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .liquid-btn:hover::after { opacity: 1; top: -50%; }
+
+  /* ============================================
+     EFFECT 4: BORDER DRAW
+  ============================================ */
+  .border-showcase {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .draw-card {
+    width: 280px;
+    padding: 40px 28px;
+    background: var(--surface);
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .draw-card svg.draw-border {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .draw-border rect {
+    fill: none;
+    stroke-width: 1.5;
+    rx: 20; ry: 20;
+    stroke-dasharray: 800;
+    stroke-dashoffset: 800;
+    transition: stroke-dashoffset 0.8s var(--ease-out-expo);
+    will-change: stroke-dashoffset;
+  }
+  .draw-card:hover .draw-border rect {
+    stroke-dashoffset: 0;
+  }
+  .draw-card.accent-border .draw-border rect { stroke: var(--accent); }
+  .draw-card.magenta-border .draw-border rect { stroke: var(--magenta); }
+  .draw-card.cyan-border .draw-border rect { stroke: var(--cyan); }
+
+  .draw-card .draw-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    z-index: 0;
+    will-change: opacity;
+  }
+  .draw-card:hover .draw-glow { opacity: 1; }
+  .draw-card.accent-border .draw-glow { box-shadow: inset 0 0 30px rgba(94, 106, 210, 0.1); }
+  .draw-card.magenta-border .draw-glow { box-shadow: inset 0 0 30px rgba(236, 72, 153, 0.1); }
+  .draw-card.cyan-border .draw-glow { box-shadow: inset 0 0 30px rgba(6, 182, 212, 0.1); }
+
+  .draw-card .draw-content {
+    position: relative;
+    z-index: 1;
+  }
+  .draw-card .draw-emoji {
+    font-size: 36px;
+    margin-bottom: 16px;
+    display: inline-block;
+    transition: transform 0.6s var(--ease-elastic);
+    will-change: transform;
+  }
+  .draw-card:hover .draw-emoji { transform: scale(1.3) rotate(10deg); }
+  .draw-card h3 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .draw-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ============================================
+     EFFECT 5: CLONE / GHOST STACK
+  ============================================ */
+  .ghost-showcase {
+    display: flex;
+    justify-content: center;
+  }
+  .ghost-wrapper {
+    position: relative;
+    width: 320px;
+    height: 200px;
+    cursor: pointer;
+  }
+  .ghost-card {
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    transition: transform 0.6s var(--ease-out-expo), opacity 0.5s ease, border-color 0.4s ease;
+    will-change: transform, opacity;
+  }
+  .ghost-card:nth-child(1) {
+    background: rgba(94, 106, 210, 0.06);
+    border-color: rgba(94, 106, 210, 0.15);
+    z-index: 3;
+  }
+  .ghost-card:nth-child(2) {
+    z-index: 2;
+    opacity: 0.6;
+  }
+  .ghost-card:nth-child(3) {
+    z-index: 1;
+    opacity: 0.3;
+  }
+
+  .ghost-wrapper:hover .ghost-card:nth-child(1) {
+    transform: translate(-40px, -20px) rotate(-4deg);
+    border-color: var(--accent);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 40px var(--accent-glow);
+  }
+  .ghost-wrapper:hover .ghost-card:nth-child(2) {
+    transform: translate(0px, -10px) rotate(1deg);
+    opacity: 0.5;
+  }
+  .ghost-wrapper:hover .ghost-card:nth-child(3) {
+    transform: translate(30px, 0px) rotate(5deg);
+    opacity: 0.2;
+  }
+
+  .ghost-card h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .ghost-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .ghost-badge {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 4px 12px;
+    background: rgba(94, 106, 210, 0.15);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ============================================
+     EFFECT 6: REVEAL HIDDEN ART
+  ============================================ */
+  .reveal-showcase {
+    display: flex;
+    justify-content: center;
+  }
+  .reveal-art-card {
+    width: 420px;
+    height: 320px;
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .reveal-art-card .art-hidden {
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 2;
+    transition: clip-path 0.8s var(--ease-out-expo);
+    clip-path: circle(100% at 50% 50%);
+    will-change: clip-path;
+  }
+  .reveal-art-card:hover .art-hidden {
+    clip-path: circle(0% at 50% 50%);
+  }
+  .reveal-art-card .art-hidden span {
+    font-size: 48px;
+    transition: transform 0.6s var(--ease-spring);
+    will-change: transform;
+  }
+  .reveal-art-card:hover .art-hidden span {
+    transform: scale(1.3) rotate(10deg);
+  }
+  .reveal-art-card .art-hidden p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .reveal-art-card .art-visible {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    /* CSS-only gradient art */
+    background:
+      radial-gradient(circle at 30% 40%, var(--accent) 0%, transparent 50%),
+      radial-gradient(circle at 70% 60%, var(--magenta) 0%, transparent 50%),
+      radial-gradient(circle at 50% 80%, var(--cyan) 0%, transparent 40%),
+      radial-gradient(circle at 20% 80%, var(--yellow) 0%, transparent 30%),
+      var(--bg);
+    opacity: 0.8;
+    transition: opacity 0.6s ease;
+  }
+  .reveal-art-card:hover .art-visible { opacity: 1; }
+
+  /* Animated mesh lines on the art */
+  .art-mesh {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.8s ease 0.2s;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+    animation: meshMove 8s linear infinite;
+  }
+  .reveal-art-card:hover .art-mesh { opacity: 1; }
+  @keyframes meshMove {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(30px, 30px) rotate(0deg); }
+  }
+
+  .art-text-overlay {
+    position: absolute;
+    bottom: 24px; left: 24px;
+    z-index: 1;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s ease 0.4s, transform 0.5s var(--ease-out-expo) 0.4s;
+    will-change: opacity, transform;
+  }
+  .reveal-art-card:hover .art-text-overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .art-text-overlay h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  }
+  .art-text-overlay p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    text-shadow: 0 1px 10px rgba(0,0,0,0.5);
+  }
+
+  /* ============================================
+     EFFECT 7: MORPHING ICON GRID
+  ============================================ */
+  .morph-icon-showcase {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  @media (max-width: 640px) {
+    .morph-icon-showcase { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .morph-icon-item {
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.4s ease, transform 0.5s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: transform;
+  }
+  .morph-icon-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.5s var(--ease-out-expo), border-radius 0.5s ease;
+    will-change: transform, border-radius;
+    z-index: 0;
+  }
+  .morph-icon-item:hover::before {
+    transform: scale(1);
+    border-radius: 0;
+  }
+  .morph-icon-item:nth-child(1)::before { background: rgba(94, 106, 210, 0.15); }
+  .morph-icon-item:nth-child(2)::before { background: rgba(236, 72, 153, 0.15); }
+  .morph-icon-item:nth-child(3)::before { background: rgba(6, 182, 212, 0.15); }
+  .morph-icon-item:nth-child(4)::before { background: rgba(226, 179, 64, 0.15); }
+  .morph-icon-item:nth-child(5)::before { background: rgba(77, 175, 115, 0.15); }
+  .morph-icon-item:nth-child(6)::before { background: rgba(139, 92, 246, 0.15); }
+  .morph-icon-item:nth-child(7)::before { background: rgba(239, 68, 68, 0.15); }
+  .morph-icon-item:nth-child(8)::before { background: rgba(94, 106, 210, 0.15); }
+
+  .morph-icon-item span {
+    position: relative;
+    z-index: 1;
+    transition: transform 0.5s var(--ease-elastic);
+    will-change: transform;
+  }
+  .morph-icon-item:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: scale(1.08) translateY(-4px);
+  }
+  .morph-icon-item:hover span {
+    transform: scale(1.2) rotate(15deg);
+  }
+  .morph-icon-item:active {
+    transform: scale(0.95);
+  }
+  .morph-icon-item:active span {
+    transform: scale(0.8) rotate(-10deg);
+  }
+
+  /* ============================================
+     EFFECT 8: THE CURTAIN
+  ============================================ */
+  .curtain-showcase {
+    display: flex;
+    justify-content: center;
+  }
+  .curtain-card {
+    width: 480px;
+    height: 300px;
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .curtain-left, .curtain-right {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 50%;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.7s var(--ease-out-expo);
+    will-change: transform;
+    overflow: hidden;
+  }
+  .curtain-left {
+    left: 0;
+    background: linear-gradient(90deg, var(--surface) 60%, rgba(18,18,18,0.95));
+  }
+  .curtain-right {
+    right: 0;
+    background: linear-gradient(-90deg, var(--surface) 60%, rgba(18,18,18,0.95));
+  }
+  .curtain-card:hover .curtain-left { transform: translateX(-100%); }
+  .curtain-card:hover .curtain-right { transform: translateX(100%); }
+
+  .curtain-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* The revealed content */
+  .curtain-reveal {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(94, 106, 210, 0.1), rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+  }
+  .curtain-reveal .big-emoji {
+    font-size: 64px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.5s ease 0.3s, transform 0.6s var(--ease-spring) 0.3s;
+    will-change: opacity, transform;
+  }
+  .curtain-card:hover .curtain-reveal .big-emoji {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .curtain-reveal h3 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -1px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease 0.5s, transform 0.5s var(--ease-out-expo) 0.5s;
+    will-change: opacity, transform;
+  }
+  .curtain-card:hover .curtain-reveal h3 {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .curtain-reveal p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.5s ease 0.65s, transform 0.5s var(--ease-out-expo) 0.65s;
+    will-change: opacity, transform;
+  }
+  .curtain-card:hover .curtain-reveal p {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Curtain seam line */
+  .curtain-seam {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: rgba(255,255,255,0.1);
+    z-index: 4;
+    transition: opacity 0.3s ease;
+  }
+  .curtain-card:hover .curtain-seam { opacity: 0; }
+
+  /* ============================================
+     FOOTER
+  ============================================ */
+  footer {
+    text-align: center;
+    padding: 60px 24px;
+    border-top: 1px solid var(--border);
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  footer p {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  footer .accent { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>
+    Hover Once…<br>
+    <span class="magic-word" id="magicWord"></span>
+  </h1>
+  <p class="hero-sub">
+    Eight impossible-feeling hover effects. No JavaScript animation libraries. Just CSS, transforms, and cubic-bezier curves doing things they shouldn't.
+  </p>
+  <div class="scroll-hint">
+    <span class="scroll-arrow">↓</span> Hover everything below
+  </div>
+</section>
+
+<!-- Magic Section -->
+<div class="magic-section">
+
+  <!-- 1: 3D Tilt -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">01 — Magnetic 3D Tilt</div>
+      <div class="effect-title">The card follows your cursor</div>
+      <div class="effect-desc">Perspective transforms + glow tracking = feels alive</div>
+    </div>
+    <div class="tilt-showcase">
+      <div class="tilt-card" id="tiltCard">
+        <div class="tilt-glow" id="tiltGlow"></div>
+        <div class="tilt-float tilt-float-1"></div>
+        <div class="tilt-float tilt-float-2"></div>
+        <div class="tilt-float tilt-float-3"></div>
+        <div class="tilt-content">
+          <div class="tilt-icon">✦</div>
+          <h3>Neural Interface</h3>
+          <p>Move your cursor around this card. It tilts toward you like it's reading your mind.</p>
+          <span class="tilt-tag">GPU Accelerated</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2: Text Scramble -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">02 — Text Decode</div>
+      <div class="effect-title">Watch the letters decode</div>
+      <div class="effect-desc">Hover each line to trigger a cascading character scramble</div>
+    </div>
+    <div class="scramble-showcase" id="scrambleShowcase">
+      <div class="scramble-line" data-text="THE FUTURE IS NOW"></div>
+      <div class="scramble-line" data-text="HOVER TO DECODE"></div>
+      <div class="scramble-line" data-text="PURE CSS MAGIC"></div>
+      <div class="scramble-hint">↕ hover each line</div>
+    </div>
+  </div>
+
+  <!-- 3: Liquid Fill -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">03 — Liquid Fill</div>
+      <div class="effect-title">Color rises like liquid</div>
+      <div class="effect-desc">Height transition from bottom with a radial light splash</div>
+    </div>
+    <div class="liquid-showcase">
+      <button class="liquid-btn cyan">Initialize</button>
+      <button class="liquid-btn magenta">Connect</button>
+      <button class="liquid-btn green">Deploy</button>
+      <button class="liquid-btn yellow">Execute</button>
+    </div>
+  </div>
+
+  <!-- 4: Border Draw -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">04 — SVG Border Draw</div>
+      <div class="effect-title">The border draws itself</div>
+      <div class="effect-desc">stroke-dashoffset animation traces the border on hover</div>
+    </div>
+    <div class="border-showcase">
+      <div class="draw-card accent-border">
+        <svg class="draw-border"><rect x="1" y="1" width="278" height="198" rx="20" ry="20"/></svg>
+        <div class="draw-glow"></div>
+        <div class="draw-content">
+          <div class="draw-emoji">⚡</div>
+          <h3>Instant</h3>
+          <p>Zero-delay response with GPU compositor thread rendering.</p>
+        </div>
+      </div>
+      <div class="draw-card magenta-border">
+        <svg class="draw-border"><rect x="1" y="1" width="278" height="198" rx="20" ry="20"/></svg>
+        <div class="draw-glow"></div>
+        <div class="draw-content">
+          <div class="draw-emoji">✦</div>
+          <h3>Precise</h3>
+          <p>Sub-pixel accuracy with cubic-bezier easing curves.</p>
+        </div>
+      </div>
+      <div class="draw-card cyan-border">
+        <svg class="draw-border"><rect x="1" y="1" width="278" height="198" rx="20" ry="20"/></svg>
+        <div class="draw-glow"></div>
+        <div class="draw-content">
+          <div class="draw-emoji">◈</div>
+          <h3>Smooth</h3>
+          <p>60fps guaranteed with only transform and opacity.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5: Ghost Stack -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">05 — Card Fanning</div>
+      <div class="effect-title">One card becomes many</div>
+      <div class="effect-desc">Ghost layers separate and fan out with staggered rotations</div>
+    </div>
+    <div class="ghost-showcase">
+      <div class="ghost-wrapper">
+        <div class="ghost-card">
+          <h3>Top Layer</h3>
+          <p>This card splits into a fan of three on hover.</p>
+          <div class="ghost-badge">Interactive</div>
+        </div>
+        <div class="ghost-card">
+          <h3>Top Layer</h3>
+          <p>This card splits into a fan of three on hover.</p>
+          <div class="ghost-badge">Interactive</div>
+        </div>
+        <div class="ghost-card">
+          <h3>Top Layer</h3>
+          <p>This card splits into a fan of three on hover.</p>
+          <div class="ghost-badge">Interactive</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: Reveal Hidden Art -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">06 — Circle Reveal</div>
+      <div class="effect-title">Clip-path uncovers art</div>
+      <div class="effect-desc">A shrinking circle mask reveals a hidden gradient world</div>
+    </div>
+    <div class="reveal-showcase">
+      <div class="reveal-art-card">
+        <div class="art-hidden">
+          <span>👁️</span>
+          <p>Hover to reveal</p>
+        </div>
+        <div class="art-visible"></div>
+        <div class="art-mesh"></div>
+        <div class="art-text-overlay">
+          <h3>Hidden Dimension</h3>
+          <p>clip-path: circle() transition</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7: Morphing Icon Grid -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">07 — Expanding Backgrounds</div>
+      <div class="effect-title">Circles morph to fill</div>
+      <div class="effect-desc">A tiny circle scales from 0 to fill the entire cell</div>
+    </div>
+    <div class="morph-icon-showcase">
+      <div class="morph-icon-item"><span>🔥</span></div>
+      <div class="morph-icon-item"><span>💎</span></div>
+      <div class="morph-icon-item"><span>🌊</span></div>
+      <div class="morph-icon-item"><span>⚡</span></div>
+      <div class="morph-icon-item"><span>🌿</span></div>
+      <div class="morph-icon-item"><span>🔮</span></div>
+      <div class="morph-icon-item"><span>❤️‍🔥</span></div>
+      <div class="morph-icon-item"><span>🚀</span></div>
+    </div>
+  </div>
+
+  <!-- 8: The Curtain -->
+  <div>
+    <div class="effect-header">
+      <div class="effect-number">08 — Curtain Reveal</div>
+      <div class="effect-title">The curtains part</div>
+      <div class="effect-desc">Two halves slide away to reveal staged content beneath</div>
+    </div>
+    <div class="curtain-showcase">
+      <div class="curtain-card">
+        <div class="curtain-left">
+          <span class="curtain-label">Hover</span>
+        </div>
+        <div class="curtain-right">
+          <span class="curtain-label">Here</span>
+        </div>
+        <div class="curtain-seam"></div>
+        <div class="curtain-reveal">
+          <div class="big-emoji">🎭</div>
+          <h3>Encore!</h3>
+          <p>Staggered reveal with spring easing</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>8 effects · 0 animation libraries · <span class="accent">pure CSS magic</span></p>
+</footer>
+
+<script>
+  // ============================================
+  // HERO MAGIC WORD — character pop
+  // ============================================
+  const magicWord = document.getElementById('magicWord');
+  const word = 'MAGIC HAPPENS';
+  word.split('').forEach((char, i) => {
+    const span = document.createElement('span');
+    span.className = 'char';
+    span.textContent = char === ' ' ? '\u00A0' : char;
+    span.style.animationDelay = (i * 40) + 'ms';
+    magicWord.appendChild(span);
+  });
+
+  // ============================================
+  // 3D TILT CARD — cursor tracking
+  // ============================================
+  const tiltCard = document.getElementById('tiltCard');
+  const tiltGlow = document.getElementById('tiltGlow');
+
+  tiltCard.addEventListener('mousemove', e => {
+    const rect = tiltCard.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -12;
+    const rotateY = ((x - centerX) / centerX) * 12;
+
+    tiltCard.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    tiltGlow.style.left = x + 'px';
+    tiltGlow.style.top = y + 'px';
+  });
+
+  tiltCard.addEventListener('mouseleave', () => {
+    tiltCard.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+    tiltCard.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease, border-color 0.4s ease';
+    setTimeout(() => {
+      tiltCard.style.transition = 'box-shadow 0.5s ease, border-color 0.4s ease';
+    }, 600);
+  });
+  tiltCard.addEventListener('mouseenter', () => {
+    tiltCard.style.transition = 'box-shadow 0.5s ease, border-color 0.4s ease';
+  });
+
+  // ============================================
+  // TEXT SCRAMBLE — hover to decode
+  // ============================================
+  const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?<>{}[]';
+  const scrambleLines = document.querySelectorAll('.scramble-line');
+
+  scrambleLines.forEach(line => {
+    const originalText = line.dataset.text;
+    const chars = originalText.split('');
+
+    // Build initial scrambled state
+    line.innerHTML = '';
+    chars.forEach((char, i) => {
+      const word = document.createElement('span');
+      word.className = 's-word';
+      const c = document.createElement('span');
+      c.className = 's-char';
+      c.textContent = char === ' ' ? ' ' : scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+      word.appendChild(c);
+      line.appendChild(word);
+    });
+
+    let scrambled = false;
+    let interval = null;
+
+    line.addEventListener('mouseenter', () => {
+      if (scrambled) return;
+      scrambled = true;
+      const charEls = line.querySelectorAll('.s-char');
+      let decoded = new Array(charEls.length).fill(false);
+
+      interval = setInterval(() => {
+        charEls.forEach((el, i) => {
+          if (decoded[i]) return;
+          if (Math.random() < 0.3) {
+            el.textContent = chars[i] === ' ' ? ' ' : scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+            el.classList.add('scrambling');
+          }
+        });
+      }, 50);
+
+      // Decode one by one
+      charEls.forEach((el, i) => {
+        setTimeout(() => {
+          decoded[i] = true;
+          el.textContent = chars[i];
+          el.classList.remove('scrambling');
+          el.classList.add('decoded');
+          if (i === charEls.length - 1) {
+            clearInterval(interval);
+            setTimeout(() => { scrambled = false; }, 500);
+          }
+        }, 80 + i * 50);
+      });
+    });
+  });
+
+  // ============================================
+  // SCROLL REVEAL for effect headers
+  // ============================================
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.effect-header').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(30px)';
+    el.style.transition = 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
+    revealObserver.observe(el);
+  });
+</script>
+</body>
+</html>
