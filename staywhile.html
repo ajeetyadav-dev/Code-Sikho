@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stay Awhile</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#050505;--surface:#0E0E11;--text:#F7F8F8;--text-dim:#8A8F98;
+    --accent:#5E6AD2;--accent-g:rgba(94,106,210,.35);--magenta:#EC4899;
+    --cyan:#06B6D4;--green:#4DAF73;--yellow:#E2B340;--red:#EF4444;
+    --border:rgba(255,255,255,.06);--bh:rgba(255,255,255,.12);
+    --eoe:cubic-bezier(.16,1,.3,1);--esp:cubic-bezier(.34,1.56,.64,1);
+    --eic:cubic-bezier(.68,-.55,.265,1.55);
+  }
+  html{scroll-behavior:auto}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+    overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:3px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.06);border-radius:2px}
+
+  .grain{position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.02;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ============================================
+     INTRO SCREEN
+  ============================================ */
+  .intro{
+    position:fixed;inset:0;z-index:2000;
+    background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:opacity .8s ease,transform .8s var(--eoe);
+    will-change:opacity,transform;
+  }
+  .intro.exit{opacity:0;transform:scale(1.05);pointer-events:none}
+
+  .intro-logo{
+    width:80px;height:80px;border-radius:22px;
+    background:linear-gradient(135deg,var(--accent),#8B5CF6);
+    display:flex;align-items:center;justify-content:center;
+    transform:scale(0) rotate(-180deg);opacity:0;
+    animation:introLogo 1s .3s var(--eoe) forwards;
+    will-change:transform,opacity;
+    position:relative;overflow:hidden;
+  }
+  .intro-logo::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.2));border-radius:22px}
+  .intro-logo svg{width:36px;height:36px;fill:none;stroke:#fff;stroke-width:2.5;
+    stroke-linecap:round;stroke-linejoin:round;position:relative;z-index:1}
+  @keyframes introLogo{to{transform:scale(1) rotate(0);opacity:1}}
+
+  .intro-text{
+    font-size:clamp(20px,3vw,28px);font-weight:600;letter-spacing:-1px;
+    margin-top:28px;overflow:hidden;
+  }
+  .intro-text .word{
+    display:inline-block;overflow:hidden;margin-right:.2em;
+  }
+  .intro-text .word span{
+    display:inline-block;transform:translateY(110%);
+    animation:wordUp .7s var(--eoe) forwards;will-change:transform;
+  }
+  .intro-text .word:nth-child(1) span{animation-delay:.7s}
+  .intro-text .word:nth-child(2) span{animation-delay:.85s}
+  .intro-text .word:nth-child(3) span{animation-delay:1s}
+  @keyframes wordUp{to{transform:translateY(0)}}
+
+  .intro-bar{
+    width:120px;height:2px;background:rgba(255,255,255,.06);border-radius:2px;
+    margin-top:32px;overflow:hidden;
+    opacity:0;animation:fadeIn .5s 1.2s ease forwards;
+  }
+  .intro-bar-fill{
+    width:0%;height:100%;background:var(--accent);border-radius:2px;
+    animation:barFill 1.5s 1.4s var(--eoe) forwards;will-change:width;
+  }
+  @keyframes barFill{to{width:100%}}
+  @keyframes fadeIn{to{opacity:1}}
+
+  .intro-skip{
+    position:absolute;bottom:40px;
+    font-size:12px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;
+    cursor:pointer;opacity:0;animation:fadeIn .5s 1.6s ease forwards;
+    transition:color .3s ease;background:none;border:none;font-family:inherit;
+  }
+  .intro-skip:hover{color:var(--text)}
+
+  /* ============================================
+     ENGAGEMENT TIMER (fixed)
+  ============================================ */
+  .engagement-bar{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    z-index:900;display:flex;align-items:center;gap:12px;
+    padding:10px 20px;background:rgba(14,14,17,.85);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--border);border-radius:100px;
+    opacity:0;transition:opacity .5s ease;pointer-events:none;
+    will-change:opacity;
+  }
+  .engagement-bar.show{opacity:1;pointer-events:auto}
+  .eng-icon{font-size:16px;animation:spin 3s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .eng-text{font-size:13px;color:var(--text-dim);font-weight:400}
+  .eng-time{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);
+    font-weight:500;min-width:48px;text-align:center}
+
+  /* ============================================
+     PROGRESS
+  ============================================ */
+  .top-progress{position:fixed;top:0;left:0;height:2px;z-index:100;
+    background:linear-gradient(90deg,var(--accent),var(--magenta),var(--cyan));
+    width:0%;will-change:width;opacity:0;transition:opacity .3s ease}
+  .top-progress.show{opacity:.7}
+
+  /* ============================================
+     GLOW CURSOR
+  ============================================ */
+  .glow{position:fixed;width:500px;height:500px;border-radius:50%;pointer-events:none;
+    z-index:1;filter:blur(40px);will-change:transform;
+    background:radial-gradient(circle,rgba(94,106,210,.07),transparent 60%);
+    backface-visibility:hidden;transform:translate(-500px,-500px)}
+  .cursor-d{position:fixed;width:6px;height:6px;background:#fff;border-radius:50%;
+    pointer-events:none;z-index:9998;mix-blend-mode:difference;
+    transform:translate(-3px,-3px);will-change:transform;
+    box-shadow:0 0 8px rgba(255,255,255,.3)}
+  @media(hover:none){.glow,.cursor-d{display:none}}
+
+  /* ============================================
+     SECTION BASE
+  ============================================ */
+  .sec{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:120px 24px;position:relative;z-index:5}
+
+  .orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;
+    will-change:transform,opacity;backface-visibility:hidden;opacity:.4}
+
+  .s-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);
+    letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;
+    text-shadow:0 0 20px var(--accent-g);
+    opacity:0;transform:translateY(20px);transition:opacity .7s var(--eoe),transform .7s var(--eoe)}
+  .s-title{font-size:clamp(36px,5vw,64px);font-weight:600;line-height:1.05;
+    letter-spacing:-2px;margin-bottom:16px;
+    opacity:0;transform:translateY(25px);transition:opacity .8s var(--eoe) .1s,transform .8s var(--eoe) .1s}
+  .s-desc{font-size:17px;color:var(--text-dim);font-weight:300;max-width:520px;
+    line-height:1.6;opacity:0;transform:translateY(20px);
+    transition:opacity .7s var(--eoe) .2s,transform .7s var(--eoe) .2s}
+  .sec.vis .s-num,.sec.vis .s-title,.sec.vis .s-desc{opacity:1;transform:translateY(0)}
+
+  .gradient-text{background:linear-gradient(135deg,var(--accent),var(--magenta),var(--cyan));
+    background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;animation:gShift 5s ease-in-out infinite}
+  @keyframes gShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+  /* ============================================
+     S1: HERO
+  ============================================ */
+  #s1 .orb-a{width:500px;height:500px;background:radial-gradient(circle,rgba(94,106,210,.1),transparent 70%);
+    top:15%;left:10%;animation:orbF1 18s ease-in-out infinite}
+  #s1 .orb-b{width:400px;height:400px;background:radial-gradient(circle,rgba(236,72,153,.07),transparent 70%);
+    bottom:15%;right:10%;animation:orbF2 15s ease-in-out infinite}
+  @keyframes orbF1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.1)}}
+  @keyframes orbF2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,30px) scale(1.05)}}
+
+  /* Floating badges */
+  .float-badges{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:36px;
+    opacity:0;transform:translateY(15px);transition:opacity .7s var(--eoe) .3s,transform .7s var(--eoe) .3s}
+  .sec.vis .float-badges{opacity:1;transform:translateY(0)}
+  .f-badge{padding:8px 16px;background:rgba(255,255,255,.03);border:1px solid var(--border);
+    border-radius:100px;font-size:13px;color:var(--text-dim);
+    transition:border-color .3s ease,color .3s ease,transform .3s var(--esp)}
+  .f-badge:hover{border-color:var(--bh);color:var(--text);transform:translateY(-2px)}
+
+  /* ============================================
+     S2: COUNTER STATS
+  ============================================ */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:56px;
+    background:var(--border);border-radius:20px;overflow:hidden;max-width:900px;width:100%}
+  @media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface);padding:40px 20px;text-align:center;
+    opacity:0;transform:translateY(20px);transition:opacity .6s var(--eoe),transform .6s var(--eoe)}
+  .stat.vis{opacity:1;transform:translateY(0)}
+  .stat-num{font-size:clamp(36px,4vw,52px);font-weight:600;letter-spacing:-2px;
+    background:linear-gradient(180deg,var(--text) 20%,var(--text-dim) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    font-variant-numeric:tabular-nums}
+  .stat-label{font-size:13px;color:var(--text-dim);margin-top:6px;letter-spacing:.5px}
+
+  /* ============================================
+     S3: STICKY TEXT SEQUENCE
+  ============================================ */
+  .sticky-sec{position:relative;height:300vh}
+  .sticky-wrap{position:sticky;top:0;height:100vh;display:flex;align-items:center;
+    justify-content:center;overflow:hidden}
+  .sticky-word{
+    position:absolute;font-size:clamp(48px,8vw,100px);font-weight:600;letter-spacing:-3px;
+    line-height:1;opacity:0;transform:scale(.8);will-change:opacity,transform;
+    transition:opacity .6s ease,transform .6s var(--eoe)}
+  .sticky-word.active{opacity:1;transform:scale(1)}
+  .sticky-word.exiting{opacity:0;transform:scale(1.15)}
+
+  /* ============================================
+     S4: HORIZONTAL MARQUEE
+  ============================================ */
+  .marquee-sec{padding:20vh 0;position:relative;z-index:5;overflow:hidden}
+  .marquee-track{display:flex;gap:20px;animation:mScroll 25s linear infinite;
+    width:max-content;will-change:transform}
+  @keyframes mScroll{to{transform:translateX(-50%)}}
+  .m-item{flex-shrink:0;padding:14px 28px;background:var(--surface);border:1px solid var(--border);
+    border-radius:100px;font-size:15px;color:var(--text-dim);white-space:nowrap;
+    display:flex;align-items:center;gap:10px;transition:border-color .3s ease,color .3s ease}
+  .m-item:hover{border-color:var(--bh);color:var(--text)}
+  .m-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+  /* ============================================
+     S5: INTERACTIVE CARDS
+  ============================================ */
+  .cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:48px;
+    max-width:900px;width:100%}
+  @media(max-width:768px){.cards-grid{grid-template-columns:1fr}}
+  .i-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:32px 24px;position:relative;overflow:hidden;cursor:default;
+    opacity:0;transform:translateY(30px);transition:opacity .7s var(--eoe),transform .7s var(--eoe),
+    border-color .3s ease;will-change:transform}
+  .i-card.vis{opacity:1;transform:translateY(0)}
+  .i-card:hover{border-color:var(--bh)}
+  .i-card .c-glow{position:absolute;width:300px;height:300px;border-radius:50%;
+    background:radial-gradient(circle,var(--accent-g),transparent 70%);pointer-events:none;
+    opacity:0;transition:opacity .4s ease;transform:translate(-50%,-50%);will-change:opacity}
+  .i-card:hover .c-glow{opacity:1}
+  .i-card .c-content{position:relative;z-index:1}
+  .i-card .c-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;
+    justify-content:center;font-size:22px;margin-bottom:18px;
+    transition:transform .5s var(--esp);will-change:transform}
+  .i-card:hover .c-icon{transform:scale(1.15) rotate(-5deg)}
+  .i-card h3{font-size:20px;font-weight:500;letter-spacing:-.3px;margin-bottom:8px}
+  .i-card p{font-size:14px;color:var(--text-dim);line-height:1.5}
+  .i-card .c-bar{height:3px;border-radius:2px;margin-top:20px;background:rgba(255,255,255,.04);
+    overflow:hidden}
+  .i-card .c-bar-fill{height:100%;border-radius:2px;width:0%;transition:width 1.2s var(--eoe);will-change:width}
+  .i-card.vis .c-bar-fill{width:var(--bar)}
+
+  /* ============================================
+     S6: REVEAL CODE BLOCK
+  ============================================ */
+  .code-wrap{max-width:700px;width:100%;margin-top:48px;opacity:0;transform:translateY(20px);
+    transition:opacity .7s var(--eoe),transform .7s var(--eoe)}
+  .sec.vis .code-wrap{opacity:1;transform:translateY(0)}
+  .code-block{background:rgba(14,14,17,.9);border:1px solid var(--border);border-radius:16px;
+    overflow:hidden;text-align:left}
+  .code-head{display:flex;align-items:center;gap:8px;padding:14px 18px;
+    border-bottom:1px solid var(--border)}
+  .code-dot{width:10px;height:10px;border-radius:50%}
+  .code-dot.r{background:var(--red)}.code-dot.y{background:var(--yellow)}.code-dot.g{background:var(--green)}
+  .code-fname{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);margin-left:8px}
+  .code-body{padding:20px;font-family:'JetBrains Mono',monospace;font-size:12px;
+    line-height:1.8;overflow-x:auto;color:var(--text-dim)}
+  .code-body .kw{color:var(--magenta)}.code-body .fn{color:var(--cyan)}
+  .code-body .str{color:var(--green)}.code-body .num{color:var(--yellow)}
+  .code-body .cm{color:rgba(255,255,255,.15)}.code-body .prop{color:var(--accent)}
+  .code-line{opacity:0;transform:translateX(-10px);transition:opacity .5s ease,transform .5s var(--eoe)}
+  .code-line.vis{opacity:1;transform:translateX(0)}
+
+  /* ============================================
+     S7: THE REWARD — UNLOCK
+  ============================================ */
+  .reward-sec{min-height:80vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:120px 24px;position:relative;z-index:5}
+  .reward-orb{width:200px;height:200px;border-radius:50%;position:relative;
+    margin-bottom:32px;opacity:0;transform:scale(0);transition:opacity .8s ease,
+    transform .8s var(--eic);will-change:transform}
+  .reward-orb.unlocked{opacity:1;transform:scale(1)}
+  .reward-orb-inner{width:100%;height:100%;border-radius:50%;
+    background:conic-gradient(from 0deg,var(--accent),var(--magenta),var(--cyan),var(--green),var(--accent));
+    animation:rewardSpin 4s linear infinite;will-change:transform;filter:blur(1px)}
+  .reward-orb-inner2{position:absolute;inset:4px;border-radius:50%;background:var(--bg);
+    display:flex;align-items:center;justify-content:center}
+  .reward-orb-inner2 span{font-size:48px;filter:drop-shadow(0 0 20px var(--accent-g))}
+  @keyframes rewardSpin{to{transform:rotate(360deg)}}
+
+  .reward-text{font-size:clamp(28px,4vw,44px);font-weight:600;letter-spacing:-1.5px;
+    margin-bottom:12px;opacity:0;transform:translateY(20px);
+    transition:opacity .7s var(--eoe) .3s,transform .7s var(--eoe) .3s}
+  .reward-text.show{opacity:1;transform:translateY(0)}
+  .reward-sub{font-size:16px;color:var(--text-dim);font-weight:300;opacity:0;
+    transform:translateY(15px);transition:opacity .7s var(--eoe) .5s,transform .7s var(--eoe) .5s}
+  .reward-sub.show{opacity:1;transform:translateY(0)}
+
+  .reward-lock{position:absolute;display:flex;flex-direction:column;align-items:center;
+    gap:12px;opacity:0;transform:translateY(20px);
+    transition:opacity .5s ease,transform .5s ease}
+  .reward-lock.show{opacity:1;transform:translateY(0)}
+  .reward-lock.hide{opacity:0;transform:translateY(-10px);pointer-events:none}
+  .lock-icon{font-size:48px;opacity:.3}
+  .lock-text{font-size:14px;color:var(--text-dim)}
+
+  /* ============================================
+     FOOTER
+  ============================================ */
+  footer{text-align:center;padding:80px 24px;border-top:1px solid var(--border);
+    max-width:1100px;margin:0 auto;position:relative;z-index:5}
+  footer p{font-size:14px;color:var(--text-dim)}
+  footer .a{color:var(--accent);font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="top-progress" id="topProg"></div>
+<div class="glow" id="glow"></div>
+<div class="cursor-d" id="cursorD"></div>
+
+<!-- ==================== INTRO ==================== -->
+<div class="intro" id="intro">
+  <div class="intro-logo">
+    <svg viewBox="0 0 24 24"><polyline points="4,16 10,8 16,12 22,4"/></svg>
+  </div>
+  <div class="intro-text">
+    <span class="word"><span>You're</span></span>
+    <span class="word"><span>about to</span></span>
+    <span class="word"><span>see magic</span></span>
+  </div>
+  <div class="intro-bar"><div class="intro-bar-fill"></div></div>
+  <button class="intro-skip" id="introSkip">Skip →</button>
+</div>
+
+<!-- ==================== ENGAGEMENT TIMER ==================== -->
+<div class="engagement-bar" id="engBar">
+  <span class="eng-icon">✦</span>
+  <span class="eng-text">You've been here</span>
+  <span class="eng-time" id="engTime">0s</span>
+</div>
+
+<!-- ==================== S1: HERO ==================== -->
+<section class="sec" id="s1">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="s-num">// welcome</div>
+  <h1 class="s-title">The Page That<br><span class="gradient-text">Makes You Stay</span></h1>
+  <p class="s-desc">Every animation is designed to trigger one more scroll. Cinematic reveals, engagement feedback, and a secret waiting at the end.</p>
+  <div class="float-badges">
+    <span class="f-badge">🎬 Cinematic Intro</span>
+    <span class="f-badge">⏱ Engagement Timer</span>
+    <span class="f-badge">📜 Scroll Storytelling</span>
+    <span class="f-badge">🔓 Secret Unlock</span>
+    <span class="f-badge">✨ Cursor Glow</span>
+  </div>
+</section>
+
+<!-- ==================== S2: STATS ==================== -->
+<section class="sec" id="s2">
+  <div class="s-num">// why it works</div>
+  <h2 class="s-title">The Psychology</h2>
+  <p class="s-desc">Each number represents a principle that keeps visitors from leaving.</p>
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat"><div class="stat-num" data-to="3" data-s="s">0s</div><div class="stat-label">First Impression Window</div></div>
+    <div class="stat"><div class="stat-num" data-to="47" data-s="%">0%</div><div class="stat-label">Expect Motion</div></div>
+    <div class="stat"><div class="stat-num" data-to="88" data-s="%">0%</div><div class="stat-label">Prefer Animated Sites</div></div>
+    <div class="stat"><div class="stat-num" data-to="5" data-s="x">0x</div><div class="stat-label">Engagement Multiplier</div></div>
+  </div>
+</section>
+
+<!-- ==================== S3: STICKY WORDS ==================== -->
+<div class="sticky-sec" id="s3">
+  <div class="sticky-wrap">
+    <span class="sticky-word" data-idx="0">Attention.</span>
+    <span class="sticky-word" data-idx="1">Anticipation.</span>
+    <span class="sticky-word" data-idx="2">Satisfaction.</span>
+    <span class="sticky-word" data-idx="3">Reward.</span>
+    <span class="sticky-word gradient-text" data-idx="4">Loop.</span>
+  </div>
+</div>
+
+<!-- ==================== MARQUEE ==================== -->
+<div class="marquee-sec">
+  <div class="marquee-track">
+    <div class="m-item"><div class="m-dot"></div>Staggered Reveals</div>
+    <div class="m-item"><div class="m-dot"></div>Scroll Progress</div>
+    <div class="m-item"><div class="m-dot"></div>Cinematic Timing</div>
+    <div class="m-item"><div class="m-dot"></div>Engagement Loops</div>
+    <div class="m-item"><div class="m-dot"></div>Proximity Feedback</div>
+    <div class="m-item"><div class="m-dot"></div>State Machines</div>
+    <div class="m-item"><div class="m-dot"></div>Hidden Rewards</div>
+    <div class="m-item"><div class="m-dot"></div>Ease Curves</div>
+    <div class="m-item"><div class="m-dot"></div>Staggered Reveals</div>
+    <div class="m-item"><div class="m-dot"></div>Scroll Progress</div>
+    <div class="m-item"><div class="m-dot"></div>Cinematic Timing</div>
+    <div class="m-item"><div class="m-dot"></div>Engagement Loops</div>
+    <div class="m-item"><div class="m-dot"></div>Proximity Feedback</div>
+    <div class="m-item"><div class="m-dot"></div>State Machines</div>
+    <div class="m-item"><div class="m-dot"></div>Hidden Rewards</div>
+    <div class="m-item"><div class="m-dot"></div>Ease Curves</div>
+  </div>
+</div>
+
+<!-- ==================== S4: CARDS ==================== -->
+<section class="sec" id="s4">
+  <div class="s-num">// the hooks</div>
+  <h2 class="s-title">Engagement Triggers</h2>
+  <p class="s-desc">Each card reveals a technique. Hover for the glow. Notice the progress bars animate on scroll.</p>
+  <div class="cards-grid" id="cardsGrid">
+    <div class="i-card" data-delay="0">
+      <div class="c-glow"></div>
+      <div class="c-content">
+        <div class="c-icon" style="background:rgba(94,106,210,.12)">🎬</div>
+        <h3>Cinematic Intro</h3>
+        <p>The loading sequence builds anticipation. You already committed before the page loads.</p>
+        <div class="c-bar"><div class="c-bar-fill" style="--bar:92%;background:var(--accent)"></div></div>
+      </div>
+    </div>
+    <div class="i-card" data-delay="1">
+      <div class="c-glow"></div>
+      <div class="c-content">
+        <div class="c-icon" style="background:rgba(236,72,153,.12)">⏱</div>
+        <h3>Time Investment</h3>
+        <p>The timer makes you aware of time spent — which paradoxically makes you stay longer.</p>
+        <div class="c-bar"><div class="c-bar-fill" style="--bar:87%;background:var(--magenta)"></div></div>
+      </div>
+    </div>
+    <div class="i-card" data-delay="2">
+      <div class="c-glow"></div>
+      <div class="c-content">
+        <div class="c-icon" style="background:rgba(6,182,212,.12)">📜</div>
+        <h3>Scroll Storytelling</h3>
+        <p>Each section reveals something new. The curiosity gap pulls you to the next section.</p>
+        <div class="c-bar"><div class="c-bar-fill" style="--bar:95%;background:var(--cyan)"></div></div>
+      </div>
+    </div>
+    <div class="i-card" data-delay="3">
+      <div class="c-glow"></div>
+      <div class="c-content">
+        <div class="c-icon" style="background:rgba(226,179,64,.12)">🔓</div>
+        <h3>Variable Reward</h3>
+        <p>Something is locked at the bottom. You don't know what it is. That uncertainty keeps you scrolling.</p>
+        <div class="c-bar"><div class="c-bar-fill" style="--bar:78%;background:var(--yellow)"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== S5: CODE ==================== -->
+<section class="sec" id="s5">
+  <div class="s-num">// the secret</div>
+  <h2 class="s-title">The Hook Pattern</h2>
+  <p class="s-desc">Every great retention page follows this sequence.</p>
+  <div class="code-wrap" id="codeWrap">
+    <div class="code-block">
+      <div class="code-head">
+        <div class="code-dot r"></div>
+        <div class="code-dot y"></div>
+        <div class="code-dot g"></div>
+        <span class="code-fname">retention.js</span>
+      </div>
+      <div class="code-body" id="codeBody">
+        <div class="code-line" data-cd="0"><span class="kw">const</span> <span class="prop">hook</span> = {</div>
+        <div class="code-line" data-cd="1">  <span class="fn">attention</span>:   <span class="str">"cinematic intro"</span>,</div>
+        <div class="code-line" data-cd="2">  <span class="fn">anticipation</span>: <span class="str">"scroll progress"</span>,</div>
+        <div class="code-line" data-cd="3">  <span class="fn">satisfaction</span>: <span class="str">"reveal animation"</span>,</div>
+        <div class="code-line" data-cd="4">  <span class="fn">reward</span>:     <span class="str">"secret unlock"</span>,</div>
+        <div class="code-line" data-cd="5">  <span class="fn">loop</span>:       <span class="str">"repeat forever"</span></div>
+        <div class="code-line" data-cd="6">};</div>
+        <div class="code-line" data-cd="7"></div>
+        <div class="code-line" data-cd="8"><span class="cm">// The visitor never leaves.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== S6: REWARD ==================== -->
+<div class="reward-sec" id="s6">
+  <div class="reward-lock show" id="rewardLock">
+    <span class="lock-icon">🔒</span>
+    <span class="lock-text">Scroll to the bottom to unlock</span>
+  </div>
+  <div class="reward-orb" id="rewardOrb">
+    <div class="reward-orb-inner"></div>
+    <div class="reward-orb-inner2"><span>💎</span></div>
+  </div>
+  <div class="reward-text" id="rewardText">You Made It.</div>
+  <div class="reward-sub" id="rewardSub">You just experienced every retention technique in the book. And it worked — you scrolled the entire page.</div>
+</div>
+
+<footer>
+  <p>An animation that makes visitors stay — <span class="a">pure psychology</span></p>
+</footer>
+
+<script>
+  // ============================================
+  // INTRO
+  // ============================================
+  const intro = document.getElementById('intro');
+  const introSkip = document.getElementById('introSkip');
+  let introDone = false;
+
+  function endIntro() {
+    if (introDone) return;
+    introDone = true;
+    intro.classList.add('exit');
+    document.body.style.overflow = '';
+    setTimeout(() => intro.style.display = 'none', 800);
+  }
+
+  // Auto-end after bar fills
+  setTimeout(endIntro, 3200);
+  introSkip.addEventListener('click', endIntro);
+  document.body.style.overflow = 'hidden';
+
+  // ============================================
+  // CURSOR GLOW
+  // ============================================
+  const glow = document.getElementById('glow');
+  const cursorD = document.getElementById('cursorD');
+  let mx = -500, my = -500, gx = -500, gy = -500;
+
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+  function animCursor() {
+    cursorD.style.transform = `translate(${mx-3}px,${my-3}px)`;
+    gx += (mx - gx) * 0.06;
+    gy += (my - gy) * 0.06;
+    glow.style.transform = `translate(${gx-250}px,${gy-250}px)`;
+    requestAnimationFrame(animCursor);
+  }
+  animCursor();
+
+  // ============================================
+  // PROGRESS BAR
+  // ============================================
+  const topProg = document.getElementById('topProg');
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    topProg.style.width = ((y / h) * 100) + '%';
+  }, { passive: true });
+
+  // ============================================
+  // ENGAGEMENT TIMER
+  // ============================================
+  const engBar = document.getElementById('engBar');
+  const engTime = document.getElementById('engTime');
+  let engStart = null;
+  let engShown = false;
+
+  function showEngagement() {
+    if (engShown) return;
+    engShown = true;
+    engStart = Date.now();
+    engBar.classList.add('show');
+    updateTimer();
+  }
+
+  function updateTimer() {
+    if (!engStart) return;
+    const sec = Math.floor((Date.now() - engStart) / 1000);
+    if (sec < 60) engTime.textContent = sec + 's';
+    else engTime.textContent = Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
+    requestAnimationFrame(updateTimer);
+  }
+
+  // Show timer after intro
+  setTimeout(showEngagement, 3500);
+
+  // ============================================
+  // SECTION REVEALS
+  // ============================================
+  const secObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('vis');
+        // Stats
+        if (e.target.id === 'statsGrid') animateStats();
+        // Code lines
+        if (e.target.id === 'codeWrap') animateCode();
+        secObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.2 });
+
+  document.querySelectorAll('.sec').forEach(s => secObs.observe(s));
+  secObs.observe(document.getElementById('statsGrid'));
+  secObs.observe(document.getElementById('codeWrap'));
+
+  // Card reveals with stagger
+  const cardObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const delay = parseInt(e.target.dataset.delay || 0) * 120;
+        setTimeout(() => e.target.classList.add('vis'), delay);
+        cardObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.i-card').forEach(c => cardObs.observe(c));
+
+  // Stat individual reveals
+  const statObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const delay = Array.from(document.querySelectorAll('.stat')).indexOf(e.target) * 100;
+        setTimeout(() => e.target.classList.add('vis'), delay);
+        statObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.stat').forEach(s => statObs.observe(s));
+
+  // ============================================
+  // STAT COUNTERS
+  // ============================================
+  let statsAnimated = false;
+  function animateStats() {
+    if (statsAnimated) return;
+    statsAnimated = true;
+    document.querySelectorAll('.stat-num').forEach(el => {
+      const to = parseInt(el.dataset.to);
+      const s = el.dataset.s;
+      const start = performance.now();
+      const dur = 1500;
+      function tick(now) {
+        const t = Math.min((now - start) / dur, 1);
+        const e = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        el.textContent = Math.round(e * to) + s;
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ============================================
+  // CODE LINE REVEAL
+  // ============================================
+  let codeAnimated = false;
+  function animateCode() {
+    if (codeAnimated) return;
+    codeAnimated = true;
+    document.querySelectorAll('.code-line').forEach((line, i) => {
+      setTimeout(() => line.classList.add('vis'), i * 120);
+    });
+  }
+
+  // ============================================
+  // STICKY WORD SEQUENCE
+  // ============================================
+  const stickyWords = document.querySelectorAll('.sticky-word');
+  let lastWordIdx = -1;
+
+  function updateSticky() {
+    const sec = document.getElementById('s3');
+    const rect = sec.getBoundingClientRect();
+    const progress = clamp(-rect.top / (rect.height - window.innerHeight), 0, 1);
+
+    const idx = Math.min(Math.floor(progress * stickyWords.length), stickyWords.length - 1);
+
+    if (idx !== lastWordIdx) {
+      stickyWords.forEach((w, i) => {
+        w.classList.remove('active', 'exiting');
+        if (i === idx) w.classList.add('active');
+        else if (i === lastWordIdx && i !== idx) w.classList.add('exiting');
+      });
+      lastWordIdx = idx;
+    }
+  }
+
+  function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+
+  // ============================================
+  // REWARD UNLOCK
+  // ============================================
+  const rewardLock = document.getElementById('rewardLock');
+  const rewardOrb = document.getElementById('rewardOrb');
+  const rewardText = document.getElementById('rewardText');
+  const rewardSub = document.getElementById('rewardSub');
+  let rewardUnlocked = false;
+
+  function checkReward() {
+    if (rewardUnlocked) return;
+    const sec = document.getElementById('s6');
+    const rect = sec.getBoundingClientRect();
+    if (rect.top < window.innerHeight * 0.7) {
+      rewardUnlocked = true;
+      rewardLock.classList.remove('show');
+      rewardLock.classList.add('hide');
+      setTimeout(() => {
+        rewardOrb.classList.add('unlocked');
+        rewardText.classList.add('show');
+        rewardSub.classList.add('show');
+      }, 300);
+    }
+  }
+
+  // ============================================
+  // CARD GLOW FOLLOW
+  // ============================================
+  document.querySelectorAll('.i-card').forEach(card => {
+    const g = card.querySelector('.c-glow');
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      g.style.left = (e.clientX - r.left) + 'px';
+      g.style.top = (e.clientY - r.top) + 'px';
+    });
+  });
+
+  // ============================================
+  // MASTER SCROLL LOOP
+  // ============================================
+  let scrollTicking = false;
+
+  function onScroll() {
+    if (!scrollTicking) {
+      requestAnimationFrame(() => {
+        updateSticky();
+        checkReward();
+        scrollTicking = false;
+      });
+      scrollTicking = true;
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+</body>
+</html>

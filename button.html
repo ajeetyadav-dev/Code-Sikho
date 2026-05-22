@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buttons That Don't Suck</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050505;
+    --surface: #0E0E11;
+    --text: #F7F8F8;
+    --text-secondary: #8A8F98;
+    --accent: #5E6AD2;
+    --accent-glow: rgba(94, 106, 210, 0.35);
+    --magenta: #EC4899;
+    --magenta-glow: rgba(236, 72, 153, 0.35);
+    --cyan: #06B6D4;
+    --cyan-glow: rgba(6, 182, 212, 0.35);
+    --green: #4DAF73;
+    --green-glow: rgba(77, 175, 115, 0.35);
+    --yellow: #E2B340;
+    --yellow-glow: rgba(226, 179, 64, 0.35);
+    --red: #EF4444;
+    --border: rgba(255, 255, 255, 0.06);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .grain {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 999;
+    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ============================================
+     HERO
+  ============================================ */
+  .hero {
+    padding: 120px 24px 40px;
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    text-shadow: 0 0 20px var(--accent-glow);
+    opacity: 0; transform: translateY(15px);
+    animation: up 0.8s 0.2s var(--ease-out-expo) forwards;
+  }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 72px);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -2.5px;
+    margin-bottom: 16px;
+    opacity: 0; transform: translateY(20px);
+    animation: up 1s 0.4s var(--ease-out-expo) forwards;
+  }
+  .hero h1 .gradient-text {
+    background: linear-gradient(135deg, var(--accent), var(--magenta), var(--cyan));
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradShift 5s ease-in-out infinite;
+  }
+  @keyframes gradShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  .hero p {
+    font-size: 17px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.6;
+    opacity: 0; transform: translateY(15px);
+    animation: up 0.8s 0.7s var(--ease-out-expo) forwards;
+  }
+  @keyframes up { to { opacity:1; transform:translateY(0); } }
+
+  /* ============================================
+     SECTION LAYOUT
+  ============================================ */
+  .section {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .section-header {
+    text-align: center;
+    margin-bottom: 48px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  }
+  .section-header.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .section-title {
+    font-size: clamp(24px, 3.5vw, 36px);
+    font-weight: 600;
+    letter-spacing: -1px;
+  }
+  .section-desc {
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    margin-top: 6px;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  /* ============================================
+     BASE BUTTON RESET
+  ============================================ */
+  .btn {
+    font-family: 'Inter', sans-serif;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* ============================================
+     1. MAGNETIC BUTTONS
+  ============================================ */
+  .btn-magnetic {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    transition: transform 0.25s var(--ease-out-expo), box-shadow 0.3s ease;
+    will-change: transform;
+  }
+  .btn-magnetic:active { transform: scale(0.95) !important; }
+  .btn-mag-accent { background: var(--accent); }
+  .btn-mag-accent:hover { box-shadow: 0 8px 30px var(--accent-glow), 0 0 60px rgba(94,106,210,0.1); }
+  .btn-mag-magenta { background: var(--magenta); }
+  .btn-mag-magenta:hover { box-shadow: 0 8px 30px var(--magenta-glow), 0 0 60px rgba(236,72,153,0.1); }
+  .btn-mag-cyan { background: var(--cyan); color: var(--bg); }
+  .btn-mag-cyan:hover { box-shadow: 0 8px 30px var(--cyan-glow), 0 0 60px rgba(6,182,212,0.1); }
+
+  /* ============================================
+     2. LIQUID FILL
+  ============================================ */
+  .btn-liquid {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: color 0.5s ease, border-color 0.4s ease, transform 0.4s var(--ease-spring);
+    will-change: transform;
+    z-index: 1;
+  }
+  .btn-liquid::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 0%;
+    border-radius: 14px;
+    z-index: -1;
+    transition: height 0.6s var(--ease-out-expo);
+    will-change: height;
+  }
+  .btn-liquid::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12), transparent 50%);
+    border-radius: 14px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+  }
+  .btn-liquid:hover { transform: translateY(-2px) scale(1.03); color: #fff; }
+  .btn-liquid:active { transform: translateY(0) scale(0.97); }
+  .btn-liquid:hover::before { height: 100%; }
+  .btn-liquid:hover::after { opacity: 1; }
+
+  .btn-liq-accent::before { background: linear-gradient(135deg, var(--accent), #8B5CF6); }
+  .btn-liq-accent:hover { border-color: var(--accent); }
+  .btn-liq-magenta::before { background: linear-gradient(135deg, var(--magenta), #F472B6); }
+  .btn-liq-magenta:hover { border-color: var(--magenta); }
+  .btn-liq-green::before { background: linear-gradient(135deg, var(--green), #6EE7B7); }
+  .btn-liq-green:hover { border-color: var(--green); }
+
+  /* ============================================
+     3. ANIMATED GRADIENT BORDER
+  ============================================ */
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .btn-gradient-border {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    position: relative;
+    z-index: 0;
+    transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: transform;
+  }
+  .btn-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 16px;
+    background: conic-gradient(from var(--angle), var(--accent), var(--magenta), var(--cyan), var(--accent));
+    z-index: -2;
+    animation: rotateAngle 3s linear infinite;
+    opacity: 0.5;
+    transition: opacity 0.4s ease;
+  }
+  .btn-gradient-border::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 13px;
+    background: var(--surface);
+    z-index: -1;
+    transition: background 0.4s ease;
+  }
+  @keyframes rotateAngle { to { --angle: 360deg; } }
+  .btn-gradient-border:hover { transform: translateY(-2px) scale(1.03); }
+  .btn-gradient-border:hover::before { opacity: 1; }
+  .btn-gradient-border:hover::after { background: rgba(14,14,17,0.6); }
+  .btn-gradient-border:hover {
+    box-shadow: 0 8px 30px rgba(94,106,210,0.15), 0 0 0 1px rgba(94,106,210,0.1);
+  }
+  .btn-gradient-border:active { transform: translateY(0) scale(0.97); }
+
+  /* Color variants via CSS vars */
+  .btn-gb-magenta { --gb1: var(--magenta); --gb2: var(--yellow); --gb3: var(--magenta); }
+  .btn-gb-magenta::before {
+    background: conic-gradient(from var(--angle), var(--magenta), var(--yellow), var(--magenta));
+  }
+  .btn-gb-cyan { --gb1: var(--cyan); --gb2: var(--green); --gb3: var(--cyan); }
+  .btn-gb-cyan::before {
+    background: conic-gradient(from var(--angle), var(--cyan), var(--green), var(--cyan));
+  }
+
+  /* ============================================
+     4. SHIMMER / GLOSS
+  ============================================ */
+  .btn-shimmer {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: transform;
+  }
+  .btn-shimmer::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -60%;
+    width: 40%; height: 200%;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255,255,255,0.25) 45%,
+      rgba(255,255,255,0.35) 50%,
+      rgba(255,255,255,0.25) 55%,
+      transparent 60%
+    );
+    transform: skewX(-20deg);
+    transition: left 0.8s ease;
+    will-change: left;
+  }
+  .btn-shimmer:hover::after { left: 130%; }
+  .btn-shimmer:hover { transform: translateY(-2px) scale(1.03); }
+  .btn-shimmer:active { transform: translateY(0) scale(0.97); }
+
+  .btn-shim-accent { background: linear-gradient(135deg, var(--accent), #7C3AED); }
+  .btn-shim-accent:hover { box-shadow: 0 8px 30px var(--accent-glow); }
+  .btn-shim-magenta { background: linear-gradient(135deg, var(--magenta), #BE185D); }
+  .btn-shim-magenta:hover { box-shadow: 0 8px 30px var(--magenta-glow); }
+  .btn-shim-dark {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid var(--border);
+  }
+  .btn-shim-dark:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.4); border-color: var(--border-hover, rgba(255,255,255,0.12)); }
+
+  /* ============================================
+     5. GLOW PULSE
+  ============================================ */
+  .btn-glow {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: transparent;
+    border: 1.5px solid;
+    position: relative;
+    transition: transform 0.4s var(--ease-spring), background 0.4s ease, color 0.3s ease;
+    will-change: transform;
+  }
+  .btn-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 15px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+    filter: blur(12px);
+  }
+  .btn-glow:hover { transform: translateY(-2px) scale(1.03); }
+  .btn-glow:hover::before { opacity: 1; }
+  .btn-glow:active { transform: translateY(0) scale(0.97); }
+
+  .btn-glow-accent {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-glow-accent::before { background: var(--accent); }
+  .btn-glow-accent:hover { background: var(--accent); color: #fff; }
+
+  .btn-glow-magenta {
+    border-color: var(--magenta);
+    color: var(--magenta);
+  }
+  .btn-glow-magenta::before { background: var(--magenta); }
+  .btn-glow-magenta:hover { background: var(--magenta); color: #fff; }
+
+  .btn-glow-cyan {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  .btn-glow-cyan::before { background: var(--cyan); }
+  .btn-glow-cyan:hover { background: var(--cyan); color: var(--bg); }
+
+  /* ============================================
+     6. PARTICLE BURST ON CLICK
+  ============================================ */
+  .btn-particle {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    transition: transform 0.15s ease;
+    will-change: transform;
+    position: relative;
+  }
+  .btn-particle:active { transform: scale(0.95); }
+  .btn-particle .particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  .btn-part-accent { background: linear-gradient(135deg, var(--accent), #8B5CF6); }
+  .btn-part-magenta { background: linear-gradient(135deg, var(--magenta), #F472B6); }
+  .btn-part-green { background: linear-gradient(135deg, var(--green), #16A34A); }
+  .btn-part-yellow { background: linear-gradient(135deg, var(--yellow), #D97706); color: var(--bg); }
+
+  /* ============================================
+     7. MORPH / BLOB BUTTON
+  ============================================ */
+  .btn-morph {
+    padding: 16px 36px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--magenta));
+    transition: border-radius 0.5s var(--ease-out-expo), transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: border-radius, transform;
+  }
+  .btn-morph:hover {
+    border-radius: 16px;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 10px 40px rgba(94,106,210,0.2), 0 0 60px rgba(236,72,153,0.1);
+  }
+  .btn-morph:active { transform: translateY(0) scale(0.97); }
+
+  .btn-morph-2 {
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--cyan), var(--green));
+    color: var(--bg);
+  }
+  .btn-morph-2:hover {
+    border-radius: 50px;
+  }
+
+  /* ============================================
+     8. 3D TILT BUTTON
+  ============================================ */
+  .btn-3d-wrap {
+    perspective: 600px;
+    display: inline-block;
+  }
+  .btn-3d {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), #7C3AED);
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease, box-shadow 0.3s ease;
+    will-change: transform;
+    position: relative;
+  }
+  .btn-3d::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 60%);
+    pointer-events: none;
+  }
+  .btn-3d:hover {
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3), 0 0 30px var(--accent-glow);
+  }
+
+  .btn-3d-magenta {
+    background: linear-gradient(135deg, var(--magenta), #BE185D);
+  }
+
+  /* ============================================
+     9. TEXT REVEAL ON HOVER
+  ============================================ */
+  .btn-text-reveal {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    overflow: hidden;
+    height: 52px;
+    transition: border-color 0.3s ease, transform 0.4s var(--ease-spring);
+    will-change: transform;
+  }
+  .btn-text-reveal:hover {
+    border-color: var(--border-hover, rgba(255,255,255,0.12));
+    transform: translateY(-2px);
+  }
+  .btn-text-reveal:active { transform: translateY(0) scale(0.97); }
+  .btn-text-reveal .btn-text-static,
+  .btn-text-reveal .btn-text-dynamic {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    left: 0;
+    transition: transform 0.4s var(--ease-out-expo), opacity 0.3s ease;
+    will-change: transform, opacity;
+  }
+  .btn-text-reveal .btn-text-static {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .btn-text-reveal .btn-text-dynamic {
+    top: 50%;
+    transform: translateY(50%);
+    opacity: 0;
+  }
+  .btn-text-reveal:hover .btn-text-static {
+    transform: translateY(-150%);
+    opacity: 0;
+  }
+  .btn-text-reveal:hover .btn-text-dynamic {
+    transform: translateY(-50%);
+    opacity: 1;
+  }
+  .btn-tr-accent:hover { border-color: var(--accent); }
+  .btn-tr-accent .btn-text-dynamic { color: var(--accent); }
+  .btn-tr-magenta:hover { border-color: var(--magenta); }
+  .btn-tr-magenta .btn-text-dynamic { color: var(--magenta); }
+  .btn-tr-green:hover { border-color: var(--green); }
+  .btn-tr-green .btn-text-dynamic { color: var(--green); }
+
+  /* ============================================
+     10. ICON FLIP BUTTON
+  ============================================ */
+  .btn-icon-flip {
+    padding: 16px 28px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.3s ease, background 0.3s ease, transform 0.4s var(--ease-spring);
+    will-change: transform;
+  }
+  .btn-icon-flip:hover {
+    border-color: var(--border-hover, rgba(255,255,255,0.12));
+    background: rgba(255,255,255,0.04);
+    transform: translateY(-2px);
+  }
+  .btn-icon-flip:active { transform: translateY(0) scale(0.97); }
+  .btn-icon-flip .flip-icon {
+    display: inline-flex;
+    width: 20px; height: 20px;
+    position: relative;
+    transition: transform 0.4s var(--ease-spring);
+    will-change: transform;
+  }
+  .btn-icon-flip:hover .flip-icon {
+    transform: translateX(4px);
+  }
+  .btn-icon-flip .flip-icon svg {
+    position: absolute;
+    width: 20px; height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.4s var(--ease-out-expo), opacity 0.3s ease;
+    will-change: transform, opacity;
+  }
+  .btn-icon-flip .icon-default { opacity: 1; transform: rotate(0deg); }
+  .btn-icon-flip .icon-hover {
+    opacity: 0;
+    transform: rotate(-90deg);
+  }
+  .btn-icon-flip:hover .icon-default {
+    opacity: 0;
+    transform: rotate(90deg);
+  }
+  .btn-icon-flip:hover .icon-hover {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+
+  .btn-if-accent:hover { border-color: rgba(94,106,210,0.3); }
+  .btn-if-accent .flip-icon { color: var(--accent); }
+  .btn-if-magenta:hover { border-color: rgba(236,72,153,0.3); }
+  .btn-if-magenta .flip-icon { color: var(--magenta); }
+  .btn-if-cyan:hover { border-color: rgba(6,182,212,0.3); }
+  .btn-if-cyan .flip-icon { color: var(--cyan); }
+
+  /* ============================================
+     11. OUTLINE DRAW
+  ============================================ */
+  .btn-draw {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    position: relative;
+    transition: color 0.4s ease, transform 0.4s var(--ease-spring);
+    will-change: transform;
+    z-index: 1;
+  }
+  .btn-draw svg.draw-svg {
+    position: absolute;
+    inset: -1px;
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .btn-draw svg.draw-svg rect {
+    fill: none;
+    stroke-width: 1.5;
+    rx: 14; ry: 14;
+    stroke-dasharray: 500;
+    stroke-dashoffset: 500;
+    transition: stroke-dashoffset 0.7s var(--ease-out-expo);
+    will-change: stroke-dashoffset;
+  }
+  .btn-draw:hover svg.draw-svg rect {
+    stroke-dashoffset: 0;
+  }
+  .btn-draw:hover { transform: translateY(-2px); }
+  .btn-draw:active { transform: translateY(0) scale(0.97); }
+
+  .btn-draw-accent svg.draw-svg rect { stroke: var(--accent); }
+  .btn-draw-accent:hover { color: var(--accent); }
+  .btn-draw-magenta svg.draw-svg rect { stroke: var(--magenta); }
+  .btn-draw-magenta:hover { color: var(--magenta); }
+  .btn-draw-cyan svg.draw-svg rect { stroke: var(--cyan); }
+  .btn-draw-cyan:hover { color: var(--cyan); }
+
+  /* ============================================
+     12. NEON PRESS
+  ============================================ */
+  .btn-neon {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    transition: all 0.15s ease;
+    will-change: transform, box-shadow, border-color, background, color;
+  }
+  .btn-neon:hover {
+    transform: translateY(-2px);
+  }
+  .btn-neon:active {
+    transform: translateY(1px) scale(0.98);
+  }
+  .btn-neon-accent:hover {
+    border-color: var(--accent);
+    background: rgba(94,106,210,0.1);
+    color: var(--accent);
+    box-shadow: 0 0 20px rgba(94,106,210,0.15), 0 0 60px rgba(94,106,210,0.05), inset 0 0 20px rgba(94,106,210,0.05);
+  }
+  .btn-neon-accent:active {
+    box-shadow: 0 0 40px rgba(94,106,210,0.3), 0 0 80px rgba(94,106,210,0.1), inset 0 0 30px rgba(94,106,210,0.1);
+  }
+  .btn-neon-magenta:hover {
+    border-color: var(--magenta);
+    background: rgba(236,72,153,0.1);
+    color: var(--magenta);
+    box-shadow: 0 0 20px rgba(236,72,153,0.15), 0 0 60px rgba(236,72,153,0.05), inset 0 0 20px rgba(236,72,153,0.05);
+  }
+  .btn-neon-magenta:active {
+    box-shadow: 0 0 40px rgba(236,72,153,0.3), 0 0 80px rgba(236,72,153,0.1), inset 0 0 30px rgba(236,72,153,0.1);
+  }
+  .btn-neon-green:hover {
+    border-color: var(--green);
+    background: rgba(77,175,115,0.1);
+    color: var(--green);
+    box-shadow: 0 0 20px rgba(77,175,115,0.15), 0 0 60px rgba(77,175,115,0.05), inset 0 0 20px rgba(77,175,115,0.05);
+  }
+  .btn-neon-green:active {
+    box-shadow: 0 0 40px rgba(77,175,115,0.3), 0 0 80px rgba(77,175,115,0.1), inset 0 0 30px rgba(77,175,115,0.1);
+  }
+
+  /* ============================================
+     13. SIZE DEMO
+  ============================================ */
+  .btn-sm { padding: 10px 20px; font-size: 13px; border-radius: 10px; }
+  .btn-md { padding: 16px 36px; font-size: 15px; border-radius: 14px; }
+  .btn-lg { padding: 20px 48px; font-size: 17px; border-radius: 16px; }
+  .btn-xl { padding: 24px 60px; font-size: 19px; border-radius: 18px; letter-spacing: -0.3px; }
+
+  /* ============================================
+     14. LOADING STATES
+  ============================================ */
+  .btn-loading {
+    padding: 16px 36px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.3s var(--ease-spring);
+    will-change: transform;
+  }
+  .btn-loading:active { transform: scale(0.97); }
+  .btn-loading .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    will-change: transform;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-loading .btn-label {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    will-change: opacity, transform;
+  }
+  .btn-loading.is-loading .btn-label {
+    opacity: 0.6;
+  }
+
+  .btn-success {
+    background: var(--green);
+  }
+  .btn-success .check-icon {
+    width: 16px; height: 16px;
+    stroke: #fff;
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    transition: stroke-dashoffset 0.4s var(--ease-out-expo);
+    will-change: stroke-dashoffset;
+  }
+  .btn-success.done .check-icon {
+    stroke-dashoffset: 0;
+  }
+
+  /* ============================================
+     LABEL UNDER BUTTONS
+  ============================================ */
+  .btn-label-text {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+    margin-top: 10px;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ============================================
+     FOOTER
+  ============================================ */
+  footer {
+    text-align: center;
+    padding: 80px 24px;
+    border-top: 1px solid var(--border);
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  footer p { font-size: 14px; color: var(--text-secondary); }
+  footer .a { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-label">// interactive showcase</div>
+  <h1>Your Buttons Look<br><span class="gradient-text">Boring… Try This</span></h1>
+  <p>14 button styles that make users want to click. Every single one is interactive — hover, click, and feel the difference.</p>
+</section>
+
+<!-- 1. Magnetic -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">01 — Magnetic Pull</div>
+    <div class="section-title">The button follows your cursor</div>
+    <div class="section-desc">Subtle attraction that makes the button feel alive</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-accent" data-magnetic>Get Started</button>
+      <div class="btn-label-text">Accent</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-magenta" data-magnetic>Subscribe</button>
+      <div class="btn-label-text">Magenta</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-cyan" data-magnetic>Learn More</button>
+      <div class="btn-label-text">Cyan</div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Liquid Fill -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">02 — Liquid Fill</div>
+    <div class="section-title">Color rises like liquid</div>
+    <div class="section-desc">Height transition from bottom with gloss overlay</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-liquid btn-liq-accent">Initialize</button>
+      <div class="btn-label-text">Accent Fill</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-liquid btn-liq-magenta">Connect</button>
+      <div class="btn-label-text">Magenta Fill</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-liquid btn-liq-green">Deploy</button>
+      <div class="btn-label-text">Green Fill</div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Gradient Border -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">03 — Rotating Border</div>
+    <div class="section-title">Conic gradient spins around the edge</div>
+    <div class="section-desc">Uses @property for smooth angle interpolation</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-gradient-border">Default Spin</button>
+      <div class="btn-label-text">Purple → Pink → Cyan</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-gradient-border btn-gb-magenta">Warm Spin</button>
+      <div class="btn-label-text">Pink → Yellow</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-gradient-border btn-gb-cyan">Cool Spin</button>
+      <div class="btn-label-text">Cyan → Green</div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Shimmer -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">04 — Shimmer Gloss</div>
+    <div class="section-title">Light sweeps across on hover</div>
+    <div class="section-desc">A skewed gradient slides left to right</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-shimmer btn-shim-accent">Purchase</button>
+      <div class="btn-label-text">Accent</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-shimmer btn-shim-magenta">Upgrade</button>
+      <div class="btn-label-text">Magenta</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-shimmer btn-shim-dark">Dark Mode</button>
+      <div class="btn-label-text">Dark Glass</div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Glow -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">05 — Glow Pulse</div>
+    <div class="section-title">Outline that ignites on hover</div>
+    <div class="section-desc">Blurred pseudo-element creates the neon glow</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-glow btn-glow-accent">Sign Up</button>
+      <div class="btn-label-text">Accent Glow</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-glow btn-glow-magenta">Subscribe</button>
+      <div class="btn-label-text">Magenta Glow</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-glow btn-glow-cyan">Explore</button>
+      <div class="btn-label-text">Cyan Glow</div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Particle Burst -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">06 — Particle Burst</div>
+    <div class="section-title">Click to explode</div>
+    <div class="section-desc">Particles fire outward from your click point</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-particle btn-part-accent" data-particles="accent">Launch</button>
+      <div class="btn-label-text">Accent Burst</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-particle btn-part-magenta" data-particles="magenta">Fire</button>
+      <div class="btn-label-text">Magenta Burst</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-particle btn-part-green" data-particles="green">Grow</button>
+      <div class="btn-label-text">Green Burst</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-particle btn-part-yellow" data-particles="yellow">Shine</button>
+      <div class="btn-label-text">Yellow Burst</div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. Morph -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">07 — Shape Morph</div>
+    <div class="section-title">Border-radius transforms on hover</div>
+    <div class="section-desc">Pill becomes rectangle, rectangle becomes pill</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-morph">Pill → Square</button>
+      <div class="btn-label-text">Pill Morph</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-morph btn-morph-2">Square → Pill</button>
+      <div class="btn-label-text">Reverse Morph</div>
+    </div>
+  </div>
+</div>
+
+<!-- 8. 3D Tilt -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">08 — 3D Tilt</div>
+    <div class="section-title">The button tilts toward your cursor</div>
+    <div class="section-desc">Perspective transforms create physical depth</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <div class="btn-3d-wrap">
+        <button class="btn btn-3d" data-tilt>Get Started</button>
+      </div>
+      <div class="btn-label-text">Accent Tilt</div>
+    </div>
+    <div class="btn-group">
+      <div class="btn-3d-wrap">
+        <button class="btn btn-3d btn-3d-magenta" data-tilt>Download</button>
+      </div>
+      <div class="btn-label-text">Magenta Tilt</div>
+    </div>
+  </div>
+</div>
+
+<!-- 9. Text Reveal -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">09 — Text Swap</div>
+    <div class="section-title">Text slides out, new text slides in</div>
+    <div class="section-desc">Two layers with opposite translateY transitions</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-text-reveal btn-tr-accent">
+        <span class="btn-text-static">Save</span>
+        <span class="btn-text-dynamic">Saved ✓</span>
+      </button>
+      <div class="btn-label-text">Save Toggle</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-text-reveal btn-tr-magenta">
+        <span class="btn-text-static">Follow</span>
+        <span class="btn-text-dynamic">Following ✓</span>
+      </button>
+      <div class="btn-label-text">Follow Toggle</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-text-reveal btn-tr-green">
+        <span class="btn-text-static">Send</span>
+        <span class="btn-text-dynamic">Sent ✓</span>
+      </button>
+      <div class="btn-label-text">Send Toggle</div>
+    </div>
+  </div>
+</div>
+
+<!-- 10. Icon Flip -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">10 — Icon Flip</div>
+    <div class="section-title">Icon rotates and swaps on hover</div>
+    <div class="section-desc">Two overlapping SVGs with cross-fade rotation</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-icon-flip btn-if-accent">
+        Next Step
+        <span class="flip-icon">
+          <svg class="icon-default" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <svg class="icon-hover" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>
+        </span>
+      </button>
+      <div class="btn-label-text">Arrow Flip</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-icon-flip btn-if-magenta">
+        Download
+        <span class="flip-icon">
+          <svg class="icon-default" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg class="icon-hover" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+      </button>
+      <div class="btn-label-text">Download → Check</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-icon-flip btn-if-cyan">
+        Share
+        <span class="flip-icon">
+          <svg class="icon-default" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <svg class="icon-hover" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </span>
+      </button>
+      <div class="btn-label-text">Share → Export</div>
+    </div>
+  </div>
+</div>
+
+<!-- 11. Outline Draw -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">11 — SVG Draw</div>
+    <div class="section-title">Border draws itself on hover</div>
+    <div class="section-desc">stroke-dashoffset transition traces the rectangle</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-draw btn-draw-accent">
+        Sign Up
+        <svg class="draw-svg"><rect x="1" y="1" width="100%" height="100%"/></svg>
+      </button>
+      <div class="btn-label-text">Accent Draw</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-draw btn-draw-magenta">
+        Subscribe
+        <svg class="draw-svg"><rect x="1" y="1" width="100%" height="100%"/></svg>
+      </button>
+      <div class="btn-label-text">Magenta Draw</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-draw btn-draw-cyan">
+        Explore
+        <svg class="draw-svg"><rect x="1" y="1" width="100%" height="100%"/></svg>
+      </button>
+      <div class="btn-label-text">Cyan Draw</div>
+    </div>
+  </div>
+</div>
+
+<!-- 12. Neon Press -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">12 — Neon Press</div>
+    <div class="section-title">Glow intensifies on click</div>
+    <div class="section-desc">Hover glows subtly, click ignites fully</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-neon btn-neon-accent">Activate</button>
+      <div class="btn-label-text">Accent Neon</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-neon btn-neon-magenta">Ignite</button>
+      <div class="btn-label-text">Magenta Neon</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-neon btn-neon-green">Enable</button>
+      <div class="btn-label-text">Green Neon</div>
+    </div>
+  </div>
+</div>
+
+<!-- 13. Sizes -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">13 — Scale System</div>
+    <div class="section-title">Consistent sizing hierarchy</div>
+    <div class="section-desc">Four sizes that work together</div>
+  </div>
+  <div class="btn-row" style="align-items: flex-end; gap: 16px;">
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-accent btn-sm" data-magnetic>Small</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-accent btn-md" data-magnetic>Medium</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-accent btn-lg" data-magnetic>Large</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-magnetic btn-mag-accent btn-xl" data-magnetic>Extra Large</button>
+    </div>
+  </div>
+</div>
+
+<!-- 14. Loading States -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">14 — State Machine</div>
+    <div class="section-title">Idle → Loading → Success</div>
+    <div class="section-desc">Click to cycle through button states</div>
+  </div>
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn btn-loading" id="loadBtn1" data-load>
+        <span class="spinner" style="display:none;"></span>
+        <span class="btn-label">Deploy Now</span>
+        <svg class="check-icon" style="display:none;" viewBox="0 0 24 24"><polyline points="5,12 10,17 19,7"/></svg>
+      </button>
+      <div class="btn-label-text">Click to Demo</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-loading btn-success" id="loadBtn2" data-load>
+        <span class="spinner" style="display:none;"></span>
+        <span class="btn-label">Save Changes</span>
+        <svg class="check-icon" style="display:none;" viewBox="0 0 24 24"><polyline points="5,12 10,17 19,7"/></svg>
+      </button>
+      <div class="btn-label-text">Click to Demo</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>14 button styles · <span class="a">zero dependencies</span> · pure CSS + minimal JS</p>
+</footer>
+
+<script>
+  // ============================================
+  // 1. MAGNETIC PULL
+  // ============================================
+  document.querySelectorAll('[data-magnetic]').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = '';
+    });
+  });
+
+  // ============================================
+  // 6. PARTICLE BURST
+  // ============================================
+  const particleColors = {
+    accent: ['#5E6AD2', '#7C3AED', '#8B5CF6', '#A78BFA', '#C4B5FD'],
+    magenta: ['#EC4899', '#F472B6', '#FB7185', '#FDA4AF', '#FECDD3'],
+    green: ['#4DAF73', '#6EE7B7', '#34D399', '#10B981', '#059669'],
+    yellow: ['#E2B340', '#FCD34D', '#FBBF24', '#F59E0B', '#D97706']
+  };
+
+  document.querySelectorAll('[data-particles]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const colors = particleColors[btn.dataset.particles] || particleColors.accent;
+
+      for (let i = 0; i < 12; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 6 + 3;
+        const angle = (Math.PI * 2 / 12) * i + (Math.random() - 0.5) * 0.8;
+        const dist = 40 + Math.random() * 50;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        p.style.cssText = `
+          width: ${size}px; height: ${size}px;
+          background: ${colors[i % colors.length]};
+          left: ${x - size/2}px; top: ${y - size/2}px;
+          box-shadow: 0 0 ${size}px ${colors[i % colors.length]};
+        `;
+        btn.appendChild(p);
+        p.animate([
+          { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 }
+        ], { duration: 600 + Math.random() * 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+        setTimeout(() => p.remove(), 900);
+      }
+    });
+  });
+
+  // ============================================
+  // 8. 3D TILT
+  // ============================================
+  document.querySelectorAll('[data-tilt]').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const rect = btn.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      const rotateX = (y - 0.5) * -20;
+      const rotateY = (x - 0.5) * 20;
+      btn.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'rotateX(0) rotateY(0)';
+      btn.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+      setTimeout(() => { btn.style.transition = 'transform 0.15s ease, box-shadow 0.3s ease'; }, 500);
+    });
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transition = 'transform 0.15s ease, box-shadow 0.3s ease';
+    });
+  });
+
+  // ============================================
+  // 14. LOADING STATE MACHINE
+  // ============================================
+  document.querySelectorAll('[data-load]').forEach(btn => {
+    const spinner = btn.querySelector('.spinner');
+    const label = btn.querySelector('.btn-label');
+    const check = btn.querySelector('.check-icon');
+    let state = 'idle'; // idle → loading → done
+
+    btn.addEventListener('click', () => {
+      if (state === 'loading') return;
+
+      if (state === 'done') {
+        // Reset
+        state = 'idle';
+        spinner.style.display = 'none';
+        check.style.display = 'none';
+        label.style.display = '';
+        btn.classList.remove('is-loading', 'done', 'btn-success');
+        label.textContent = btn.id === 'loadBtn1' ? 'Deploy Now' : 'Save Changes';
+        return;
+      }
+
+      // Start loading
+      state = 'loading';
+      label.style.display = '';
+      spinner.style.display = '';
+      check.style.display = 'none';
+      btn.classList.add('is-loading');
+      btn.classList.remove('done', 'btn-success');
+
+      // Done
+      setTimeout(() => {
+        state = 'done';
+        spinner.style.display = 'none';
+        check.style.display = '';
+        label.style.display = 'none';
+        btn.classList.remove('is-loading');
+        btn.classList.add('done', 'btn-success');
+      }, 1800);
+    });
+  });
+
+  // ============================================
+  // SECTION REVEAL
+  // ============================================
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
+</script>
+</body>
+</html>

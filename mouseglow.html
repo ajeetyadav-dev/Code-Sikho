@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Illegal Mouse Glow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #030305;
+    --surface: #0a0a0f;
+    --text: #F7F8F8;
+    --text-secondary: #6a6a7a;
+    --accent: #5E6AD2;
+    --magenta: #EC4899;
+    --cyan: #06B6D4;
+    --green: #4DAF73;
+    --yellow: #E2B340;
+    --border: rgba(255, 255, 255, 0.04);
+    --mx: -200px;
+    --my: -200px;
+    --rx: -200px;
+    --ry: -200px;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    cursor: none;
+  }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+  /* ============================================
+     THE GLOW LAYERS — THIS IS THE MAGIC
+  ============================================ */
+
+  /* Layer 1: Giant ambient glow — follows SLOW */
+  .glow-ambient {
+    position: fixed;
+    width: 800px; height: 800px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(94,106,210,0.06), transparent 60%);
+    pointer-events: none;
+    z-index: 1;
+    transform: translate(var(--rx), var(--ry));
+    will-change: transform;
+    filter: blur(40px);
+    backface-visibility: hidden;
+  }
+
+  /* Layer 2: Medium color glow — follows MEDIUM */
+  .glow-color {
+    position: fixed;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    transform: translate(var(--mx), var(--my));
+    will-change: transform;
+    filter: blur(30px);
+    backface-visibility: hidden;
+    mix-blend-mode: screen;
+    transition: background 0.8s ease;
+    background: radial-gradient(circle, rgba(94,106,210,0.12), transparent 60%);
+  }
+
+  /* Layer 3: Sharp inner glow — follows FAST (near cursor) */
+  .glow-sharp {
+    position: fixed;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.06), transparent 70%);
+    pointer-events: none;
+    z-index: 3;
+    transform: translate(var(--mx), var(--my));
+    will-change: transform;
+    filter: blur(10px);
+    backface-visibility: hidden;
+  }
+
+  /* Layer 4: Tiny white dot — exact cursor position */
+  .cursor-dot {
+    position: fixed;
+    width: 8px; height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    will-change: transform;
+    mix-blend-mode: difference;
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+
+  /* Layer 5: Ring around cursor */
+  .cursor-ring {
+    position: fixed;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9997;
+    transform: translate(-50%, -50%);
+    will-change: transform, width, height, border-color;
+    transition: width 0.4s var(--ease-out-expo), height 0.4s var(--ease-out-expo), border-color 0.3s ease;
+  }
+  .cursor-ring.hovering {
+    width: 60px; height: 60px;
+    border-color: var(--accent);
+  }
+
+  /* Layer 6: Trail particles */
+  .trail-dot {
+    position: fixed;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    will-change: transform, opacity;
+    background: var(--accent);
+    backface-visibility: hidden;
+  }
+
+  @media (hover: none) {
+    .glow-ambient, .glow-color, .glow-sharp,
+    .cursor-dot, .cursor-ring, .trail-dot { display: none; }
+    body { cursor: auto; }
+  }
+
+  /* ============================================
+     GRAIN
+  ============================================ */
+  .grain {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ============================================
+     PROGRESS BAR
+  ============================================ */
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--magenta), var(--cyan));
+    z-index: 100;
+    width: 0%;
+    will-change: width;
+    opacity: 0.6;
+  }
+
+  /* ============================================
+     HERO
+  ============================================ */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    position: relative;
+    z-index: 5;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px 8px;
+    background: rgba(94,106,210,0.06);
+    border: 1px solid rgba(94,106,210,0.12);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: up 0.8s 0.2s var(--ease-out-expo) forwards;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+  @keyframes up { to { opacity:1; transform:translateY(0); } }
+
+  .hero h1 {
+    font-size: clamp(44px, 8vw, 96px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -3px;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: up 1s 0.4s var(--ease-out-expo) forwards;
+  }
+  .hero h1 .gradient-text {
+    background: linear-gradient(135deg, var(--accent), var(--magenta), var(--cyan));
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradShift 5s ease-in-out infinite;
+  }
+  @keyframes gradShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 520px;
+    line-height: 1.6;
+    opacity: 0;
+    animation: up 0.8s 0.7s var(--ease-out-expo) forwards;
+  }
+
+  .hero-hint {
+    margin-top: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: up 0.8s 1s var(--ease-out-expo) forwards;
+  }
+  .hero-hint-line {
+    width: 40px; height: 1px;
+    background: var(--text-secondary);
+    opacity: 0.3;
+  }
+  .hero-hint span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* ============================================
+     SECTIONS
+  ============================================ */
+  .section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 24px;
+    position: relative;
+    z-index: 5;
+  }
+  .section-header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  }
+  .section-title {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 600;
+    letter-spacing: -1.5px;
+    margin-bottom: 10px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo) 0.1s, transform 0.7s var(--ease-out-expo) 0.1s;
+  }
+  .section-desc {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo) 0.2s, transform 0.7s var(--ease-out-expo) 0.2s;
+  }
+  .section-header.visible .section-num,
+  .section-header.visible .section-title,
+  .section-header.visible .section-desc {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ============================================
+     SPOTLIGHT CARDS — glow passes THROUGH
+  ============================================ */
+  .spotlight-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 768px) { .spotlight-grid { grid-template-columns: 1fr; } }
+
+  .spotlight-card {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: none;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  }
+  .spotlight-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .spotlight-card .card-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    transition: border-color 0.4s ease;
+    z-index: 1;
+  }
+  .spotlight-card:hover .card-bg {
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  /* THE SPOTLIGHT — light passes through the card */
+  .spotlight-card .card-light {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    overflow: hidden;
+  }
+  .spotlight-card:hover .card-light { opacity: 1; }
+  .spotlight-card .card-light::after {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(94,106,210,0.1), transparent 60%);
+    transform: translate(var(--card-mx, -200px), var(--card-my, -200px));
+    will-change: transform;
+    pointer-events: none;
+  }
+
+  .spotlight-card .card-content {
+    position: relative;
+    z-index: 3;
+    padding: 32px 24px;
+  }
+  .spotlight-card .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 20px;
+    transition: transform 0.5s var(--ease-spring);
+    will-change: transform;
+  }
+  .spotlight-card:hover .card-icon {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  .spotlight-card h3 {
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
+  }
+  .spotlight-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ============================================
+     TEXT REVEAL — only visible in the light
+  ============================================ */
+  .reveal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 768px) { .reveal-grid { grid-template-columns: 1fr; } }
+
+  .reveal-card {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    height: 200px;
+    cursor: none;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  }
+  .reveal-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-card .reveal-dark {
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: clip-path 0.6s var(--ease-out-expo);
+    clip-path: circle(100% at 50% 50%);
+    will-change: clip-path;
+  }
+  .reveal-card:hover .reveal-dark {
+    clip-path: circle(0% at var(--reveal-x, 50%) var(--reveal-y, 50%));
+  }
+  .reveal-card .reveal-dark .eye-icon {
+    font-size: 20px;
+    opacity: 0.5;
+  }
+
+  .reveal-card .reveal-bright {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    padding: 24px;
+  }
+  .reveal-card .reveal-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  .reveal-card .reveal-bright h3 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    position: relative;
+    z-index: 1;
+  }
+  .reveal-card .reveal-bright p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Color variants */
+  .rv-accent .reveal-glow { background: radial-gradient(circle, rgba(94,106,210,0.15), transparent 70%); }
+  .rv-accent .reveal-bright h3 { color: var(--accent); }
+  .rv-magenta .reveal-glow { background: radial-gradient(circle, rgba(236,72,153,0.15), transparent 70%); }
+  .rv-magenta .reveal-bright h3 { color: var(--magenta); }
+  .rv-cyan .reveal-glow { background: radial-gradient(circle, rgba(6,182,212,0.15), transparent 70%); }
+  .rv-cyan .reveal-bright h3 { color: var(--cyan); }
+  .rv-green .reveal-glow { background: radial-gradient(circle, rgba(77,175,115,0.15), transparent 70%); }
+  .rv-green .reveal-bright h3 { color: var(--green); }
+
+  /* ============================================
+     PROXIMITY GRID — elements react to distance
+  ============================================ */
+  .prox-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 768px) { .prox-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 480px) { .prox-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .prox-dot {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: transform 0.4s var(--ease-out-expo), background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    will-change: transform, background, border-color, box-shadow;
+    position: relative;
+    overflow: hidden;
+  }
+  .prox-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(94,106,210,0.3), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    will-change: opacity;
+  }
+  .prox-dot.reactive::after { opacity: 1; }
+  .prox-dot.reactive {
+    background: rgba(94,106,210,0.1);
+    border-color: rgba(94,106,210,0.2);
+    box-shadow: 0 0 15px rgba(94,106,210,0.1);
+  }
+
+  /* ============================================
+     COLOR SHIFT SECTION
+  ============================================ */
+  .color-showcase {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .color-orb {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    position: relative;
+    cursor: none;
+    transition: transform 0.5s var(--ease-spring), box-shadow 0.5s ease;
+    will-change: transform;
+  }
+  .color-orb:hover { transform: scale(1.15); }
+  .color-orb .orb-inner {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    transition: filter 0.5s ease;
+    will-change: filter;
+  }
+  .color-orb:hover .orb-inner {
+    filter: brightness(1.3);
+  }
+  .color-orb .orb-ring {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    transition: border-color 0.5s ease, transform 0.5s var(--ease-spring);
+    will-change: border-color, transform;
+  }
+  .color-orb:hover .orb-ring {
+    transform: scale(1.1);
+  }
+  .orb-accent .orb-inner { background: radial-gradient(circle at 35% 35%, #818CF8, var(--accent), #3730A3); }
+  .orb-accent:hover .orb-ring { border-color: rgba(94,106,210,0.3); }
+  .orb-accent:hover { box-shadow: 0 0 60px rgba(94,106,210,0.3); }
+  .orb-magenta .orb-inner { background: radial-gradient(circle at 35% 35%, #F9A8D4, var(--magenta), #9D174D); }
+  .orb-magenta:hover .orb-ring { border-color: rgba(236,72,153,0.3); }
+  .orb-magenta:hover { box-shadow: 0 0 60px rgba(236,72,153,0.3); }
+  .orb-cyan .orb-inner { background: radial-gradient(circle at 35% 35%, #67E8F9, var(--cyan), #0E7490); }
+  .orb-cyan:hover .orb-ring { border-color: rgba(6,182,212,0.3); }
+  .orb-cyan:hover { box-shadow: 0 0 60px rgba(6,182,212,0.3); }
+  .orb-green .orb-inner { background: radial-gradient(circle at 35% 35%, #6EE7B7, var(--green), #065F46); }
+  .orb-green:hover .orb-ring { border-color: rgba(77,175,115,0.3); }
+  .orb-green:hover { box-shadow: 0 0 60px rgba(77,175,115,0.3); }
+
+  .color-label {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .color-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ============================================
+     THE WALL — huge proximity-reactive text
+  ============================================ */
+  .wall-section {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 24px;
+    position: relative;
+    z-index: 5;
+  }
+  .wall-text {
+    font-size: clamp(48px, 10vw, 140px);
+    font-weight: 600;
+    letter-spacing: -4px;
+    line-height: 1;
+    position: relative;
+  }
+  .wall-word {
+    display: inline-block;
+    transition: color 0.4s ease, text-shadow 0.4s ease, transform 0.5s var(--ease-spring);
+    will-change: color, text-shadow, transform;
+    color: rgba(255,255,255,0.06);
+    margin: 0 0.05em;
+  }
+  .wall-word.lit {
+    color: var(--text);
+    text-shadow: 0 0 40px rgba(94,106,210,0.2);
+  }
+  .wall-word.bright {
+    color: #fff;
+    text-shadow: 0 0 60px var(--accent-glow);
+    transform: scale(1.05);
+  }
+  .wall-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    margin-top: 32px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .wall-sub.show { opacity: 1; }
+
+  /* ============================================
+     FOOTER
+  ============================================ */
+  footer {
+    text-align: center;
+    padding: 80px 24px;
+    border-top: 1px solid var(--border);
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 5;
+  }
+  footer p { font-size: 14px; color: var(--text-secondary); }
+  footer .a { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+
+<!-- ============================================
+     GLOW LAYERS
+============================================== -->
+<div class="glow-ambient" id="glowAmbient"></div>
+<div class="glow-color" id="glowColor"></div>
+<div class="glow-sharp" id="glowSharp"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">
+    <div class="badge-dot"></div>
+    Move your mouse
+  </div>
+  <h1>The Glow Effect<br>That Feels <span class="gradient-text">Illegal</span></h1>
+  <p class="hero-sub">Six layered glow systems, proximity-reactive elements, hidden text reveals, and a color-shifting trail — all running at 60fps.</p>
+  <div class="hero-hint">
+    <div class="hero-hint-line"></div>
+    <span>Move slowly to feel it</span>
+    <div class="hero-hint-line"></div>
+  </div>
+</section>
+
+<!-- 1: Spotlight Cards -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">01 — Spotlight Pass-Through</div>
+    <div class="section-title">Light passes through the cards</div>
+    <div class="section-desc">Each card has its own radial gradient that follows your cursor independently</div>
+  </div>
+  <div class="spotlight-grid" id="spotlightGrid">
+    <div class="spotlight-card" data-delay="0">
+      <div class="card-bg"></div>
+      <div class="card-light"></div>
+      <div class="card-content">
+        <div class="card-icon" style="background:rgba(94,106,210,0.12);">⚡</div>
+        <h3>GPU Compositing</h3>
+        <p>Only transform and opacity — the compositor thread never sleeps.</p>
+      </div>
+    </div>
+    <div class="spotlight-card" data-delay="1">
+      <div class="card-bg"></div>
+      <div class="card-light"></div>
+      <div class="card-content">
+        <div class="card-icon" style="background:rgba(236,72,153,0.12);">✦</div>
+        <h3>Lerp Smoothing</h3>
+        <p>Different speeds for each layer create organic parallax depth.</p>
+      </div>
+    </div>
+    <div class="spotlight-card" data-delay="2">
+      <div class="card-bg"></div>
+      <div class="card-light"></div>
+      <div class="card-content">
+        <div class="card-icon" style="background:rgba(6,182,212,0.12);">◈</div>
+        <h3>Multi-Layer Stack</h3>
+        <p>Six independent glow layers at different sizes and blur levels.</p>
+      </div>
+    </div>
+    <div class="spotlight-card" data-delay="3">
+      <div class="card-bg"></div>
+      <div class="card-light"></div>
+      <div class="card-content">
+        <div class="card-icon" style="background:rgba(77,175,115,0.12);">🧬</div>
+        <h3>Proximity Field</h3>
+        <p>Elements react based on distance from cursor, not just hover state.</p>
+      </div>
+    </div>
+    <div class="spotlight-card" data-delay="4">
+      <div class="card-bg"></div>
+      <div class="card-light"></div>
+      <div class="card-content">
+        <div class="card-icon" style="background:rgba(226,179,64,0.12);">👁️</div>
+        <h3>Hidden Reveals</h3>
+        <p>Content only appears when the light passes over it — clip-path magic.</p>
+      </div>
+    </div>
+    <div class="spotlight-card" data-delay="5">
+      <div class="card-bg"></div>
+      <div class="card-light"></div>
+      <div class="card-content">
+        <div class="card-icon" style="background:rgba(139,92,246,0.12);">🔮</div>
+        <h3>Color Shift</h3>
+        <p>The glow color changes based on cursor position — continuous hue rotation.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2: Text Reveal -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">02 — Darkness Reveals Light</div>
+    <div class="section-title">Hover to pierce the darkness</div>
+    <div class="section-desc">clip-path circle shrinks from your cursor position, revealing hidden content</div>
+  </div>
+  <div class="reveal-grid" id="revealGrid">
+    <div class="reveal-card rv-accent" data-delay="0">
+      <div class="reveal-dark"><span class="eye-icon">👁️</span> Hover to reveal</div>
+      <div class="reveal-glow"></div>
+      <div class="reveal-bright"><h3>Neural Link</h3><p>Direct interface between thought and digital realm</p></div>
+    </div>
+    <div class="reveal-card rv-magenta" data-delay="1">
+      <div class="reveal-dark"><span class="eye-icon">👁️</span> Hover to reveal</div>
+      <div class="reveal-glow"></div>
+      <div class="reveal-bright"><h3>Quantum Core</h3><p>Processing power beyond classical limits</p></div>
+    </div>
+    <div class="reveal-card rv-cyan" data-delay="2">
+      <div class="reveal-dark"><span class="eye-icon">👁️</span> Hover to reveal</div>
+      <div class="reveal-glow"></div>
+      <div class="reveal-bright"><h3>Void Engine</h3><p>Rendering reality from pure mathematics</p></div>
+    </div>
+    <div class="reveal-card rv-green" data-delay="3">
+      <div class="reveal-dark"><span class="eye-icon">👁️</span> Hover to reveal</div>
+      <div class="reveal-glow"></div>
+      <div class="reveal-bright"><h3>Bio Circuit</h3><p>Organic computing that grows and adapts</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3: Proximity Grid -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">03 — Proximity Field</div>
+    <div class="section-title">Dots react to distance</div>
+    <div class="section-desc">No hover needed — elements within range illuminate based on proximity</div>
+  </div>
+  <div class="prox-grid" id="proxGrid"></div>
+</div>
+
+<!-- 4: Color Orbs -->
+<div class="section">
+  <div class="section-header" data-reveal>
+    <div class="section-num">04 — Color Shift</div>
+    <div class="section-title">Glow color follows position</div>
+    <div class="section-desc">The main glow layer shifts hue based on your cursor's X position</div>
+  </div>
+  <div class="color-showcase">
+    <div class="color-group">
+      <div class="color-orb orb-accent"></div>
+      <div class="color-label">Indigo</div>
+    </div>
+    <div class="color-group">
+      <div class="color-orb orb-magenta"></div>
+      <div class="color-label">Rose</div>
+    </div>
+    <div class="color-group">
+      <div class="color-orb orb-cyan"></div>
+      <div class="color-label">Cyan</div>
+    </div>
+    <div class="color-group">
+      <div class="color-orb orb-green"></div>
+      <div class="color-label">Emerald</div>
+    </div>
+  </div>
+</div>
+
+<!-- 5: The Wall -->
+<div class="wall-section">
+  <div class="wall-text" id="wallText"></div>
+  <div class="wall-sub" id="wallSub">move your cursor across the text</div>
+</div>
+
+<footer>
+  <p>Six glow layers · proximity physics · <span class="a">zero dependencies</span></p>
+</footer>
+
+<script>
+  // ============================================
+  // CORE GLOW ENGINE
+  // ============================================
+  const cursorDot = document.getElementById('cursorDot');
+  const cursorRing = document.getElementById('cursorRing');
+  const glowAmbient = document.getElementById('glowAmbient');
+  const glowColor = document.getElementById('glowColor');
+  const glowSharp = document.getElementById('glowSharp');
+  const progress = document.getElementById('progress');
+
+  // State
+  let mouseX = -500, mouseY = -500;
+  let dotX = -500, dotY = -500;
+  let ringX = -500, ringY = -500;
+  let sharpX = -500, sharpY = -500;
+  let colorX = -500, colorY = -500;
+  let ambientX = -500, ambientY = -500;
+
+  // Trail system
+  const TRAIL_COUNT = 8;
+  const trailPositions = [];
+  const trailDots = [];
+  for (let i = 0; i < TRAIL_COUNT; i++) {
+    trailPositions.push({ x: -500, y: -500 });
+    const dot = document.createElement('div');
+    dot.className = 'trail-dot';
+    dot.style.opacity = (1 - i / TRAIL_COUNT) * 0.4;
+    dot.style.width = dot.style.height = (4 - i * 0.3) + 'px';
+    document.body.appendChild(dot);
+    trailDots.push(dot);
+  }
+
+  // Mouse tracking
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  // Smooth interpolation loop
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function animateGlow() {
+    // Layer speeds: dot is instant, ring is fast, sharp is medium, color is slow, ambient is slowest
+    dotX = mouseX;
+    dotY = mouseY;
+    ringX = lerp(ringX, mouseX, 0.2);
+    ringY = lerp(ringY, mouseY, 0.2);
+    sharpX = lerp(sharpX, mouseX, 0.12);
+    sharpY = lerp(sharpY, mouseY, 0.12);
+    colorX = lerp(colorX, mouseX, 0.06);
+    colorY = lerp(colorY, mouseY, 0.06);
+    ambientX = lerp(ambientX, mouseX, 0.03);
+    ambientY = lerp(ambientY, mouseY, 0.03);
+
+    cursorDot.style.transform = `translate(${dotX - 4}px, ${dotY - 4}px)`;
+    cursorRing.style.transform = `translate(${ringX - 20}px, ${ringY - 20}px)`;
+    glowSharp.style.transform = `translate(${sharpX - 100}px, ${sharpY - 100}px)`;
+    glowColor.style.transform = `translate(${colorX - 250}px, ${colorY - 250}px)`;
+    glowAmbient.style.transform = `translate(${ambientX - 400}px, ${ambientY - 400}px)`;
+
+    // Color shift based on X position
+    const xPercent = mouseX / window.innerWidth;
+    const hue = 220 + xPercent * 160; // 220 (blue) → 380 (pink)
+    glowColor.style.background = `radial-gradient(circle, hsla(${hue}, 70%, 55%, 0.12), transparent 60%)`;
+
+    // Trail
+    trailPositions.unshift({ x: mouseX, y: mouseY });
+    if (trailPositions.length > TRAIL_COUNT) trailPositions.pop();
+    for (let i = 0; i < TRAIL_COUNT; i++) {
+      const pos = trailPositions[Math.min(i, trailPositions.length - 1)];
+      const smoothX = lerp(parseFloat(trailDots[i].style.left || pos.x), pos.x, 0.3 - i * 0.03);
+      const smoothY = lerp(parseFloat(trailDots[i].style.top || pos.y), pos.y, 0.3 - i * 0.03);
+      trailDots[i].style.left = smoothX + 'px';
+      trailDots[i].style.top = smoothY + 'px';
+      trailDots[i].style.background = `hsla(${hue}, 70%, 55%, ${(1 - i / TRAIL_COUNT) * 0.6})`;
+    }
+
+    // Proximity grid
+    updateProximity();
+
+    // Wall text
+    updateWall();
+
+    requestAnimationFrame(animateGlow);
+  }
+  animateGlow();
+
+  // Scroll progress
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.width = ((y / h) * 100) + '%';
+  }, { passive: true });
+
+  // Cursor hover state
+  document.querySelectorAll('a, button, .spotlight-card, .reveal-card, .color-orb').forEach(el => {
+    el.addEventListener('mouseenter', () => cursorRing.classList.add('hovering'));
+    el.addEventListener('mouseleave', () => cursorRing.classList.remove('hovering'));
+  });
+
+  // ============================================
+  // SPOTLIGHT CARDS — per-card cursor tracking
+  // ============================================
+  document.querySelectorAll('.spotlight-card').forEach(card => {
+    const light = card.querySelector('.card-light');
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      light.style.setProperty('--card-mx', (x - 200) + 'px');
+      light.style.setProperty('--card-my', (y - 200) + 'px');
+    });
+  });
+
+  // ============================================
+  // REVEAL CARDS — clip-path follows cursor
+  // ============================================
+  document.querySelectorAll('.reveal-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+      card.style.setProperty('--reveal-x', xPercent + '%');
+      card.style.setProperty('--reveal-y', yPercent + '%');
+    });
+  });
+
+  // ============================================
+  // PROXIMITY GRID
+  // ============================================
+  const proxGrid = document.getElementById('proxGrid');
+  const PROX_COUNT = 42;
+  const proxDots = [];
+  for (let i = 0; i < PROX_COUNT; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'prox-dot';
+    proxGrid.appendChild(dot);
+    proxDots.push(dot);
+  }
+
+  const PROX_RADIUS = 150;
+
+  function updateProximity() {
+    proxDots.forEach(dot => {
+      const rect = dot.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = mouseX - cx;
+      const dy = mouseY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < PROX_RADIUS) {
+        const intensity = 1 - dist / PROX_RADIUS;
+        const scale = 1 + intensity * 0.4;
+        dot.classList.add('reactive');
+        dot.style.transform = `scale(${scale})`;
+      } else {
+        dot.classList.remove('reactive');
+        dot.style.transform = 'scale(1)';
+      }
+    });
+  }
+
+  // ============================================
+  // THE WALL — word-by-word proximity
+  // ============================================
+  const wallText = document.getElementById('wallText');
+  const wallSub = document.getElementById('wallSub');
+  const wallWords = ['LIGHT', 'REVEALS', 'WHAT', 'DARKNESS', 'HIDES'];
+  const wallWordEls = [];
+
+  wallWords.forEach(word => {
+    const span = document.createElement('span');
+    span.className = 'wall-word';
+    span.textContent = word;
+    wallText.appendChild(span);
+    wallWordEls.push(span);
+  });
+
+  const WALL_RADIUS = 250;
+  let wallActive = false;
+
+  function updateWall() {
+    let anyLit = false;
+    wallWordEls.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = mouseX - cx;
+      const dy = mouseY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      el.classList.remove('lit', 'bright');
+      if (dist < WALL_RADIUS) {
+        anyLit = true;
+        const intensity = 1 - dist / WALL_RADIUS;
+        if (intensity > 0.6) {
+          el.classList.add('bright');
+        } else {
+          el.classList.add('lit');
+        }
+      }
+    });
+    wallSub.classList.toggle('show', anyLit);
+  }
+
+  // ============================================
+  // SCROLL REVEALS
+  // ============================================
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        if (entry.target.hasAttribute('data-reveal')) {
+          entry.target.classList.add('visible');
+        } else {
+          const delay = parseInt(entry.target.dataset.delay || 0) * 80;
+          setTimeout(() => entry.target.classList.add('visible'), delay);
+        }
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('[data-reveal], .spotlight-card, .reveal-card').forEach(el => {
+    revealObserver.observe(el);
+  });
+</script>
+</body>
+</html>

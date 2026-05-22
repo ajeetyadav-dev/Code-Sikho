@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premium Navbar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050505;
+    --surface: #0E0E11;
+    --text: #F7F8F8;
+    --text-secondary: #8A8F98;
+    --accent: #5E6AD2;
+    --accent-glow: rgba(94, 106, 210, 0.35);
+    --magenta: #EC4899;
+    --cyan: #06B6D4;
+    --green: #4DAF73;
+    --yellow: #E2B340;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-hover: rgba(255, 255, 255, 0.12);
+    --nav-height: 64px;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  html { scroll-behavior: smooth; scroll-padding-top: var(--nav-height); }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .grain {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9999;
+    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ============================================
+     THE NAVBAR
+  ============================================ */
+  .navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--nav-height);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    transition: transform 0.5s var(--ease-out-expo), background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    will-change: transform;
+  }
+  .navbar.hidden { transform: translateY(-100%); }
+
+  .navbar-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.6);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border-bottom: 1px solid transparent;
+    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    will-change: background, border-color;
+  }
+  .navbar.scrolled .navbar-bg {
+    background: rgba(5, 5, 5, 0.85);
+    border-bottom-color: var(--border);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+  }
+
+  /* Progress bar inside nav */
+  .nav-progress {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--magenta), var(--cyan));
+    background-size: 200% 100%;
+    animation: gradSlide 3s linear infinite;
+    width: 0%;
+    z-index: 2;
+    will-change: width;
+    border-radius: 0 1px 1px 0;
+  }
+  @keyframes gradSlide { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+
+  .nav-inner {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 8px;
+  }
+
+  /* Logo */
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+    flex-shrink: 0;
+    margin-right: 24px;
+  }
+  .nav-logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.5s var(--ease-spring), box-shadow 0.4s ease;
+    will-change: transform;
+    position: relative;
+    overflow: hidden;
+  }
+  .nav-logo-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2));
+    border-radius: 9px;
+  }
+  .nav-logo:hover .nav-logo-icon {
+    transform: rotate(-8deg) scale(1.1);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .nav-logo-icon svg {
+    width: 16px; height: 16px;
+    fill: none; stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    position: relative;
+    z-index: 1;
+  }
+  .nav-logo-text {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  /* Nav Links */
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    flex: 1;
+  }
+
+  .nav-link {
+    position: relative;
+  }
+  .nav-link > a {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    border-radius: 10px;
+    transition: color 0.25s ease, background 0.25s ease;
+    will-change: color, background;
+  }
+  .nav-link > a:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+  }
+  .nav-link.active > a {
+    color: var(--text);
+  }
+
+  /* Active indicator — sliding pill */
+  .nav-indicator {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: left 0.4s var(--ease-out-expo), width 0.4s var(--ease-out-expo), opacity 0.3s ease;
+    will-change: left, width, opacity;
+    box-shadow: 0 0 8px var(--accent-glow);
+    opacity: 0;
+  }
+  .nav-link.active .nav-indicator { opacity: 1; }
+
+  /* Dropdown arrow */
+  .nav-arrow {
+    width: 14px; height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s var(--ease-out-expo);
+    will-change: transform;
+  }
+  .nav-arrow svg {
+    width: 12px; height: 12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .nav-link.open .nav-arrow { transform: rotate(180deg); }
+
+  /* ============================================
+     MEGA DROPDOWN
+  ============================================ */
+  .mega-dropdown {
+    position: absolute;
+    top: calc(var(--nav-height) + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    width: 560px;
+    background: rgba(14, 14, 17, 0.95);
+    backdrop-filter: blur(30px) saturate(1.3);
+    -webkit-backdrop-filter: blur(30px) saturate(1.3);
+    border: 1px solid var(--border-hover);
+    border-radius: 20px;
+    padding: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.4s var(--ease-out-expo);
+    will-change: opacity, transform;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  }
+  .nav-link.open .mega-dropdown {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .mega-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+  .mega-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.25s ease, transform 0.3s var(--ease-spring);
+    will-change: background, transform;
+  }
+  .mega-item:hover {
+    background: rgba(255,255,255,0.04);
+    transform: translateX(4px);
+  }
+  .mega-item-icon {
+    width: 40px; height: 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: transform 0.4s var(--ease-spring);
+    will-change: transform;
+  }
+  .mega-item:hover .mega-item-icon { transform: scale(1.1) rotate(-5deg); }
+  .mega-item-text h4 {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
+  }
+  .mega-item-text p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* Dropdown arrow pointer */
+  .mega-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px; height: 12px;
+    background: rgba(14, 14, 17, 0.95);
+    border-left: 1px solid var(--border-hover);
+    border-top: 1px solid var(--border-hover);
+  }
+
+  /* ============================================
+     NAV RIGHT
+  ============================================ */
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .nav-icon-btn {
+    width: 38px; height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.3s var(--ease-spring);
+    will-change: transform;
+  }
+  .nav-icon-btn:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+  }
+  .nav-icon-btn:active { transform: scale(0.9); }
+  .nav-icon-btn svg {
+    width: 18px; height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Notification dot */
+  .notif-dot {
+    position: absolute;
+    top: 7px; right: 7px;
+    width: 7px; height: 7px;
+    background: var(--magenta);
+    border-radius: 50%;
+    border: 1.5px solid var(--bg);
+    box-shadow: 0 0 6px rgba(236,72,153,0.5);
+  }
+
+  .nav-cta {
+    padding: 8px 20px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s var(--ease-spring), box-shadow 0.3s ease, background 0.3s ease;
+    will-change: transform;
+    white-space: nowrap;
+  }
+  .nav-cta:hover {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+  }
+  .nav-cta:active { transform: translateY(0) scale(0.97); }
+
+  /* ============================================
+     SEARCH OVERLAY
+  ============================================ */
+  .search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    will-change: opacity;
+  }
+  .search-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .search-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .search-panel {
+    position: relative;
+    z-index: 1;
+    width: 90%;
+    max-width: 600px;
+    background: rgba(14, 14, 17, 0.95);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid var(--border-hover);
+    border-radius: 20px;
+    overflow: hidden;
+    transform: translateY(-20px) scale(0.96);
+    transition: transform 0.4s var(--ease-out-expo);
+    will-change: transform;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+  }
+  .search-overlay.open .search-panel {
+    transform: translateY(0) scale(1);
+  }
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-input-wrap svg {
+    width: 20px; height: 20px;
+    stroke: var(--text-secondary);
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    flex-shrink: 0;
+  }
+  .search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+  }
+  .search-input::placeholder { color: var(--text-secondary); }
+  .search-kbd {
+    padding: 3px 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .search-results {
+    padding: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .search-result-item:hover { background: rgba(255,255,255,0.04); }
+  .search-result-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    background: rgba(94,106,210,0.1);
+  }
+  .search-result-text h4 {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .search-result-text p {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .search-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .search-footer kbd {
+    padding: 2px 6px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+  }
+
+  /* ============================================
+     MOBILE MENU
+  ============================================ */
+  .mobile-toggle {
+    display: none;
+    width: 38px; height: 38px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    z-index: 2001;
+    flex-shrink: 0;
+  }
+  .hamburger {
+    width: 20px; height: 14px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .hamburger span {
+    display: block;
+    width: 100%; height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: transform 0.4s var(--ease-out-expo), opacity 0.3s ease, width 0.3s var(--ease-out-expo);
+    will-change: transform, opacity;
+    transform-origin: center;
+  }
+  .mobile-toggle.active .hamburger span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+  }
+  .mobile-toggle.active .hamburger span:nth-child(2) {
+    opacity: 0;
+    width: 0;
+  }
+  .mobile-toggle.active .hamburger span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  .mobile-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    pointer-events: none;
+  }
+  .mobile-drawer.open { pointer-events: auto; }
+  .mobile-drawer-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .mobile-drawer.open .mobile-drawer-bg { opacity: 1; }
+
+  .mobile-drawer-panel {
+    position: absolute;
+    top: 0; right: 0;
+    width: 320px;
+    max-width: 85vw;
+    height: 100%;
+    background: rgba(10, 10, 14, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.5s var(--ease-out-expo);
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .mobile-drawer.open .mobile-drawer-panel { transform: translateX(0); }
+
+  .mobile-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    height: var(--nav-height);
+  }
+  .mobile-drawer-links {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mobile-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 400;
+    border-radius: 12px;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .mobile-link:hover {
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+  }
+  .mobile-link.active { color: var(--text); }
+  .mobile-link-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: rgba(255,255,255,0.04);
+    flex-shrink: 0;
+  }
+  .mobile-drawer-footer {
+    margin-top: auto;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .mobile-cta {
+    width: 100%;
+    padding: 14px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s var(--ease-spring);
+  }
+  .mobile-cta:active { transform: scale(0.97); }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .nav-cta { display: none; }
+    .mobile-toggle { display: flex; }
+  }
+
+  /* ============================================
+     PAGE CONTENT
+  ============================================ */
+  section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    position: relative;
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    text-shadow: 0 0 20px var(--accent-glow);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  }
+  .section-title {
+    font-size: clamp(36px, 5vw, 60px);
+    font-weight: 600;
+    letter-spacing: -2px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo) 0.1s, transform 0.7s var(--ease-out-expo) 0.1s;
+  }
+  .section-desc {
+    font-size: 17px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 500px;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s var(--ease-out-expo) 0.2s, transform 0.7s var(--ease-out-expo) 0.2s;
+  }
+  section.visible .section-num,
+  section.visible .section-title,
+  section.visible .section-desc {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Section backgrounds */
+  .section-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  #s1 .section-orb {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(94,106,210,0.15), transparent 70%);
+    top: 20%; left: 15%;
+  }
+  #s2 .section-orb {
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(236,72,153,0.12), transparent 70%);
+    bottom: 20%; right: 10%;
+  }
+  #s3 .section-orb {
+    width: 450px; height: 450px;
+    background: radial-gradient(circle, rgba(6,182,212,0.1), transparent 70%);
+    top: 30%; right: 20%;
+  }
+  #s4 .section-orb {
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, rgba(77,175,115,0.1), transparent 70%);
+    bottom: 25%; left: 20%;
+  }
+  #s5 .section-orb {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(94,106,210,0.08), transparent 70%);
+    top: 20%; left: 30%;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--accent), var(--magenta), var(--cyan));
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradShift 5s ease-in-out infinite;
+  }
+  @keyframes gradShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+  /* Feature pills in sections */
+  .feature-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 32px;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.7s var(--ease-out-expo) 0.3s, transform 0.7s var(--ease-out-expo) 0.3s;
+  }
+  section.visible .feature-pills { opacity: 1; transform: translateY(0); }
+  .pill {
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+  .pill:hover { border-color: var(--border-hover); color: var(--text); }
+
+  /* Scroll cue in hero */
+  .scroll-cue {
+    position: absolute;
+    bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: cueIn 0.8s 1s var(--ease-out-expo) forwards;
+  }
+  @keyframes cueIn { to { opacity: 1; } }
+  .scroll-cue span {
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .scroll-cue-line {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: sPulse 2s ease-in-out infinite;
+  }
+  @keyframes sPulse { 0%,100%{opacity:1;transform:scaleY(1)} 50%{opacity:.3;transform:scaleY(.6)} }
+
+  /* ============================================
+     FOOTER
+  ============================================ */
+  footer {
+    text-align: center;
+    padding: 60px 24px;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  footer p { font-size: 14px; color: var(--text-secondary); }
+  footer .a { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- ============================================
+     NAVBAR
+============================================== -->
+<nav class="navbar" id="navbar">
+  <div class="navbar-bg"></div>
+  <div class="nav-progress" id="navProgress"></div>
+
+  <div class="nav-inner">
+    <!-- Logo -->
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg viewBox="0 0 16 16"><polyline points="2,10 6,4 10,8 14,2"/></svg>
+      </div>
+      <span class="nav-logo-text">Apex</span>
+    </a>
+
+    <!-- Links -->
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-link active" data-section="s1">
+        <a href="#s1">Home</a>
+        <div class="nav-indicator"></div>
+      </li>
+      <li class="nav-link" data-section="s2">
+        <a href="#s2">Product <span class="nav-arrow"><svg viewBox="0 0 12 12"><polyline points="3,4.5 6,7.5 9,4.5"/></svg></span></a>
+        <div class="nav-indicator"></div>
+
+        <!-- Mega Dropdown -->
+        <div class="mega-dropdown">
+          <div class="mega-grid">
+            <a href="#" class="mega-item">
+              <div class="mega-item-icon" style="background:rgba(94,106,210,0.12);">⚡</div>
+              <div class="mega-item-text">
+                <h4>Analytics</h4>
+                <p>Real-time insights & metrics</p>
+              </div>
+            </a>
+            <a href="#" class="mega-item">
+              <div class="mega-item-icon" style="background:rgba(236,72,153,0.12);">🛡️</div>
+              <div class="mega-item-text">
+                <h4>Security</h4>
+                <p>Enterprise-grade protection</p>
+              </div>
+            </a>
+            <a href="#" class="mega-item">
+              <div class="mega-item-icon" style="background:rgba(6,182,212,0.12);">🔗</div>
+              <div class="mega-item-text">
+                <h4>Integrations</h4>
+                <p>Connect your favorite tools</p>
+              </div>
+            </a>
+            <a href="#" class="mega-item">
+              <div class="mega-item-icon" style="background:rgba(77,175,115,0.12);">🚀</div>
+              <div class="mega-item-text">
+                <h4>Deployments</h4>
+                <p>One-click production releases</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </li>
+      <li class="nav-link" data-section="s3">
+        <a href="#s3">Solutions</a>
+        <div class="nav-indicator"></div>
+      </li>
+      <li class="nav-link" data-section="s4">
+        <a href="#s4">Pricing</a>
+        <div class="nav-indicator"></div>
+      </li>
+      <li class="nav-link" data-section="s5">
+        <a href="#s5">Docs</a>
+        <div class="nav-indicator"></div>
+      </li>
+    </ul>
+
+    <!-- Right -->
+    <div class="nav-right">
+      <button class="nav-icon-btn" id="searchBtn" aria-label="Search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="nav-icon-btn" aria-label="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </button>
+      <button class="nav-cta">Get Started</button>
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
+        <div class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================
+     SEARCH OVERLAY
+============================================== -->
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-backdrop" id="searchBackdrop"></div>
+  <div class="search-panel">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search anything..." autocomplete="off">
+      <span class="search-kbd">ESC</span>
+    </div>
+    <div class="search-results">
+      <a href="#" class="search-result-item">
+        <div class="search-result-icon">📊</div>
+        <div class="search-result-text">
+          <h4>Analytics Dashboard</h4>
+          <p>View real-time metrics and reports</p>
+        </div>
+      </a>
+      <a href="#" class="search-result-item">
+        <div class="search-result-icon">⚡</div>
+        <div class="search-result-text">
+          <h4>Performance Monitoring</h4>
+          <p>Track speed and uptime</p>
+        </div>
+      </a>
+      <a href="#" class="search-result-item">
+        <div class="search-result-icon">🔗</div>
+        <div class="search-result-text">
+          <h4>API Integrations</h4>
+          <p>Connect with Slack, GitHub, and more</p>
+        </div>
+      </a>
+      <a href="#" class="search-result-item">
+        <div class="search-result-icon">📄</div>
+        <div class="search-result-text">
+          <h4>Documentation</h4>
+          <p>Get started with Apex in minutes</p>
+        </div>
+      </a>
+    </div>
+    <div class="search-footer">
+      <span><kbd>↑↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Open</span>
+      <span><kbd>ESC</kbd> Close</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     MOBILE DRAWER
+============================================== -->
+<div class="mobile-drawer" id="mobileDrawer">
+  <div class="mobile-drawer-bg" id="mobileBackdrop"></div>
+  <div class="mobile-drawer-panel">
+    <div class="mobile-drawer-header">
+      <span style="font-weight:600; font-size:15px;">Menu</span>
+    </div>
+    <div class="mobile-drawer-links">
+      <a href="#s1" class="mobile-link active" data-section="s1">
+        <div class="mobile-link-icon">🏠</div>Home
+      </a>
+      <a href="#s2" class="mobile-link" data-section="s2">
+        <div class="mobile-link-icon">📦</div>Product
+      </a>
+      <a href="#s3" class="mobile-link" data-section="s3">
+        <div class="mobile-link-icon">💡</div>Solutions
+      </a>
+      <a href="#s4" class="mobile-link" data-section="s4">
+        <div class="mobile-link-icon">💎</div>Pricing
+      </a>
+      <a href="#s5" class="mobile-link" data-section="s5">
+        <div class="mobile-link-icon">📖</div>Docs
+      </a>
+    </div>
+    <div class="mobile-drawer-footer">
+      <button class="mobile-cta">Get Started Free</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     PAGE SECTIONS
+============================================== -->
+<section id="s1">
+  <div class="section-orb"></div>
+  <div class="section-num">// Welcome</div>
+  <h1 class="section-title">The Premium<br><span class="gradient-text">Navbar Experience</span></h1>
+  <p class="section-desc">Scroll down, hover the links, open the dropdown, try the search — every detail is engineered to feel expensive.</p>
+  <div class="feature-pills">
+    <span class="pill">Smart Hide/Show</span>
+    <span class="pill">Active Section Tracking</span>
+    <span class="pill">Mega Dropdown</span>
+    <span class="pill">Search Overlay</span>
+    <span class="pill">Scroll Progress</span>
+  </div>
+  <div class="scroll-cue">
+    <span>Scroll</span>
+    <div class="scroll-cue-line"></div>
+  </div>
+</section>
+
+<section id="s2">
+  <div class="section-orb"></div>
+  <div class="section-num">// Product</div>
+  <h2 class="section-title">Built for Scale</h2>
+  <p class="section-desc">Every feature designed with enterprise teams in mind. Notice the "Product" link is now active in the navbar.</p>
+</section>
+
+<section id="s3">
+  <div class="section-orb"></div>
+  <div class="section-num">// Solutions</div>
+  <h2 class="section-title">Tailored to You</h2>
+  <p class="section-desc">From startups to Fortune 500. The active indicator slides smoothly between links as you scroll.</p>
+</section>
+
+<section id="s4">
+  <div class="section-orb"></div>
+  <div class="section-num">// Pricing</div>
+  <h2 class="section-title">Simple Pricing</h2>
+  <p class="section-desc">No surprises. No hidden fees. Try scrolling up quickly — the navbar hides, then reappears.</p>
+</section>
+
+<section id="s5">
+  <div class="section-orb"></div>
+  <div class="section-num">// Documentation</div>
+  <h2 class="section-title">World-Class Docs</h2>
+  <p class="section-desc">Everything you need to get started. Press <kbd style="padding:2px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:'JetBrains Mono',monospace;">⌘K</kbd> to open search.</p>
+</section>
+
+<footer>
+  <p>A navbar that makes websites feel <span class="a">premium</span> — zero dependencies</p>
+</footer>
+
+<script>
+  // ============================================
+  // ELEMENTS
+  // ============================================
+  const navbar = document.getElementById('navbar');
+  const navProgress = document.getElementById('navProgress');
+  const navLinks = document.querySelectorAll('.nav-link');
+  const mobileLinks = document.querySelectorAll('.mobile-link');
+  const sections = document.querySelectorAll('section');
+  const searchBtn = document.getElementById('searchBtn');
+  const searchOverlay = document.getElementById('searchOverlay');
+  const searchBackdrop = document.getElementById('searchBackdrop');
+  const searchInput = document.getElementById('searchInput');
+  const mobileToggle = document.getElementById('mobileToggle');
+  const mobileDrawer = document.getElementById('mobileDrawer');
+  const mobileBackdrop = document.getElementById('mobileBackdrop');
+
+  // ============================================
+  // 1. SMART HIDE/SHOW ON SCROLL
+  // ============================================
+  let lastScrollY = 0;
+  let scrollTicking = false;
+  const SCROLL_THRESHOLD = 80;
+
+  function handleScroll() {
+    const currentY = window.scrollY;
+    const docH = document.documentElement.scrollHeight - window.innerHeight;
+
+    // Progress bar
+    navProgress.style.width = ((currentY / docH) * 100) + '%';
+
+    // Scrolled state (stronger bg)
+    navbar.classList.toggle('scrolled', currentY > 20);
+
+    // Hide/show logic
+    if (currentY > SCROLL_THRESHOLD && currentY > lastScrollY) {
+      navbar.classList.add('hidden');
+    } else {
+      navbar.classList.remove('hidden');
+    }
+
+    // Active section tracking
+    updateActiveSection();
+
+    lastScrollY = currentY;
+    scrollTicking = false;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!scrollTicking) {
+      requestAnimationFrame(handleScroll);
+      scrollTicking = true;
+    }
+  }, { passive: true });
+
+  // ============================================
+  // 2. ACTIVE SECTION TRACKING + SLIDING INDICATOR
+  // ============================================
+  function updateActiveSection() {
+    let activeId = null;
+
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      // Section is "active" when its top is in the upper 40% of viewport
+      if (rect.top <= window.innerHeight * 0.4) {
+        activeId = sec.id;
+      }
+    });
+
+    navLinks.forEach(link => {
+      const isActive = link.dataset.section === activeId;
+      link.classList.toggle('active', isActive);
+    });
+
+    mobileLinks.forEach(link => {
+      link.classList.toggle('active', link.dataset.section === activeId);
+    });
+
+    // Slide the indicator to the active link
+    const activeLink = document.querySelector(`.nav-link.active`);
+    const indicator = activeLink ? activeLink.querySelector('.nav-indicator') : null;
+    if (activeLink && indicator) {
+      const linkRect = activeLink.getBoundingClientRect();
+      const navRect = document.getElementById('navLinks').getBoundingClientRect();
+      indicator.style.left = (linkRect.left - navRect.left) + 'px';
+      indicator.style.width = linkRect.width + 'px';
+    }
+  }
+
+  // ============================================
+  // 3. MEGA DROPDOWN
+  // ============================================
+  let dropdownTimeout;
+
+  navLinks.forEach(link => {
+    const dropdown = link.querySelector('.mega-dropdown');
+    if (!dropdown) return;
+
+    link.addEventListener('mouseenter', () => {
+      clearTimeout(dropdownTimeout);
+      // Close other dropdowns
+      navLinks.forEach(l => {
+        if (l !== link) l.classList.remove('open');
+      });
+      link.classList.add('open');
+    });
+
+    link.addEventListener('mouseleave', () => {
+      dropdownTimeout = setTimeout(() => {
+        link.classList.remove('open');
+      }, 200);
+    });
+
+    // Keep open when hovering the dropdown itself
+    dropdown.addEventListener('mouseenter', () => {
+      clearTimeout(dropdownTimeout);
+    });
+    dropdown.addEventListener('mouseleave', () => {
+      dropdownTimeout = setTimeout(() => {
+        link.classList.remove('open');
+      }, 150);
+    });
+  });
+
+  // ============================================
+  // 4. SEARCH OVERLAY
+  // ============================================
+  function openSearch() {
+    searchOverlay.classList.add('open');
+    setTimeout(() => searchInput.focus(), 100);
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSearch() {
+    searchOverlay.classList.remove('open');
+    searchInput.value = '';
+    document.body.style.overflow = '';
+  }
+
+  searchBtn.addEventListener('click', openSearch);
+  searchBackdrop.addEventListener('click', closeSearch);
+
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      searchOverlay.classList.contains('open') ? closeSearch() : openSearch();
+    }
+    if (e.key === 'Escape' && searchOverlay.classList.contains('open')) {
+      closeSearch();
+    }
+  });
+
+  // ============================================
+  // 5. MOBILE DRAWER
+  // ============================================
+  function openMobile() {
+    mobileDrawer.classList.add('open');
+    mobileToggle.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMobile() {
+    mobileDrawer.classList.remove('open');
+    mobileToggle.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  mobileToggle.addEventListener('click', () => {
+    mobileDrawer.classList.contains('open') ? closeMobile() : openMobile();
+  });
+  mobileBackdrop.addEventListener('click', closeMobile);
+
+  // Close mobile on link click
+  mobileLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      closeMobile();
+    });
+  });
+
+  // ============================================
+  // 6. SECTION REVEAL ON SCROLL
+  // ============================================
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.2 });
+
+  sections.forEach(sec => sectionObserver.observe(sec));
+
+  // ============================================
+  // 7. INITIAL STATE
+  // ============================================
+  handleScroll();
+  // Trigger hero visible immediately
+  document.getElementById('s1').classList.add('visible');
+</script>
+</body>
+</html>
