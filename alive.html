@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alive</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#06060a;--surface:#0d0d14;--text:#e8e8f0;--dim:#5a5a6e;
+    --accent:#6366f1;--ag:rgba(99,102,241,.25);--rose:#f43f5e;
+    --cyan:#22d3ee;--emerald:#34d399;--amber:#f59e0b;
+    --border:rgba(255,255,255,.04);
+    --eoe:cubic-bezier(.16,1,.3,1);--esp:cubic-bezier(.34,1.56,.64,1);
+    --breath:4s;--drift:6s;
+  }
+  html{scroll-behavior:auto}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+    overflow-x:hidden;-webkit-font-smoothing:antialiased;cursor:none}
+  ::-webkit-scrollbar{width:3px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.05);border-radius:2px}
+
+  /* ===== THE TRICK: moving grain ===== */
+  .grain{position:fixed;inset:-50%;width:200%;height:200%;pointer-events:none;
+    z-index:9999;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:grainDrift 8s steps(10) infinite}
+  @keyframes grainDrift{
+    0%{transform:translate(0,0)}10%{transform:translate(-5%,-10%)}
+    20%{transform:translate(-15%,5%)}30%{transform:translate(7%,-15%)}
+    40%{transform:translate(-5%,10%)}50%{transform:translate(-15%,0)}
+    60%{transform:translate(15%,10%)}70%{transform:translate(0%,-10%)}
+    80%{transform:translate(10%,15%)}90%{transform:translate(-10%,5%)}
+    100%{transform:translate(0,0)}}
+
+  /* ===== AMBIENT GLOW LAYERS ===== */
+  .amb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(80px);
+    will-change:transform,opacity;backface-visibility:hidden;z-index:0}
+  .amb-1{width:600px;height:600px;top:-10%;left:-10%;
+    background:radial-gradient(circle,rgba(99,102,241,.05),transparent 70%);
+    animation:ambFloat 20s ease-in-out infinite}
+  .amb-2{width:500px;height:500px;bottom:-5%;right:-8%;
+    background:radial-gradient(circle,rgba(244,63,94,.04),transparent 70%);
+    animation:ambFloat 16s ease-in-out infinite reverse}
+  .amb-3{width:400px;height:400px;top:40%;left:40%;
+    background:radial-gradient(circle,rgba(34,211,238,.035),transparent 70%);
+    animation:ambFloat 24s ease-in-out infinite 2s}
+  @keyframes ambFloat{
+    0%,100%{transform:translate(0,0) scale(1)}
+    33%{transform:translate(60px,-40px) scale(1.1)}
+    66%{transform:translate(-40px,50px) scale(.95)}}
+
+  /* ===== CURSOR ===== */
+  .c-dot{position:fixed;width:6px;height:6px;background:#fff;border-radius:50%;
+    pointer-events:none;z-index:10000;mix-blend-mode:difference;
+    transform:translate(-3px,-3px);will-change:transform;
+    box-shadow:0 0 8px rgba(255,255,255,.4)}
+  .c-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(255,255,255,.1);
+    border-radius:50%;pointer-events:none;z-index:9999;
+    transform:translate(-18px,-18px);will-change:transform,width,height}
+  .c-glow{position:fixed;width:400px;height:400px;border-radius:50%;
+    background:radial-gradient(circle,rgba(99,102,241,.06),transparent 60%);
+    pointer-events:none;z-index:1;filter:blur(30px);will-change:transform;
+    backface-visibility:hidden}
+  @media(hover:none){.c-dot,.c-ring,.c-glow{display:none}body{cursor:auto}}
+
+  /* ===== BREATHING KEYFRAME — the core trick ===== */
+  @keyframes breathe{
+    0%,100%{transform:scale(1);opacity:var(--bo,1)}
+    50%{transform:scale(var(--bs,1.04));opacity:var(--bo2,1)}}
+
+  /* ===== HERO ===== */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;z-index:2}
+  .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px 6px 8px;
+    background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.1);
+    border-radius:100px;font-size:12px;font-weight:500;color:var(--accent);
+    animation:breathe var(--breath) ease-in-out infinite;--bs:1.05;--bo:.7;--bo2:1;
+    opacity:0;animation:up .8s .2s var(--eoe) forwards, breathe var(--breath) ease-in-out .8s infinite}
+  .hero-badge span{width:5px;height:5px;background:var(--accent);border-radius:50%;
+    animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
+  @keyframes up{to{opacity:1;transform:translateY(0)}}
+  .hero h1{font-size:clamp(48px,8vw,88px);font-weight:600;line-height:1;
+    letter-spacing:-3px;margin-bottom:20px;overflow:hidden;
+    opacity:0;animation:up 1s .4s var(--eoe) forwards}
+  .hero h1 .line{display:block;overflow:hidden}
+  .hero h1 .line span{display:inline-block;
+    animation:breathe var(--breath) ease-in-out infinite}
+  .hero h1 .line:nth-child(1) span{animation-delay:0s;--bs:1.02;--bo:.95;--bo2:1}
+  .hero h1 .line:nth-child(2) span{animation-delay:.5s;--bs:1.04;--bo:.9;--bo2:1}
+  .hero h1 .gt{background:linear-gradient(135deg,var(--accent),var(--rose),var(--cyan));
+    background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;animation:gs 6s ease-in-out infinite}
+  @keyframes gs{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  .hero p{font-size:18px;color:var(--dim);font-weight:300;line-height:1.6;
+    max-width:520px;opacity:0;animation:up .8s .7s var(--eoe) forwards}
+
+  /* ===== BREATHING ORBS ===== */
+  .orb-field{position:absolute;inset:0;pointer-events:none;z-index:1}
+  .orb{position:absolute;border-radius:50%;will-change:transform;
+    backface-visibility:hidden}
+  .orb-1{width:8px;height:8px;background:var(--accent);opacity:.3;top:25%;left:20%;
+    animation:orbFloat1 12s ease-in-out infinite}
+  .orb-2{width:6px;height:6px;background:var(--rose);opacity:.25;top:70%;left:75%;
+    animation:orbFloat2 10s ease-in-out infinite}
+  .orb-3{width:10px;height:10px;background:var(--cyan);opacity:.2;top:40%;right:15%;
+    animation:orbFloat3 14s ease-in-out infinite}
+  .orb-4{width:5px;height:5px;background:var(--emerald);opacity:.25;bottom:25%;left:35%;
+    animation:orbFloat1 9s ease-in-out infinite 3s}
+  .orb-5{width:7px;height:7px;background:var(--amber);opacity:.2;top:15%;right:30%;
+    animation:orbFloat2 11s ease-in-out infinite 2s}
+  .orb-6{width:4px;height:4px;background:var(--accent);opacity:.3;bottom:35%;right:25%;
+    animation:orbFloat3 13s ease-in-out infinite 1s}
+  @keyframes orbFloat1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-60px)}}
+  @keyframes orbFloat2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,40px)}}
+  @keyframes orbFloat3{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,50px)}}
+
+  /* ===== SECTIONS ===== */
+  .sec{max-width:1100px;margin:0 auto;padding:80px 24px;position:relative;z-index:2}
+  .sec-head{text-align:center;margin-bottom:56px}
+  .sec-n{font-size:12px;font-weight:500;color:var(--accent);letter-spacing:3px;
+    text-transform:uppercase;margin-bottom:10px;
+    animation:breathe var(--breath) ease-in-out infinite;--bs:1.03;--bo:.7;--bo2:1}
+  .sec-t{font-size:clamp(28px,4vw,44px);font-weight:600;letter-spacing:-1.5px}
+  .sec-d{font-size:15px;color:var(--dim);font-weight:300;margin-top:8px}
+
+  /* ===== 1: BREATHING CARDS ===== */
+  .breathe-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:768px){.breathe-grid{grid-template-columns:1fr}}
+  .b-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:36px 28px;position:relative;overflow:hidden;
+    animation:breathe var(--breath) ease-in-out infinite;
+    transition:border-color .4s ease,box-shadow .4s ease;
+    will-change:transform,opacity}
+  .b-card:nth-child(1){--bs:1.03;--bo:1;--bo2:.95;animation-delay:0s}
+  .b-card:nth-child(2){--bs:1.04;--bo:.95;--bo2:1;animation-delay:.6s}
+  .b-card:nth-child(3){--bs:1.02;--bo:1;--bo2:.9;animation-delay:1.2s}
+  .b-card:hover{border-color:rgba(255,255,255,.08);
+    box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .b-card .bc-glow{position:absolute;width:150px;height:150px;border-radius:50%;
+    pointer-events:none;opacity:0;filter:blur(30px);
+    transition:opacity .5s ease;will-change:opacity;transform:translate(-50%,-50%)}
+  .b-card:hover .bc-glow{opacity:1}
+  .b-card .bc-icon{width:48px;height:48px;border-radius:14px;display:flex;
+    align-items:center;justify-content:center;font-size:22px;margin-bottom:20px;
+    animation:breathe calc(var(--breath) * .8) ease-in-out infinite;--bs:1.08;--bo:1;--bo2:.8}
+  .b-card:nth-child(1) .bc-icon{animation-delay:.3s;background:rgba(99,102,241,.1)}
+  .b-card:nth-child(1) .bc-glow{background:var(--ag);left:50%;top:30%}
+  .b-card:nth-child(2) .bc-icon{animation-delay:.8s;background:rgba(244,63,94,.1)}
+  .b-card:nth-child(2) .bc-glow{background:rgba(244,63,94,.2);left:60%;top:40%}
+  .b-card:nth-child(3) .bc-icon{animation-delay:1.3s;background:rgba(34,211,238,.1)}
+  .b-card:nth-child(3) .bc-glow{background:rgba(34,211,238,.2);left:40%;top:35%}
+  .b-card h3{font-size:18px;font-weight:500;letter-spacing:-.3px;margin-bottom:8px}
+  .b-card p{font-size:14px;color:var(--dim);line-height:1.5}
+
+  /* ===== 2: LIVING METRICS ===== */
+  .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:var(--border);border-radius:20px;overflow:hidden}
+  @media(max-width:768px){.metric-grid{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:var(--surface);padding:40px 24px;text-align:center;
+    position:relative;overflow:hidden}
+  .metric-val{font-size:48px;font-weight:700;letter-spacing:-2px;
+    font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,var(--text) 20%,var(--dim) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    animation:breathe calc(var(--breath) * 1.5) ease-in-out infinite;
+    --bs:1.02;--bo:.9;--bo2:1;margin-bottom:6px}
+  .metric:nth-child(1) .metric-val{animation-delay:0s}
+  .metric:nth-child(2) .metric-val{animation-delay:.4s}
+  .metric:nth-child(3) .metric-val{animation-delay:.8s}
+  .metric:nth-child(4) .metric-val{animation-delay:1.2s}
+  .metric-label{font-size:13px;color:var(--dim);letter-spacing:.5px}
+  .metric-pulse{position:absolute;bottom:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    opacity:0;animation:mpulse 3s ease-in-out infinite}
+  @keyframes mpulse{0%,100%{opacity:0;transform:scaleX(.5)}50%{opacity:.3;transform:scaleX(1)}}
+
+  /* ===== 3: WAVE CANVAS ===== */
+  .wave-sec{padding:0;max-width:100%;height:400px;position:relative;z-index:2;overflow:hidden}
+  #waveCanvas{width:100%;height:100%;display:block}
+  .wave-overlay{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px;pointer-events:none;z-index:2}
+  .wave-overlay h2{font-size:clamp(32px,5vw,56px);font-weight:600;letter-spacing:-2px;
+    text-shadow:0 4px 30px rgba(0,0,0,.5)}
+  .wave-overlay p{font-size:16px;color:var(--dim);font-weight:300;
+    text-shadow:0 2px 20px rgba(0,0,0,.5)}
+
+  /* ===== 4: LIVING BORDER CARDS ===== */
+  .live-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  @media(max-width:600px){.live-grid{grid-template-columns:1fr}}
+  .live-card{position:relative;border-radius:24px;overflow:hidden;cursor:default;
+    background:var(--surface);border:1px solid var(--border);
+    padding:36px;transition:border-color .4s ease,box-shadow .4s ease}
+  .live-card:hover{border-color:rgba(255,255,255,.08);
+    box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .live-card svg.live-border{position:absolute;inset:0;width:100%;height:100%;
+    pointer-events:none;z-index:2}
+  .live-card svg.live-border rect{fill:none;stroke-width:1.5;rx:24;ry:24;
+    stroke-dasharray:600;stroke-dashoffset:600;
+    animation:borderDraw 4s ease-in-out infinite;will-change:stroke-dashoffset}
+  @keyframes borderDraw{0%{stroke-dashoffset:600;stroke:rgba(99,102,241,.3)}
+    30%{stroke-dashoffset:0;stroke:rgba(99,102,241,.4)}
+    70%{stroke-dashoffset:0;stroke:rgba(99,102,241,.15)}100%{stroke-dashoffset:-600}}
+  .live-card:nth-child(2) svg.live-border rect{animation-delay:1s;
+    stroke:rgba(244,63,94,.3)}
+  .live-card:nth-child(2) svg.live-border rect{animation-name:borderDraw2}
+  @keyframes borderDraw2{0%{stroke-dashoffset:600;stroke:rgba(244,63,94,.3)}
+    30%{stroke-dashoffset:0;stroke:rgba(244,63,94,.4)}
+    70%{stroke-dashoffset:0;stroke:rgba(244,63,94,.15)}100%{stroke-dashoffset:-600}}
+  .live-card .lc-content{position:relative;z-index:3}
+  .live-card h3{font-size:22px;font-weight:600;letter-spacing:-.5px;margin-bottom:8px}
+  .live-card p{font-size:14px;color:var(--dim);line-height:1.5;margin-bottom:20px}
+  .live-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.04);overflow:hidden}
+  .live-bar-fill{height:100%;border-radius:2px;width:0%;
+    animation:barPulse 3s ease-in-out infinite;will-change:width}
+  @keyframes barPulse{0%,100%{width:20%}50%{width:85%}}
+  .live-card:nth-child(1) .live-bar-fill{background:linear-gradient(90deg,var(--accent),var(--cyan))}
+  .live-card:nth-child(2) .live-bar-fill{background:linear-gradient(90deg,var(--rose),var(--amber));
+    animation-delay:1s}
+
+  /* ===== 5: FLOATING PARTICLES CANVAS ===== */
+  .particle-sec{height:350px;position:relative;z-index:2;overflow:hidden;
+    max-width:1100px;margin:0 auto;border-radius:24px;border:1px solid var(--border);
+    background:rgba(13,13,20,.5)}
+  #particleCanvas{width:100%;height:100%;display:block}
+  .particle-overlay{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;flex-direction:column;gap:8px;pointer-events:none;z-index:2}
+  .particle-overlay h3{font-size:28px;font-weight:600;letter-spacing:-1px;
+    text-shadow:0 4px 30px rgba(0,0,0,.5)}
+  .particle-overlay p{font-size:14px;color:var(--dim);font-weight:300;
+    text-shadow:0 2px 20px rgba(0,0,0,.5)}
+
+  /* ===== 6: TIME-SHIFT GRADIENT TEXT ===== */
+  .time-section{text-align:center;padding:100px 24px;position:relative;z-index:2}
+  .time-section h2{font-size:clamp(36px,6vw,72px);font-weight:600;letter-spacing:-2.5px;
+    line-height:1.1;margin-bottom:20px}
+  .time-word{display:inline-block;
+    animation:breathe var(--breath) ease-in-out infinite;
+    --bs:1.03;--bo:.85;--bo2:1;will-change:transform,opacity}
+  .time-word:nth-child(1){animation-delay:0s}
+  .time-word:nth-child(2){animation-delay:.4s}
+  .time-word:nth-child(3){animation-delay:.8s}
+  .time-word:nth-child(4){animation-delay:1.2s}
+  .time-word:nth-child(5){animation-delay:1.6s}
+  .time-section p{font-size:16px;color:var(--dim);font-weight:300;max-width:500px;
+    margin:0 auto;line-height:1.6}
+  .time-sub{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);
+    margin-top:32px;letter-spacing:1px;
+    animation:breathe var(--breath) ease-in-out infinite;--bs:1.05;--bo:.6;--bo2:1}
+
+  /* ===== FOOTER ===== */
+  footer{text-align:center;padding:80px 24px;border-top:1px solid var(--border);
+    max-width:1100px;margin:0 auto;position:relative;z-index:2}
+  footer p{font-size:14px;color:var(--dim)}
+  footer .a{color:var(--accent);font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="amb amb-1"></div>
+<div class="amb amb-2"></div>
+<div class="amb amb-3"></div>
+<div class="c-dot" id="cDot"></div>
+<div class="c-ring" id="cRing"></div>
+<div class="c-glow" id="cGlow"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="orb-field">
+    <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+    <div class="orb orb-4"></div><div class="orb orb-5"></div><div class="orb orb-6"></div>
+  </div>
+  <div class="hero-badge"><span></span>the trick</div>
+  <h1>
+    <span class="line"><span>Websites Feel</span></span>
+    <span class="line"><span class="gt">ALIVE With This</span></span>
+  </h1>
+  <p>One keyframe. Applied everywhere. At different speeds. With staggered delays. That's the entire trick — and it changes everything.</p>
+</section>
+
+<!-- 1: Breathing Cards -->
+<div class="sec">
+  <div class="sec-head"><div class="sec-n">// the heartbeat</div>
+    <div class="sec-t">Everything Breathes</div>
+    <div class="sec-d">Cards, icons, labels — all pulsing at different rhythms create organic rhythm</div></div>
+  <div class="breathe-grid">
+    <div class="b-card">
+      <div class="bc-glow"></div>
+      <div class="bc-icon">⚡</div>
+      <h3>Living Motion</h3>
+      <p>The page doesn't sit still. It breathes. Scale oscillates ±4% with ease-in-out timing.</p>
+    </div>
+    <div class="b-card">
+      <div class="bc-glow"></div>
+      <div class="bc-icon">✦</div>
+      <h3>Staggered Rhythm</h3>
+      <p>Each element has a different animation-delay. The pattern never repeats exactly.</p>
+    </div>
+    <div class="b-card">
+      <div class="bc-glow"></div>
+      <div class="bc-icon">🌊</div>
+      <h3>Organic Feel</h3>
+      <p>Not mechanical loops. ease-in-out curves mimic natural breathing patterns.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 2: Living Metrics -->
+<div class="sec">
+  <div class="sec-head"><div class="sec-n">// the pulse</div>
+    <div class="sec-t">Metrics That Breathe</div>
+    <div class="sec-d">Numbers gently pulse. The scan line sweeps underneath. The page feels monitored.</div></div>
+  <div class="metric-grid">
+    <div class="metric">
+      <div class="metric-val" id="m1">0</div>
+      <div class="metric-label">Frames / Second</div>
+      <div class="metric-pulse"></div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" id="m2">0</div>
+      <div class="metric-label">Elements Alive</div>
+      <div class="metric-pulse" style="animation-delay:.5s"></div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" id="m3">0ms</div>
+      <div class="metric-label">Layout Thrash</div>
+      <div class="metric-pulse" style="animation-delay:1s"></div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" id="m4">0</div>
+      <div class="metric-label">JS Libraries</div>
+      <div class="metric-pulse" style="animation-delay:1.5s"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3: Wave -->
+<div class="wave-sec">
+  <canvas id="waveCanvas"></canvas>
+  <div class="wave-overlay">
+    <h2>Continuous Flow</h2>
+    <p>Sine waves with different frequencies create never-repeating patterns</p>
+  </div>
+</div>
+
+<!-- 4: Living Border Cards -->
+<div class="sec">
+  <div class="sec-head"><div class="sec-n">// the trace</div>
+    <div class="sec-t">Borders That Breathe</div>
+    <div class="sec-d">SVG stroke-dashoffset animates the border draw in a loop. Different colors, different phases.</div></div>
+  <div class="live-grid">
+    <div class="live-card">
+      <svg class="live-border" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x=".5" y=".5" width="99" height="99"/></svg>
+      <div class="lc-content">
+        <h3>Neural Network</h3>
+        <p>Active connections pulse through the border, tracing the card outline continuously.</p>
+        <div class="live-bar"><div class="live-bar-fill"></div></div>
+      </div>
+    </div>
+    <div class="live-card">
+      <svg class="live-border" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x=".5" y=".5" width="99" height="99"/></svg>
+      <div class="lc-content">
+        <h3>Heartbeat Signal</h3>
+        <p>The draw-hold-fade pattern mimics a cardiac monitor trace along the card edge.</p>
+        <div class="live-bar"><div class="live-bar-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5: Particles -->
+<div class="sec" style="padding-left:0;padding-right:0;max-width:100%">
+  <div class="particle-sec">
+    <canvas id="particleCanvas"></canvas>
+    <div class="particle-overlay">
+      <h3>Connected Intelligence</h3>
+      <p>Move your cursor — the field responds in real-time</p>
+    </div>
+  </div>
+</div>
+
+<!-- 6: Time-shift text -->
+<div class="time-section">
+  <h2>
+    <span class="time-word">Every</span>
+    <span class="time-word">pixel</span>
+    <span class="time-word">moves</span>
+    <span class="time-word">with</span>
+    <span class="time-word">purpose</span>
+  </h2>
+  <p>Not decoration. Communication. The breathing tells your brain: this page is alive, pay attention.</p>
+  <div class="time-sub" id="clockDisplay">00:00:00</div>
+</div>
+
+<footer>
+  <p>The trick: <span class="a">@keyframes breathe { scale + opacity }</span> — applied everywhere with different delays. That's it.</p>
+</footer>
+
+<script>
+  // ===== CURSOR =====
+  const cDot = document.getElementById('cDot');
+  const cRing = document.getElementById('cRing');
+  const cGlow = document.getElementById('cGlow');
+  let mx = -200, my = -200, rx = -200, ry = -200, gx = -200, gy = -200;
+
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+  function animCursor() {
+    cDot.style.transform = `translate(${mx-3}px,${my-3}px)`;
+    rx += (mx - rx) * 0.18;
+    ry += (my - ry) * 0.18;
+    cRing.style.transform = `translate(${rx-18}px,${ry-18}px)`;
+    gx += (mx - gx) * 0.04;
+    gy += (my - gy) * 0.04;
+    cGlow.style.transform = `translate(${gx-200}px,${gy-200}px)`;
+    requestAnimationFrame(animCursor);
+  }
+  animCursor();
+
+  // ===== WAVE CANVAS =====
+  const wC = document.getElementById('waveCanvas');
+  const wCtx = wC.getContext('2d');
+  let wTime = 0;
+
+  function resizeWave() {
+    const r = wC.parentElement.getBoundingClientRect();
+    wC.width = r.width * devicePixelRatio;
+    wC.height = r.height * devicePixelRatio;
+    wC.style.width = r.width + 'px';
+    wC.style.height = r.height + 'px';
+    wCtx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  resizeWave();
+
+  function drawWave() {
+    const w = wC.width / devicePixelRatio;
+    const h = wC.height / devicePixelRatio;
+    wCtx.clearRect(0, 0, w, h);
+
+    const waves = [
+      { amp: 30, freq: 0.008, speed: 0.02, color: 'rgba(99,102,241,', opacity: 0.08, yOff: 0 },
+      { amp: 25, freq: 0.012, speed: 0.015, color: 'rgba(244,63,94,', opacity: 0.06, yOff: 20 },
+      { amp: 35, freq: 0.006, speed: 0.025, color: 'rgba(34,211,238,', opacity: 0.05, yOff: 40 },
+      { amp: 20, freq: 0.015, speed: 0.018, color: 'rgba(52,211,153,', opacity: 0.04, yOff: 60 },
+    ];
+
+    waves.forEach(wave => {
+      wCtx.beginPath();
+      for (let x = 0; x <= w; x += 2) {
+        const y = h / 2 + wave.yOff +
+          Math.sin(x * wave.freq + wTime * wave.speed) * wave.amp +
+          Math.sin(x * wave.freq * 0.5 + wTime * wave.speed * 0.7) * wave.amp * 0.5;
+        if (x === 0) wCtx.moveTo(x, y);
+        else wCtx.lineTo(x, y);
+      }
+      wCtx.lineTo(w, h);
+      wCtx.lineTo(0, h);
+      wCtx.closePath();
+      wCtx.fillStyle = wave.color + wave.opacity + ')';
+      wCtx.fill();
+    });
+
+    wTime++;
+    requestAnimationFrame(drawWave);
+  }
+  drawWave();
+
+  // ===== PARTICLE CANVAS =====
+  const pC = document.getElementById('particleCanvas');
+  const pCtx = pC.getContext('2d');
+  let particles = [];
+  let pmx = 0, pmy = 0;
+
+  function resizeParticles() {
+    const r = pC.parentElement.getBoundingClientRect();
+    pC.width = r.width * devicePixelRatio;
+    pC.height = r.height * devicePixelRatio;
+    pC.style.width = r.width + 'px';
+    pC.style.height = r.height + 'px';
+    pCtx.scale(devicePixelRatio, devicePixelRatio);
+    initParticles();
+  }
+
+  function initParticles() {
+    particles = [];
+    const r = pC.parentElement.getBoundingClientRect();
+    const count = Math.min(80, Math.floor((r.width * r.height) / 8000));
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * r.width,
+        y: Math.random() * r.height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 2 + 1,
+        opacity: Math.random() * 0.4 + 0.1,
+        baseOpacity: Math.random() * 0.4 + 0.1,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  pC.parentElement.addEventListener('mousemove', e => {
+    const r = pC.parentElement.getBoundingClientRect();
+    pmx = e.clientX - r.left;
+    pmy = e.clientY - r.top;
+  });
+
+  function drawParticles() {
+    const r = pC.parentElement.getBoundingClientRect();
+    const w = r.width, h = r.height;
+    pCtx.clearRect(0, 0, w, h);
+    const time = Date.now() * 0.001;
+
+    particles.forEach(p => {
+      const dx = pmx - p.x;
+      const dy = pmy - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 150 && dist > 0) {
+        const force = (150 - dist) / 150 * 0.03;
+        p.vx -= (dx / dist) * force;
+        p.vy -= (dy / dist) * force;
+      }
+
+      p.vx *= 0.99;
+      p.vy *= 0.99;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+
+      // Breathing opacity
+      p.opacity = p.baseOpacity + Math.sin(time * 2 + p.phase) * p.baseOpacity * 0.4;
+
+      pCtx.beginPath();
+      pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      pCtx.fillStyle = `rgba(99,102,241,${p.opacity})`;
+      pCtx.fill();
+
+      // Connections
+      for (let j = 0; j < particles.length; j++) {
+        const p2 = particles[j];
+        const cdx = p.x - p2.x;
+        const cdy = p.y - p2.y;
+        const cd = Math.sqrt(cdx * cdx + cdy * cdy);
+        if (cd < 100 && cd > 0) {
+          const lineOpacity = (1 - cd / 100) * 0.06 * Math.min(p.opacity, p2.opacity) * 3;
+          pCtx.beginPath();
+          pCtx.moveTo(p.x, p.y);
+          pCtx.lineTo(p2.x, p2.y);
+          pCtx.strokeStyle = `rgba(99,102,241,${lineOpacity})`;
+          pCtx.lineWidth = 0.5;
+          pCtx.stroke();
+        }
+      }
+    });
+
+    requestAnimationFrame(drawParticles);
+  }
+  resizeParticles();
+  drawParticles();
+
+  // ===== COUNTERS =====
+  const counters = [
+    { el: document.getElementById('m1'), target: 60, suffix: '' },
+    { el: document.getElementById('m2'), target: 47, suffix: '' },
+    { el: document.getElementById('m3'), target: 0, suffix: 'ms' },
+    { el: document.getElementById('m4'), target: 0, suffix: '' },
+  ];
+
+  counters.forEach(c => {
+    const start = performance.now();
+    const dur = 1500;
+    function tick(now) {
+      const t = Math.min((now - start) / dur, 1);
+      const e = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      c.el.textContent = Math.round(e * c.target) + c.suffix;
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    // Delay to sync with scroll reveal
+    setTimeout(() => requestAnimationFrame(tick), 500);
+  });
+
+  // ===== CLOCK =====
+  const clockEl = document.getElementById('clockDisplay');
+  function updateClock() {
+    const now = new Date();
+    clockEl.textContent =
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ':' +
+      String(now.getSeconds()).padStart(2, '0');
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ===== RESIZE =====
+  window.addEventListener('resize', () => { resizeWave(); resizeParticles(); });
+</script>
+</body>
+</html>

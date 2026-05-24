@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apple-Inspired Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#000000;--surface:#111113;--surface-2:#1a1a1e;--surface-3:#222228;
+    --text:#F5F5F7;--text-2:#A1A1A6;--text-3:#6E6E73;
+    --blue:#2997FF;--blue-g:rgba(41,151,255,.2);
+    --violet:#BF5AF2;--violet-g:rgba(191,90,242,.2);
+    --orange:#FF9F0A;--orange-g:rgba(255,159,10,.15);
+    --green:#30D158;--green-g:rgba(48,209,88,.15);
+    --pink:#FF375F;--pink-g:rgba(255,55,95,.15);
+    --cyan:#64D2FF;--cyan-g:rgba(100,210,255,.15);
+    --border:rgba(255,255,255,.06);
+    --border-2:rgba(255,255,255,.1);
+    --eoe:cubic-bezier(.25,1,.5,1);--esp:cubic-bezier(.34,1.56,.64,1);
+    --ease-apple:cubic-bezier(.28,.11,.32,1);
+  }
+  html{scroll-behavior:auto}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+    overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
+
+  /* ===== HERO ===== */
+  .hero{padding:140px 24px 50px;text-align:center;max-width:720px;margin:0 auto;
+    position:relative}
+  .hero::after{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);
+    width:800px;height:600px;background:radial-gradient(ellipse,rgba(41,151,255,.06),
+    transparent 70%);pointer-events:none}
+  .hero-label{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;
+    background:rgba(41,151,255,.08);border:1px solid rgba(41,151,255,.12);border-radius:100px;
+    font-size:12px;font-weight:500;color:var(--blue);margin-bottom:24px;
+    opacity:0;animation:up .8s .2s var(--eoe) forwards}
+  .hero-label span{width:5px;height:5px;background:var(--blue);border-radius:50%}
+  .hero h1{font-size:clamp(44px,7vw,76px);font-weight:600;line-height:1.05;
+    letter-spacing:-2.5px;margin-bottom:16px;
+    opacity:0;animation:up 1s .4s var(--eoe) forwards}
+  .hero h1 .sf{font-weight:200;color:var(--text-2)}
+  .hero p{font-size:18px;color:var(--text-2);font-weight:300;line-height:1.5;
+    max-width:520px;margin:0 auto;
+    opacity:0;animation:up .8s .7s var(--eoe) forwards}
+  @keyframes up{to{opacity:1;transform:translateY(0)}}
+
+  /* ===== LAYOUT ===== */
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 24px 140px;
+    display:flex;flex-direction:column;gap:120px}
+  .sec-head{text-align:center;margin-bottom:56px}
+  .sec-n{font-size:12px;font-weight:500;color:var(--blue);letter-spacing:2px;
+    text-transform:uppercase;margin-bottom:10px}
+  .sec-t{font-size:clamp(28px,3.5vw,40px);font-weight:600;letter-spacing:-1px}
+  .sec-d{font-size:15px;color:var(--text-2);font-weight:300;margin-top:8px}
+  .row{display:grid;gap:20px}
+
+  .card-base{opacity:0;transform:translateY(24px);
+    transition:opacity .7s var(--eoe),transform .7s var(--eoe)}
+  .card-base.vis{opacity:1;transform:translateY(0)}
+
+  /* ============================================================
+     1. FEATURE CARDS — the Apple.com style
+  ============================================================ */
+  .feat-grid{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:768px){.feat-grid{grid-template-columns:1fr}}
+  .feat-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:36px 28px;position:relative;overflow:hidden;cursor:default;
+    transition:transform .5s var(--ease-apple),box-shadow .5s var(--ease-apple),
+    border-color .4s ease}
+  .feat-card:hover{transform:translateY(-8px);
+    box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04)}
+  .feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
+    opacity:0;transition:opacity .4s ease}
+  .feat-card:hover::before{opacity:1}
+  .feat-card .fc-icon{width:52px;height:52px;border-radius:14px;display:flex;
+    align-items:center;justify-content:center;font-size:24px;margin-bottom:20px;
+    transition:transform .5s var(--esp);will-change:transform;position:relative}
+  .feat-card:hover .fc-icon{transform:scale(1.08)}
+  .feat-card h3{font-size:19px;font-weight:600;letter-spacing:-.3px;margin-bottom:8px}
+  .feat-card p{font-size:14px;color:var(--text-2);line-height:1.55}
+
+  /* Soft glow behind icon on hover */
+  .fc-icon::after{content:'';position:absolute;inset:-8px;border-radius:20px;
+    opacity:0;transition:opacity .4s ease;will-change:opacity}
+  .feat-card:hover .fc-icon::after{opacity:1}
+  .fc-blue .fc-icon{background:rgba(41,151,255,.1)}
+  .fc-blue .fc-icon::after{background:radial-gradient(circle,rgba(41,151,255,.15),transparent 70%)}
+  .fc-violet .fc-icon{background:rgba(191,90,242,.1)}
+  .fc-violet .fc-icon::after{background:radial-gradient(circle,rgba(191,90,242,.15),transparent 70%)}
+  .fc-green .fc-icon{background:rgba(48,209,88,.1)}
+  .fc-green .fc-icon::after{background:radial-gradient(circle,rgba(48,209,88,.15),transparent 70%)}
+
+  /* ============================================================
+     2. PRODUCT CARDS — iPhone-style
+  ============================================================ */
+  .prod-grid{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:768px){.prod-grid{grid-template-columns:1fr}}
+  .prod-card{
+    border-radius:24px;overflow:hidden;cursor:default;position:relative;
+    background:var(--surface);border:1px solid var(--border);
+    transition:transform .5s var(--ease-apple),box-shadow .5s var(--ease-apple),
+    border-color .4s ease}
+  .prod-card:hover{transform:translateY(-6px) scale(1.01);
+    box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .prod-visual{height:240px;position:relative;overflow:hidden;
+    display:flex;align-items:center;justify-content:center}
+  .prod-visual .pv-bg{position:absolute;inset:0;transition:transform .6s var(--ease-apple);
+    will-change:transform}
+  .prod-card:hover .pv-bg{transform:scale(1.05)}
+  .prod-visual .pv-icon{font-size:64px;position:relative;z-index:1;filter:drop-shadow(0 8px 24px rgba(0,0,0,.4));
+    transition:transform .5s var(--esp);will-change:transform}
+  .prod-card:hover .pv-icon{transform:scale(1.08) translateY(-4px)}
+  .prod-body{padding:28px}
+  .prod-body .prod-tag{display:inline-block;padding:4px 10px;border-radius:6px;
+    font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+    margin-bottom:12px}
+  .prod-body h3{font-size:24px;font-weight:600;letter-spacing:-.5px;margin-bottom:6px}
+  .prod-body p{font-size:14px;color:var(--text-2);line-height:1.5;margin-bottom:20px}
+  .prod-link{display:inline-flex;align-items:center;gap:6px;font-size:14px;
+    font-weight:500;color:var(--blue);text-decoration:none;
+    transition:gap .3s var(--eoe)}
+  .prod-link svg{width:14px;height:14px;stroke:var(--blue);fill:none;
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+    transition:transform .3s var(--eoe);will-change:transform}
+  .prod-card:hover .prod-link{gap:10px}
+  .prod-card:hover .prod-link svg{transform:translateX(3px)}
+
+  /* ============================================================
+     3. FROSTED GLASS CARDS
+  ============================================================ */
+  .frost-wrap{position:relative;padding:60px 0}
+  .frost-wrap::before{content:'';position:absolute;inset:-40px;
+    background:radial-gradient(ellipse at 30% 40%,rgba(41,151,255,.06),transparent 50%),
+    radial-gradient(ellipse at 70% 60%,rgba(191,90,242,.05),transparent 50%);
+    pointer-events:none;opacity:0;transition:opacity .8s ease}
+  .frost-wrap.vis::before{opacity:1}
+  .frost-grid{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:768px){.frost-grid{grid-template-columns:1fr}}
+  .frost-card{
+    border-radius:24px;padding:32px 24px;position:relative;overflow:hidden;
+    cursor:default;transition:transform .5s var(--ease-apple),
+    border-color .4s ease;
+    background:rgba(255,255,255,.03);
+    backdrop-filter:blur(40px) saturate(1.4);
+    -webkit-backdrop-filter:blur(40px) saturate(1.4);
+    border:1px solid rgba(255,255,255,.08)}
+  .frost-card:hover{transform:translateY(-6px);
+    border-color:rgba(255,255,255,.12)}
+  .frost-card .fr-glow{position:absolute;width:200px;height:200px;border-radius:50%;
+    pointer-events:none;opacity:0;transition:opacity .5s ease;
+    filter:blur(40px);will-change:opacity;transform:translate(-50%,-50%)}
+  .frost-card:hover .fr-glow{opacity:1}
+  .fr-num{font-size:40px;font-weight:700;letter-spacing:-2px;margin-bottom:4px;
+    background:linear-gradient(180deg,var(--text),var(--text-2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    font-variant-numeric:tabular-nums}
+  .fr-label{font-size:13px;color:var(--text-2);font-weight:400;margin-bottom:20px}
+  .fr-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+  .fr-bar-fill{height:100%;border-radius:2px;width:0%;
+    transition:width 1.2s var(--ease-apple);will-change:width}
+  .frost-card.vis .fr-bar-fill{width:var(--fill)}
+  .fr-blue .fr-glow{background:var(--blue-g)}
+  .fr-blue .fr-bar-fill{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+  .fr-violet .fr-glow{background:var(--violet-g)}
+  .fr-violet .fr-bar-fill{background:linear-gradient(90deg,var(--violet),var(--pink))}
+  .fr-green .fr-glow{background:var(--green-g)}
+  .fr-green .fr-bar-fill{background:linear-gradient(90deg,var(--green),var(--cyan))}
+
+  /* ============================================================
+     4. APP ICON GRID — macOS Launchpad style
+  ============================================================ */
+  .app-grid{grid-template-columns:repeat(5,1fr);max-width:600px;margin:0 auto}
+  @media(max-width:600px){.app-grid{grid-template-columns:repeat(4,1fr)}}
+  .app-icon{
+    aspect-ratio:1;border-radius:22px;display:flex;align-items:center;
+    justify-content:center;font-size:32px;cursor:default;position:relative;
+    overflow:hidden;transition:transform .4s var(--esp),
+    box-shadow .4s var(--ease-apple);will-change:transform;
+    box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .app-icon::after{content:'';position:absolute;inset:0;border-radius:22px;
+    background:linear-gradient(180deg,rgba(255,255,255,.15) 0%,transparent 50%);
+    pointer-events:none;transition:opacity .3s ease;opacity:.7}
+  .app-icon:hover{transform:scale(1.12) translateY(-4px);
+    box-shadow:0 12px 30px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06)}
+  .app-icon:hover::after{opacity:1}
+  .app-icon:active{transform:scale(.95);transition-duration:.1s}
+  .app-icon span{position:relative;z-index:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+
+  .ai-1{background:linear-gradient(180deg,#5856D6,#3634A3)}
+  .ai-2{background:linear-gradient(180deg,#FF375F,#D12E4B)}
+  .ai-3{background:linear-gradient(180deg,#FF9F0A,#E08D08)}
+  .ai-4{background:linear-gradient(180deg,#30D158,#28A745)}
+  .ai-5{background:linear-gradient(180deg,#2997FF,#1A7FE8)}
+  .ai-6{background:linear-gradient(180deg,#BF5AF2,#A03DE0)}
+  .ai-7{background:linear-gradient(180deg,#64D2FF,#4AC2F0)}
+  .ai-8{background:linear-gradient(180deg,#FF6482,#E05068)}
+  .ai-9{background:linear-gradient(180deg,#AC8E68,#96805C)}
+  .ai-10{background:linear-gradient(180deg,#5E5CE6,#4A48CC)}
+
+  .app-label{text-align:center;margin-top:8px;font-size:11px;color:var(--text-3);
+    transition:color .3s ease}
+  .app-group{display:flex;flex-direction:column;align-items:center}
+  .app-group:hover .app-label{color:var(--text-2)}
+
+  /* ============================================================
+     5. PRO CARD — Apple Card titanium style
+  ============================================================ */
+  .pro-section{display:flex;justify-content:center}
+  .pro-card{
+    width:460px;max-width:100%;border-radius:28px;padding:48px 40px;
+    position:relative;overflow:hidden;cursor:default;
+    background:linear-gradient(145deg,#1c1c1e,#111113);
+    border:1px solid rgba(255,255,255,.08);
+    transition:transform .6s var(--ease-apple),box-shadow .6s var(--ease-apple),
+    border-color .4s ease}
+  @media(max-width:500px){.pro-card{padding:36px 24px}}
+  .pro-card:hover{transform:translateY(-8px) scale(1.01);
+    box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.05)}
+  /* Titanium shimmer */
+  .pro-card::before{content:'';position:absolute;inset:0;
+    background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.04) 45%,
+    rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 55%,transparent 60%);
+    transform:translateX(-100%);transition:transform .8s var(--ease-apple);pointer-events:none}
+  .pro-card:hover::before{transform:translateX(100%)}
+  /* Subtle rainbow edge */
+  .pro-card::after{content:'';position:absolute;inset:0;border-radius:28px;
+    background:linear-gradient(145deg,rgba(255,255,255,.06),transparent 40%,
+    transparent 60%,rgba(255,255,255,.03));pointer-events:none}
+  .pro-chip{width:44px;height:34px;border-radius:10px;
+    background:linear-gradient(145deg,#FFD60A,#E6C008);
+    display:flex;align-items:center;justify-content:center;margin-bottom:28px;
+    box-shadow:0 2px 8px rgba(255,214,10,.15);
+    transition:transform .5s var(--esp);will-change:transform;position:relative;overflow:hidden}
+  .pro-chip::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(255,255,255,.3),transparent 50%);border-radius:10px}
+  .pro-chip span{font-size:14px;font-weight:700;color:#1c1c1e;position:relative;z-index:1}
+  .pro-card:hover .pro-chip{transform:rotate(-5deg) scale(1.05)}
+  .pro-name{font-size:28px;font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
+  .pro-type{font-size:14px;color:var(--text-2);font-weight:300;margin-bottom:28px}
+  .pro-num-group{display:flex;gap:24px;margin-bottom:32px}
+  .pro-num-item{}
+  .pro-num-label{font-size:10px;color:var(--text-3);letter-spacing:1px;
+    text-transform:uppercase;margin-bottom:4px}
+  .pro-num-val{font-size:20px;font-weight:600;letter-spacing:-.5px;
+    font-variant-numeric:tabular-nums}
+  .pro-divider{height:1px;background:rgba(255,255,255,.06);margin-bottom:24px}
+  .pro-features{display:flex;flex-direction:column;gap:12px}
+  .pro-feat{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-2)}
+  .pro-feat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+  /* ============================================================
+     6. MINIMAL LIST CARDS
+  ============================================================ */
+  .list-grid{grid-template-columns:repeat(2,1fr);max-width:800px;margin:0 auto}
+  @media(max-width:600px){.list-grid{grid-template-columns:1fr}}
+  .list-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:24px;cursor:default;display:flex;align-items:center;gap:18px;
+    transition:transform .4s var(--ease-apple),background .4s ease,
+    border-color .4s ease,box-shadow .4s var(--ease-apple)}
+  .list-card:hover{transform:translateX(4px);background:rgba(255,255,255,.02);
+    border-color:rgba(255,255,255,.08);
+    box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  .lc-icon{width:44px;height:44px;border-radius:12px;display:flex;
+    align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+    transition:transform .4s var(--esp);will-change:transform}
+  .list-card:hover .lc-icon{transform:scale(1.1)}
+  .lc-text{flex:1;min-width:0}
+  .lc-text h4{font-size:15px;font-weight:500;letter-spacing:-.2px;margin-bottom:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lc-text p{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .lc-arrow{width:28px;height:28px;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;background:rgba(255,255,255,.04);
+    flex-shrink:0;transition:transform .3s var(--eoe),background .3s ease}
+  .lc-arrow svg{width:12px;height:12px;stroke:var(--text-3);fill:none;
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+    transition:stroke .3s ease,transform .3s var(--eoe);will-change:transform}
+  .list-card:hover .lc-arrow{background:rgba(255,255,255,.06)}
+  .list-card:hover .lc-arrow svg{stroke:var(--text);transform:translateX(1px)}
+
+  /* ============================================================
+     FOOTER
+  ============================================================ */
+  footer{text-align:center;padding:80px 24px;border-top:1px solid var(--border);
+    max-width:1120px;margin:0 auto}
+  footer p{font-size:14px;color:var(--text-3)}
+  footer .a{color:var(--blue);font-weight:500}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-label"><span></span> Design Study</div>
+  <h1>Cards That Feel<br><span class="sf">Like Apple</span></h1>
+  <p>Restrained motion, layered depth, frosted materials, and the discipline to stop before "too much." Every pixel intentional.</p>
+</section>
+
+<div class="wrap">
+
+  <!-- 1: Feature Cards -->
+  <div>
+    <div class="sec-head"><div class="sec-n">01 — Feature Cards</div>
+      <div class="sec-t">The Apple.com standard</div>
+      <div class="sec-d">Subtle lift, top highlight, icon glow. Nothing more.</div></div>
+    <div class="row feat-grid">
+      <div class="feat-card card-base fc-blue" data-d="0">
+        <div class="fc-icon">⚡</div>
+        <h3>Blazing Fast</h3>
+        <p>Every interaction is GPU-accelerated. The browser never leaves the compositor thread.</p>
+      </div>
+      <div class="feat-card card-base fc-violet" data-d="1">
+        <div class="fc-icon">✦</div>
+        <h3>Beautifully Crafted</h3>
+        <p>Custom cubic-bezier curves create motion that feels organic, not mechanical.</p>
+      </div>
+      <div class="feat-card card-base fc-green" data-d="2">
+        <div class="fc-icon">🧬</div>
+        <h3>Thoughtfully Layered</h3>
+        <p>Shadows, borders, and blurs work together to create perceived depth without 3D transforms.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2: Product Cards -->
+  <div>
+    <div class="sec-head"><div class="sec-n">02 — Product Cards</div>
+      <div class="sec-t">The iPhone showcase style</div>
+      <div class="sec-d">Visual hero, gradient background, arrow that leans forward on hover.</div></div>
+    <div class="row prod-grid">
+      <div class="prod-card card-base" data-d="0">
+        <div class="prod-visual">
+          <div class="pv-bg" style="background:linear-gradient(180deg,rgba(41,151,255,.12),rgba(41,151,255,.02))"></div>
+          <div class="pv-icon">📱</div>
+        </div>
+        <div class="prod-body">
+          <div class="prod-tag" style="background:rgba(41,151,255,.1);color:var(--blue)">New</div>
+          <h3>iPhone 16 Pro</h3>
+          <p>Titanium design. A17 Pro chip. The most advanced iPhone ever.</p>
+          <a href="#" class="prod-link">Learn more <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></a>
+        </div>
+      </div>
+      <div class="prod-card card-base" data-d="1">
+        <div class="prod-visual">
+          <div class="pv-bg" style="background:linear-gradient(180deg,rgba(191,90,242,.12),rgba(191,90,242,.02))"></div>
+          <div class="pv-icon">💻</div>
+        </div>
+        <div class="prod-body">
+          <div class="prod-tag" style="background:rgba(191,90,242,.1);color:var(--violet)">Pro</div>
+          <h3>MacBook Pro</h3>
+          <p>M3 Pro and M3 Max. The most powerful Mac laptops for work and play.</p>
+          <a href="#" class="prod-link">Learn more <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3: Frosted Glass -->
+  <div>
+    <div class="sec-head"><div class="sec-n">03 — Frosted Glass</div>
+      <div class="sec-t">The Vision Pro aesthetic</div>
+      <div class="sec-d">backdrop-filter blur with subtle glow and animated progress bars.</div></div>
+    <div class="frost-wrap vis">
+      <div class="row frost-grid">
+        <div class="frost-card card-base fr-blue" data-d="0">
+          <div class="fr-glow" style="left:50%;top:20%"></div>
+          <div class="fr-num">98<span style="font-size:24px;font-weight:400">%</span></div>
+          <div class="fr-label">Performance Score</div>
+          <div class="fr-bar"><div class="fr-bar-fill" style="--fill:98%"></div></div>
+        </div>
+        <div class="frost-card card-base fr-violet" data-d="1">
+          <div class="fr-glow" style="left:50%;top:20%"></div>
+          <div class="fr-num">4K<span style="font-size:24px;font-weight:400"></span></div>
+          <div class="fr-label">Display Resolution</div>
+          <div class="fr-bar"><div class="fr-bar-fill" style="--fill:85%"></div></div>
+        </div>
+        <div class="frost-card card-base fr-green" data-d="2">
+          <div class="fr-glow" style="left:50%;top:20%"></div>
+          <div class="fr-num">60<span style="font-size:24px;font-weight:400">fps</span></div>
+          <div class="fr-label">Frame Rate</div>
+          <div class="fr-bar"><div class="fr-bar-fill" style="--fill:100%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4: App Icons -->
+  <div>
+    <div class="sec-head"><div class="sec-n">04 — App Icons</div>
+      <div class="sec-t">The Launchpad effect</div>
+      <div class="sec-d">Slight lift with shadow expansion. The icon grows 12% and floats up 4px. Nothing else.</div></div>
+    <div class="row app-grid">
+      <div class="app-group"><div class="app-icon ai-1 card-base" data-d="0"><span>🎵</span></div><div class="app-label">Music</div></div>
+      <div class="app-group"><div class="app-icon ai-2 card-base" data-d="1"><span>📸</span></div><div class="app-label">Photos</div></div>
+      <div class="app-group"><div class="app-icon ai-3 card-base" data-d="2"><span>📌</span></div><div class="app-label">Notes</div></div>
+      <div class="app-group"><div class="app-icon ai-4 card-base" data-d="3"><span>💬</span></div><div class="app-label">Messages</div></div>
+      <div class="app-group"><div class="app-icon ai-5 card-base" data-d="4"><span>🌐</span></div><div class="app-label">Safari</div></div>
+      <div class="app-group"><div class="app-icon ai-6 card-base" data-d="5"><span>🎨</span></div><div class="app-label">Freeform</div></div>
+      <div class="app-group"><div class="app-icon ai-7 card-base" data-d="6"><span>⛅</span></div><div class="app-label">Weather</div></div>
+      <div class="app-group"><div class="app-icon ai-8 card-base" data-d="7"><span>❤️</span></div><div class="app-label">Health</div></div>
+      <div class="app-group"><div class="app-icon ai-9 card-base" data-d="8"><span>🗺️</span></div><div class="app-label">Maps</div></div>
+      <div class="app-group"><div class="app-icon ai-10 card-base" data-d="9"><span>⚙️</span></div><div class="app-label">Settings</div></div>
+    </div>
+  </div>
+
+  <!-- 5: Pro Card -->
+  <div>
+    <div class="sec-head"><div class="sec-n">05 — Titanium Card</div>
+      <div class="sec-t">The Apple Card detail view</div>
+      <div class="sec-d">Shimmer sweep, golden chip, stacked shadow layers. Premium restraint.</div></div>
+    <div class="pro-section">
+      <div class="pro-card card-base" data-d="0">
+        <div class="pro-chip"><span></span></div>
+        <div class="pro-name">Apple Card</div>
+        <div class="pro-type">Titanium. Completely reimagined.</div>
+        <div class="pro-num-group">
+          <div class="pro-num-item"><div class="pro-num-label">APR</div><div class="pro-num-val">0%–23.99%</div></div>
+          <div class="pro-num-item"><div class="pro-num-label">Cashback</div><div class="pro-num-val">Up to 3%</div></div>
+          <div class="pro-num-item"><div class="pro-num-label">Annual Fee</div><div class="pro-num-val">$0</div></div>
+        </div>
+        <div class="pro-divider"></div>
+        <div class="pro-features">
+          <div class="pro-feat"><div class="pro-feat-dot" style="background:var(--green)"></div>Daily Cash on every purchase</div>
+          <div class="pro-feat"><div class="pro-feat-dot" style="background:var(--blue)"></div>Seamless integration with Wallet</div>
+          <div class="pro-feat"><div class="pro-feat-dot" style="background:var(--violet)"></div>No foreign transaction fees</div>
+          <div class="pro-feat"><div class="pro-feat-dot" style="background:var(--orange)"></div>Titanium physical card</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: List Cards -->
+  <div>
+    <div class="sec-head"><div class="sec-n">06 — List Items</div>
+      <div class="sec-t">The Settings panel style</div>
+      <div class="sec-d">Slides right 4px. Arrow leans forward. Background barely changes. Barely-there hover.</div></div>
+    <div class="row list-grid">
+      <div class="list-card card-base" data-d="0">
+        <div class="lc-icon" style="background:rgba(41,151,255,.1)">🎨</div>
+        <div class="lc-text"><h4>Appearance</h4><p>Light, Dark, Auto</p></div>
+        <div class="lc-arrow"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+      <div class="list-card card-base" data-d="1">
+        <div class="lc-icon" style="background:rgba(48,209,88,.1)">🔒</div>
+        <div class="lc-text"><h4>Privacy & Security</h4><p>Face ID, Passkeys, Alerts</p></div>
+        <div class="lc-arrow"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+      <div class="list-card card-base" data-d="2">
+        <div class="lc-icon" style="background:rgba(255,159,10,.1)">🔔</div>
+        <div class="lc-text"><h4>Notifications</h4><p>Scheduled, Focus, Summary</p></div>
+        <div class="lc-arrow"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+      <div class="list-card card-base" data-d="3">
+        <div class="lc-icon" style="background:rgba(191,90,242,.1)">🧠</div>
+        <div class="lc-text"><h4>Apple Intelligence</h4><p>Siri, Writing Tools, Image Playground</p></div>
+        <div class="lc-arrow"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+      <div class="list-card card-base" data-d="4">
+        <div class="lc-icon" style="background:rgba(255,55,95,.1)">⚙️</div>
+        <div class="lc-text"><h4>General</h4><p>About, Software Update, AirDrop</p></div>
+        <div class="lc-arrow"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+      <div class="list-card card-base" data-d="5">
+        <div class="lc-icon" style="background:rgba(100,210,255,.1)">🖥️</div>
+        <div class="lc-text"><h4>Display</h4><p>Brightness, Night Shift, True Tone</p></div>
+        <div class="lc-arrow"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>The Apple philosophy: <span class="a">less motion, more meaning</span></p>
+</footer>
+
+<script>
+  // ============================================
+  // SCROLL REVEALS with stagger
+  // ============================================
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const d = parseInt(e.target.dataset.d || 0) * 100;
+        setTimeout(() => e.target.classList.add('vis'), d);
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -30px 0px' });
+
+  document.querySelectorAll('.card-base').forEach(el => obs.observe(el));
+
+  // Frost cards use parent observer
+  const frostObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('vis');
+        frostObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  frostObs.observe(document.querySelector('.frost-wrap'));
+</script>
+</body>
+</html>

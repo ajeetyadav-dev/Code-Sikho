@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beginner UI vs Pro UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0e0e11;
+    --bg-elevated: #16161a;
+    --bg-card: #1c1c22;
+    --fg: #ececef;
+    --fg-muted: #72727e;
+    --border: #2a2a33;
+    --accent-pro: #e8a83e;
+    --accent-pro-dim: rgba(232,168,62,0.12);
+    --accent-bad: #e05252;
+    --accent-bad-dim: rgba(224,82,82,0.1);
+    --accent-good: #4ade80;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Background atmosphere */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%; left: -20%;
+    width: 80vw; height: 80vw;
+    background: radial-gradient(circle, rgba(232,168,62,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -30%; right: -10%;
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(224,82,82,0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grid background */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .content-wrapper {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 100px 24px 60px;
+    text-align: center;
+    position: relative;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    font-size: 13px;
+    color: var(--fg-muted);
+    margin-bottom: 28px;
+    animation: fadeInDown 0.6s ease;
+  }
+  .badge i { color: var(--accent-pro); }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(42px, 7vw, 80px);
+    font-weight: 700;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    margin-bottom: 20px;
+    animation: fadeInDown 0.7s ease;
+  }
+  h1 .vs {
+    display: inline-block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px 16px;
+    font-size: 0.45em;
+    vertical-align: middle;
+    margin: 0 8px;
+    color: var(--fg-muted);
+    font-weight: 400;
+    letter-spacing: 2px;
+  }
+  h1 .beginner { color: var(--accent-bad); }
+  h1 .pro { color: var(--accent-pro); }
+
+  .subtitle {
+    font-size: 18px;
+    color: var(--fg-muted);
+    max-width: 560px;
+    margin: 0 auto;
+    animation: fadeInDown 0.8s ease;
+  }
+
+  .scroll-hint {
+    margin-top: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--fg-muted);
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    animation: bounce 2s ease infinite;
+  }
+  .scroll-hint i { font-size: 16px; }
+
+  /* ── Comparison Sections ── */
+  .comparison-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .comparison-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .section-number {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-pro);
+    background: var(--accent-pro-dim);
+    padding: 4px 12px;
+    border-radius: 100px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .section-heading {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+
+  .section-desc {
+    color: var(--fg-muted);
+    font-size: 15px;
+    max-width: 600px;
+    margin-bottom: 40px;
+  }
+
+  /* ── Split Panel ── */
+  .split-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .panel {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+  }
+
+  .panel-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .panel-tag.beginner-tag { color: var(--accent-bad); }
+  .panel-tag.pro-tag { color: var(--accent-pro); }
+  .panel-tag i { font-size: 11px; }
+
+  .panel-verdict {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+  .panel-verdict.bad {
+    background: var(--accent-bad-dim);
+    color: var(--accent-bad);
+  }
+  .panel-verdict.good {
+    background: rgba(74,222,128,0.1);
+    color: var(--accent-good);
+  }
+
+  .panel-body {
+    padding: 32px 28px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    position: relative;
+  }
+
+  /* ── Annotations ── */
+  .annotation-list {
+    margin-top: 24px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .annotation {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+  .annotation i {
+    margin-top: 3px;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .annotation i.fa-xmark { color: var(--accent-bad); }
+  .annotation i.fa-check { color: var(--accent-good); }
+
+  /* ══════════════════════════════════════
+     BEGINNER COMPONENT STYLES (intentionally bad)
+     ══════════════════════════════════════ */
+
+  /* Beginner Buttons */
+  .beg-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+  }
+  .beg-btn-primary { background: #3388ff; color: white; }
+  .beg-btn-secondary { background: #cccccc; color: #333333; }
+  .beg-btn-danger { background: red; color: white; font-size: 11px; padding: 5px 10px; }
+  .beg-btn-group { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+
+  /* Pro Buttons */
+  .pro-btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .pro-btn {
+    padding: 10px 22px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .pro-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    pointer-events: none;
+  }
+  .pro-btn-primary {
+    background: var(--accent-pro);
+    color: #1a1a1a;
+    box-shadow: 0 2px 12px rgba(232,168,62,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .pro-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(232,168,62,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .pro-btn-primary:active { transform: translateY(0); }
+  .pro-btn-secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  .pro-btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.15);
+  }
+  .pro-btn-ghost {
+    background: transparent;
+    color: var(--accent-bad);
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  .pro-btn-ghost:hover { background: var(--accent-bad-dim); }
+
+  /* Beginner Card */
+  .beg-card {
+    width: 100%;
+    max-width: 300px;
+    background: white;
+    border-radius: 0;
+    padding: 10px;
+    color: #333;
+    font-family: Arial, sans-serif;
+  }
+  .beg-card img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+  }
+  .beg-card-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 6px 0 2px;
+  }
+  .beg-card-text {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.3;
+  }
+  .beg-card-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .beg-price { font-size: 18px; color: red; font-weight: bold; }
+  .beg-cart-btn {
+    background: orange;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  /* Pro Card */
+  .pro-card {
+    width: 100%;
+    max-width: 300px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .pro-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .pro-card-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    position: relative;
+  }
+  .pro-card-img-wrapper {
+    position: relative;
+    overflow: hidden;
+  }
+  .pro-card-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--accent-pro);
+    color: #1a1a1a;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    z-index: 2;
+  }
+  .pro-card-body { padding: 18px 20px; }
+  .pro-card-cat {
+    font-size: 11px;
+    color: var(--accent-pro);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .pro-card-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--fg);
+  }
+  .pro-card-desc {
+    font-size: 13px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .pro-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .pro-price {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--fg);
+  }
+  .pro-price span {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--fg-muted);
+  }
+
+  /* Beginner Form */
+  .beg-form {
+    width: 100%;
+    max-width: 280px;
+    font-family: Arial, sans-serif;
+    color: #333;
+  }
+  .beg-form label {
+    font-size: 12px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .beg-form input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 0;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .beg-form-submit {
+    background: #3388ff;
+    color: white;
+    border: none;
+    padding: 8px 30px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  /* Pro Form */
+  .pro-form {
+    width: 100%;
+    max-width: 280px;
+  }
+  .pro-form-group {
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .pro-form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg);
+    margin-bottom: 6px;
+  }
+  .pro-form-label .required {
+    color: var(--accent-bad);
+    margin-left: 2px;
+  }
+  .pro-form-input {
+    width: 100%;
+    padding: 11px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-size: 14px;
+    font-family: var(--font-body);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+  }
+  .pro-form-input::placeholder { color: var(--fg-muted); }
+  .pro-form-input:focus {
+    border-color: var(--accent-pro);
+    box-shadow: 0 0 0 3px var(--accent-pro-dim);
+  }
+  .pro-form-hint {
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 5px;
+  }
+  .pro-form-submit {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-pro);
+    color: #1a1a1a;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 12px rgba(232,168,62,0.25);
+  }
+  .pro-form-submit:hover {
+    box-shadow: 0 4px 20px rgba(232,168,62,0.35);
+    transform: translateY(-1px);
+  }
+
+  /* Beginner Nav */
+  .beg-nav {
+    display: flex;
+    gap: 0;
+    background: #eee;
+    padding: 0;
+    width: 100%;
+    max-width: 400px;
+    font-family: Arial, sans-serif;
+  }
+  .beg-nav a {
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #333;
+    text-decoration: none;
+    border-right: 1px solid #ddd;
+  }
+  .beg-nav a:hover { background: #ddd; }
+  .beg-nav a.active { background: #3388ff; color: white; }
+
+  /* Pro Nav */
+  .pro-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .pro-nav a {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .pro-nav a:hover { color: var(--fg); background: rgba(255,255,255,0.04); }
+  .pro-nav a.active {
+    color: #1a1a1a;
+    background: var(--accent-pro);
+    box-shadow: 0 2px 8px rgba(232,168,62,0.3);
+  }
+
+  /* Beginner Typography */
+  .beg-typo {
+    text-align: left;
+    width: 100%;
+    max-width: 300px;
+    font-family: Arial, sans-serif;
+    color: #333;
+  }
+  .beg-typo h2 { font-size: 24px; margin-bottom: 4px; }
+  .beg-typo h3 { font-size: 18px; margin-bottom: 8px; color: #666; }
+  .beg-typo p { font-size: 12px; line-height: 1.4; color: #999; }
+  .beg-typo .meta { font-size: 10px; color: #bbb; margin-top: 6px; }
+
+  /* Pro Typography */
+  .pro-typo {
+    text-align: left;
+    width: 100%;
+    max-width: 300px;
+  }
+  .pro-typo .overline {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-pro);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .pro-typo h2 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--fg);
+    line-height: 1.2;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .pro-typo p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--fg-muted);
+  }
+  .pro-typo .meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .pro-typo .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pro-typo .meta-item i { color: var(--accent-pro); font-size: 11px; }
+
+  /* Beginner Toast */
+  .beg-toast {
+    background: #333;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 0;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  /* Pro Toast */
+  .pro-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-good);
+    border-radius: var(--radius-sm);
+    width: 100%;
+    max-width: 320px;
+    animation: slideInToast 0.4s ease;
+  }
+  .pro-toast-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(74,222,128,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pro-toast-icon i { font-size: 10px; color: var(--accent-good); }
+  .pro-toast-content { flex: 1; }
+  .pro-toast-title { font-size: 13px; font-weight: 600; color: var(--fg); margin-bottom: 2px; }
+  .pro-toast-msg { font-size: 12px; color: var(--fg-muted); line-height: 1.4; }
+  .pro-toast-close {
+    background: none;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px;
+    transition: color 0.2s;
+  }
+  .pro-toast-close:hover { color: var(--fg); }
+
+  /* Beginner Toggle */
+  .beg-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    color: #333;
+  }
+  .beg-toggle {
+    width: 40px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+  }
+  .beg-toggle::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+  }
+
+  /* Pro Toggle */
+  .pro-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .pro-toggle-label {
+    font-size: 14px;
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .pro-toggle-sublabel {
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .pro-toggle {
+    width: 48px;
+    height: 26px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 13px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .pro-toggle.active {
+    background: var(--accent-pro);
+    border-color: var(--accent-pro);
+  }
+  .pro-toggle::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .pro-toggle.active::after { transform: translateX(22px); }
+
+  /* ── Stats Section ── */
+  .stats-bar {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .stat-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent-pro);
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: var(--fg-muted);
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 80px 24px 40px;
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+  }
+  .footer-cta {
+    font-family: var(--font-display);
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .footer-sub {
+    color: var(--fg-muted);
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+  .footer-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    background: var(--accent-pro);
+    color: #1a1a1a;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 16px rgba(232,168,62,0.3);
+  }
+  .footer-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(232,168,62,0.4);
+  }
+  .footer-copy {
+    margin-top: 48px;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+
+  /* ── Keyframe Animations ── */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(8px); }
+  }
+  @keyframes slideInToast {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── Floating Particles ── */
+  .particle {
+    position: fixed;
+    width: 3px;
+    height: 3px;
+    background: var(--accent-pro);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 0;
+    animation: floatParticle linear infinite;
+  }
+  @keyframes floatParticle {
+    0% { opacity: 0; transform: translateY(100vh) scale(0); }
+    10% { opacity: 0.4; }
+    90% { opacity: 0.4; }
+    100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .split-panel {
+      grid-template-columns: 1fr;
+    }
+    .stats-bar {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    header { padding: 60px 20px 40px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="content-wrapper">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="badge"><i class="fa-solid fa-sparkles"></i> Interactive Design Comparison</div>
+    <h1><span class="beginner">Beginner</span><span class="vs">VS</span><span class="pro">Pro</span></h1>
+    <p class="subtitle">Real, live UI components side by side. See exactly what separates amateur interfaces from professional ones — no slides, no mockups, just code.</p>
+    <div class="scroll-hint"><span>Scroll to explore</span><i class="fa-solid fa-chevron-down"></i></div>
+  </header>
+
+  <!-- ── Stats ── -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="stat-value" data-target="8">0</div>
+      <div class="stat-label">Comparisons</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" data-target="47">0</div>
+      <div class="stat-label">Details Noted</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" data-target="100" data-suffix="%">0%</div>
+      <div class="stat-label">Live Components</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" data-target="0" data-special="zero">0</div>
+      <div class="stat-label">Frameworks Needed</div>
+    </div>
+  </div>
+
+  <!-- ═══ 1. BUTTONS ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">01</span>
+      <span class="section-title">Buttons</span>
+    </div>
+    <h2 class="section-heading">The first thing users touch</h2>
+    <p class="section-desc">Buttons are the workhorse of any interface. The difference is in the details: weight, feedback, hierarchy, and how they respond to interaction.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body">
+          <div class="beg-btn-group">
+            <button class="beg-btn beg-btn-primary">Submit</button>
+            <button class="beg-btn beg-btn-secondary">Cancel</button>
+            <button class="beg-btn beg-btn-danger">DELETE</button>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>Default browser styling, no custom font</div>
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>No hover, active, or focus states</div>
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>Inconsistent sizing and padding</div>
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>Sharp corners with no visual logic</div>
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>No visual hierarchy between actions</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <div class="pro-btn-group">
+            <button class="pro-btn pro-btn-primary">Submit</button>
+            <button class="pro-btn pro-btn-secondary">Cancel</button>
+            <button class="pro-btn pro-btn-ghost">Delete</button>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Consistent sizing with proper touch targets</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Hover lift + shadow intensifies on interaction</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Clear visual hierarchy: filled, outlined, ghost</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Subtle top-light gradient adds dimension</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Danger action de-emphasized, not screaming</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2. CARDS ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">02</span>
+      <span class="section-title">Cards</span>
+    </div>
+    <h2 class="section-heading">Content containers that either attract or repel</h2>
+    <p class="section-desc">A card is more than a box with content. It needs breathing room, visual hierarchy, and a sense of quality that makes people want to engage.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background: #f5f5f5;">
+          <div class="beg-card">
+            <img src="https://picsum.photos/seed/begcard/400/200.jpg" alt="Product">
+            <div class="beg-card-title">Wireless Headphones</div>
+            <div class="beg-card-text">Good quality sound and comfortable to wear for long periods of time.</div>
+            <div class="beg-card-footer">
+              <span class="beg-price">$29.99</span>
+              <button class="beg-cart-btn">Add to Cart</button>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>White card on light gray — no contrast</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Zero border-radius, feels dated and harsh</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Tiny padding, everything crammed together</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <div class="pro-card" id="proCard">
+            <div class="pro-card-img-wrapper">
+              <span class="pro-card-badge">New</span>
+              <img class="pro-card-img" src="https://picsum.photos/seed/procard/400/240.jpg" alt="Product">
+            </div>
+            <div class="pro-card-body">
+              <div class="pro-card-cat">Audio</div>
+              <div class="pro-card-title">Wireless Headphones</div>
+              <div class="pro-card-desc">Premium sound with adaptive noise cancellation and 30-hour battery life.</div>
+              <div class="pro-card-footer">
+                <div class="pro-price">$79 <span>/unit</span></div>
+                <button class="pro-btn pro-btn-primary" style="padding:8px 18px;font-size:13px;">Add to Cart</button>
+              </div>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Elevated card with hover lift + shadow</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Category label creates scannable hierarchy</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Generous padding gives content room to breathe</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 3. FORM INPUTS ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">03</span>
+      <span class="section-title">Form Inputs</span>
+    </div>
+    <h2 class="section-heading">Where conversions are won or lost</h2>
+    <p class="section-desc">Forms are the handshake between user and system. Clumsy inputs create friction; polished ones build trust and guide users effortlessly.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background:#f5f5f5;">
+          <div class="beg-form">
+            <label>Name</label>
+            <input type="text" placeholder="John">
+            <label>Email</label>
+            <input type="email" placeholder="john@email.com">
+            <label>Message</label>
+            <input type="text" placeholder="Your message...">
+            <button class="beg-form-submit">Send</button>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>No required indicators or validation hints</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Using text input instead of textarea for message</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>No focus states, users can't tell where they are</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <div class="pro-form">
+            <div class="pro-form-group">
+              <label class="pro-form-label">Full Name <span class="required">*</span></label>
+              <input class="pro-form-input" type="text" placeholder="John Doe">
+            </div>
+            <div class="pro-form-group">
+              <label class="pro-form-label">Email Address <span class="required">*</span></label>
+              <input class="pro-form-input" type="email" placeholder="john@example.com">
+              <div class="pro-form-hint">We'll never share your email.</div>
+            </div>
+            <div class="pro-form-group">
+              <label class="pro-form-label">Message</label>
+              <input class="pro-form-input" type="text" placeholder="Tell us what you need...">
+            </div>
+            <button class="pro-form-submit">Send Message</button>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Required fields marked with clear indicator</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Focus ring with accent color guides attention</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Reassurance hint builds trust under email</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4. NAVIGATION ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">04</span>
+      <span class="section-title">Navigation</span>
+    </div>
+    <h2 class="section-heading">The skeleton of your interface</h2>
+    <p class="section-desc">Navigation should feel like a map, not a wall of links. The pro version uses spacing, containment, and state to create clarity.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background:#f5f5f5;">
+          <nav class="beg-nav">
+            <a href="#">Home</a>
+            <a href="#" class="active">Products</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+            <a href="#">Blog</a>
+          </nav>
+          <div class="annotation-list">
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Flat background, no container boundary</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Hard dividers between links feel rigid</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Active state is just a color swap, no shape</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <nav class="pro-nav" id="proNav">
+            <a href="#" data-nav>Home</a>
+            <a href="#" data-nav class="active">Products</a>
+            <a href="#" data-nav>About</a>
+            <a href="#" data-nav>Contact</a>
+            <a href="#" data-nav>Blog</a>
+          </nav>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Pill container creates clear boundary</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Active tab uses filled shape + shadow</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Click tabs to see smooth state transitions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 5. TYPOGRAPHY ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">05</span>
+      <span class="section-title">Typography</span>
+    </div>
+    <h2 class="section-heading">Words are 80% of your interface</h2>
+    <p class="section-desc">Hierarchy isn't just making things bigger. It's about creating a reading rhythm that guides the eye naturally through content.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background:#f5f5f5;">
+          <div class="beg-typo">
+            <h3>Blog Post</h3>
+            <h2>How to Design Better Interfaces</h2>
+            <p>Design is really important for making good websites. You should learn about colors and fonts and spacing to make things look nice and professional.</p>
+            <div class="meta">Jan 1, 2024 · 5 min read</div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Heading order is backwards (h3 before h2)</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>No type scale — sizes feel random</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Body text too small and low contrast</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <div class="pro-typo">
+            <div class="overline">Design Article</div>
+            <h2>How to Design Better Interfaces</h2>
+            <p>Great interfaces don't happen by accident. They emerge from deliberate decisions about hierarchy, spacing, and the subtle art of knowing when to stop.</p>
+            <div class="meta">
+              <div class="meta-item"><i class="fa-regular fa-calendar"></i> Jan 1, 2024</div>
+              <div class="meta-item"><i class="fa-regular fa-clock"></i> 5 min read</div>
+              <div class="meta-item"><i class="fa-regular fa-eye"></i> 2.4k views</div>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Overline establishes category before title</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Clear type scale: 11px → 26px → 14px</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Metadata uses icons for quick scanning</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 6. TOAST / NOTIFICATION ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">06</span>
+      <span class="section-title">Notifications</span>
+    </div>
+    <h2 class="section-heading">Feedback that respects the user's attention</h2>
+    <p class="section-desc">Notifications should inform without interrupting. Structure, color coding, and dismissibility separate helpful from annoying.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background:#2a2a2a;">
+          <div class="beg-toast">
+            <i class="fa-solid fa-check-circle" style="color:#4ade80;"></i>
+            Item added to cart successfully!
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>No title/body structure — everything is one line</div>
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>No way to dismiss, feels intrusive</div>
+            <div class="annotation"><i class="fa-solid fa-xmark"></i>Sharp corners, no visual personality</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <div class="pro-toast" id="proToast">
+            <div class="pro-toast-icon"><i class="fa-solid fa-check"></i></div>
+            <div class="pro-toast-content">
+              <div class="pro-toast-title">Added to cart</div>
+              <div class="pro-toast-msg">Wireless Headphones has been added to your cart.</div>
+            </div>
+            <button class="pro-toast-close" id="toastClose" aria-label="Dismiss notification"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Title + message structure for quick scanning</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Colored left border indicates success type</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Dismiss button gives user control — try it</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 7. TOGGLE / SWITCH ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">07</span>
+      <span class="section-title">Toggles</span>
+    </div>
+    <h2 class="section-heading">Small controls, big expectations</h2>
+    <p class="section-desc">Toggles seem simple but carry weight. Users expect smooth animation, clear on/off states, and labels that make the action unambiguous.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background:#f5f5f5;">
+          <div style="display:flex;flex-direction:column;gap:16px;align-items:flex-start;width:100%;max-width:280px;">
+            <div class="beg-toggle-wrapper">
+              <div class="beg-toggle"></div>
+              <span>Dark Mode</span>
+            </div>
+            <div class="beg-toggle-wrapper">
+              <div class="beg-toggle"></div>
+              <span>Notifications</span>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>No animation — state changes feel broken</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>No on/off color differentiation</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Not actually interactive — it's just a div</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body">
+          <div style="display:flex;flex-direction:column;gap:20px;align-items:flex-start;width:100%;max-width:300px;">
+            <div class="pro-toggle-wrapper">
+              <div style="flex:1;">
+                <div class="pro-toggle-label">Dark Mode</div>
+                <div class="pro-toggle-sublabel">Reduce eye strain in low light</div>
+              </div>
+              <div class="pro-toggle active" data-toggle role="switch" aria-checked="true" tabindex="0"></div>
+            </div>
+            <div class="pro-toggle-wrapper">
+              <div style="flex:1;">
+                <div class="pro-toggle-label">Push Notifications</div>
+                <div class="pro-toggle-sublabel">Get alerts for important updates</div>
+              </div>
+              <div class="pro-toggle" data-toggle role="switch" aria-checked="false" tabindex="0"></div>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Smooth cubic-bezier animation on state change</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Label + sublabel removes all ambiguity</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Click to toggle — fully interactive</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 8. SPACING & ALIGNMENT ═══ -->
+  <section class="comparison-section" data-section>
+    <div class="section-label">
+      <span class="section-number">08</span>
+      <span class="section-title">Spacing</span>
+    </div>
+    <h2 class="section-heading">The invisible framework holding everything together</h2>
+    <p class="section-desc">Spacing is the silent communicator. Inconsistent spacing feels chaotic; consistent spacing feels intentional and trustworthy.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag beginner-tag"><i class="fa-solid fa-circle"></i> Beginner</span>
+          <span class="panel-verdict bad">Needs Work</span>
+        </div>
+        <div class="panel-body" style="background:#f5f5f5;align-items:flex-start;">
+          <div style="font-family:Arial,sans-serif;color:#333;width:100%;max-width:260px;">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+              <img src="https://picsum.photos/seed/avatar1/40/40.jpg" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+              <div>
+                <div style="font-size:13px;font-weight:bold;">Sarah Chen</div>
+                <div style="font-size:10px;color:#999;">2 hours ago</div>
+              </div>
+            </div>
+            <div style="font-size:12px;margin-bottom:2px;">Just finished the new dashboard design. Would love feedback from the team!</div>
+            <img src="https://picsum.photos/seed/post1/300/150.jpg" style="width:100%;height:100px;object-fit:cover;margin-bottom:3px;">
+            <div style="display:flex;gap:2px;font-size:11px;color:#666;">
+              <span style="margin-right:8px;">Like</span>
+              <span style="margin-right:8px;">Comment</span>
+              <span>Share</span>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Elements crammed with 2-4px gaps</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>No consistent vertical rhythm</div>
+            <div class="annotation" style="color:#666;border-color:rgba(0,0,0,0.05);background:rgba(0,0,0,0.02);"><i class="fa-solid fa-xmark"></i>Action links have no hover targets</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag pro-tag"><i class="fa-solid fa-circle"></i> Pro</span>
+          <span class="panel-verdict good">Polished</span>
+        </div>
+        <div class="panel-body" style="align-items:flex-start;">
+          <div style="width:100%;max-width:280px;">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+              <img src="https://picsum.photos/seed/avatar2/40/40.jpg" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--fg);">Sarah Chen</div>
+                <div style="font-size:12px;color:var(--fg-muted);">2 hours ago</div>
+              </div>
+            </div>
+            <div style="font-size:14px;line-height:1.6;color:var(--fg-muted);margin-bottom:16px;">Just finished the new dashboard design. Would love feedback from the team!</div>
+            <img src="https://picsum.photos/seed/post2/400/200.jpg" style="width:100%;height:140px;object-fit:cover;border-radius:var(--radius-sm);margin-bottom:16px;">
+            <div style="display:flex;gap:6px;padding-top:14px;border-top:1px solid var(--border);">
+              <button class="pro-btn pro-btn-secondary" style="flex:1;padding:8px;font-size:13px;justify-content:center;display:flex;align-items:center;gap:6px;">
+                <i class="fa-regular fa-heart" style="font-size:12px;"></i> Like
+              </button>
+              <button class="pro-btn pro-btn-secondary" style="flex:1;padding:8px;font-size:13px;justify-content:center;display:flex;align-items:center;gap:6px;">
+                <i class="fa-regular fa-comment" style="font-size:12px;"></i> Comment
+              </button>
+              <button class="pro-btn pro-btn-secondary" style="flex:1;padding:8px;font-size:13px;justify-content:center;display:flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-share" style="font-size:12px;"></i> Share
+              </button>
+            </div>
+          </div>
+          <div class="annotation-list">
+            <div class="annotation"><i class="fa-solid fa-check"></i>Consistent 16px vertical rhythm throughout</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Proper gap sizing: 14px avatar gap, 6px button gap</div>
+            <div class="annotation"><i class="fa-solid fa-check"></i>Action buttons have full touch targets</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-cta">The details are the design.</div>
+    <p class="footer-sub">Every pixel, every transition, every space between elements tells users how much you care.</p>
+    <button class="footer-btn" id="backToTop"><i class="fa-solid fa-arrow-up"></i> Back to Top</button>
+    <p class="footer-copy">Built with pure HTML, CSS, and JavaScript — no frameworks, no shortcuts.</p>
+  </footer>
+
+</div>
+
+<script>
+  // ── Floating Particles ──
+  (function createParticles() {
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.animationDuration = (12 + Math.random() * 18) + 's';
+      p.style.animationDelay = (Math.random() * 15) + 's';
+      p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+      if (Math.random() > 0.5) p.style.background = 'var(--accent-bad)';
+      document.body.appendChild(p);
+    }
+  })();
+
+  // ── Scroll Reveal (IntersectionObserver) ──
+  const sections = document.querySelectorAll('[data-section]');
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.15 });
+  sections.forEach(s => sectionObserver.observe(s));
+
+  // ── Stats Counter Animation ──
+  let statsCounted = false;
+  const statsBar = document.getElementById('statsBar');
+  const statsObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !statsCounted) {
+      statsCounted = true;
+      document.querySelectorAll('.stat-value').forEach(el => {
+        const target = parseInt(el.dataset.target);
+        const suffix = el.dataset.suffix || '';
+        const special = el.dataset.special;
+        if (special === 'zero') {
+          el.textContent = '0';
+          return;
+        }
+        let current = 0;
+        const step = Math.max(1, Math.floor(target / 40));
+        const interval = setInterval(() => {
+          current += step;
+          if (current >= target) {
+            current = target;
+            clearInterval(interval);
+          }
+          el.textContent = current + suffix;
+        }, 30);
+      });
+    }
+  }, { threshold: 0.5 });
+  statsObserver.observe(statsBar);
+
+  // ── Pro Nav Tab Switching ──
+  document.querySelectorAll('#proNav [data-nav]').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('#proNav [data-nav]').forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // ── Pro Toggle Interaction ──
+  document.querySelectorAll('[data-toggle]').forEach(toggle => {
+    function handleToggle() {
+      toggle.classList.toggle('active');
+      const isActive = toggle.classList.contains('active');
+      toggle.setAttribute('aria-checked', isActive);
+    }
+    toggle.addEventListener('click', handleToggle);
+    toggle.addEventListener('keydown', function(e) {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        handleToggle();
+      }
+    });
+  });
+
+  // ── Toast Dismiss ──
+  document.getElementById('toastClose').addEventListener('click', function() {
+    const toast = document.getElementById('proToast');
+    toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-12px)';
+    setTimeout(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(0)';
+    }, 2000); // Reshow after 2s to keep demo functional
+  });
+
+  // ── Back to Top ──
+  document.getElementById('backToTop').addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ── Mouse Glow Effect on Panels ──
+  document.querySelectorAll('.panel').forEach(panel => {
+    panel.addEventListener('mousemove', function(e) {
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      this.style.background = `radial-gradient(600px circle at ${x}px ${y}px, rgba(255,255,255,0.02), transparent 40%)`;
+    });
+    panel.addEventListener('mouseleave', function() {
+      this.style.background = '';
+    });
+  });
+</script>
+</body>
+</html>
