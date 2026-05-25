@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesla Style Button Animations</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #050505;
+    --bg-card: #0c0c0c;
+    --fg: #f0f0f0;
+    --fg-muted: #6a6a6a;
+    --accent: #e0e0e0;
+    --border: #1a1a1a;
+    --radius: 4px;
+    --font: 'Space Grotesk', -apple-system, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--fg);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Subtle grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; }
+
+  /* ── Navigation ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 48px;
+    z-index: 100;
+    background: rgba(5,5,5,0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    font-size: 13px;
+    color: var(--fg-muted);
+    text-decoration: none;
+    transition: color 0.3s;
+    font-weight: 400;
+  }
+  .nav-links a:hover { color: var(--fg); }
+
+  /* ── Hero ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    position: relative;
+  }
+  .hero-overline {
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.2s forwards;
+  }
+  .hero-title {
+    font-size: clamp(40px, 8vw, 96px);
+    font-weight: 700;
+    letter-spacing: -3px;
+    line-height: 1;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .hero-title .line {
+    display: block;
+    overflow: hidden;
+  }
+  .hero-title .line-inner {
+    display: block;
+    transform: translateY(110%);
+    animation: revealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .hero-title .line:nth-child(1) .line-inner { animation-delay: 0.3s; }
+  .hero-title .line:nth-child(2) .line-inner { animation-delay: 0.45s; }
+  .hero-sub {
+    font-size: 17px;
+    color: var(--fg-muted);
+    font-weight: 300;
+    max-width: 480px;
+    line-height: 1.6;
+    margin-bottom: 64px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.7s forwards;
+  }
+
+  /* ── Main Hero Button (Tesla Signature) ── */
+  .hero-btn-area {
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.9s forwards;
+  }
+
+  /* ── Section Base ── */
+  .section {
+    padding: 120px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 12px;
+  }
+  .section-heading {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    margin-bottom: 64px;
+    line-height: 1.1;
+  }
+  .section-heading span {
+    color: var(--fg-muted);
+    font-weight: 300;
+  }
+
+  /* ── Button Showcase Grid ── */
+  .showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 24px;
+  }
+  .showcase-cell {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 48px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.4s ease;
+  }
+  .showcase-cell.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .showcase-cell:hover {
+    border-color: #2a2a2a;
+  }
+  .showcase-cell-label {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    font-weight: 500;
+  }
+  .showcase-cell-num {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 11px;
+    color: #222;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ══════════════════════════════════════
+     TESLA BUTTON STYLES
+     ══════════════════════════════════════ */
+
+  /* Base reset for all demo buttons */
+  .t-btn {
+    font-family: var(--font);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── 1. SWEEP FILL (The classic Tesla) ── */
+  .t-btn-sweep {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid var(--fg);
+    border-radius: var(--radius);
+    transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-sweep::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--fg);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: -1;
+  }
+  .t-btn-sweep:hover {
+    color: #050505;
+  }
+  .t-btn-sweep:hover::before {
+    transform: scaleX(1);
+  }
+  .t-btn-sweep:active {
+    transform: scale(0.97);
+  }
+
+  /* Large hero variant */
+  .t-btn-sweep-hero {
+    padding: 18px 64px;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+
+  /* ── 2. REVERSE SWEEP ── */
+  .t-btn-rsweep {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: var(--fg);
+    color: #050505;
+    border: 1.5px solid var(--fg);
+    border-radius: var(--radius);
+    transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-rsweep::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #050505;
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: -1;
+  }
+  .t-btn-rsweep:hover { color: var(--fg); }
+  .t-btn-rsweep:hover::before { transform: scaleX(1); }
+  .t-btn-rsweep:active { transform: scale(0.97); }
+
+  /* ── 3. ARROW SLIDE ── */
+  .t-btn-arrow {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius);
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    transition: border-color 0.4s ease, color 0.4s ease;
+  }
+  .t-btn-arrow .arrow-icon {
+    display: inline-flex;
+    margin-left: 12px;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  .t-btn-arrow:hover {
+    border-color: var(--fg);
+    color: var(--fg);
+  }
+  .t-btn-arrow:hover .arrow-icon {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .t-btn-arrow:active { transform: scale(0.97); }
+
+  /* ── 4. VERTICAL REVEAL ── */
+  .t-btn-vreveal {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid var(--fg);
+    border-radius: var(--radius);
+    transition: color 0.4s ease;
+    overflow: hidden;
+  }
+  .t-btn-vreveal::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--fg);
+    transform: scaleY(0);
+    transform-origin: bottom center;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: -1;
+  }
+  .t-btn-vreveal:hover { color: #050505; }
+  .t-btn-vreveal:hover::before { transform: scaleY(1); }
+  .t-btn-vreveal:active { transform: scale(0.97); }
+
+  /* ── 5. CENTER EXPAND ── */
+  .t-btn-expand {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid var(--fg);
+    border-radius: var(--radius);
+    transition: color 0.4s ease;
+  }
+  .t-btn-expand::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: var(--fg);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1), height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: -1;
+  }
+  .t-btn-expand:hover { color: #050505; }
+  .t-btn-expand:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+  .t-btn-expand:active { transform: scale(0.97); }
+
+  /* ── 6. BORDER DRAW (SVG) ── */
+  .t-btn-borderdraw-wrap {
+    position: relative;
+    display: inline-block;
+    padding: 2px;
+    border-radius: calc(var(--radius) + 1px);
+  }
+  .t-btn-borderdraw-wrap svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: visible;
+  }
+  .t-btn-borderdraw-wrap svg rect {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.5;
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    transition: stroke-dashoffset 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    rx: var(--radius);
+  }
+  .t-btn-borderdraw-wrap:hover svg rect {
+    stroke-dashoffset: 0;
+  }
+  .t-btn-borderdraw {
+    padding: 14px 46px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border-radius: var(--radius);
+    transition: background 0.4s ease, color 0.4s ease;
+  }
+  .t-btn-borderdraw-wrap:hover .t-btn-borderdraw {
+    background: var(--fg);
+    color: #050505;
+  }
+  .t-btn-borderdraw:active { transform: scale(0.97); }
+
+  /* ── 7. TEXT SWAP ── */
+  .t-btn-swap {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius);
+    height: 50px;
+    display: inline-flex;
+    align-items: center;
+    transition: border-color 0.4s ease;
+  }
+  .t-btn-swap:hover { border-color: var(--fg); }
+  .t-btn-swap .swap-text {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 20px;
+    line-height: 20px;
+  }
+  .t-btn-swap .swap-text span {
+    display: block;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-swap .swap-text .swap-out {
+    transform: translateY(0);
+  }
+  .t-btn-swap .swap-text .swap-in {
+    transform: translateY(100%);
+    color: var(--fg-muted);
+  }
+  .t-btn-swap:hover .swap-text .swap-out {
+    transform: translateY(-100%);
+  }
+  .t-btn-swap:hover .swap-text .swap-in {
+    transform: translateY(0);
+    color: var(--fg);
+  }
+  .t-btn-swap:active { transform: scale(0.97); }
+
+  /* ── 8. MAGNETIC BUTTON ── */
+  .t-btn-magnetic {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: var(--fg);
+    color: #050505;
+    border: none;
+    border-radius: var(--radius);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    will-change: transform;
+  }
+  .t-btn-magnetic:hover {
+    box-shadow: 0 0 40px rgba(255,255,255,0.08);
+  }
+
+  /* ── 9. CORNER ACCENT ── */
+  .t-btn-corner {
+    padding: 16px 48px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius);
+    transition: border-color 0.4s ease, color 0.4s ease;
+    position: relative;
+  }
+  .t-btn-corner::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 20px;
+    height: 20px;
+    border-bottom: 1.5px solid var(--fg);
+    border-right: 1.5px solid var(--fg);
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-corner::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 20px;
+    height: 20px;
+    border-top: 1.5px solid var(--fg);
+    border-left: 1.5px solid var(--fg);
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.05s;
+    z-index: 1;
+  }
+  .t-btn-corner:hover {
+    border-color: rgba(255,255,255,0.15);
+    color: var(--fg);
+  }
+  .t-btn-corner:hover::before,
+  .t-btn-corner:hover::after {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .t-btn-corner:active { transform: scale(0.97); }
+
+  /* ── 10. PILL GLOW ── */
+  .t-btn-pill {
+    padding: 14px 40px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: rgba(255,255,255,0.06);
+    color: var(--fg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 980px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-pill:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+    box-shadow: 0 0 30px rgba(255,255,255,0.04), inset 0 0 30px rgba(255,255,255,0.02);
+    transform: translateY(-1px);
+  }
+  .t-btn-pill:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ── 11. UNDERLINE DRAW ── */
+  .t-btn-underline {
+    padding: 16px 8px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: none;
+    position: relative;
+  }
+  .t-btn-underline::after {
+    content: '';
+    position: absolute;
+    bottom: 12px;
+    left: 8px;
+    width: 0;
+    height: 1px;
+    background: var(--fg);
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-underline:hover::after {
+    width: calc(100% - 16px);
+  }
+
+  /* ── 12. DUAL BORDER ── */
+  .t-btn-dual-wrap {
+    position: relative;
+    display: inline-block;
+    padding: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: calc(var(--radius) + 3px);
+    transition: border-color 0.4s ease, padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .t-btn-dual-wrap:hover {
+    border-color: var(--fg);
+    padding: 0;
+  }
+  .t-btn-dual {
+    padding: 14px 44px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius);
+    transition: border-color 0.4s ease, background 0.4s ease, color 0.4s ease;
+  }
+  .t-btn-dual-wrap:hover .t-btn-dual {
+    background: var(--fg);
+    color: #050505;
+    border-color: var(--fg);
+  }
+
+  /* ── Sizing Demo ── */
+  .sizing-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .t-btn-sweep.sm { padding: 10px 28px; font-size: 12px; letter-spacing: 0.5px; }
+  .t-btn-sweep.md { padding: 16px 48px; font-size: 14px; }
+  .t-btn-sweep.lg { padding: 20px 64px; font-size: 16px; letter-spacing: 1px; }
+  .size-label {
+    font-size: 10px;
+    color: #333;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .size-group { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── State Demo ── */
+  .state-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .t-btn-sweep:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .t-btn-sweep.loading {
+    color: transparent;
+    pointer-events: none;
+  }
+  .t-btn-sweep.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 18px; height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 1.5px solid rgba(5,5,5,0.3);
+    border-top-color: #050505;
+    border-radius: 50%;
+    animation: btnSpin 0.6s linear infinite;
+  }
+
+  /* ── Code Hint ── */
+  .code-hint {
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--fg-muted);
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .code-hint .kw { color: #888; }
+  .code-hint .val { color: #ccc; }
+  .code-hint .prop { color: #666; }
+
+  /* ── Divider ── */
+  .divider {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 80px 24px 40px;
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+  }
+  .footer-text {
+    font-size: 13px;
+    color: var(--fg-muted);
+    line-height: 1.8;
+  }
+  .footer-text span { color: var(--fg); font-weight: 500; }
+
+  /* ── Keyframes ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes revealUp {
+    from { transform: translateY(110%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes btnSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Click Ripple ── */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(5,5,5,0.15);
+    transform: scale(0);
+    animation: rippleAnim 0.6s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .section { padding: 80px 20px; }
+    .showcase-grid { grid-template-columns: 1fr; }
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .state-row { gap: 12px; }
+    .state-row .t-btn-sweep { font-size: 12px; padding: 12px 28px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- ── Nav ── -->
+  <nav>
+    <div class="nav-logo">Button Lab</div>
+    <div class="nav-links">
+      <a href="#primary">Primary</a>
+      <a href="#variants">Variants</a>
+      <a href="#sizing">Sizing</a>
+      <a href="#states">States</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-overline">Interactive Component Study</div>
+    <h1 class="hero-title">
+      <span class="line"><span class="line-inner">Tesla-Style</span></span>
+      <span class="line"><span class="line-inner">Button Animations</span></span>
+    </h1>
+    <p class="hero-sub">Twelve hover variations inspired by Tesla's design language. Minimal, precise, and relentlessly refined. Hover over every button to feel the difference.</p>
+    <div class="hero-btn-area">
+      <button class="t-btn t-btn-sweep t-btn-sweep-hero" id="heroBtn">Order Now</button>
+    </div>
+  </section>
+
+  <!-- ── Primary Effect ── -->
+  <div class="divider"></div>
+  <section class="section" id="primary">
+    <div class="section-label">The Signature</div>
+    <h2 class="section-heading">Sweep Fill <span>— the effect that started it all</span></h2>
+    <div style="display:flex;align-items:center;justify-content:center;min-height:200px;">
+      <button class="t-btn t-btn-sweep t-btn-sweep-hero" data-ripple>Configure Now</button>
+    </div>
+    <div class="code-hint">
+      <span class="prop">transform-origin</span>: <span class="val">left center</span>;<br>
+      <span class="kw">transition</span>: <span class="val">transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)</span>;<br>
+      <span class="prop">/* Pseudo-element scales from 0 to 1 on X axis */</span>
+    </div>
+  </section>
+
+  <!-- ── Variants Grid ── -->
+  <div class="divider"></div>
+  <section class="section" id="variants">
+    <div class="section-label">Variants</div>
+    <h2 class="section-heading">Twelve expressions, <span>one language</span></h2>
+
+    <div class="showcase-grid">
+
+      <!-- 1. Sweep Fill -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Sweep Fill</span>
+        <span class="showcase-cell-num">01</span>
+        <button class="t-btn t-btn-sweep" data-ripple>Order Now</button>
+      </div>
+
+      <!-- 2. Reverse Sweep -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Reverse Sweep</span>
+        <span class="showcase-cell-num">02</span>
+        <button class="t-btn t-btn-rsweep" data-ripple>Learn More</button>
+      </div>
+
+      <!-- 3. Arrow Slide -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Arrow Slide</span>
+        <span class="showcase-cell-num">03</span>
+        <button class="t-btn t-btn-arrow" data-ripple>
+          Explore
+          <span class="arrow-icon"><i class="fa-solid fa-arrow-right" style="font-size:12px;"></i></span>
+        </button>
+      </div>
+
+      <!-- 4. Vertical Reveal -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Vertical Reveal</span>
+        <span class="showcase-cell-num">04</span>
+        <button class="t-btn t-btn-vreveal" data-ripple>Schedule Drive</button>
+      </div>
+
+      <!-- 5. Center Expand -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Center Expand</span>
+        <span class="showcase-cell-num">05</span>
+        <button class="t-btn t-btn-expand" data-ripple>Get Started</button>
+      </div>
+
+      <!-- 6. Border Draw -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Border Draw</span>
+        <span class="showcase-cell-num">06</span>
+        <div class="t-btn-borderdraw-wrap">
+          <svg><rect></rect></svg>
+          <button class="t-btn t-btn-borderdraw" data-ripple>Custom Order</button>
+        </div>
+      </div>
+
+      <!-- 7. Text Swap -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Text Swap</span>
+        <span class="showcase-cell-num">07</span>
+        <button class="t-btn t-btn-swap">
+          <span class="swap-text">
+            <span class="swap-out">View Inventory</span>
+            <span class="swap-in">32 Available</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- 8. Magnetic -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Magnetic</span>
+        <span class="showcase-cell-num">08</span>
+        <button class="t-btn t-btn-magnetic" id="magneticBtn" data-ripple>Reserve Now</button>
+      </div>
+
+      <!-- 9. Corner Accent -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Corner Accent</span>
+        <span class="showcase-cell-num">09</span>
+        <button class="t-btn t-btn-corner" data-ripple>Compare Models</button>
+      </div>
+
+      <!-- 10. Pill Glow -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Pill Glow</span>
+        <span class="showcase-cell-num">10</span>
+        <button class="t-btn t-btn-pill" data-ripple>Test Drive</button>
+      </div>
+
+      <!-- 11. Underline Draw -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Underline Draw</span>
+        <span class="showcase-cell-num">11</span>
+        <button class="t-btn t-btn-underline" data-ripple>Learn More</button>
+      </div>
+
+      <!-- 12. Dual Border -->
+      <div class="showcase-cell" data-reveal>
+        <span class="showcase-cell-label">Dual Border</span>
+        <span class="showcase-cell-num">12</span>
+        <div class="t-btn-dual-wrap">
+          <button class="t-btn t-btn-dual" data-ripple>Configure</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Sizing ── -->
+  <div class="divider"></div>
+  <section class="section" id="sizing">
+    <div class="section-label">Sizing</div>
+    <h2 class="section-heading">Three scales, <span>same precision</span></h2>
+    <div class="sizing-row">
+      <div class="size-group">
+        <button class="t-btn t-btn-sweep sm" data-ripple>Small</button>
+        <div class="size-label">SM</div>
+      </div>
+      <div class="size-group">
+        <button class="t-btn t-btn-sweep md" data-ripple>Medium</button>
+        <div class="size-label">MD</div>
+      </div>
+      <div class="size-group">
+        <button class="t-btn t-btn-sweep lg" data-ripple>Large</button>
+        <div class="size-label">LG</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── States ── -->
+  <div class="divider"></div>
+  <section class="section" id="states">
+    <div class="section-label">States</div>
+    <h2 class="section-heading">Beyond hover — <span>loading, disabled, and click</span></h2>
+    <div class="state-row">
+      <button class="t-btn t-btn-sweep" data-ripple id="demoNormal">Default</button>
+      <button class="t-btn t-btn-sweep" data-ripple id="demoLoading">Click to Load</button>
+      <button class="t-btn t-btn-sweep" disabled>Disabled</button>
+    </div>
+    <div class="code-hint" style="margin-top:32px;">
+      <span class="prop">/* Click the "Click to Load" button to see the loading state */</span><br>
+      <span class="prop">/* Click the "Default" button to see the ripple effect */</span><br>
+      <span class="prop">/* All filled buttons get a ripple on click */</span>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p class="footer-text">
+      Built with <span>zero frameworks</span>. Every animation is pure CSS with minimal JS for magnetic/ripple effects.<br>
+      The cubic-bezier(0.16, 1, 0.3, 1) easing is the secret ingredient.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  // ── Scroll Reveal for showcase cells ──
+  const revealEls = document.querySelectorAll('[data-reveal]');
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry, idx) => {
+      if (entry.isIntersecting) {
+        // Stagger based on index within the grid
+        const allCells = Array.from(revealEls);
+        const index = allCells.indexOf(entry.target);
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, (index % 4) * 80);
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  revealEls.forEach(el => revealObserver.observe(el));
+
+  // ── Ripple Effect ──
+  document.querySelectorAll('[data-ripple]').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.left = x + 'px';
+      ripple.style.top = y + 'px';
+      // Size the ripple to cover the button
+      const size = Math.max(rect.width, rect.height) * 2;
+      ripple.style.width = size + 'px';
+      ripple.style.height = size + 'px';
+      ripple.style.marginLeft = -size / 2 + 'px';
+      ripple.style.marginTop = -size / 2 + 'px';
+      this.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove());
+    });
+  });
+
+  // ── Magnetic Button ──
+  const magneticBtn = document.getElementById('magneticBtn');
+  if (magneticBtn) {
+    magneticBtn.addEventListener('mousemove', function(e) {
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      // Subtle pull toward cursor — max 6px
+      const moveX = x * 0.08;
+      const moveY = y * 0.08;
+      this.style.transform = `translate(${moveX}px, ${moveY}px)`;
+    });
+    magneticBtn.addEventListener('mouseleave', function() {
+      this.style.transform = 'translate(0, 0)';
+    });
+  }
+
+  // ── Loading State Demo ──
+  const demoLoading = document.getElementById('demoLoading');
+  if (demoLoading) {
+    demoLoading.addEventListener('click', function() {
+      this.classList.add('loading');
+      // Simulate a 2-second async operation
+      setTimeout(() => {
+        this.classList.remove('loading');
+        this.textContent = 'Done';
+        // Reset after a moment
+        setTimeout(() => {
+          this.textContent = 'Click to Load';
+        }, 1500);
+      }, 2000);
+    });
+  }
+
+  // ── SVG Border Draw: Calculate rect path length dynamically ──
+  document.querySelectorAll('.t-btn-borderdraw-wrap svg rect').forEach(rect => {
+    // Get the actual rendered dimensions
+    const wrap = rect.closest('.t-btn-borderdraw-wrap');
+    function updateDash() {
+      const w = wrap.offsetWidth;
+      const h = wrap.offsetHeight;
+      const r = 4; // border-radius
+      // Approximate perimeter of rounded rect
+      const perimeter = 2 * (w + h) - 8 * r + 2 * Math.PI * r;
+      rect.style.strokeDasharray = perimeter;
+      rect.style.strokeDashoffset = perimeter;
+      rect.setAttribute('width', w);
+      rect.setAttribute('height', h);
+    }
+    updateDash();
+    // Update on resize
+    window.addEventListener('resize', updateDash);
+    // Re-trigger hover state after setting correct dasharray
+    const btn = wrap.querySelector('.t-btn-borderdraw');
+    wrap.addEventListener('mouseenter', () => {
+      rect.style.strokeDashoffset = '0';
+    });
+    wrap.addEventListener('mouseleave', () => {
+      const w = wrap.offsetWidth;
+      const h = wrap.offsetHeight;
+      const r = 4;
+      const perimeter = 2 * (w + h) - 8 * r + 2 * Math.PI * r;
+      rect.style.strokeDashoffset = perimeter;
+    });
+    // Remove CSS transition to avoid conflict
+    rect.style.transition = 'stroke-dashoffset 0.7s cubic-bezier(0.16, 1, 0.3, 1)';
+  });
+
+  // ── Smooth scroll for nav links ──
+  document.querySelectorAll('nav a[href^="#"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script>
+</body>
+</html>

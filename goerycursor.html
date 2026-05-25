@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gooey Cursor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060608;
+    --fg: #e8e6e3;
+    --accent: #ff5e3a;
+    --accent2: #ffb040;
+    --muted: #3a3a42;
+    --font: 'Space Grotesk', sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden}
+  body{font-family:var(--font);background:var(--bg);color:var(--fg);cursor:none;-webkit-font-smoothing:antialiased}
+
+  /* Hidden SVG filter */
+  .svg-defs{position:absolute;width:0;height:0;overflow:hidden}
+
+  /* Layers */
+  .layer{position:fixed;inset:0;pointer-events:none}
+  #glowLayer{z-index:1}
+  #gooLayer{z-index:2}
+  #uiLayer{z-index:3;pointer-events:auto;cursor:none}
+
+  /* Glow canvas */
+  #glowCanvas{width:100%;height:100%}
+
+  /* Gooey container — has the filter applied */
+  #gooContainer{width:100%;height:100%}
+
+  /* Gooey blobs */
+  .blob{position:absolute;border-radius:50%;will-change:transform}
+  .blob-cursor{background:var(--accent)}
+  .blob-trail{background:var(--accent2);opacity:0.8}
+  .blob-node{transition:background 0.4s}
+
+  /* UI elements — unfiltered, stay sharp */
+  .instructions{
+    position:fixed;bottom:40px;left:50%;transform:translateX(-50%);
+    font-size:13px;color:var(--muted);letter-spacing:0.5px;
+    display:flex;gap:24px;opacity:1;transition:opacity 1.2s ease;
+    z-index:10;pointer-events:none;white-space:nowrap;
+  }
+  .instructions.fade{opacity:0}
+  .instructions span{display:flex;align-items:center;gap:6px}
+  .instructions i{font-size:10px;color:var(--accent);opacity:0.6}
+
+  .brand{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    text-align:center;pointer-events:none;z-index:5;
+    opacity:0;animation:brandIn 1.2s ease 0.5s forwards;
+  }
+  @keyframes brandIn{to{opacity:1}}
+  .brand-title{
+    font-size:clamp(60px,14vw,160px);font-weight:700;letter-spacing:-5px;
+    line-height:0.9;color:rgba(255,255,255,0.025);user-select:none;
+  }
+  .brand-sub{
+    font-size:clamp(11px,1.5vw,15px);letter-spacing:6px;text-transform:uppercase;
+    color:rgba(255,255,255,0.02);margin-top:16px;font-weight:300;
+  }
+
+  .stats{
+    position:fixed;top:28px;left:32px;z-index:10;pointer-events:none;
+    font-size:11px;color:var(--muted);letter-spacing:0.5px;
+    font-variant-numeric:tabular-nums;line-height:1.8;
+    opacity:0;animation:brandIn 0.8s ease 0.8s forwards;
+  }
+  .stats span{color:var(--accent);font-weight:600}
+
+  .mode-label{
+    position:fixed;top:28px;right:32px;z-index:10;pointer-events:none;
+    font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);opacity:0;transition:opacity 0.3s,color 0.3s;
+  }
+  .mode-label.active{opacity:1;color:var(--accent)}
+
+  /* Particles in unfiltered layer so they stay crisp */
+  .particle{position:fixed;border-radius:50%;pointer-events:none;z-index:4;will-change:transform,opacity}
+
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  @media(max-width:600px){
+    .instructions{flex-direction:column;gap:8px;align-items:center;font-size:12px}
+    .stats{font-size:10px;left:16px;top:16px}
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG Filter: the gooey magic -->
+<svg class="svg-defs">
+  <defs>
+    <filter id="goo">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" mode="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                18 -7 0 0 -6" result="goo"/>
+      <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- Layer 0: Background brand -->
+<div class="brand">
+  <div class="brand-title">GOOEY</div>
+  <div class="brand-sub">Move your cursor</div>
+</div>
+
+<!-- Layer 1: Glow (unfiltered) -->
+<div class="layer" id="glowLayer">
+  <canvas id="glowCanvas"></canvas>
+</div>
+
+<!-- Layer 2: Gooey blobs (filtered) -->
+<div class="layer" id="gooLayer">
+  <div id="gooContainer" style="filter:url(#goo)"></div>
+</div>
+
+<!-- Layer 3: UI (unfiltered) -->
+<div class="layer" id="uiLayer"></div>
+
+<!-- Stats -->
+<div class="stats" id="stats">
+  BLOBS <span id="blobCount">0</span><br>
+  VELOCITY <span id="velDisplay">0.0</span><br>
+  CONNECTIONS <span id="connCount">0</span>
+</div>
+<div class="mode-label" id="modeLabel">ATTRACT</div>
+
+<!-- Instructions -->
+<div class="instructions" id="instructions">
+  <span><i class="fa-solid fa-arrow-pointer"></i> Move to attract</span>
+  <span><i class="fa-solid fa-hand-pointer"></i> Click to burst</span>
+  <span><i class="fa-solid fa-hand"></i> Hold to pull</span>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   Configuration
+   ══════════════════════════════════════ */
+const C = {
+  cursorR: 38,          // cursor blob radius
+  trailCount: 5,        // number of trail blobs
+  trailR: [24, 19, 15, 12, 9], // trail radii
+  trailLerp: [0.13, 0.09, 0.055, 0.03, 0.015], // trail follow speeds
+  nodeCount: 8,         // floating node count
+  nodeR: 18,            // node radius
+  nodeSpring: 0.018,    // spring stiffness
+  nodeDamp: 0.88,       // spring damping
+  attractR: 260,        // attraction radius
+  attractF: 0.035,      // attraction force
+  holdMult: 2.8,        // hold force multiplier
+  burstCount: 16,       // particles per click
+  burstForce: 12,       // burst impulse
+  nodeImpulse: 8,       // impulse given to nearby nodes on click
+  nodeImpulseR: 200,    // radius for node impulse
+  colors: ['#ff5e3a','#ff7e3a','#ff9e3a','#ffb040','#ffc840'],
+};
+
+/* ══════════════════════════════════════
+   State
+   ══════════════════════════════════════ */
+let mx = innerWidth / 2, my = innerHeight / 2;
+let pmx = mx, pmy = my;
+let vx = 0, vy = 0; // cursor velocity
+let holding = false;
+let entered = false;
+const blobs = [];
+const nodes = [];
+const particles = [];
+let connections = 0;
+
+/* ══════════════════════════════════════
+   DOM References
+   ══════════════════════════════════════ */
+const gooCont = document.getElementById('gooContainer');
+const glowCanvas = document.getElementById('glowCanvas');
+const gx = glowCanvas.getContext('2d');
+const uiLayer = document.getElementById('uiLayer');
+const statsEl = document.getElementById('stats');
+const blobCountEl = document.getElementById('blobCount');
+const velEl = document.getElementById('velDisplay');
+const connEl = document.getElementById('connCount');
+const modeLabel = document.getElementById('modeLabel');
+const instrEl = document.getElementById('instructions');
+
+/* ══════════════════════════════════════
+   Utility
+   ══════════════════════════════════════ */
+function dist(x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function pickColor() { return C.colors[Math.floor(Math.random() * C.colors.length)]; }
+
+/* ══════════════════════════════════════
+   Create Blobs
+   ══════════════════════════════════════ */
+function makeBlob(x, y, r, cls, color) {
+  const el = document.createElement('div');
+  el.className = 'blob ' + cls;
+  const d = r * 2;
+  el.style.cssText = `width:${d}px;height:${d}px;left:${x - r}px;top:${y - r}px;${color ? 'background:' + color : ''}`;
+  gooCont.appendChild(el);
+  return { el, x, y, r, vx: 0, vy: 0 };
+}
+
+// Cursor blob
+const cursor = makeBlob(mx, my, C.cursorR, 'blob-cursor');
+cursor.el.style.transform = 'scale(0)'; // start invisible
+blobs.push(cursor);
+
+// Trail blobs — chain follow
+for (let i = 0; i < C.trailCount; i++) {
+  const b = makeBlob(mx, my, C.trailR[i], 'blob-trail', pickColor());
+  b.lerp = C.trailLerp[i];
+  b.follow = i === 0 ? cursor : blobs[blobs.length - 1];
+  blobs.push(b);
+}
+
+/* ══════════════════════════════════════
+   Create Nodes
+   ══════════════════════════════════════ */
+for (let i = 0; i < C.nodeCount; i++) {
+  const angle = (i / C.nodeCount) * Math.PI * 2;
+  const rad = Math.min(innerWidth, innerHeight) * 0.25;
+  const hx = innerWidth / 2 + Math.cos(angle) * rad;
+  const hy = innerHeight / 2 + Math.sin(angle) * rad;
+  const color = C.colors[i % C.colors.length];
+  const b = makeBlob(hx, hy, C.nodeR, 'blob-node', color);
+  b.homeX = hx;
+  b.homeY = hy;
+  b.vx = 0;
+  b.vy = 0;
+  b.baseColor = color;
+  nodes.push(b);
+}
+
+/* ══════════════════════════════════════
+   Glow Canvas Setup
+   ══════════════════════════════════════ */
+function resizeGlow() {
+  glowCanvas.width = innerWidth;
+  glowCanvas.height = innerHeight;
+}
+resizeGlow();
+window.addEventListener('resize', () => {
+  resizeGlow();
+  // Recalculate node homes
+  nodes.forEach((n, i) => {
+    const angle = (i / C.nodeCount) * Math.PI * 2;
+    const rad = Math.min(innerWidth, innerHeight) * 0.25;
+    n.homeX = innerWidth / 2 + Math.cos(angle) * rad;
+    n.homeY = innerHeight / 2 + Math.sin(angle) * rad;
+  });
+});
+
+/* ══════════════════════════════════════
+   Input Handling
+   ══════════════════════════════════════ */
+function onMove(x, y) {
+  if (!entered) {
+    entered = true;
+    cursor.el.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+    cursor.el.style.transform = 'scale(1)';
+    setTimeout(() => { cursor.el.style.transition = 'none'; }, 450);
+  }
+  pmx = mx; pmy = my;
+  mx = x; my = y;
+}
+
+document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+document.addEventListener('touchmove', e => {
+  e.preventDefault();
+  onMove(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+document.addEventListener('mousedown', () => { holding = true; burst(); });
+document.addEventListener('mouseup', () => { holding = false; });
+document.addEventListener('touchstart', e => {
+  holding = true;
+  onMove(e.touches[0].clientX, e.touches[0].clientY);
+  burst();
+}, { passive: true });
+document.addEventListener('touchend', () => { holding = false; });
+
+document.addEventListener('mouseleave', () => {
+  mx = innerWidth / 2; my = innerHeight / 2;
+  holding = false;
+});
+
+// Fade instructions
+setTimeout(() => instrEl.classList.add('fade'), 5000);
+
+/* ══════════════════════════════════════
+   Particle Burst
+   ══════════════════════════════════════ */
+function burst() {
+  for (let i = 0; i < C.burstCount; i++) {
+    const angle = (Math.PI * 2 * i) / C.burstCount + rand(-0.3, 0.3);
+    const speed = C.burstForce * rand(0.4, 1);
+    const color = pickColor();
+    const size = rand(4, 10);
+    const el = document.createElement('div');
+    el.className = 'particle';
+    el.style.cssText = `width:${size}px;height:${size}px;background:${color};left:${mx - size / 2}px;top:${my - size / 2}px;`;
+    uiLayer.appendChild(el);
+    particles.push({
+      el, x: mx, y: my,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size, life: 1, decay: rand(0.015, 0.025)
+    });
+    // Impulse nearby nodes
+    nodes.forEach(n => {
+      const d = dist(mx, my, n.x, n.y);
+      if (d < C.nodeImpulseR && d > 1) {
+        const f = (1 - d / C.nodeImpulseR) * C.nodeImpulse;
+        n.vx -= ((n.x - mx) / d) * f;
+        n.vy -= ((n.y - my) / d) * f;
+      }
+    });
+  }
+}
+
+/* ══════════════════════════════════════
+   Main Loop
+   ══════════════════════════════════════ */
+function tick() {
+  // Cursor velocity
+  vx = mx - pmx;
+  vy = my - pmy;
+  const speed = Math.sqrt(vx * vx + vy * vy);
+  pmx = lerp(pmx, mx, 0.5); // smooth previous for stable velocity
+
+  // ── Update cursor ──
+  cursor.x = lerp(cursor.x, mx, 0.28);
+  cursor.y = lerp(cursor.y, my, 0.28);
+  const s = 1 + Math.min(speed * 0.006, 0.25); // stretch on fast movement
+  cursor.el.style.left = (cursor.x - cursor.r) + 'px';
+  cursor.el.style.top = (cursor.y - cursor.r) + 'px';
+
+  // ── Update trails ──
+  for (let i = 1; i <= C.trailCount; i++) {
+    const b = blobs[i];
+    b.x = lerp(b.x, b.follow.x, b.lerp);
+    b.y = lerp(b.y, b.follow.y, b.lerp);
+    b.el.style.left = (b.x - b.r) + 'px';
+    b.el.style.top = (b.y - b.r) + 'px';
+  }
+
+  // ── Update nodes ──
+  const aMult = holding ? C.holdMult : 1;
+  connections = 0;
+
+  nodes.forEach(n => {
+    // Spring to home
+    const dx = n.homeX - n.x;
+    const dy = n.homeY - n.y;
+    n.vx += dx * C.nodeSpring;
+    n.vy += dy * C.nodeSpring;
+
+    // Attraction to cursor
+    const cd = dist(cursor.x, cursor.y, n.x, n.y);
+    if (cd < C.attractR && cd > 1) {
+      const f = C.attractF * aMult * (1 - cd / C.attractR);
+      n.vx += ((cursor.x - n.x) / cd) * f;
+      n.vy += ((cursor.y - n.y) / cd) * f;
+      if (cd < C.nodeR + cursor.r + 40) connections++;
+    }
+
+    // Damping
+    n.vx *= C.nodeDamp;
+    n.vy *= C.nodeDamp;
+    n.x += n.vx;
+    n.y += n.vy;
+
+    n.el.style.left = (n.x - n.r) + 'px';
+    n.el.style.top = (n.y - n.r) + 'px';
+
+    // Color shift when near cursor
+    if (cd < C.attractR) {
+      const t = 1 - cd / C.attractR;
+      n.el.style.background = `rgba(255,${Math.round(94 + t * 82)},${Math.round(58 + t * 6)},${0.7 + t * 0.3})`;
+      n.el.style.transform = `scale(${1 + t * 0.3})`;
+    } else {
+      n.el.style.background = n.baseColor;
+      n.el.style.transform = 'scale(1)';
+    }
+  });
+
+  // ── Update particles ──
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.vy += 0.18; // gravity
+    p.vx *= 0.985; // drag
+    p.vy *= 0.985;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= p.decay;
+    if (p.life <= 0) {
+      p.el.remove();
+      particles.splice(i, 1);
+      continue;
+    }
+    p.el.style.left = (p.x - p.size / 2) + 'px';
+    p.el.style.top = (p.y - p.size / 2) + 'px';
+    p.el.style.opacity = p.life;
+    p.el.style.transform = `scale(${p.life * 0.8 + 0.2})`;
+  }
+
+  // ── Glow canvas ──
+  gx.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
+
+  // Cursor glow
+  const gr = 120 + speed * 1.5;
+  const cg = gx.createRadialGradient(cursor.x, cursor.y, 0, cursor.x, cursor.y, gr);
+  cg.addColorStop(0, 'rgba(255,94,58,0.12)');
+  cg.addColorStop(0.5, 'rgba(255,160,64,0.04)');
+  cg.addColorStop(1, 'rgba(0,0,0,0)');
+  gx.fillStyle = cg;
+  gx.beginPath();
+  gx.arc(cursor.x, cursor.y, gr, 0, Math.PI * 2);
+  gx.fill();
+
+  // Node glows
+  nodes.forEach(n => {
+    const ng = gx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3);
+    ng.addColorStop(0, n.baseColor.replace(')', ',0.06)').replace('rgb', 'rgba'));
+    ng.addColorStop(1, 'rgba(0,0,0,0)');
+    gx.fillStyle = ng;
+    gx.beginPath();
+    gx.arc(n.x, n.y, n.r * 3, 0, Math.PI * 2);
+    gx.fill();
+  });
+
+  // ── Stats ──
+  const totalBlobs = blobs.length + nodes.length;
+  blobCountEl.textContent = totalBlobs;
+  velEl.textContent = speed.toFixed(1);
+  connEl.textContent = connections;
+
+  // Mode label
+  if (holding && entered) {
+    modeLabel.textContent = 'PULLING';
+    modeLabel.classList.add('active');
+  } else if (speed > 3 && entered) {
+    modeLabel.textContent = 'MOVING';
+    modeLabel.classList.add('active');
+  } else {
+    modeLabel.classList.remove('active');
+  }
+
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

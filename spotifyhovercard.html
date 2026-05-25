@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wavelength — Hover Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-sidebar: #050505;
+    --bg-card: #141414;
+    --bg-card-hover: #1e1e1e;
+    --fg: #e8e8e8;
+    --fg-muted: #6a6a6a;
+    --accent: #1ed760;
+    --accent-hover: #1fdf64;
+    --radius: 8px;
+    --font: 'Space Grotesk', -apple-system, sans-serif;
+    --sidebar-w: 260px;
+    --nowplaying-h: 72px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--fg);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── App Shell ── */
+  .app { display: flex; min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    background: var(--bg-sidebar);
+    padding: 24px 12px;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.04);
+    overflow-y: auto;
+  }
+  .sidebar-logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    padding: 0 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sidebar-logo i { color: var(--accent); font-size: 18px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 32px; }
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    text-decoration: none;
+    transition: color 0.2s, background 0.2s;
+    cursor: pointer;
+  }
+  .sidebar-link:hover { color: var(--fg); background: rgba(255,255,255,0.05); }
+  .sidebar-link.active { color: var(--fg); background: rgba(255,255,255,0.07); }
+  .sidebar-link i { width: 20px; text-align: center; font-size: 15px; }
+  .sidebar-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 8px 12px 16px; }
+  .sidebar-heading {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    padding: 0 12px 12px;
+  }
+  .sidebar-playlist { font-size: 13px; color: var(--fg-muted); }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    margin-left: var(--sidebar-w);
+    padding-bottom: calc(var(--nowplaying-h) + 24px);
+    position: relative;
+  }
+  /* Gradient header */
+  .main::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 400px;
+    background: linear-gradient(180deg, #0f2918 0%, #0a1610 40%, transparent 100%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .main-inner { position: relative; z-index: 1; }
+
+  /* ── Top Bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10,10,10,0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .topbar-nav { display: flex; gap: 8px; }
+  .topbar-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: var(--fg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+  .topbar-btn:hover { background: rgba(0,0,0,0.8); }
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 500px;
+    padding: 8px 16px;
+    width: 360px;
+    max-width: 40vw;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .search-box:focus-within {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.1);
+  }
+  .search-box i { color: var(--fg-muted); font-size: 13px; }
+  .search-box input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--fg);
+    font-size: 13px;
+    font-family: var(--font);
+    width: 100%;
+  }
+  .search-box input::placeholder { color: var(--fg-muted); }
+
+  /* ── Greeting ── */
+  .greeting {
+    padding: 32px 32px 8px;
+  }
+  .greeting h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  /* ── Recently Played (Horizontal Scroll) ── */
+  .recent-section { padding: 24px 32px 0; }
+  .recent-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    cursor: grab;
+    padding: 4px 0 12px;
+    -ms-overflow-style: none;
+  }
+  .recent-scroll::-webkit-scrollbar { display: none; }
+  .recent-scroll.dragging { cursor: grabbing; scroll-behavior: auto; }
+  .recent-card {
+    flex-shrink: 0;
+    width: 280px;
+    height: 64px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .recent-card:hover { background: rgba(255,255,255,0.12); }
+  .recent-card img {
+    width: 64px; height: 64px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .recent-card-info {
+    padding: 0 16px;
+    min-width: 0;
+  }
+  .recent-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .recent-card-desc {
+    font-size: 11px;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+  .recent-play {
+    position: absolute;
+    right: 12px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(4px) scale(0.85);
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) 0.03s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .recent-card:hover .recent-play {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .recent-play:hover { transform: scale(1.08) !important; background: var(--accent-hover); }
+  .recent-play:active { transform: scale(0.95) !important; }
+
+  /* ── Section ── */
+  .section { padding: 32px 32px 0; }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .section-more {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    text-decoration: none;
+    transition: color 0.2s, text-decoration-color 0.2s;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 3px;
+  }
+  .section-more:hover { color: var(--fg); text-decoration-color: var(--fg); }
+
+  /* ── Card Grid ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+    gap: 24px;
+  }
+
+  /* ══════════════════════════════════════
+     THE STAR: CARD HOVER ANIMATIONS
+     ══════════════════════════════════════ */
+  .card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 14px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  .card.visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.5s ease, transform 0.5s ease, background 0.15s ease;
+  }
+  .card:hover { background: var(--bg-card-hover); }
+
+  .card-img-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: #1a1a1a;
+  }
+  .card-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.4s ease, transform 0.4s ease;
+  }
+  .card:hover .card-img-wrap img {
+    filter: brightness(1.08);
+    transform: scale(1.03);
+  }
+
+  /* ── Play Button (The Hero) ── */
+  .card-play {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    cursor: pointer;
+    z-index: 5;
+    /* Hidden by default */
+    opacity: 0;
+    transform: translateY(8px) scale(0.85);
+    /* Staggered timing: appears 50ms after card hover */
+    transition:
+      opacity 0.25s ease 0.05s,
+      transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s,
+      box-shadow 0.25s ease 0.05s,
+      background 0.15s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    /* Prevent layout shift */
+    will-change: transform, opacity;
+  }
+  .card:hover .card-play {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  /* Play button's own hover — bigger + brighter */
+  .card-play:hover {
+    transform: translateY(0) scale(1.08) !important;
+    background: var(--accent-hover);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+    transition-delay: 0s !important;
+  }
+  /* Press feedback */
+  .card-play:active {
+    transform: translateY(0) scale(0.94) !important;
+    transition-delay: 0s !important;
+  }
+  .card-play i { margin-left: 2px; } /* Optical centering for play triangle */
+
+  /* Artist variant: smaller, overlaps image bottom */
+  .card-play-artist {
+    width: 40px;
+    height: 40px;
+    bottom: -4px;
+    right: 24px;
+    font-size: 13px;
+  }
+
+  /* ── Card Text ── */
+  .card-info { min-height: 40px; }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-bottom: 2px;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card:hover .card-title { text-decoration-color: var(--fg); }
+  .card-desc {
+    font-size: 12px;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  /* ── Playing Indicator ── */
+  .eq-indicator {
+    display: inline-flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .eq-indicator span {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 1px;
+    animation: eqBar 0.6s ease-in-out infinite alternate;
+  }
+  .eq-indicator span:nth-child(1) { animation-delay: 0s; }
+  .eq-indicator span:nth-child(2) { animation-delay: 0.15s; }
+  .eq-indicator span:nth-child(3) { animation-delay: 0.3s; }
+  .eq-indicator span:nth-child(4) { animation-delay: 0.08s; }
+  @keyframes eqBar {
+    0% { height: 3px; }
+    100% { height: 14px; }
+  }
+
+  /* ── Special: Liked Songs Card ── */
+  .card-liked-bg {
+    background: linear-gradient(135deg, #450af5, #8e8ee5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-liked-bg i {
+    font-size: 48px;
+    color: rgba(255,255,255,0.85);
+  }
+
+  /* ── Special: Discover Weekly gradient ── */
+  .card-gradient-bg {
+    background: linear-gradient(135deg, #1a4731, #0d2818);
+  }
+  .card-gradient-bg .gradient-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(30,215,96,0.15), transparent);
+  }
+
+  /* ── Now Playing Bar ── */
+  .nowplaying {
+    position: fixed;
+    bottom: 0; left: var(--sidebar-w); right: 0;
+    height: var(--nowplaying-h);
+    background: #181818;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 200;
+  }
+  .np-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 200px;
+    flex: 1;
+  }
+  .np-art {
+    width: 48px; height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: #222;
+    flex-shrink: 0;
+    transition: transform 8s linear;
+  }
+  .np-art.spinning { animation: spin 8s linear infinite; }
+  .np-art.paused { animation-play-state: paused; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .np-info { min-width: 0; }
+  .np-title {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .np-artist {
+    font-size: 11px;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .np-like {
+    background: none;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 8px;
+    margin-left: 8px;
+    transition: color 0.2s, transform 0.2s;
+  }
+  .np-like:hover { color: var(--fg); }
+  .np-like.liked { color: var(--accent); }
+  .np-like:active { transform: scale(0.85); }
+
+  .np-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 600px;
+    flex: 2;
+  }
+  .np-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .np-ctrl-btn {
+    background: none;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    transition: color 0.2s, transform 0.15s;
+  }
+  .np-ctrl-btn:hover { color: var(--fg); }
+  .np-ctrl-btn:active { transform: scale(0.88); }
+  .np-play-main {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--fg);
+    border: none;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.2s;
+  }
+  .np-play-main:hover { transform: scale(1.08); background: #fff; }
+  .np-play-main:active { transform: scale(0.95); }
+
+  .np-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .np-time { font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; min-width: 32px; }
+  .np-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+    overflow: visible;
+  }
+  .np-progress-fill {
+    height: 100%;
+    background: var(--fg);
+    border-radius: 2px;
+    width: 35%;
+    position: relative;
+    transition: width 0.1s linear;
+  }
+  .np-progress-bar:hover .np-progress-fill { background: var(--accent); }
+  .np-progress-dot {
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translateY(-50%) scale(0);
+    width: 10px; height: 10px;
+    background: var(--fg);
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+  }
+  .np-progress-bar:hover .np-progress-dot { transform: translateY(-50%) scale(1); }
+
+  .np-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 120px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+  .np-vol-icon {
+    background: none; border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 13px;
+    transition: color 0.2s;
+  }
+  .np-vol-icon:hover { color: var(--fg); }
+  .np-vol-bar {
+    width: 90px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+  }
+  .np-vol-fill {
+    height: 100%;
+    width: 65%;
+    background: var(--fg);
+    border-radius: 2px;
+    transition: width 0.1s;
+  }
+  .np-vol-bar:hover .np-vol-fill { background: var(--accent); }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: calc(var(--nowplaying-h) + 16px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+  .toast {
+    background: #2e2e2e;
+    color: var(--fg);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
+    white-space: nowrap;
+  }
+  .toast i { color: var(--accent); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.95); } to { opacity: 1; transform: none; } }
+  @keyframes toastOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-8px) scale(0.95); } }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .nowplaying { left: 0; }
+  }
+  @media (max-width: 600px) {
+    .card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+    .search-box { width: 180px; }
+    .np-right { display: none; }
+    .np-left { min-width: 140px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><i class="fa-solid fa-wave-square"></i> Wavelength</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-link active" href="#"><i class="fa-solid fa-house"></i> Home</a>
+      <a class="sidebar-link" href="#"><i class="fa-solid fa-magnifying-glass"></i> Search</a>
+      <a class="sidebar-link" href="#"><i class="fa-solid fa-book-open"></i> Your Library</a>
+    </nav>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-heading">Playlists</div>
+    <nav class="sidebar-nav">
+      <a class="sidebar-link sidebar-playlist" href="#"><i class="fa-solid fa-plus"></i> Create Playlist</a>
+      <a class="sidebar-link sidebar-playlist" href="#"><i class="fa-solid fa-heart"></i> Liked Songs</a>
+    </nav>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav" id="sidebarPlaylists"></nav>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main">
+    <div class="main-inner">
+      <!-- Top Bar -->
+      <div class="topbar">
+        <div class="topbar-nav">
+          <button class="topbar-btn" aria-label="Go back"><i class="fa-solid fa-chevron-left"></i></button>
+          <button class="topbar-btn" aria-label="Go forward"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" placeholder="What do you want to listen to?">
+        </div>
+      </div>
+
+      <!-- Greeting -->
+      <div class="greeting"><h1 id="greetingText">Good evening</h1></div>
+
+      <!-- Recently Played -->
+      <div class="recent-section">
+        <div class="recent-scroll" id="recentScroll"></div>
+      </div>
+
+      <!-- Made For You -->
+      <div class="section" id="madeSection">
+        <div class="section-header">
+          <h2 class="section-title">Made For You</h2>
+          <a href="#" class="section-more">Show all</a>
+        </div>
+        <div class="card-grid" id="madeGrid"></div>
+      </div>
+
+      <!-- Popular Artists -->
+      <div class="section" id="artistSection">
+        <div class="section-header">
+          <h2 class="section-title">Popular Artists</h2>
+          <a href="#" class="section-more">Show all</a>
+        </div>
+        <div class="card-grid" id="artistGrid"></div>
+      </div>
+
+      <!-- New Releases -->
+      <div class="section" id="newSection">
+        <div class="section-header">
+          <h2 class="section-title">New Releases</h2>
+          <a href="#" class="section-more">Show all</a>
+        </div>
+        <div class="card-grid" id="newGrid"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Now Playing Bar ── -->
+  <footer class="nowplaying" id="nowPlaying">
+    <div class="np-left">
+      <img class="np-art" id="npArt" src="https://picsum.photos/seed/np-default/96/96" alt="Now playing">
+      <div class="np-info">
+        <div class="np-title" id="npTitle">Select a track</div>
+        <div class="np-artist" id="npArtist">—</div>
+      </div>
+      <button class="np-like" id="npLike" aria-label="Like"><i class="fa-regular fa-heart"></i></button>
+    </div>
+    <div class="np-center">
+      <div class="np-controls">
+        <button class="np-ctrl-btn" aria-label="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+        <button class="np-ctrl-btn" aria-label="Previous"><i class="fa-solid fa-backward-step"></i></button>
+        <button class="np-play-main" id="npPlayBtn" aria-label="Play"><i class="fa-solid fa-play"></i></button>
+        <button class="np-ctrl-btn" aria-label="Next"><i class="fa-solid fa-forward-step"></i></button>
+        <button class="np-ctrl-btn" aria-label="Repeat"><i class="fa-solid fa-repeat"></i></button>
+      </div>
+      <div class="np-progress-row">
+        <span class="np-time" id="npTimeCurrent">1:23</span>
+        <div class="np-progress-bar" id="npProgressBar">
+          <div class="np-progress-fill" id="npProgressFill">
+            <div class="np-progress-dot"></div>
+          </div>
+        </div>
+        <span class="np-time" id="npTimeTotal">3:45</span>
+      </div>
+    </div>
+    <div class="np-right">
+      <button class="np-vol-icon" aria-label="Volume"><i class="fa-solid fa-volume-high"></i></button>
+      <div class="np-vol-bar" id="npVolBar">
+        <div class="np-vol-fill" id="npVolFill"></div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ── Data ──
+  const recentData = [
+    { title: "Daily Mix 1", desc: "Bon Iver, Sufjan Stevens, Iron & Wine", img: "recent-dm1", type: "playlist" },
+    { title: "In Rainbows", desc: "Radiohead", img: "recent-ir", type: "album" },
+    { title: "Discovery Weekly", desc: "Your weekly mixtape", img: "recent-dw", type: "playlist" },
+    { title: "After Hours", desc: "The Weeknd", img: "recent-ah", type: "album" },
+    { title: "Chill Vibes", desc: "Lo-fi, ambient, downtempo", img: "recent-cv", type: "playlist" },
+    { title: "Blonde", desc: "Frank Ocean", img: "recent-bl", type: "album" },
+    { title: "Indie Folk", desc: "Fleet Foxes, Father John Misty", img: "recent-if", type: "playlist" },
+  ];
+
+  const madeData = [
+    { title: "Liked Songs", desc: "243 songs", img: null, special: "liked" },
+    { title: "Discover Weekly", desc: "Your weekly mixtape of fresh music", img: "made-dw", special: "gradient" },
+    { title: "Daily Mix 1", desc: "Bon Iver, Sufjan Stevens, Iron & Wine", img: "made-dm1" },
+    { title: "Release Radar", desc: "Catch all the latest from artists you follow", img: "made-rr" },
+    { title: "Daily Mix 2", desc: "Tame Impala, MGMT, Unknown Mortal Orchestra", img: "made-dm2" },
+    { title: "On Repeat", desc: "Songs you can't stop listening to", img: "made-or" },
+  ];
+
+  const artistData = [
+    { name: "Radiohead", img: "art-rh" },
+    { name: "Bon Iver", img: "art-bi" },
+    { name: "Frank Ocean", img: "art-fo" },
+    { name: "Tame Impala", img: "art-ti" },
+    { name: "The Weeknd", img: "art-tw" },
+    { name: "Sufjan Stevens", img: "art-ss" },
+  ];
+
+  const newData = [
+    { title: "Shadows Collide", desc: "Arcade Fire", img: "new-sc" },
+    { title: "Midnight Frequencies", desc: "James Blake", img: "new-mf" },
+    { title: "Amber Light", desc: "Khruangbin", img: "new-al" },
+    { title: "Dissolve", desc: " Perfume Genius", img: "new-ds" },
+    { title: "Weightless", desc: "Floating Points", img: "new-wl" },
+  ];
+
+  const sidebarPlaylists = ["Late Night Drive", "Morning Coffee", "Deep Focus", "Workout Energy", "Rainy Day", "Summer Vibes"];
+
+  // ── Greeting based on time ──
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  document.getElementById('greetingText').textContent = greeting;
+
+  // ── Build Sidebar Playlists ──
+  const sidebarEl = document.getElementById('sidebarPlaylists');
+  sidebarPlaylists.forEach(name => {
+    const a = document.createElement('a');
+    a.className = 'sidebar-link sidebar-playlist';
+    a.href = '#';
+    a.innerHTML = `<i class="fa-solid fa-music" style="font-size:13px;opacity:0.4;"></i> ${name}`;
+    sidebarEl.appendChild(a);
+  });
+
+  // ── Build Recently Played ──
+  const recentScroll = document.getElementById('recentScroll');
+  recentData.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'recent-card';
+    card.innerHTML = `
+      <img src="https://picsum.photos/seed/${d.img}/128/128" alt="${d.title}" loading="lazy">
+      <div class="recent-card-info">
+        <div class="recent-card-title">${d.title}</div>
+        <div class="recent-card-desc">${d.desc}</div>
+      </div>
+      <button class="recent-play" aria-label="Play ${d.title}"><i class="fa-solid fa-play"></i></button>
+    `;
+    recentScroll.appendChild(card);
+  });
+
+  // ── Build Card Grids ──
+  function createCard(d, variant) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const isArtist = variant === 'artist';
+    const isLiked = d.special === 'liked';
+    const isGradient = d.special === 'gradient';
+    const title = d.title || d.name;
+    const desc = d.desc || (isArtist ? 'Artist' : '');
+
+    let imgHTML;
+    if (isLiked) {
+      imgHTML = `<div class="card-img-wrap card-liked-bg"><i class="fa-solid fa-heart"></i><button class="card-play" aria-label="Play ${title}"><i class="fa-solid fa-play"></i></button></div>`;
+    } else if (isGradient) {
+      imgHTML = `<div class="card-img-wrap card-gradient-bg"><div class="gradient-overlay"></div><img src="https://picsum.photos/seed/${d.img}/300/300" alt="${title}" loading="lazy"><button class="card-play" aria-label="Play ${title}"><i class="fa-solid fa-play"></i></button></div>`;
+    } else {
+      const roundStyle = isArtist ? 'style="border-radius:50%;"' : '';
+      const playClass = isArtist ? 'card-play card-play-artist' : 'card-play';
+      imgHTML = `<div class="card-img-wrap"><img src="https://picsum.photos/seed/${d.img}/300/300" alt="${title}" loading="lazy" ${roundStyle}><button class="${playClass}" aria-label="Play ${title}"><i class="fa-solid fa-play"></i></button></div>`;
+    }
+
+    card.innerHTML = `${imgHTML}<div class="card-info"><div class="card-title">${title}</div>${desc ? `<div class="card-desc">${desc}</div>` : ''}</div>`;
+    return card;
+  }
+
+  function populateGrid(containerId, data, variant) {
+    const grid = document.getElementById(containerId);
+    data.forEach(d => grid.appendChild(createCard(d, variant)));
+  }
+
+  populateGrid('madeGrid', madeData, 'default');
+  populateGrid('artistGrid', artistData, 'artist');
+  populateGrid('newGrid', newData, 'default');
+
+  // ── Scroll Reveal for Cards ──
+  function revealCards(sectionId, gridId) {
+    const section = document.getElementById(sectionId);
+    const cards = document.querySelectorAll(`#${gridId} .card`);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const allCards = Array.from(cards);
+          const idx = allCards.indexOf(entry.target);
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, idx * 70);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    cards.forEach(c => observer.observe(c));
+  }
+  revealCards('madeSection', 'madeGrid');
+  revealCards('artistSection', 'artistGrid');
+  revealCards('newSection', 'newGrid');
+
+  // ── Drag to Scroll (Recently Played) ──
+  const scrollEl = document.getElementById('recentScroll');
+  let isDragging = false, startX, scrollLeft;
+  scrollEl.addEventListener('mousedown', e => {
+    isDragging = true;
+    scrollEl.classList.add('dragging');
+    startX = e.pageX - scrollEl.offsetLeft;
+    scrollLeft = scrollEl.scrollLeft;
+  });
+  scrollEl.addEventListener('mouseleave', () => { isDragging = false; scrollEl.classList.remove('dragging'); });
+  scrollEl.addEventListener('mouseup', () => { isDragging = false; scrollEl.classList.remove('dragging'); });
+  scrollEl.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollEl.offsetLeft;
+    scrollEl.scrollLeft = scrollLeft - (x - startX) * 1.5;
+  });
+
+  // ── Now Playing Logic ──
+  let isPlaying = false;
+  let progressInterval = null;
+  let currentProgress = 35;
+  let currentTrack = null;
+  let activePlayBtn = null;
+
+  const npArt = document.getElementById('npArt');
+  const npTitle = document.getElementById('npTitle');
+  const npArtist = document.getElementById('npArtist');
+  const npPlayBtn = document.getElementById('npPlayBtn');
+  const npProgressFill = document.getElementById('npProgressFill');
+  const npTimeCurrent = document.getElementById('npTimeCurrent');
+  const npTimeTotal = document.getElementById('npTimeTotal');
+  const npLike = document.getElementById('npLike');
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function updateProgress() {
+    currentProgress += 0.08;
+    if (currentProgress >= 100) currentProgress = 0;
+    npProgressFill.style.width = currentProgress + '%';
+    const totalSec = 225; // 3:45
+    npTimeCurrent.textContent = formatTime(totalSec * currentProgress / 100);
+  }
+
+  function startPlaying() {
+    isPlaying = true;
+    npPlayBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    npArt.classList.add('spinning');
+    npArt.classList.remove('paused');
+    progressInterval = setInterval(updateProgress, 100);
+  }
+
+  function pausePlaying() {
+    isPlaying = false;
+    npPlayBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    npArt.classList.add('paused');
+    clearInterval(progressInterval);
+  }
+
+  function showToast(text) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<i class="fa-solid fa-play"></i> ${text}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 2600);
+  }
+
+  function setActiveCard(playBtn) {
+    // Remove previous eq indicator
+    document.querySelectorAll('.eq-indicator').forEach(eq => eq.remove());
+    // Add eq indicator to new active card
+    if (playBtn) {
+      const titleEl = playBtn.closest('.card')?.querySelector('.card-title');
+      if (titleEl) {
+        const eq = document.createElement('span');
+        eq.className = 'eq-indicator';
+        eq.innerHTML = '<span></span><span></span><span></span><span></span>';
+        titleEl.appendChild(eq);
+      }
+    }
+    activePlayBtn = playBtn;
+  }
+
+  function playTrack(title, artist, imgSeed, playBtn) {
+    npTitle.textContent = title;
+    npArtist.textContent = artist;
+    npArt.src = `https://picsum.photos/seed/${imgSeed}/96/96`;
+    currentProgress = 0;
+    npProgressFill.style.width = '0%';
+    setActiveCard(playBtn);
+    startPlaying();
+    showToast(`Now playing: ${title}`);
+  }
+
+  // Card play button clicks
+  document.addEventListener('click', e => {
+    const playBtn = e.target.closest('.card-play, .recent-play');
+    if (!playBtn) return;
+    e.stopPropagation();
+
+    let title, artist, imgSeed;
+
+    if (playBtn.classList.contains('recent-play')) {
+      const card = playBtn.closest('.recent-card');
+      title = card.querySelector('.recent-card-title').textContent;
+      artist = card.querySelector('.recent-card-desc').textContent;
+      imgSeed = card.querySelector('img').src.match(/seed\/([^/]+)/)?.[1] || 'default';
+    } else {
+      const card = playBtn.closest('.card');
+      title = card.querySelector('.card-title')?.childNodes[0].textContent?.trim() || 'Track';
+      const descEl = card.querySelector('.card-desc');
+      artist = descEl ? descEl.textContent : 'Unknown';
+      const imgEl = card.querySelector('.card-img-wrap img');
+      imgSeed = imgEl ? (imgEl.src.match(/seed\/([^/]+)/)?.[1] || 'default') : 'liked';
+    }
+
+    playTrack(title, artist, imgSeed, playBtn);
+  });
+
+  // Now playing play/pause
+  npPlayBtn.addEventListener('click', () => {
+    if (isPlaying) pausePlaying();
+    else if (currentTrack) startPlaying();
+    else {
+      // Play first made-for-you card as default
+      const firstPlay = document.querySelector('#madeGrid .card-play');
+      if (firstPlay) firstPlay.click();
+    }
+  });
+
+  // Like toggle
+  npLike.addEventListener('click', function() {
+    this.classList.toggle('liked');
+    const isLiked = this.classList.contains('liked');
+    this.innerHTML = isLiked ? '<i class="fa-solid fa-heart"></i>' : '<i class="fa-regular fa-heart"></i>';
+    if (isLiked) this.style.transform = 'scale(1.3)';
+    setTimeout(() => this.style.transform = '', 200);
+  });
+
+  // Progress bar seek
+  document.getElementById('npProgressBar').addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    currentProgress = ((e.clientX - rect.left) / rect.width) * 100;
+    npProgressFill.style.width = currentProgress + '%';
+  });
+
+  // Volume bar
+  document.getElementById('npVolBar').addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const vol = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    document.getElementById('npVolFill').style.width = vol + '%';
+  });
+</script>
+</body>
+</html>

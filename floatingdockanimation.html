@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floating Dock</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #080808;
+    --accent: #00d4aa;
+    --accent-dim: rgba(0,212,170,0.08);
+    --accent-glow: rgba(0,212,170,0.2);
+    --font: 'Space Grotesk', sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:var(--font);background:var(--bg);color:#e8e6e3;-webkit-font-smoothing:antialiased;cursor:default;position:relative}
+
+  .bg-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px)}
+  .orb-1{width:550px;height:550px;background:radial-gradient(circle,rgba(0,200,170,0.1),transparent 70%);top:-12%;right:-8%;animation:od1 28s ease-in-out infinite}
+  .orb-2{width:420px;height:420px;background:radial-gradient(circle,rgba(220,140,50,0.08),transparent 70%);bottom:5%;left:-6%;animation:od2 32s ease-in-out infinite}
+  .orb-3{width:360px;height:360px;background:radial-gradient(circle,rgba(200,80,70,0.06),transparent 70%);top:35%;left:45%;animation:od3 22s ease-in-out infinite}
+  @keyframes od1{0%,100%{transform:translate(0,0)}33%{transform:translate(-60px,40px)}66%{transform:translate(30px,-50px)}}
+  @keyframes od2{0%,100%{transform:translate(0,0)}33%{transform:translate(50px,-30px)}66%{transform:translate(-40px,50px)}}
+  @keyframes od3{0%,100%{transform:translate(0,0)}50%{transform:translate(-70px,-40px)}}
+
+  .desktop-clock{position:fixed;top:50%;left:50%;transform:translate(-50%,-55%);text-align:center;pointer-events:none;user-select:none;z-index:1}
+  .clock-time{display:block;font-size:clamp(90px,16vw,180px);font-weight:200;letter-spacing:-5px;line-height:1;color:rgba(255,255,255,0.04)}
+  .clock-date{display:block;font-size:clamp(12px,1.8vw,18px);letter-spacing:5px;text-transform:uppercase;font-weight:300;color:rgba(255,255,255,0.03);margin-top:12px}
+
+  #particles{position:fixed;inset:0;z-index:50;pointer-events:none}
+
+  .dock-area{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:40}
+
+  .dock-wrapper{
+    -webkit-box-reflect:below 2px linear-gradient(transparent,transparent 45%,rgba(255,255,255,0.03));
+    opacity:0;
+    animation:dockIn 0.9s cubic-bezier(0.16,1,0.3,1) 0.2s forwards;
+  }
+  @keyframes dockIn{
+    0%{opacity:0;transform:perspective(1000px) rotateX(2deg) translateY(60px) scale(0.92)}
+    100%{opacity:1;transform:perspective(1000px) rotateX(2deg) translateY(0) scale(1)}
+  }
+
+  .dock{
+    display:flex;align-items:flex-end;gap:4px;
+    padding:10px 14px;
+    background:rgba(255,255,255,0.04);
+    backdrop-filter:blur(24px) saturate(180%);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:20px;position:relative;overflow:visible;
+  }
+  .dock::before{
+    content:'';position:absolute;top:0;left:var(--gx,50%);transform:translateX(-50%);
+    width:220px;height:100%;border-radius:20px;
+    background:radial-gradient(ellipse,rgba(0,212,170,0.06),transparent 70%);
+    pointer-events:none;opacity:0;transition:opacity 0.35s;
+  }
+  .dock.ga::before{opacity:1}
+
+  .dock-sep{width:1px;height:32px;background:rgba(255,255,255,0.1);margin:0 4px;flex-shrink:0;align-self:center}
+
+  .dock-item{
+    position:relative;display:flex;flex-direction:column;align-items:center;
+    cursor:pointer;will-change:transform;opacity:0;
+    animation:iPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    -webkit-tap-highlight-color:transparent;
+  }
+  @keyframes iPop{0%{opacity:0;transform:scale(0.2) translateY(20px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+
+  .dock-icon{
+    width:48px;height:48px;border-radius:22%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:21px;color:rgba(255,255,255,0.9);
+    background:linear-gradient(145deg,var(--ic1),var(--ic2));
+    box-shadow:0 2px 10px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.18),inset 0 -1px 0 rgba(0,0,0,0.2);
+    transition:box-shadow 0.35s ease;position:relative;overflow:hidden;
+  }
+  .dock-icon::after{
+    content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+    background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,0.08) 50%,transparent 60%);
+    pointer-events:none;
+  }
+  .dock-item:hover .dock-icon{
+    box-shadow:0 2px 10px rgba(0,0,0,0.35),0 0 24px var(--ig,rgba(255,255,255,0.1)),inset 0 1px 0 rgba(255,255,255,0.18),inset 0 -1px 0 rgba(0,0,0,0.2);
+  }
+
+  .dock-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.55);margin-top:6px;opacity:0;transition:opacity 0.3s}
+  .dock-dot.v{opacity:1}
+
+  .dock-tooltip{
+    position:fixed;padding:5px 14px;
+    background:rgba(30,30,34,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.08);border-radius:6px;
+    font-size:12px;font-weight:500;letter-spacing:0.3px;color:#e8e6e3;
+    white-space:nowrap;pointer-events:none;opacity:0;
+    transform:translateX(-50%) translateY(4px) scale(0.9);
+    transition:opacity 0.2s ease,transform 0.25s cubic-bezier(0.34,1.56,0.64,1);z-index:100;
+  }
+  .dock-tooltip.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+
+  .surface-glow{
+    position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+    width:70%;height:30px;
+    background:radial-gradient(ellipse,rgba(0,212,170,0.06),transparent 70%);
+    filter:blur(8px);pointer-events:none;
+  }
+
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  @media(max-width:600px){.dock{gap:2px;padding:8px 10px}.dock-icon{width:40px;height:40px;font-size:17px}.dock-area{bottom:16px}}
+</style>
+</head>
+<body>
+
+<div class="bg-orb orb-1"></div>
+<div class="bg-orb orb-2"></div>
+<div class="bg-orb orb-3"></div>
+
+<div class="desktop-clock">
+  <span class="clock-time" id="clockTime">00:00</span>
+  <span class="clock-date" id="clockDate"></span>
+</div>
+
+<canvas id="particles"></canvas>
+
+<div class="dock-area">
+  <div class="dock-wrapper" id="dockWrapper">
+    <div class="dock" id="dock"></div>
+    <div class="surface-glow"></div>
+  </div>
+</div>
+
+<div class="dock-tooltip" id="tooltip"></div>
+
+<script>
+const CFG = {
+  maxScale: 1.85, baseScale: 1, radius: 180,
+  ss: 0.12, sd: 0.82, tiltMax: 2.5, pCount: 20,
+};
+
+const DATA = [
+  {l:'Finder',  i:'fa-compass',  c1:'#4ecdc4',c2:'#2a9d8f',a:1},
+  {l:'Messages',i:'fa-message',   c1:'#34c759',c2:'#248a3d',a:1},
+  {l:'Mail',    i:'fa-envelope',  c1:'#5b9bd5',c2:'#3a7bc8',a:0},
+  {l:'Music',   i:'fa-music',     c1:'#ff6b6b',c2:'#e74c3c',a:1},
+  {l:'Photos',  i:'fa-image',     c1:'#ffd93d',c2:'#f0c419',a:0},
+  'sep',
+  {l:'Terminal',i:'fa-terminal',  c1:'#1e1e2e',c2:'#181825',tc:'#00d4aa',a:1},
+  {l:'Browser', i:'fa-globe',     c1:'#e8e6e3',c2:'#c0beb8',a:0},
+  {l:'Code',    i:'fa-code',      c1:'#f0a050',c2:'#d4853a',a:1},
+  'sep',
+  {l:'Settings',i:'fa-gear',      c1:'#7f8c8d',c2:'#636e72',a:0},
+  {l:'Trash',   i:'fa-trash-can', c1:'#95a5a6',c2:'#7f8c8d',a:0},
+];
+
+class Spring {
+  constructor(v,s,d){this.value=v;this.target=v;this.velocity=0;this.s=s;this.d=d}
+  step(){const f=(this.target-this.value)*this.s;this.velocity=(this.velocity+f)*this.d;this.value+=this.velocity;return this.value}
+}
+
+const items=[],springs=[],parts=[];
+let mx=-9e3,my=-9e3,ready=false;
+const dock=document.getElementById('dock'),dw=document.getElementById('dockWrapper'),
+      tip=document.getElementById('tooltip'),pc=document.getElementById('particles'),
+      px=pc.getContext('2d'),tilt=new Spring(0,0.08,0.78);
+
+function build(){
+  DATA.forEach(d=>{
+    if(d==='sep'){const s=document.createElement('div');s.className='dock-sep';dock.appendChild(s);return}
+    const it=document.createElement('div');it.className='dock-item';it.dataset.label=d.l;
+    it.style.animationDelay=(0.4+items.length*0.055)+'s';
+    const ic=document.createElement('div');ic.className='dock-icon';
+    ic.style.setProperty('--ic1',d.c1);ic.style.setProperty('--ic2',d.c2);ic.style.setProperty('--ig',d.c1+'55');
+    ic.innerHTML=`<i class="fa-solid ${d.i}" style="color:${d.tc||'rgba(255,255,255,0.9)'}"></i>`;
+    it.appendChild(ic);
+    const dot=document.createElement('div');dot.className='dock-dot'+(d.a?' v':'');it.appendChild(dot);
+    dock.appendChild(it);items.push(it);springs.push(new Spring(CFG.baseScale,CFG.ss,CFG.sd));
+    it.addEventListener('animationend',()=>{it.style.animation='none';it.style.opacity='1'},{once:true});
+  });
+}
+
+const eoq=t=>1-Math.pow(1-t,4);
+
+function updTargets(){
+  items.forEach((it,i)=>{
+    const r=it.getBoundingClientRect(),cx=r.left+r.width/2,dist=Math.abs(mx-cx);
+    let t=CFG.baseScale;
+    if(dist<CFG.radius){const ratio=1-dist/CFG.radius;t=CFG.baseScale+(CFG.maxScale-CFG.baseScale)*eoq(ratio)}
+    springs[i].target=t;
+  });
+}
+
+function updTip(){
+  let ms=CFG.baseScale,mi=null;
+  items.forEach((it,i)=>{if(springs[i].value>ms){ms=springs[i].value;mi=it}});
+  if(ms>1.2&&mi){
+    tip.textContent=mi.dataset.label;const r=mi.getBoundingClientRect();
+    tip.style.left=(r.left+r.width/2)+'px';tip.style.bottom=(innerHeight-r.top+14)+'px';
+    tip.classList.add('show');
+  } else tip.classList.remove('show');
+}
+
+function updPad(){
+  let m=CFG.baseScale;springs.forEach(s=>{if(s.value>m)m=s.value});
+  const e=Math.max(0,(m-1)*22);dock.style.paddingTop=(10+e)+'px';dock.style.paddingBottom=(10+e)+'px';
+}
+
+function updTilt(){
+  const r=dw.getBoundingClientRect(),cx=r.left+r.width/2;
+  const vd=Math.abs(my-(r.top+r.height/2)),vi=Math.max(0,1-vd/250);
+  const nx=Math.max(-1,Math.min(1,(mx-cx)/(r.width/2)));
+  tilt.target=-nx*CFG.tiltMax*vi;tilt.step();
+  dw.style.transform=`perspective(1000px) rotateX(2deg) rotateY(${tilt.value}deg)`;
+}
+
+function updGlow(){
+  const r=dock.getBoundingClientRect(),rx=mx-r.left;
+  const inD=mx>r.left-40&&mx<r.right+40&&my>r.top-60&&my<r.bottom+40;
+  dock.style.setProperty('--gx',Math.max(0,Math.min(r.width,rx))+'px');
+  dock.classList.toggle('ga',inD);
+}
+
+function spawn(x,y,col){
+  for(let i=0;i<CFG.pCount;i++){
+    const a=-Math.PI*0.1-Math.random()*Math.PI*0.8,sp=2.5+Math.random()*6;
+    parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,sz:1.5+Math.random()*3,c:col,life:1,dec:0.012+Math.random()*0.012});
+  }
+}
+
+function drawParts(){
+  px.clearRect(0,0,pc.width,pc.height);
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.14;p.vx*=0.99;p.life-=p.dec;
+    if(p.life<=0){parts.splice(i,1);continue}
+    px.globalAlpha=p.life*0.25;px.fillStyle=p.c;px.beginPath();px.arc(p.x,p.y,p.sz*2.5,0,Math.PI*2);px.fill();
+    px.globalAlpha=p.life*0.85;px.beginPath();px.arc(p.x,p.y,p.sz,0,Math.PI*2);px.fill();
+  }
+  px.globalAlpha=1;
+}
+
+function loop(){
+  if(!ready){requestAnimationFrame(loop);return}
+  updTargets();
+  items.forEach((it,i)=>{springs[i].step();it.style.transform=`scale(${springs[i].value})`;it.style.transformOrigin='bottom center'});
+  updPad();updTip();updTilt();updGlow();drawParts();
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+document.addEventListener('mouseleave',()=>{mx=-9e3;my=-9e3});
+
+dock.addEventListener('click',e=>{
+  const it=e.target.closest('.dock-item');if(!it)return;
+  const i=items.indexOf(it);if(i===-1)return;
+  springs[i].velocity=0.18;
+  const ic=it.querySelector('.dock-icon'),r=ic.getBoundingClientRect();
+  spawn(r.left+r.width/2,r.top+r.height/2,ic.style.getPropertyValue('--ic1').trim());
+});
+
+dock.addEventListener('touchstart',e=>{const t=e.touches[0];mx=t.clientX;my=t.clientY},{passive:true});
+dock.addEventListener('touchmove',e=>{const t=e.touches[0];mx=t.clientX;my=t.clientY},{passive:true});
+dock.addEventListener('touchend',()=>{
+  if(!items.length)return;let md=Infinity,ci=null;
+  items.forEach((it,i)=>{const r=it.getBoundingClientRect(),d=Math.abs(mx-(r.left+r.width/2));if(d<md){md=d;ci=i}});
+  if(ci!==null&&md<60){
+    springs[ci].velocity=0.18;
+    const ic=items[ci].querySelector('.dock-icon'),r=ic.getBoundingClientRect();
+    spawn(r.left+r.width/2,r.top+r.height/2,ic.style.getPropertyValue('--ic1').trim());
+  }
+  setTimeout(()=>{mx=-9e3;my=-9e3},300);
+},{passive:true});
+
+function rsz(){pc.width=innerWidth;pc.height=innerHeight}
+window.addEventListener('resize',rsz);
+
+function updClk(){
+  const n=new Date();
+  document.getElementById('clockTime').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+  const ds=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const ms=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('clockDate').textContent=ds[n.getDay()]+', '+ms[n.getMonth()]+' '+n.getDate();
+}
+
+build();rsz();updClk();setInterval(updClk,10000);
+setTimeout(()=>{ready=true},1200);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

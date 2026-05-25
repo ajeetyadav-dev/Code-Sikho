@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Generated UI vs Hand-Coded UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --bg-elevated: #131316;
+    --bg-card: #18181c;
+    --fg: #e8e6e3;
+    --fg-muted: #6e6c68;
+    --border: #252528;
+    --accent: #e85d3a;
+    --accent-dim: rgba(232,93,58,0.1);
+    --accent-glow: rgba(232,93,58,0.25);
+    --good: #3ad9a0;
+    --good-dim: rgba(58,217,160,0.08);
+    --bad: #e85d5d;
+    --bad-dim: rgba(232,93,93,0.08);
+    --font: 'Space Grotesk', sans-serif;
+    --font-serif: 'Instrument Serif', serif;
+    --radius: 10px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg);color:var(--fg);overflow-x:hidden;-webkit-font-smoothing:antialiased;line-height:1.6}
+
+  /* Atmosphere */
+  body::before{content:'';position:fixed;top:-30%;right:-20%;width:70vw;height:70vw;background:radial-gradient(circle,rgba(232,93,58,0.03)0%,transparent 55%);pointer-events:none;z-index:0}
+  body::after{content:'';position:fixed;bottom:-20%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(58,217,160,0.02)0%,transparent 60%);pointer-events:none;z-index:0}
+  .grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.012)1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012)1px,transparent 1px);background-size:72px 72px;pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1}
+
+  /* Scroll progress */
+  .scroll-bar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--good));z-index:9999;width:0%;transition:width .05s linear}
+
+  /* ── Hero ── */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative}
+  .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid var(--border);background:var(--bg-elevated);font-size:12px;color:var(--fg-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:32px;opacity:0;animation:fadeUp .7s ease .2s forwards}
+  .hero-badge i{color:var(--accent);font-size:10px}
+  .hero h1{font-size:clamp(36px,7vw,82px);font-weight:800;letter-spacing:-3px;line-height:.95;margin-bottom:24px}
+  .hero h1 .ai{color:var(--bad);position:relative}
+  .hero h1 .hc{color:var(--good)}
+  .hero h1 .vs{display:inline-block;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:2px 14px;font-size:.38em;vertical-align:middle;margin:0 6px;color:var(--fg-muted);font-weight:400;letter-spacing:2px}
+  .hero-sub{font-size:17px;color:var(--fg-muted);max-width:560px;line-height:1.7;font-weight:300;opacity:0;animation:fadeUp .7s ease .5s forwards}
+  .hero-scroll{margin-top:56px;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--fg-muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:0;animation:fadeUp .7s ease .7s forwards}
+  .hero-scroll i{animation:bounce 2s ease infinite}
+
+  /* ── Comparison Sections ── */
+  .comp{max-width:1240px;margin:0 auto;padding:80px 24px;opacity:0;transform:translateY(36px);transition:opacity .7s ease,transform .7s ease}
+  .comp.vis{opacity:1;transform:translateY(0)}
+  .comp-meta{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  .comp-num{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:4px 12px;border-radius:100px;letter-spacing:.5px}
+  .comp-cat{font-size:12px;color:var(--fg-muted);text-transform:uppercase;letter-spacing:2px}
+  .comp-title{font-size:clamp(24px,3.5vw,38px);font-weight:700;letter-spacing:-1px;margin-bottom:6px}
+  .comp-desc{color:var(--fg-muted);font-size:14px;max-width:620px;margin-bottom:40px;line-height:1.7}
+
+  /* Split panel */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .panel{border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;position:relative}
+  .panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--bg-elevated)}
+  .panel-tag{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600}
+  .panel-tag.ai-tag{color:var(--bad)}
+  .panel-tag.hc-tag{color:var(--good)}
+  .panel-tag i{font-size:8px}
+  .panel-verd{font-size:10px;padding:3px 10px;border-radius:100px;font-weight:600;letter-spacing:.3px}
+  .panel-verd.bad{background:var(--bad-dim);color:var(--bad)}
+  .panel-verd.good{background:var(--good-dim);color:var(--good)}
+  .panel-body{padding:28px 24px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-card);position:relative}
+
+  /* Annotations */
+  .annots{margin-top:20px;width:100%;display:flex;flex-direction:column;gap:6px}
+  .ann{display:flex;align-items:flex-start;gap:9px;font-size:11.5px;color:var(--fg-muted);line-height:1.55;padding:7px 10px;border-radius:6px;background:rgba(255,255,255,.015);border:1px solid rgba(255,255,255,.02)}
+  .ann i{margin-top:3px;font-size:9px;flex-shrink:0}
+  .ann i.fa-xmark{color:var(--bad)}
+  .ann i.fa-check{color:var(--good)}
+
+  /* ══════════════════════════════════════
+     AI-GENERATED MOCK STYLES
+     ══════════════════════════════════════ */
+
+  /* AI Nav - generic gradient, too many items */
+  .ai-nav{width:100%;max-width:420px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px;padding:6px;display:flex;align-items:center;gap:2px;font-family:system-ui,sans-serif}
+  .ai-nav a{flex:1;text-align:center;padding:8px 6px;font-size:11px;color:rgba(255,255,255,.8);text-decoration:none;border-radius:8px;font-weight:500;transition:background .2s}
+  .ai-nav a:hover{background:rgba(255,255,255,.15)}
+  .ai-nav a.active{background:rgba(255,255,255,.2);color:#fff}
+  .ai-nav-logo{padding:8px 12px;font-size:14px;font-weight:700;color:#fff;margin-right:4px}
+
+  /* HC Nav */
+  .hc-nav{width:100%;max-width:420px;display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);font-family:var(--font)}
+  .hc-nav-logo{font-size:15px;font-weight:700;padding:10px 20px 10px 0;margin-right:24px;letter-spacing:-.5px}
+  .hc-nav a{padding:10px 0;font-size:13px;color:var(--fg-muted);text-decoration:none;font-weight:500;position:relative;transition:color .2s}
+  .hc-nav a::after{content:'';position:absolute;bottom:-1px;left:0;width:0;height:2px;background:var(--accent);transition:width .35s cubic-bezier(.16,1,.3,1)}
+  .hc-nav a:hover{color:var(--fg)}
+  .hc-nav a:hover::after{width:100%}
+  .hc-nav a.active{color:var(--fg)}
+  .hc-nav a.active::after{width:100%}
+
+  /* AI Hero - gradient text, generic CTA, stock layout */
+  .ai-hero{width:100%;max-width:360px;text-align:center;font-family:system-ui,sans-serif;padding:16px}
+  .ai-hero h2{font-size:22px;font-weight:700;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;line-height:1.2}
+  .ai-hero p{font-size:12px;color:#999;margin-bottom:16px;line-height:1.5}
+  .ai-hero-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:10px 28px;border-radius:50px;font-size:12px;cursor:pointer;box-shadow:0 4px 15px rgba(102,126,234,.4)}
+  .ai-hero-stars{color:#fbbf24;font-size:10px;margin-bottom:8px;letter-spacing:2px}
+
+  /* HC Hero */
+  .hc-hero{width:100%;max-width:360px;padding:16px}
+  .hc-hero-overline{font-size:11px;color:var(--accent);letter-spacing:2.5px;text-transform:uppercase;font-weight:600;margin-bottom:12px}
+  .hc-hero h2{font-family:var(--font-serif);font-size:32px;font-weight:400;font-style:italic;color:var(--fg);line-height:1.15;margin-bottom:12px;letter-spacing:-.5px}
+  .hc-hero p{font-size:13px;color:var(--fg-muted);line-height:1.65;margin-bottom:20px}
+  .hc-hero-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:var(--fg);color:var(--bg);border:none;border-radius:6px;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .2s}
+  .hc-hero-btn:hover{background:#fff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,255,255,.1)}
+
+  /* AI Cards - glassmorphism soup */
+  .ai-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px;font-family:system-ui,sans-serif}
+  .ai-card{background:rgba(255,255,255,.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;overflow:hidden}
+  .ai-card-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;margin-bottom:10px}
+  .ai-card:nth-child(2) .ai-card-icon{background:linear-gradient(135deg,#f093fb,#f5576c)}
+  .ai-card:nth-child(3) .ai-card-icon{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+  .ai-card:nth-child(4) .ai-card-icon{background:linear-gradient(135deg,#43e97b,#38f9d7)}
+  .ai-card h4{font-size:12px;font-weight:600;color:#fff;margin-bottom:4px}
+  .ai-card p{font-size:10px;color:rgba(255,255,255,.5);line-height:1.4}
+
+  /* HC Cards */
+  .hc-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px}
+  .hc-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:border-color .3s,transform .3s;cursor:default}
+  .hc-card:hover{border-color:#3a3a3e;transform:translateY(-2px)}
+  .hc-card-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:13px;margin-bottom:12px;transition:box-shadow .3s}
+  .hc-card:hover .hc-card-icon{box-shadow:0 0 20px var(--accent-dim)}
+  .hc-card h4{font-size:13px;font-weight:600;margin-bottom:4px}
+  .hc-card p{font-size:11px;color:var(--fg-muted);line-height:1.5}
+
+  /* AI Form */
+  .ai-form{width:100%;max-width:300px;font-family:system-ui,sans-serif}
+  .ai-form-grp{margin-bottom:12px}
+  .ai-form-grp label{font-size:11px;color:#aaa;display:block;margin-bottom:4px;font-weight:500}
+  .ai-form-grp input{width:100%;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:12px;outline:none;backdrop-filter:blur(8px)}
+  .ai-form-grp input:focus{border-color:#667eea;box-shadow:0 0 12px rgba(102,126,234,.2)}
+  .ai-form-btn{width:100%;padding:11px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:12px;font-size:12px;cursor:pointer;box-shadow:0 4px 15px rgba(102,126,234,.3);margin-top:4px}
+
+  /* HC Form */
+  .hc-form{width:100%;max-width:300px}
+  .hc-form-grp{margin-bottom:18px}
+  .hc-form-grp label{font-size:13px;font-weight:500;color:var(--fg);display:block;margin-bottom:6px}
+  .hc-form-grp label .req{color:var(--accent);margin-left:2px}
+  .hc-form-grp input{width:100%;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:13px;font-family:var(--font);outline:none;transition:border-color .2s,box-shadow .2s}
+  .hc-form-grp input::placeholder{color:var(--fg-muted)}
+  .hc-form-grp input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+  .hc-form-hint{font-size:11px;color:var(--fg-muted);margin-top:5px}
+  .hc-form-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .2s}
+  .hc-form-btn:hover{box-shadow:0 4px 16px var(--accent-glow);transform:translateY(-1px)}
+
+  /* AI Footer - overloaded */
+  .ai-footer{width:100%;max-width:360px;font-family:system-ui,sans-serif;text-align:center;padding:8px}
+  .ai-footer-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;text-align:left}
+  .ai-footer-col h5{font-size:10px;color:#fff;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+  .ai-footer-col a{display:block;font-size:10px;color:rgba(255,255,255,.4);text-decoration:none;margin-bottom:3px}
+  .ai-footer-bottom{font-size:9px;color:rgba(255,255,255,.25);border-top:1px solid rgba(255,255,255,.06);padding-top:8px}
+
+  /* HC Footer */
+  .hc-footer{width:100%;max-width:360px;display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+  .hc-footer-copy{font-size:12px;color:var(--fg-muted)}
+  .hc-footer-links{display:flex;gap:20px}
+  .hc-footer-links a{font-size:12px;color:var(--fg-muted);text-decoration:none;transition:color .2s}
+  .hc-footer-links a:hover{color:var(--fg)}
+
+  /* AI Typography block */
+  .ai-typo{width:100%;max-width:320px;font-family:system-ui,sans-serif;color:#fff;text-align:left}
+  .ai-typo .badge-ai{display:inline-block;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:9px;padding:3px 10px;border-radius:50px;font-weight:600;margin-bottom:8px;letter-spacing:.5px}
+  .ai-typo h3{font-size:18px;font-weight:700;margin-bottom:6px;line-height:1.2}
+  .ai-typo p{font-size:11px;color:rgba(255,255,255,.45);line-height:1.5}
+  .ai-typo .meta{font-size:9px;color:rgba(255,255,255,.25);margin-top:8px;display:flex;gap:12px}
+
+  /* HC Typography block */
+  .hc-typo{width:100%;max-width:320px;text-align:left}
+  .hc-typo .overline{font-size:10px;color:var(--accent);letter-spacing:2.5px;text-transform:uppercase;font-weight:600;margin-bottom:10px}
+  .hc-typo h3{font-family:var(--font-serif);font-size:24px;font-weight:400;font-style:italic;color:var(--fg);line-height:1.2;margin-bottom:8px}
+  .hc-typo p{font-size:13px;color:var(--fg-muted);line-height:1.7}
+  .hc-typo .meta{margin-top:14px;display:flex;align-items:center;gap:16px;font-size:12px;color:var(--fg-muted)}
+  .hc-typo .meta-item{display:flex;align-items:center;gap:5px}
+  .hc-typo .meta-item i{color:var(--accent);font-size:10px}
+
+  /* AI Color palette display */
+  .ai-palette{display:flex;gap:4px;width:100%;max-width:340px}
+  .ai-swatch{flex:1;height:60px;border-radius:12px}
+  .ai-palette-labels{display:flex;gap:4px;width:100%;max-width:340px;margin-top:6px}
+  .ai-palette-labels span{flex:1;font-size:9px;color:var(--fg-muted);text-align:center;font-family:monospace}
+
+  /* HC Color palette display */
+  .hc-palette{display:flex;gap:6px;width:100%;max-width:340px;align-items:end}
+  .hc-swatch{border-radius:4px;position:relative;transition:transform .3s}
+  .hc-swatch:hover{transform:translateY(-4px)}
+  .hc-swatch-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--fg-muted);font-family:monospace;white-space:nowrap}
+
+  /* AI "Section" pattern */
+  .ai-sections{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;font-family:system-ui,sans-serif}
+  .ai-section-block{border-radius:16px;overflow:hidden}
+  .ai-section-block img{width:100%;height:80px;object-fit:cover}
+  .ai-section-block-text{padding:10px 12px;background:rgba(255,255,255,.05)}
+  .ai-section-block-text h4{font-size:12px;font-weight:600;color:#fff;margin-bottom:3px}
+  .ai-section-block-text p{font-size:10px;color:rgba(255,255,255,.4)}
+
+  /* HC "Section" pattern - varied layout */
+  .hc-sections{width:100%;max-width:340px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:10px}
+  .hc-sec-item{border-radius:var(--radius);overflow:hidden;position:relative;cursor:pointer}
+  .hc-sec-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.16,1,.3,1)}
+  .hc-sec-item:hover img{transform:scale(1.05)}
+  .hc-sec-item:first-child{grid-row:span 2}
+  .hc-sec-overlay{position:absolute;bottom:0;left:0;right:0;padding:12px;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+  .hc-sec-overlay h4{font-size:12px;font-weight:600}
+  .hc-sec-overlay p{font-size:10px;color:rgba(255,255,255,.6);margin-top:2px}
+
+  /* ── Stats ── */
+  .stats{max-width:1240px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .stat{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;text-align:center;transition:transform .3s,border-color .3s}
+  .stat:hover{transform:translateY(-2px);border-color:#333}
+  .stat-val{font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--accent);margin-bottom:2px}
+  .stat-lbl{font-size:12px;color:var(--fg-muted)}
+
+  /* ── Verdict Section ── */
+  .verdict{max-width:800px;margin:0 auto;padding:80px 24px 120px;text-align:center}
+  .verdict h2{font-family:var(--font-serif);font-size:clamp(28px,4.5vw,48px);font-weight:400;font-style:italic;line-height:1.2;letter-spacing:-.5px;margin-bottom:20px}
+  .verdict h2 em{font-style:normal;color:var(--accent);font-family:var(--font);font-weight:700}
+  .verdict p{font-size:16px;color:var(--fg-muted);line-height:1.7;max-width:560px;margin:0 auto 40px}
+  .verdict-points{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left;margin-bottom:48px}
+  .verdict-point{display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-elevated);transition:border-color .3s}
+  .verdict-point:hover{border-color:#333}
+  .verdict-point i{color:var(--good);margin-top:3px;font-size:12px;flex-shrink:0}
+  .verdict-point div{font-size:13px;color:var(--fg-muted);line-height:1.5}
+  .verdict-point strong{color:var(--fg);font-weight:600;display:block;margin-bottom:2px}
+
+  /* ── Footer ── */
+  footer{text-align:center;padding:48px 24px;border-top:1px solid var(--border)}
+  footer p{font-size:12px;color:var(--fg-muted)}
+  footer span{color:var(--fg);font-weight:500}
+
+  /* Keyframes */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+  /* Responsive */
+  @media(max-width:768px){
+    .split{grid-template-columns:1fr}
+    .stats{grid-template-columns:1fr 1fr}
+    .verdict-points{grid-template-columns:1fr}
+    .ai-cards,.hc-cards{grid-template-columns:1fr 1fr}
+    .hc-sections{grid-template-columns:1fr}
+    .hc-sec-item:first-child{grid-row:auto}
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div class="scroll-bar" id="scrollBar"></div>
+<div class="grid-bg"></div>
+
+<div class="wrap">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge"><i class="fa-solid fa-circle"></i> Design Comparison</div>
+    <h1><span class="ai">AI-Generated</span><span class="vs">VS</span><span class="hc">Hand-Coded</span></h1>
+    <p class="hero-sub">Same brief, same content — completely different outcomes. Eight live comparisons reveal why human judgment still beats pattern matching.</p>
+    <div class="hero-scroll"><span>Scroll to compare</span><i class="fa-solid fa-chevron-down"></i></div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats" id="statsBar">
+    <div class="stat"><div class="stat-val" data-t="8">0</div><div class="stat-lbl">Comparisons</div></div>
+    <div class="stat"><div class="stat-val" data-t="52">0</div><div class="stat-lbl">Differences Noted</div></div>
+    <div class="stat"><div class="stat-val" data-t="100" data-s="%">0%</div><div class="stat-lbl">Live Components</div></div>
+    <div class="stat"><div class="stat-val" data-t="0" data-sp="z">0</div><div class="stat-lbl">AI Used to Build This</div></div>
+  </div>
+
+  <!-- 1. Navigation -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">01</span><span class="comp-cat">Navigation</span></div>
+    <h2 class="comp-title">The first thing users see sets the tone</h2>
+    <p class="comp-desc">AI defaults to gradient pill navs because they appear in thousands of training examples. A human asks: what does this specific brand need?</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Generic</span></div>
+        <div class="panel-body">
+          <nav class="ai-nav"><span class="ai-nav-logo">Brand</span><a href="#">Home</a><a href="#" class="active">About</a><a href="#">Services</a><a href="#">Blog</a><a href="#">Contact</a></nav>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Gradient background is the most overused AI pattern</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Pill container adds no value — it's decorative noise</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>All links treated equally — no visual hierarchy</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Intentional</span></div>
+        <div class="panel-body">
+          <nav class="hc-nav"><span class="hc-nav-logo">Brand</span><a href="#">Home</a><a href="#" class="active">About</a><a href="#">Services</a><a href="#">Blog</a><a href="#">Contact</a></nav>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Underline indicator — minimal, scannable, mature</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Logo separated from nav items by spacing, not a container</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Hover reveals the accent color — rewards exploration</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Hero Section -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">02</span><span class="comp-cat">Hero Section</span></div>
+    <h2 class="comp-title">Gradient text is not a personality</h2>
+    <p class="comp-desc">AI loves rainbow gradients, star ratings, and "Revolutionize your workflow" copy. Humans write for the actual audience.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Cookie-cutter</span></div>
+        <div class="panel-body">
+          <div class="ai-hero">
+            <div class="ai-hero-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+            <h2>Revolutionize Your Workflow with AI</h2>
+            <p>Unlock the power of next-generation solutions. Empower your team to achieve more with less effort.</p>
+            <button class="ai-hero-btn">Get Started Free</button>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Gradient text on dark bg — seen 10,000 times</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Fake 5-star rating — adds zero credibility</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Copy is empty buzzwords with no real message</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Distinctive</span></div>
+        <div class="panel-body">
+          <div class="hc-hero">
+            <div class="hc-hero-overline">For Designers</div>
+            <h2>Build less, mean more.</h2>
+            <p>A toolkit for people who believe the best interface is the one you barely notice — because it just works.</p>
+            <button class="hc-hero-btn">See the Toolkit <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i></button>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Serif italic heading creates instant visual identity</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Overline establishes audience before the headline</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Copy has a real point of view, not buzzwords</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Feature Cards -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">03</span><span class="comp-cat">Feature Cards</span></div>
+    <h2 class="comp-title">Glassmorphism is a crutch, not a style</h2>
+    <p class="comp-desc">AI reaches for glassmorphism, gradient icons, and 16px border-radius because they scored well in training data. Restraint is harder to learn.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Over-designed</span></div>
+        <div class="panel-body">
+          <div class="ai-cards">
+            <div class="ai-card"><div class="ai-card-icon"><i class="fa-solid fa-bolt"></i></div><h4>Fast</h4><p>Lightning-fast performance</p></div>
+            <div class="ai-card"><div class="ai-card-icon"><i class="fa-solid fa-shield"></i></div><h4>Secure</h4><p>Enterprise-grade security</p></div>
+            <div class="ai-card"><div class="ai-card-icon"><i class="fa-solid fa-cloud"></i></div><h4>Cloud</h4><p>Scalable cloud infra</p></div>
+            <div class="ai-card"><div class="ai-card-icon"><i class="fa-solid fa-chart-line"></i></div><h4>Analytics</h4><p>Real-time insights</p></div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Four different gradient icons — visual chaos</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Glassmorphism on a dark bg adds no readability</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>16px radius everywhere — no variation or reason</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Restrained</span></div>
+        <div class="panel-body">
+          <div class="hc-cards">
+            <div class="hc-card"><div class="hc-card-icon"><i class="fa-solid fa-bolt"></i></div><h4>Fast</h4><p>Sub-100ms response times across every endpoint.</p></div>
+            <div class="hc-card"><div class="hc-card-icon"><i class="fa-solid fa-shield"></i></div><h4>Secure</h4><p>SOC 2 Type II certified with end-to-end encryption.</p></div>
+            <div class="hc-card"><div class="hc-card-icon"><i class="fa-solid fa-cloud"></i></div><h4>Scalable</h4><p>Auto-scales from zero to 100k concurrent users.</p></div>
+            <div class="hc-card"><div class="hc-card-icon"><i class="fa-solid fa-chart-line"></i></div><h4>Observable</h4><p>Structured logs, traces, and metrics from day one.</p></div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Single accent color for icons — visual cohesion</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Solid backgrounds — actually readable</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Descriptions contain real specifics, not filler</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Forms -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">04</span><span class="comp-cat">Forms</span></div>
+    <h2 class="comp-title">Trust is built in the details of a form</h2>
+    <p class="comp-desc">AI makes forms that look flashy but miss the functional details that actually help users complete them.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Style over substance</span></div>
+        <div class="panel-body">
+          <div class="ai-form">
+            <div class="ai-form-grp"><label>Full Name</label><input type="text" placeholder="John Doe"></div>
+            <div class="ai-form-grp"><label>Email Address</label><input type="email" placeholder="john@example.com"></div>
+            <div class="ai-form-grp"><label>Password</label><input type="password" placeholder="********"></div>
+            <button class="ai-form-btn">Create Account</button>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>No required field indicators</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>12px rounded inputs look bubbly, not serious</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Blur on inputs is pure decoration — hurts readability</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Functional</span></div>
+        <div class="panel-body">
+          <div class="hc-form">
+            <div class="hc-form-grp"><label>Full Name <span class="req">*</span></label><input type="text" placeholder="Jane Smith"></div>
+            <div class="hc-form-grp"><label>Email <span class="req">*</span></label><input type="email" placeholder="jane@company.com"><div class="hc-form-hint">We'll only use this for your account.</div></div>
+            <div class="hc-form-grp"><label>Password <span class="req">*</span></label><input type="password" placeholder="8+ characters"></div>
+            <button class="hc-form-btn">Create Account</button>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Required markers, reassurance hint, clear placeholder</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>6px radius — professional, not playful</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Focus ring uses accent color — clear state signal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Typography & Content -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">05</span><span class="comp-cat">Typography</span></div>
+    <h2 class="comp-title">Type hierarchy reveals who's thinking</h2>
+    <p class="comp-desc">AI uses one font at many sizes. A human designer combines typefaces to create contrast, personality, and rhythm.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Flat</span></div>
+        <div class="panel-body">
+          <div class="ai-typo">
+            <span class="badge-ai">Featured</span>
+            <h3>10 Tips for Better Productivity in 2024</h3>
+            <p>Discover the secrets that top performers use to maximize their output and achieve extraordinary results in both work and life.</p>
+            <div class="meta"><span>Jan 15, 2024</span><span>5 min read</span></div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Single system-ui font — no personality at all</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Gradient badge adds visual noise, not information</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Title is generic SEO bait, not real content</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Expressive</span></div>
+        <div class="panel-body">
+          <div class="hc-typo">
+            <div class="overline">Essay</div>
+            <h3>Why your tools are making you worse</h3>
+            <p>The best designers I know share one trait: they switch tools constantly. Not because they're fickle, but because comfort is the enemy of quality.</p>
+            <div class="meta">
+              <div class="meta-item"><i class="fa-regular fa-calendar"></i> Jan 15, 2024</div>
+              <div class="meta-item"><i class="fa-regular fa-clock"></i> 5 min</div>
+              <div class="meta-item"><i class="fa-regular fa-eye"></i> 4.2k</div>
+            </div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Serif + sans-serif pairing creates visual tension</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Overline is functional, not decorative</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Opening line has a real point of view</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Color -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">06</span><span class="comp-cat">Color</span></div>
+    <h2 class="comp-title">AI has a favorite color palette and it's exhausting</h2>
+    <p class="comp-desc">Purple-blue gradients appear in an estimated 40% of AI-generated interfaces. A human chooses color to serve the brand, not the pattern.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Predictable</span></div>
+        <div class="panel-body">
+          <div class="ai-palette">
+            <div class="ai-swatch" style="background:linear-gradient(135deg,#667eea,#764ba2);"></div>
+            <div class="ai-swatch" style="background:#f093fb;"></div>
+            <div class="ai-swatch" style="background:#4facfe;"></div>
+            <div class="ai-swatch" style="background:#43e97b;"></div>
+            <div class="ai-swatch" style="background:#fa709a;"></div>
+          </div>
+          <div class="ai-palette-labels"><span>#667eea</span><span>#f093fb</span><span>#4facfe</span><span>#43e97b</span><span>#fa709a</span></div>
+          <div class="annots" style="margin-top:32px;">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Every color is saturated — no breathing room</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Rainbow approach has no hierarchy or system</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>You've seen this exact palette 500 times</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Considered</span></div>
+        <div class="panel-body">
+          <div class="hc-palette">
+            <div class="hc-swatch" style="width:80px;height:64px;background:#0b0b0d;"><span class="hc-swatch-label">#0b0b0d</span></div>
+            <div class="hc-swatch" style="width:60px;height:52px;background:#18181c;"><span class="hc-swatch-label">#18181c</span></div>
+            <div class="hc-swatch" style="width:50px;height:44px;background:#e8e6e3;"><span class="hc-swatch-label">#e8e6e3</span></div>
+            <div class="hc-swatch" style="width:50px;height:40px;background:#e85d3a;"><span class="hc-swatch-label">#e85d3a</span></div>
+            <div class="hc-swatch" style="width:40px;height:36px;background:#3ad9a0;"><span class="hc-swatch-label">#3ad9a0</span></div>
+          </div>
+          <div class="annots" style="margin-top:40px;">
+            <div class="ann"><i class="fa-solid fa-check"></i>One accent color — the rest is value-based hierarchy</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Sized by importance, not by random choice</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Dark palette with warm accent — distinctive and readable</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Layout Patterns -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">07</span><span class="comp-cat">Layout</span></div>
+    <h2 class="comp-title">Repetition is the enemy of rhythm</h2>
+    <p class="comp-desc">AI generates the same card layout for every section. A human designer varies the grid to create visual interest and signal content differences.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Monotonous</span></div>
+        <div class="panel-body">
+          <div class="ai-sections">
+            <div class="ai-section-block"><img src="https://picsum.photos/seed/ai-s1/400/160" alt=""><div class="ai-section-block-text"><h4>Our Services</h4><p>We offer a wide range of services</p></div></div>
+            <div class="ai-section-block"><img src="https://picsum.photos/seed/ai-s2/400/160" alt=""><div class="ai-section-block-text"><h4>Case Studies</h4><p>See our successful projects</p></div></div>
+            <div class="ai-section-block"><img src="https://picsum.photos/seed/ai-s3/400/160" alt=""><div class="ai-section-block-text"><h4>Testimonials</h4><p>What our clients say about us</p></div></div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Three identical blocks stacked — zero variety</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Copy is placeholder-level — "wide range of services"</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>No visual hierarchy between sections</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Varied</span></div>
+        <div class="panel-body">
+          <div class="hc-sections">
+            <div class="hc-sec-item"><img src="https://picsum.photos/seed/hc-s1/400/400" alt=""><div class="hc-sec-overlay"><h4>Featured Project</h4><p>A deep dive into our latest work</p></div></div>
+            <div class="hc-sec-item"><img src="https://picsum.photos/seed/hc-s2/300/200" alt=""><div class="hc-sec-overlay"><h4>Case Study</h4></div></div>
+            <div class="hc-sec-item"><img src="https://picsum.photos/seed/hc-s3/300/200" alt=""><div class="hc-sec-overlay"><h4>Process</h4></div></div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Asymmetric grid — featured item gets visual weight</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Smaller items are paired — creates rhythm</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Hover zoom signals interactivity</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Footer -->
+  <section class="comp" data-comp>
+    <div class="comp-meta"><span class="comp-num">08</span><span class="comp-cat">Footer</span></div>
+    <h2 class="comp-title">Know when to stop</h2>
+    <p class="comp-desc">AI stuffs footers with three-column link grids because most websites have them. A human asks: does this page actually need a mega footer?</p>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag ai-tag"><i class="fa-solid fa-circle"></i> AI-Generated</span><span class="panel-verd bad">Overloaded</span></div>
+        <div class="panel-body">
+          <div class="ai-footer">
+            <div class="ai-footer-cols">
+              <div class="ai-footer-col"><h5>Product</h5><a href="#">Features</a><a href="#">Pricing</a><a href="#">Integrations</a><a href="#">Changelog</a></div>
+              <div class="ai-footer-col"><h5>Company</h5><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Press</a></div>
+              <div class="ai-footer-col"><h5>Legal</h5><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Cookies</a><a href="#">Licenses</a></div>
+            </div>
+            <div class="ai-footer-bottom">2024 Brand Inc. All rights reserved.</div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-xmark"></i>12 links nobody will ever click</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>Three columns for a landing page — disproportionate</div>
+            <div class="ann"><i class="fa-solid fa-xmark"></i>"Changelog" and "Licenses" — really?</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-tag hc-tag"><i class="fa-solid fa-circle"></i> Hand-Coded</span><span class="panel-verd good">Proportionate</span></div>
+        <div class="panel-body">
+          <div class="hc-footer">
+            <span class="hc-footer-copy">2024 Brand</span>
+            <div class="hc-footer-links"><a href="#">Privacy</a><a href="#">Terms</a></div>
+          </div>
+          <div class="annots">
+            <div class="ann"><i class="fa-solid fa-check"></i>Two links — the only ones legally required</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Takes 4 seconds to scan instead of 20</div>
+            <div class="ann"><i class="fa-solid fa-check"></i>Proportionate to a single-page site</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Verdict -->
+  <section class="verdict">
+    <h2>The difference isn't pixels. It's <em>judgment</em>.</h2>
+    <p>AI optimizes for statistical likelihood. Humans optimize for this specific moment, this specific audience, this specific goal. That's not a technology gap — it's a taste gap.</p>
+    <div class="verdict-points">
+      <div class="verdict-point"><i class="fa-solid fa-check"></i><div><strong>Restraint over excess</strong>Knowing what to leave out is more valuable than knowing what to add.</div></div>
+      <div class="verdict-point"><i class="fa-solid fa-check"></i><div><strong>Opinion over neutrality</strong>Strong work takes a position. AI defaults to the average of everything.</div></div>
+      <div class="verdict-point"><i class="fa-solid fa-check"></i><div><strong>Context over patterns</strong>Every design decision should answer "why for this project?" not "what usually goes here?"</div></div>
+      <div class="verdict-point"><i class="fa-solid fa-check"></i><div><strong>Specifics over generics</strong>"SOC 2 certified" beats "enterprise-grade security" every time.</div></div>
+    </div>
+  </section>
+
+  <footer><p>This entire page was <span>hand-coded</span> from scratch — no AI, no templates, no shortcuts.</p></footer>
+
+</div>
+
+<script>
+  // Scroll progress
+  const scrollBar = document.getElementById('scrollBar');
+  function updateScroll() {
+    const s = window.scrollY;
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    scrollBar.style.width = (h > 0 ? (s / h) * 100 : 0) + '%';
+  }
+
+  // Section reveal
+  const comps = document.querySelectorAll('[data-comp]');
+  const compObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('vis');
+        compObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  comps.forEach(c => compObs.observe(c));
+
+  // Stats counter
+  let counted = false;
+  const statsBar = document.getElementById('statsBar');
+  const statsObs = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !counted) {
+      counted = true;
+      document.querySelectorAll('.stat-val').forEach(el => {
+        const t = parseInt(el.dataset.t);
+        const s = el.dataset.s || '';
+        const sp = el.dataset.sp;
+        if (sp) { el.textContent = '0'; return; }
+        let c = 0;
+        const step = Math.max(1, Math.floor(t / 35));
+        const iv = setInterval(() => {
+          c += step;
+          if (c >= t) { c = t; clearInterval(iv); }
+          el.textContent = c + s;
+        }, 28);
+      });
+    }
+  }, { threshold: 0.5 });
+  statsObs.observe(statsBar);
+
+  // HC Nav tab switching
+  document.querySelectorAll('.hc-nav a').forEach(a => {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.hc-nav a').forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // Mouse glow on panels
+  document.querySelectorAll('.panel').forEach(p => {
+    p.addEventListener('mousemove', function(e) {
+      const r = this.getBoundingClientRect();
+      this.style.background = `radial-gradient(500px circle at ${e.clientX - r.left}px ${e.clientY - r.top}px, rgba(255,255,255,.015), transparent 40%)`;
+    });
+    p.addEventListener('mouseleave', function() { this.style.background = ''; });
+  });
+
+  // Master scroll
+  window.addEventListener('scroll', updateScroll, { passive: true });
+  updateScroll();
+</script>
+</body>
+</html>

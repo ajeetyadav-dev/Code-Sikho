@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — System Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #08080a;
+    --bg-raised: #0e0e12;
+    --bg-card: #121216;
+    --fg: #e4e2df;
+    --fg-dim: #8a8890;
+    --fg-faint: #3e3e46;
+    --accent: #00e5c3;
+    --accent-dim: rgba(0,229,195,0.08);
+    --accent-glow: rgba(0,229,195,0.2);
+    --warn: #e8a84c;
+    --warn-dim: rgba(232,168,76,0.08);
+    --danger: #e85d5d;
+    --danger-dim: rgba(232,93,93,0.08);
+    --border: #1c1c22;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+    --radius: 2px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--fg);overflow-x:hidden;-webkit-font-smoothing:antialiased;line-height:1.6}
+
+  /* ── Canvas BG ── */
+  #bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.4}
+
+  /* ── Scan Line Overlay ── */
+  .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+
+  .wrap{position:relative;z-index:2}
+
+  /* ── Top Bar ── */
+  .topbar{position:fixed;top:0;left:0;right:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;z-index:100;border-bottom:1px solid var(--border);background:rgba(8,8,10,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .topbar-left{display:flex;align-items:center;gap:16px}
+  .topbar-logo{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:3px;color:var(--accent)}
+  .topbar-sep{width:1px;height:16px;background:var(--border)}
+  .topbar-ver{font-family:var(--mono);font-size:11px;color:var(--fg-faint)}
+  .topbar-right{display:flex;align-items:center;gap:20px}
+  .topbar-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .topbar-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite}
+  .topbar-time{font-family:var(--mono);font-size:11px;color:var(--fg-dim);font-variant-numeric:tabular-nums}
+
+  /* ── Hero ── */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;position:relative;overflow:hidden}
+  .hero-scan{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent-glow),transparent);animation:scanMove 4s ease-in-out infinite;pointer-events:none}
+  .hero-overline{font-family:var(--mono);font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--fg-faint);margin-bottom:28px;opacity:0;animation:fadeUp .8s ease .3s forwards}
+  .hero-title{font-size:clamp(52px,11vw,140px);font-weight:800;letter-spacing:-5px;line-height:.9;margin-bottom:28px;position:relative}
+  .hero-title .char{display:inline-block;opacity:0;transform:translateY(40px);animation:charReveal .6s cubic-bezier(.16,1,.3,1) forwards}
+  .hero-title .accent-char{color:var(--accent);text-shadow:0 0 60px var(--accent-glow),0 0 120px rgba(0,229,195,.08)}
+  .hero-sub{font-size:15px;color:var(--fg-dim);max-width:440px;line-height:1.7;font-weight:300;opacity:0;animation:fadeUp .8s ease 1s forwards}
+  .hero-coords{position:absolute;bottom:40px;left:32px;font-family:var(--mono);font-size:10px;color:var(--fg-faint);letter-spacing:1px;opacity:0;animation:fadeUp .8s ease 1.3s forwards}
+  .hero-coords span{color:var(--accent)}
+
+  /* ── Section Base ── */
+  .sect{padding:100px 32px;max-width:1280px;margin:0 auto}
+  .sect-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:48px;flex-wrap:wrap;gap:16px}
+  .sect-label{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+  .sect-title{font-size:clamp(24px,3.5vw,36px);font-weight:700;letter-spacing:-1px}
+  .sect-desc{font-size:13px;color:var(--fg-dim);max-width:380px}
+
+  /* ── HUD Card ── */
+  .hud-card{background:var(--bg-card);border:1px solid var(--border);position:relative;padding:28px;overflow:hidden;transition:border-color .4s}
+  .hud-card:hover{border-color:#2a2a32}
+  .hud-card::before,.hud-card::after{content:'';position:absolute;width:16px;height:16px;pointer-events:none;transition:border-color .4s}
+  .hud-card::before{top:-1px;left:-1px;border-top:1px solid var(--fg-faint);border-left:1px solid var(--fg-faint)}
+  .hud-card::after{bottom:-1px;right:-1px;border-bottom:1px solid var(--fg-faint);border-right:1px solid var(--fg-faint)}
+  .hud-card:hover::before,.hud-card:hover::after{border-color:var(--accent)}
+
+  /* ── Metrics Row ── */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:80px}
+  .metric{opacity:0;transform:translateY(20px)}
+  .metric.vis{opacity:1;transform:translateY(0);transition:opacity .6s ease,transform .6s ease}
+  .metric-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .metric-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--fg-dim)}
+  .metric-dot{width:6px;height:6px;border-radius:50%}
+  .metric-dot.green{background:var(--accent);box-shadow:0 0 8px var(--accent-glow);animation:pulse 2s ease infinite}
+  .metric-dot.amber{background:var(--warn);box-shadow:0 0 8px rgba(232,168,76,.3);animation:pulse 2s ease infinite .5s}
+  .metric-val{font-family:var(--mono);font-size:clamp(32px,5vw,44px);font-weight:300;letter-spacing:-2px;color:var(--fg);line-height:1;margin-bottom:6px}
+  .metric-val .unit{font-size:.35em;color:var(--fg-dim);letter-spacing:0;margin-left:4px}
+  .metric-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden;margin-top:12px}
+  .metric-bar-fill{height:100%;border-radius:1px;transition:width 1.5s cubic-bezier(.16,1,.3,1)}
+  .metric-bar-fill.accent{background:var(--accent)}
+  .metric-bar-fill.warn{background:var(--warn)}
+  .metric-bar-fill.danger{background:var(--danger)}
+
+  /* ── Module Grid ── */
+  .modules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .module{opacity:0;transform:translateY(24px)}
+  .module.vis{opacity:1;transform:translateY(0);transition:opacity .6s ease,transform .6s ease}
+  .module-icon{width:40px;height:40px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:15px;transition:box-shadow .4s}
+  .module-icon.accent{background:var(--accent-dim);color:var(--accent)}
+  .module-icon.warn{background:var(--warn-dim);color:var(--warn)}
+  .module-icon.danger{background:var(--danger-dim);color:var(--danger)}
+  .hud-card:hover .module-icon.accent{box-shadow:0 0 20px var(--accent-dim)}
+  .hud-card:hover .module-icon.warn{box-shadow:0 0 20px var(--warn-dim)}
+  .module-title{font-size:15px;font-weight:600;margin-bottom:6px}
+  .module-desc{font-size:12px;color:var(--fg-dim);line-height:1.6;margin-bottom:18px}
+  .module-status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:1px}
+  .module-status .dot{width:5px;height:5px;border-radius:50%}
+  .module-status .dot.on{background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}
+  .module-status .dot.warn{background:var(--warn);box-shadow:0 0 6px rgba(232,168,76,.3)}
+  .module-status .dot.off{background:var(--fg-faint)}
+
+  /* ── Ring Gauges ── */
+  .rings{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:80px}
+  .ring{display:flex;flex-direction:column;align-items:center;gap:16px;opacity:0;transform:translateY(20px)}
+  .ring.vis{opacity:1;transform:translateY(0);transition:opacity .6s ease,transform .6s ease}
+  .ring-svg{position:relative;width:110px;height:110px}
+  .ring-svg svg{transform:rotate(-90deg);width:100%;height:100%}
+  .ring-bg{fill:none;stroke:var(--border);stroke-width:3}
+  .ring-fill{fill:none;stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset 1.5s cubic-bezier(.16,1,.3,1)}
+  .ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:22px;font-weight:300;letter-spacing:-1px}
+  .ring-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--fg-dim)}
+
+  /* ── Data Feed ── */
+  .feed-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .feed{opacity:0;transform:translateY(24px)}
+  .feed.vis{opacity:1;transform:translateY(0);transition:opacity .6s ease,transform .6s ease}
+  .feed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .feed-title{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--fg-dim)}
+  .feed-badge{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:var(--radius);background:var(--accent-dim);color:var(--accent);letter-spacing:1px}
+  .feed-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.02);transition:background .2s}
+  .feed-item:last-child{border-bottom:none}
+  .feed-dot{width:6px;height:6px;border-radius:50%;margin-top:6px;flex-shrink:0}
+  .feed-dot.accent{background:var(--accent)}
+  .feed-dot.warn{background:var(--warn)}
+  .feed-dot.danger{background:var(--danger)}
+  .feed-text{font-size:12px;color:var(--fg-dim);line-height:1.5;flex:1}
+  .feed-text strong{color:var(--fg);font-weight:500}
+  .feed-time{font-family:var(--mono);font-size:10px;color:var(--fg-faint);white-space:nowrap;margin-top:2px}
+
+  /* ── Terminal ── */
+  .terminal{margin-top:80px;max-width:100%}
+  .terminal-bar{display:flex;align-items:center;gap:8px;padding:12px 18px;background:var(--bg-card);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius) var(--radius) 0 0}
+  .terminal-dot{width:8px;height:8px;border-radius:50%}
+  .terminal-dot.r{background:#e85d5d}
+  .terminal-dot.y{background:#e8a84c}
+  .terminal-dot.g{background:#3ad9a0}
+  .terminal-title{font-family:var(--mono);font-size:10px;color:var(--fg-faint);letter-spacing:1px;margin-left:8px}
+  .terminal-body{background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);padding:24px;font-family:var(--mono);font-size:12px;line-height:2;color:var(--fg-dim);max-height:240px;overflow-y:auto}
+  .terminal-body::-webkit-scrollbar{width:4px}
+  .terminal-body::-webkit-scrollbar-track{background:transparent}
+  .terminal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .t-line{opacity:0;animation:termFade .3s ease forwards}
+  .t-prompt{color:var(--accent)}
+  .t-cmd{color:var(--fg)}
+  .t-out{color:var(--fg-dim)}
+  .t-warn{color:var(--warn)}
+  .t-ok{color:var(--accent)}
+  .t-err{color:var(--danger)}
+  .t-cursor{display:inline-block;width:7px;height:14px;background:var(--accent);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+
+  /* ── System Map ── */
+  .sysmap{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:80px}
+  .sysmap-main{min-height:280px;position:relative;display:flex;align-items:center;justify-content:center}
+  .sysmap-sidebar{display:flex;flex-direction:column;gap:12px}
+  .sysmap-node{opacity:0;transform:translateY(20px)}
+  .sysmap-node.vis{opacity:1;transform:translateY(0);transition:opacity .5s ease,transform .5s ease}
+  .sysmap-stat{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.02)}
+  .sysmap-stat-label{font-size:12px;color:var(--fg-dim)}
+  .sysmap-stat-val{font-family:var(--mono);font-size:12px;color:var(--fg)}
+
+  /* ── Footer ── */
+  footer{text-align:center;padding:80px 24px 40px;border-top:1px solid var(--border);margin-top:80px}
+  footer p{font-family:var(--mono);font-size:11px;color:var(--fg-faint);letter-spacing:1px}
+  footer span{color:var(--accent)}
+
+  /* Keyframes */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes charReveal{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  @keyframes scanMove{0%{top:-1px;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  @keyframes termFade{from{opacity:0}to{opacity:1}}
+
+  /* Responsive */
+  @media(max-width:900px){
+    .metrics{grid-template-columns:repeat(2,1fr)}
+    .modules{grid-template-columns:1fr}
+    .rings{grid-template-columns:repeat(2,1fr)}
+    .feed-grid{grid-template-columns:1fr}
+    .sysmap{grid-template-columns:1fr}
+  }
+  @media(max-width:600px){
+    .metrics{grid-template-columns:1fr}
+    .topbar{padding:0 16px}
+    .sect{padding:60px 16px}
+    .hero-coords{display:none}
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="wrap">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">NEXUS</span>
+      <span class="topbar-sep"></span>
+      <span class="topbar-ver">v4.2.1</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-status"><span class="topbar-dot"></span> SYSTEMS NOMINAL</div>
+      <span class="topbar-time" id="clock">00:00:00</span>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-scan"></div>
+    <div class="hero-overline">System Control Interface</div>
+    <h1 class="hero-title" id="heroTitle"></h1>
+    <p class="hero-sub">Unified command layer for distributed infrastructure. Monitor, orchestrate, and respond to anomalies in real time.</p>
+    <div class="hero-coords">LAT <span>37.7749</span> LON <span>-122.4194</span> | NODE <span>US-WEST-02</span></div>
+  </section>
+
+  <!-- Metrics -->
+  <section class="sect" id="metricsSect">
+    <div class="sect-head">
+      <div>
+        <div class="sect-label">Telemetry</div>
+        <h2 class="sect-title">Core Metrics</h2>
+      </div>
+      <p class="sect-desc">Real-time readings from the primary cluster. Updated every 500ms.</p>
+    </div>
+    <div class="metrics" id="metricsGrid">
+      <div class="metric hud-card" data-metric>
+        <div class="metric-top"><span class="metric-label">Throughput</span><span class="metric-dot green"></span></div>
+        <div class="metric-val"><span data-count="847">0</span><span class="unit">GB/s</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill accent" style="width:0%" data-bar="84"></div></div>
+      </div>
+      <div class="metric hud-card" data-metric>
+        <div class="metric-top"><span class="metric-label">Latency</span><span class="metric-dot green"></span></div>
+        <div class="metric-val"><span data-count="12">0</span><span class="unit">ms</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill accent" style="width:0%" data-bar="12"></div></div>
+      </div>
+      <div class="metric hud-card" data-metric>
+        <div class="metric-top"><span class="metric-label">CPU Load</span><span class="metric-dot amber"></span></div>
+        <div class="metric-val"><span data-count="73">0</span><span class="unit">%</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill warn" style="width:0%" data-bar="73"></div></div>
+      </div>
+      <div class="metric hud-card" data-metric>
+        <div class="metric-top"><span class="metric-label">Error Rate</span><span class="metric-dot green"></span></div>
+        <div class="metric-val"><span data-count="0" data-dec="03">0</span><span class="unit">%</span></div>
+        <div class="metric-bar"><div class="metric-bar-fill accent" style="width:0%" data-bar="3"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ring Gauges -->
+  <section class="sect" id="ringsSect">
+    <div class="sect-head">
+      <div>
+        <div class="sect-label">Capacity</div>
+        <h2 class="sect-title">Resource Allocation</h2>
+      </div>
+    </div>
+    <div class="rings" id="ringsGrid">
+      <div class="ring" data-ring>
+        <div class="ring-svg">
+          <svg viewBox="0 0 110 110"><circle class="ring-bg" cx="55" cy="55" r="48"/><circle class="ring-fill" cx="55" cy="55" r="48" stroke="var(--accent)" stroke-dasharray="301.6" stroke-dashoffset="301.6" data-offset="72"/></svg>
+          <div class="ring-val" data-ringval="72">0%</div>
+        </div>
+        <div class="ring-label">Memory</div>
+      </div>
+      <div class="ring" data-ring>
+        <div class="ring-svg">
+          <svg viewBox="0 0 110 110"><circle class="ring-bg" cx="55" cy="55" r="48"/><circle class="ring-fill" cx="55" cy="55" r="48" stroke="var(--warn)" stroke-dasharray="301.6" stroke-dashoffset="301.6" data-offset="58"/></svg>
+          <div class="ring-val" data-ringval="58">0%</div>
+        </div>
+        <div class="ring-label">Compute</div>
+      </div>
+      <div class="ring" data-ring>
+        <div class="ring-svg">
+          <svg viewBox="0 0 110 110"><circle class="ring-bg" cx="55" cy="55" r="48"/><circle class="ring-fill" cx="55" cy="55" r="48" stroke="var(--accent)" stroke-dasharray="301.6" stroke-dashoffset="301.6" data-offset="34"/></svg>
+          <div class="ring-val" data-ringval="34">0%</div>
+        </div>
+        <div class="ring-label">Storage</div>
+      </div>
+      <div class="ring" data-ring>
+        <div class="ring-svg">
+          <svg viewBox="0 0 110 110"><circle class="ring-bg" cx="55" cy="55" r="48"/><circle class="ring-fill" cx="55" cy="55" r="48" stroke="var(--accent)" stroke-dasharray="301.6" stroke-dashoffset="301.6" data-offset="91"/></svg>
+          <div class="ring-val" data-ringval="91">0%</div>
+        </div>
+        <div class="ring-label">Network</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modules -->
+  <section class="sect" id="modulesSect">
+    <div class="sect-head">
+      <div>
+        <div class="sect-label">Subsystems</div>
+        <h2 class="sect-title">Active Modules</h2>
+      </div>
+      <p class="sect-desc">Nine subsystems managed through the NEXUS control layer.</p>
+    </div>
+    <div class="modules" id="modulesGrid">
+      <div class="module hud-card" data-module>
+        <div class="module-icon accent"><i class="fa-solid fa-shield-halved"></i></div>
+        <div class="module-title">Threat Detection</div>
+        <div class="module-desc">Real-time anomaly detection across all ingress points. Zero false positives in the last 72 hours.</div>
+        <div class="module-status"><span class="dot on"></span> ACTIVE — 0 INCIDENTS</div>
+      </div>
+      <div class="module hud-card" data-module>
+        <div class="module-icon accent"><i class="fa-solid fa-route"></i></div>
+        <div class="module-title">Traffic Router</div>
+        <div class="module-desc">Dynamic load balancing with geographic affinity. Automatic failover in under 200ms.</div>
+        <div class="module-status"><span class="dot on"></span> ACTIVE — 12 ROUTES</div>
+      </div>
+      <div class="module hud-card" data-module>
+        <div class="module-icon warn"><i class="fa-solid fa-database"></i></div>
+        <div class="module-title">Data Pipeline</div>
+        <div class="module-desc">Streaming ETL with exactly-once delivery guarantees. Currently processing 4.2M events/sec.</div>
+        <div class="module-status"><span class="dot warn"></span> ELEVATED — BACKPRESSURE</div>
+      </div>
+      <div class="module hud-card" data-module>
+        <div class="module-icon accent"><i class="fa-solid fa-key"></i></div>
+        <div class="module-title">Auth Gateway</div>
+        <div class="module-desc">OAuth 2.0 + mTLS enforcement. Token rotation every 15 minutes across 2.1M active sessions.</div>
+        <div class="module-status"><span class="dot on"></span> ACTIVE — 2.1M SESSIONS</div>
+      </div>
+      <div class="module hud-card" data-module>
+        <div class="module-icon accent"><i class="fa-solid fa-cube"></i></div>
+        <div class="module-title">Container Orchestration</div>
+        <div class="module-desc">Kubernetes-native scheduling with bin-packing optimization. 847 pods across 32 nodes.</div>
+        <div class="module-status"><span class="dot on"></span> ACTIVE — 847 PODS</div>
+      </div>
+      <div class="module hud-card" data-module>
+        <div class="module-icon danger"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        <div class="module-title">Backup Controller</div>
+        <div class="module-desc">Incremental snapshots every 6 hours. Last restore test failed — investigation in progress.</div>
+        <div class="module-status"><span class="dot off"></span> DEGRADED — RESTORE FAILED</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data Feed -->
+  <section class="sect" id="feedSect">
+    <div class="sect-head">
+      <div>
+        <div class="sect-label">Events</div>
+        <h2 class="sect-title">Live Data Feed</h2>
+      </div>
+    </div>
+    <div class="feed-grid" id="feedGrid">
+      <div class="feed hud-card" data-feed>
+        <div class="feed-header"><span class="feed-title">System Events</span><span class="feed-badge">LIVE</span></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>Auto-scaling triggered</strong> — us-east-1 cluster expanded to 48 nodes</div><div class="feed-time">2s ago</div></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>Deployment complete</strong> — service gateway v2.14.0 rolled out</div><div class="feed-time">18s ago</div></div>
+        <div class="feed-item"><span class="feed-dot warn"></span><div class="feed-text"><strong>High memory pressure</strong> — data-pipeline-07 exceeded 85% threshold</div><div class="feed-time">1m ago</div></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>Certificate rotated</strong> — api.nexus.io TLS cert renewed</div><div class="feed-time">3m ago</div></div>
+        <div class="feed-item"><span class="feed-dot danger"></span><div class="feed-text"><strong>Backup failure</strong> — snapshot #4821 corrupted, retry scheduled</div><div class="feed-time">8m ago</div></div>
+      </div>
+      <div class="feed hud-card" data-feed>
+        <div class="feed-header"><span class="feed-title">Security Log</span><span class="feed-badge">MONITORED</span></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>Auth success</strong> — admin@nexus.io from 52.14.xx.xx</div><div class="feed-time">5s ago</div></div>
+        <div class="feed-item"><span class="feed-dot warn"></span><div class="feed-text"><strong>Rate limit approached</strong> — client-id: nx-prod-4421 at 95%</div><div class="feed-time">22s ago</div></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>mTLS handshake</strong> — new peer validated in us-west-2</div><div class="feed-time">45s ago</div></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>Policy updated</strong> — IP allowlist refreshed, 3 entries added</div><div class="feed-time">2m ago</div></div>
+        <div class="feed-item"><span class="feed-dot accent"></span><div class="feed-text"><strong>Scan complete</strong> — 0 vulnerabilities found in dependency tree</div><div class="feed-time">6m ago</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- System Map + Sidebar -->
+  <section class="sect" id="sysmapSect">
+    <div class="sect-head">
+      <div>
+        <div class="sect-label">Topology</div>
+        <h2 class="sect-title">System Map</h2>
+      </div>
+    </div>
+    <div class="sysmap" id="sysmapGrid">
+      <div class="sysmap-main hud-card sysmap-node" data-sysmap>
+        <canvas id="topoCanvas" style="width:100%;height:260px;"></canvas>
+      </div>
+      <div class="sysmap-sidebar">
+        <div class="hud-card sysmap-node" data-sysmap>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Total Nodes</span><span class="sysmap-stat-val">128</span></div>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Active</span><span class="sysmap-stat-val" style="color:var(--accent)">124</span></div>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Draining</span><span class="sysmap-stat-val" style="color:var(--warn)">3</span></div>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Offline</span><span class="sysmap-stat-val" style="color:var(--danger)">1</span></div>
+        </div>
+        <div class="hud-card sysmap-node" data-sysmap>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Regions</span><span class="sysmap-stat-val">4</span></div>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Avg Uptime</span><span class="sysmap-stat-val" style="color:var(--accent)">99.97%</span></div>
+          <div class="sysmap-stat"><span class="sysmap-stat-label">Last Incident</span><span class="sysmap-stat-val">14d ago</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Terminal -->
+  <section class="sect" id="termSect">
+    <div class="sect-head">
+      <div>
+        <div class="sect-label">Interface</div>
+        <h2 class="sect-title">Command Terminal</h2>
+      </div>
+    </div>
+    <div class="terminal" data-term>
+      <div class="terminal-bar">
+        <span class="terminal-dot r"></span>
+        <span class="terminal-dot y"></span>
+        <span class="terminal-dot g"></span>
+        <span class="terminal-title">nexus@control:~</span>
+      </div>
+      <div class="terminal-body" id="termBody"></div>
+    </div>
+  </section>
+
+  <footer><p>NEXUS SYSTEM CONTROL <span>v4.2.1</span> | ALL SYSTEMS MONITORED | NODE US-WEST-02</p></footer>
+</div>
+
+<script>
+// ── Background Particle Grid ──
+(function(){
+  const c = document.getElementById('bgCanvas');
+  const ctx = c.getContext('2d');
+  let w, h, particles = [], mouse = {x: -1000, y: -1000};
+
+  function resize(){
+    w = c.width = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+  // Create particles in a grid
+  const spacing = 60;
+  function init(){
+    particles = [];
+    const cols = Math.ceil(w / spacing) + 1;
+    const rows = Math.ceil(h / spacing) + 1;
+    for(let r = 0; r < rows; r++){
+      for(let c2 = 0; c2 < cols; c2++){
+        particles.push({
+          ox: c2 * spacing,
+          oy: r * spacing,
+          x: c2 * spacing,
+          y: r * spacing,
+          size: 1
+        });
+      }
+    }
+  }
+  init();
+  window.addEventListener('resize', init);
+
+  function draw(){
+    ctx.clearRect(0, 0, w, h);
+    const maxDist = 120;
+    for(let i = 0; i < particles.length; i++){
+      const p = particles[i];
+      const dx = mouse.x - p.ox;
+      const dy = mouse.y - p.oy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if(dist < maxDist){
+        const force = (1 - dist / maxDist) * 18;
+        p.x = p.ox - (dx / dist) * force;
+        p.y = p.oy - (dy / dist) * force;
+        p.size = 1 + (1 - dist / maxDist) * 1.5;
+      } else {
+        p.x += (p.ox - p.x) * 0.1;
+        p.y += (p.oy - p.y) * 0.1;
+        p.size += (1 - p.size) * 0.1;
+      }
+      // Draw particle
+      const alpha = dist < maxDist ? 0.15 + (1 - dist / maxDist) * 0.35 : 0.12;
+      ctx.fillStyle = `rgba(0,229,195,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Draw connections near mouse
+    for(let i = 0; i < particles.length; i++){
+      const a = particles[i];
+      const da = Math.sqrt((mouse.x - a.ox) ** 2 + (mouse.y - a.oy) ** 2);
+      if(da > maxDist) continue;
+      for(let j = i + 1; j < particles.length; j++){
+        const b = particles[j];
+        const db = Math.sqrt((mouse.x - b.ox) ** 2 + (mouse.y - b.oy) ** 2);
+        if(db > maxDist) continue;
+        const ab = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        if(ab < spacing * 1.5){
+          ctx.strokeStyle = `rgba(0,229,195,${0.06 * (1 - ab / (spacing * 1.5))})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Clock ──
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' +
+    String(now.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Hero Title Character Animation ──
+(function(){
+  const title = 'NEXUS';
+  const el = document.getElementById('heroTitle');
+  const accentIndices = [0, 1]; // N, E in accent
+  title.split('').forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.className = 'char' + (accentIndices.includes(i) ? ' accent-char' : '');
+    span.textContent = ch;
+    span.style.animationDelay = (0.5 + i * 0.08) + 's';
+    el.appendChild(span);
+  });
+})();
+
+// ── Scroll Reveal ──
+function revealSection(selector, childSelector, stagger){
+  const section = document.querySelector(selector);
+  if(!section) return;
+  const children = section.querySelectorAll(childSelector);
+  const obs = new IntersectionObserver(entries => {
+    if(entries[0].isIntersecting){
+      children.forEach((c, i) => {
+        setTimeout(() => c.classList.add('vis'), i * (stagger || 80));
+      });
+      obs.unobserve(section);
+    }
+  }, {threshold: 0.15});
+  obs.observe(section);
+}
+revealSection('#metricsGrid', '.metric', 100);
+revealSection('#ringsGrid', '.ring', 120);
+revealSection('#modulesGrid', '.module', 80);
+revealSection('#feedGrid', '.feed', 150);
+revealSection('#sysmapGrid', '.sysmap-node', 100);
+
+// ── Metric Counters + Bars ──
+let metricsCounted = false;
+const metricsObs = new IntersectionObserver(entries => {
+  if(entries[0].isIntersecting && !metricsCounted){
+    metricsCounted = true;
+    document.querySelectorAll('[data-count]').forEach(el => {
+      const target = parseInt(el.dataset.count);
+      const dec = el.dataset.dec;
+      const final = dec ? target + '.' + dec : target;
+      const start = performance.now();
+      const dur = 1400;
+      function anim(now){
+        const p = Math.min((now - start) / dur, 1);
+        const e = 1 - Math.pow(1 - p, 3);
+        if(dec){
+          const intP = Math.floor(e * target);
+          const decP = Math.floor(e * parseInt(dec));
+          el.textContent = intP + '.' + String(decP).padStart(dec.length, '0');
+        } else {
+          el.textContent = Math.floor(e * target);
+        }
+        if(p < 1) requestAnimationFrame(anim);
+        else el.textContent = final;
+      }
+      requestAnimationFrame(anim);
+    });
+    document.querySelectorAll('[data-bar]').forEach((el, i) => {
+      setTimeout(() => { el.style.width = el.dataset.bar + '%'; }, i * 100);
+    });
+  }
+}, {threshold: 0.3});
+metricsObs.observe(document.getElementById('metricsGrid'));
+
+// ── Ring Gauges ──
+let ringsAnimated = false;
+const ringsObs = new IntersectionObserver(entries => {
+  if(entries[0].isIntersecting && !ringsAnimated){
+    ringsAnimated = true;
+    const circ = 301.6;
+    document.querySelectorAll('[data-offset]').forEach((el, i) => {
+      const pct = parseInt(el.dataset.offset);
+      const offset = circ - (circ * pct / 100);
+      setTimeout(() => {
+        el.style.strokeDashoffset = offset;
+      }, i * 150);
+    });
+    document.querySelectorAll('[data-ringval]').forEach((el, i) => {
+      const target = parseInt(el.dataset.ringval);
+      const start = performance.now();
+      const dur = 1500;
+      function anim(now){
+        const p = Math.min((now - start - i * 150) / dur, 1);
+        if(p < 0) { requestAnimationFrame(anim); return; }
+        const e = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.floor(e * target) + '%';
+        if(p < 1) requestAnimationFrame(anim);
+      }
+      requestAnimationFrame(anim);
+    });
+  }
+}, {threshold: 0.3});
+ringsObs.observe(document.getElementById('ringsGrid'));
+
+// ── Topology Canvas ──
+(function(){
+  const canvas = document.getElementById('topoCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h, nodes = [], animFrame;
+
+  function resize(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    w = canvas.width = rect.width;
+    h = canvas.height = 260;
+    initNodes();
+  }
+
+  function initNodes(){
+    nodes = [];
+    // Central hub
+    nodes.push({x: w/2, y: h/2, r: 8, color: '#00e5c3', label: 'HUB', pulse: 0});
+    // Ring 1 - 6 nodes
+    for(let i = 0; i < 6; i++){
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const radius = 75;
+      nodes.push({
+        x: w/2 + Math.cos(angle) * radius,
+        y: h/2 + Math.sin(angle) * radius,
+        r: 4, color: '#00e5c3', label: 'N' + (i+1), pulse: Math.random() * Math.PI * 2
+      });
+    }
+    // Ring 2 - 12 nodes
+    for(let i = 0; i < 12; i++){
+      const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
+      const radius = 130;
+      const isOff = i === 7; // one offline node
+      nodes.push({
+        x: w/2 + Math.cos(angle) * radius,
+        y: h/2 + Math.sin(angle) * radius,
+        r: 3, color: isOff ? '#e85d5d' : (i === 3 || i === 9 ? '#e8a84c' : '#00e5c3'),
+        label: '', pulse: Math.random() * Math.PI * 2, off: isOff
+      });
+    }
+  }
+
+  function draw(time){
+    ctx.clearRect(0, 0, w, h);
+    const t = time * 0.001;
+
+    // Draw connections
+    for(let i = 1; i < nodes.length; i++){
+      const n = nodes[i];
+      // Connect to hub
+      ctx.beginPath();
+      ctx.moveTo(nodes[0].x, nodes[0].y);
+      ctx.lineTo(n.x, n.y);
+      ctx.strokeStyle = n.off ? 'rgba(232,93,93,0.08)' : 'rgba(0,229,195,0.06)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+
+      // Connect to neighbors in same ring
+      if(i <= 6 && i > 1){
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[i-1].x, nodes[i-1].y);
+        ctx.strokeStyle = 'rgba(0,229,195,0.04)';
+        ctx.stroke();
+      }
+      if(i > 6){
+        const prev = i > 7 ? nodes[i-1] : nodes[6];
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(prev.x, prev.y);
+        ctx.strokeStyle = n.off ? 'rgba(232,93,93,0.05)' : 'rgba(0,229,195,0.03)';
+        ctx.stroke();
+      }
+    }
+
+    // Draw traveling packets on some connections
+    for(let i = 1; i <= 6; i++){
+      const n = nodes[i];
+      const progress = ((t * 0.3 + i * 0.5) % 1);
+      const px = nodes[0].x + (n.x - nodes[0].x) * progress;
+      const py = nodes[0].y + (n.y - nodes[0].y) * progress;
+      ctx.fillStyle = 'rgba(0,229,195,0.6)';
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw nodes
+    nodes.forEach(n => {
+      // Pulse glow
+      if(!n.off){
+        const pulseR = n.r + 6 + Math.sin(t * 2 + n.pulse) * 3;
+        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, pulseR);
+        grad.addColorStop(0, n.color === '#e8a84c' ? 'rgba(232,168,76,0.15)' : 'rgba(0,229,195,0.15)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, pulseR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Node dot
+      ctx.fillStyle = n.color;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label for hub
+      if(n.label === 'HUB'){
+        ctx.fillStyle = 'rgba(0,229,195,0.5)';
+        ctx.font = '9px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.fillText('HUB', n.x, n.y - 14);
+      }
+    });
+
+    animFrame = requestAnimationFrame(draw);
+  }
+
+  // Only start when visible
+  const topoObs = new IntersectionObserver(entries => {
+    if(entries[0].isIntersecting){
+      resize();
+      draw(0);
+      topoObs.unobserve(canvas.parentElement);
+    }
+  }, {threshold: 0.1});
+  topoObs.observe(canvas.parentElement);
+  window.addEventListener('resize', () => { if(animFrame) { resize(); } });
+})();
+
+// ── Terminal Typing ──
+(function(){
+  const lines = [
+    {type: 'cmd', text: 'nexus status --cluster primary'},
+    {type: 'out', text: 'Cluster: primary (us-west-2)'},
+    {type: 'out', text: '  Nodes:     128 total, 124 active, 3 draining, 1 offline'},
+    {type: 'out', text: '  Throughput: 847 GB/s'},
+    {type: 'out', text: '  Latency:   12ms p99'},
+    {type: 'ok', text: '  Status:    HEALTHY'},
+    {type: 'cmd', text: ''},
+    {type: 'cmd', text: 'nexus inspect --module backup-controller'},
+    {type: 'out', text: 'Module: backup-controller'},
+    {type: 'warn', text: '  Last snapshot: #4821 — CORRUPTED'},
+    {type: 'out', text: '  Retry scheduled: 2024-12-15T08:00:00Z'},
+    {type: 'err', text: '  Status: DEGRADED — manual intervention recommended'},
+    {type: 'cmd', text: ''},
+    {type: 'cmd', text: 'nexus logs --tail 1 --module threat-detection'},
+    {type: 'ok', text: '[2024-12-14T23:47:12Z] Scan complete. 0 threats detected. All clear.'},
+  ];
+
+  const body = document.getElementById('termBody');
+  let lineIdx = 0;
+
+  function addLine(){
+    if(lineIdx >= lines.length) return;
+    const l = lines[lineIdx];
+    const div = document.createElement('div');
+    div.className = 't-line';
+    div.style.animationDelay = '0s';
+
+    if(l.type === 'cmd'){
+      div.innerHTML = `<span class="t-prompt">nexus $ </span><span class="t-cmd">${l.text}</span>`;
+    } else {
+      div.className += ` t-${l.type === 'ok' ? 'ok' : l.type === 'warn' ? 'warn' : l.type === 'err' ? 'err' : 'out'}`;
+      div.textContent = l.text;
+    }
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+    lineIdx++;
+
+    // Add cursor to last line if it's a cmd
+    if(l.type === 'cmd'){
+      const cursor = document.createElement('span');
+      cursor.className = 't-cursor';
+      div.appendChild(cursor);
+      // Remove cursor from previous cmd lines
+      const prevCursors = body.querySelectorAll('.t-cursor');
+      if(prevCursors.length > 1){
+        prevCursors[0].remove();
+      }
+    }
+
+    const delay = l.type === 'cmd' ? 600 : 120;
+    setTimeout(addLine, delay);
+  }
+
+  const termObs = new IntersectionObserver(entries => {
+    if(entries[0].isIntersecting){
+      setTimeout(addLine, 400);
+      termObs.unobserve(document.getElementById('termSect'));
+    }
+  }, {threshold: 0.3});
+  termObs.observe(document.getElementById('termSect'));
+})();
+
+// ── Scroll Progress (replacing topbar border) ──
+const topbar = document.querySelector('.topbar');
+window.addEventListener('scroll', () => {
+  const s = window.scrollY;
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const p = h > 0 ? s / h : 0;
+  topbar.style.borderBottomColor = `rgba(0,229,195,${0.06 + p * 0.12})`;
+}, {passive: true});
+</script>
+</body>
+</html>
