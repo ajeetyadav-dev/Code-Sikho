@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liquid Glass</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #e8e6e3;
+    --muted: #5a5a64;
+    --accent: #00d4aa;
+    --accent-dim: rgba(0,212,170,0.1);
+    --warm: #ff5e3a;
+    --amber: #ffb040;
+    --font: 'Space Grotesk', sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg);color:var(--fg);overflow-x:hidden;-webkit-font-smoothing:antialiased;line-height:1.6}
+
+  /* ═══════════════════════════════════
+     NAVBAR — THE LIQUID GLASS
+     ═══════════════════════════════════ */
+  .navbar{
+    position:fixed;top:12px;left:12px;right:12px;height:56px;
+    border-radius:16px;z-index:1000;
+    backdrop-filter:blur(28px) saturate(180%);
+    -webkit-backdrop-filter:blur(28px) saturate(180%);
+    background:rgba(255,255,255,0.0);
+    border:1px solid transparent;
+    overflow:hidden;
+    transition:background 0.6s cubic-bezier(0.16,1,0.3,1),
+               border-color 0.6s ease,
+               top 0.4s cubic-bezier(0.16,1,0.3,1),
+               border-radius 0.4s ease;
+  }
+  .navbar.scrolled{
+    background:rgba(10,10,18,0.62);
+    border-color:rgba(255,255,255,0.06);
+    top:0;left:0;right:0;border-radius:0;
+  }
+
+  /* Caustics canvas — light patterns on the glass surface */
+  .navbar-caustics{
+    position:absolute;inset:0;pointer-events:none;z-index:1;
+    opacity:0;transition:opacity 0.6s ease;
+  }
+  .navbar.scrolled .navbar-caustics{opacity:1}
+
+  /* Mouse-following light spot */
+  .navbar-light{
+    position:absolute;width:320px;height:320px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,0.055) 0%,transparent 65%);
+    pointer-events:none;z-index:2;
+    transform:translate(-50%,-50%);
+    left:var(--lx,-300px);top:var(--ly,-300px);
+    transition:left 0.18s ease-out,top 0.18s ease-out,opacity 0.4s ease;
+    opacity:0;
+  }
+  .navbar:hover .navbar-light{opacity:1}
+
+  /* Prismatic rainbow overlay */
+  .navbar-prism{
+    position:absolute;inset:0;pointer-events:none;z-index:3;
+    opacity:0;transition:opacity 0.5s ease;
+    background:linear-gradient(90deg,
+      transparent 0%,rgba(255,100,100,0.025) 15%,rgba(255,210,60,0.025) 30%,
+      rgba(100,255,160,0.025) 45%,rgba(100,180,255,0.025) 60%,
+      rgba(180,100,255,0.025) 75%,transparent 100%);
+    background-size:200% 100%;
+    background-position:var(--ppos,50% 0);
+  }
+  .navbar:hover .navbar-prism{opacity:1}
+
+  /* Bottom edge refraction light */
+  .navbar-edge{
+    position:absolute;bottom:-1px;left:0;right:0;height:1px;pointer-events:none;z-index:4;
+    background:radial-gradient(ellipse 120px 1px at var(--ex,-200px) 50%,rgba(255,255,255,0.2),transparent);
+    opacity:0;transition:opacity 0.3s ease;
+  }
+  .navbar:hover .navbar-edge{opacity:1}
+
+  /* Animated gradient border (mask technique) */
+  .navbar-border{
+    position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;
+    padding:1px;
+    background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent 35%,transparent 65%,rgba(255,255,255,0.03));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    opacity:0;transition:opacity 0.6s ease;
+  }
+  .navbar.scrolled .navbar-border{opacity:1}
+
+  /* Top reflection — simulates light hitting the top edge of glass */
+  .navbar-reflect{
+    position:absolute;top:0;left:0;right:0;height:50%;pointer-events:none;z-index:2;
+    background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);
+    border-radius:16px 16px 0 0;
+    transition:border-radius 0.4s ease;
+  }
+  .navbar.scrolled .navbar-reflect{border-radius:0}
+
+  /* Nav content */
+  .navbar-inner{
+    position:relative;z-index:10;
+    height:100%;display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;
+  }
+
+  /* Logo with prismatic shimmer */
+  .nav-logo{
+    font-size:17px;font-weight:700;letter-spacing:2px;
+    text-decoration:none;
+    background:linear-gradient(90deg,#ff5e3a,#ffb040,#00d4aa,#5ba8d5,#c084fc,#ff5e3a);
+    background-size:200% 100%;
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    animation:prismShift 5s linear infinite;
+  }
+  @keyframes prismShift{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+
+  /* Nav links */
+  .nav-links{display:flex;gap:4px;align-items:center}
+  .nav-link{
+    position:relative;padding:7px 16px;font-size:13.5px;font-weight:500;
+    color:rgba(255,255,255,0.55);text-decoration:none;
+    border-radius:8px;overflow:hidden;
+    transition:color 0.3s ease;z-index:1;
+  }
+  .nav-link::before{
+    content:'';position:absolute;inset:0;border-radius:inherit;
+    background:rgba(255,255,255,0.07);
+    transform:scaleY(0);transform-origin:bottom;
+    transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    z-index:-1;
+  }
+  .nav-link:hover{color:rgba(255,255,255,0.95)}
+  .nav-link:hover::before{transform:scaleY(1)}
+  .nav-link.active{color:rgba(255,255,255,0.9)}
+  .nav-link.active::before{transform:scaleY(1);background:rgba(255,255,255,0.1)}
+
+  /* Click ripple */
+  .nav-ripple{
+    position:absolute;width:10px;height:10px;border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    transform:translate(-50%,-50%) scale(0);
+    animation:rippleBurst 0.6s ease-out forwards;
+    pointer-events:none;z-index:0;
+  }
+  @keyframes rippleBurst{to{transform:translate(-50%,-50%) scale(28);opacity:0}}
+
+  /* CTA button — also glass */
+  .nav-cta{
+    padding:7px 18px;border-radius:8px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.1);
+    color:#fff;font-size:13px;font-weight:600;font-family:var(--font);
+    cursor:pointer;
+    transition:all 0.3s ease;
+    position:relative;overflow:hidden;
+  }
+  .nav-cta:hover{
+    background:rgba(255,255,255,0.14);
+    border-color:rgba(255,255,255,0.18);
+    box-shadow:0 0 24px rgba(255,255,255,0.04);
+  }
+
+  /* Mobile menu button */
+  .nav-menu{
+    display:none;background:none;border:none;color:rgba(255,255,255,0.6);
+    font-size:18px;cursor:pointer;padding:8px;
+    transition:color 0.2s;
+  }
+  .nav-menu:hover{color:#fff}
+
+  /* ═══════════════════════════════════
+     HERO
+     ═══════════════════════════════════ */
+  .hero{
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    text-align:center;padding:120px 24px 80px;
+    position:relative;overflow:hidden;
+    background:var(--bg);
+  }
+  .hero-blob{position:absolute;border-radius:50%;pointer-events:none}
+  .hb1{width:650px;height:650px;top:-12%;right:-8%;background:radial-gradient(circle,rgba(255,94,58,0.28),transparent 70%);filter:blur(90px);animation:bf1 22s ease-in-out infinite}
+  .hb2{width:550px;height:550px;bottom:-15%;left:-6%;background:radial-gradient(circle,rgba(0,212,170,0.22),transparent 70%);filter:blur(90px);animation:bf2 28s ease-in-out infinite}
+  .hb3{width:400px;height:400px;bottom:15%;right:15%;background:radial-gradient(circle,rgba(255,176,64,0.18),transparent 70%);filter:blur(70px);animation:bf3 18s ease-in-out infinite}
+  @keyframes bf1{0%,100%{transform:translate(0,0)}33%{transform:translate(-50px,40px)}66%{transform:translate(30px,-50px)}}
+  @keyframes bf2{0%,100%{transform:translate(0,0)}33%{transform:translate(40px,-30px)}66%{transform:translate(-40px,50px)}}
+  @keyframes bf3{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,-30px)}}
+
+  .hero-overline{
+    font-size:12px;letter-spacing:4px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:24px;
+    opacity:0;animation:fadeUp 0.8s ease 0.2s forwards;
+  }
+  .hero-title{
+    font-size:clamp(48px,10vw,120px);font-weight:800;
+    letter-spacing:-4px;line-height:0.95;margin-bottom:24px;
+    overflow:hidden;
+  }
+  .hero-title .line{display:block;overflow:hidden}
+  .hero-title .line-inner{display:block;transform:translateY(110%);animation:revealUp 1s cubic-bezier(0.16,1,0.3,1) forwards}
+  .hero-title .line:nth-child(1) .line-inner{animation-delay:0.4s}
+  .hero-title .line:nth-child(2) .line-inner{animation-delay:0.55s}
+  .hero-sub{
+    font-size:17px;color:var(--muted);max-width:480px;line-height:1.7;font-weight:300;
+    opacity:0;animation:fadeUp 0.8s ease 0.8s forwards;
+  }
+  .hero-cta{
+    margin-top:40px;display:flex;gap:14px;
+    opacity:0;animation:fadeUp 0.8s ease 1s forwards;
+  }
+  .btn-glass{
+    padding:12px 32px;border-radius:10px;font-size:14px;font-weight:600;
+    font-family:var(--font);cursor:pointer;text-decoration:none;
+    transition:all 0.3s ease;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-glass-primary{
+    background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);
+    color:#fff;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  }
+  .btn-glass-primary:hover{background:rgba(255,255,255,0.16);border-color:rgba(255,255,255,0.2);box-shadow:0 0 30px rgba(255,255,255,0.04)}
+  .btn-glass-ghost{background:transparent;border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.6)}
+  .btn-glass-ghost:hover{color:#fff;border-color:rgba(255,255,255,0.15)}
+
+  .hero-scroll{
+    position:absolute;bottom:40px;display:flex;flex-direction:column;
+    align-items:center;gap:8px;color:var(--muted);font-size:11px;
+    letter-spacing:2px;text-transform:uppercase;
+    opacity:0;animation:fadeUp 0.8s ease 1.3s forwards;
+  }
+  .hero-scroll i{animation:bounce 2s ease infinite}
+  .scroll-line{width:1px;height:36px;background:rgba(255,255,255,0.08);position:relative;overflow:hidden;border-radius:1px}
+  .scroll-line::after{content:'';position:absolute;top:-100%;width:100%;height:40%;background:var(--accent);animation:scrollPulse 2s ease infinite}
+
+  /* ═══════════════════════════════════
+     ABOUT SECTION
+     ═══════════════════════════════════ */
+  .about{
+    min-height:100vh;padding:140px 48px;position:relative;
+    background:#080810;
+  }
+  .about::before{
+    content:'';position:absolute;inset:0;
+    background-image:radial-gradient(rgba(255,255,255,0.025) 1px,transparent 1px);
+    background-size:28px 28px;pointer-events:none;
+  }
+  .sect-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+  .sect-title{font-size:clamp(28px,4vw,48px);font-weight:700;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1}
+  .sect-desc{font-size:15px;color:var(--muted);max-width:520px;line-height:1.7;margin-bottom:56px}
+  .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1000px}
+  .feat-card{
+    background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+    border-radius:12px;padding:32px 24px;
+    transition:border-color 0.3s,transform 0.3s;
+    opacity:0;transform:translateY(24px);
+  }
+  .feat-card.vis{opacity:1;transform:translateY(0);transition:opacity 0.6s ease,transform 0.6s ease,border-color 0.3s,transform 0.3s}
+  .feat-card:hover{border-color:rgba(255,255,255,0.08);transform:translateY(-2px)}
+  .feat-icon{width:40px;height:40px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:16px;margin-bottom:18px;transition:box-shadow 0.3s}
+  .feat-card:hover .feat-icon{box-shadow:0 0 20px var(--accent-dim)}
+  .feat-title{font-size:16px;font-weight:600;margin-bottom:8px}
+  .feat-desc{font-size:13px;color:var(--muted);line-height:1.6}
+
+  /* ═══════════════════════════════════
+     WORK SECTION
+     ═══════════════════════════════════ */
+  .work{min-height:100vh;padding:140px 48px;background:#0c0c14}
+  .work-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:280px 280px;gap:16px;max-width:1100px}
+  .work-item{border-radius:12px;overflow:hidden;position:relative;opacity:0;transform:translateY(24px)}
+  .work-item.vis{opacity:1;transform:translateY(0);transition:opacity 0.7s ease,transform 0.7s ease}
+  .work-item img{width:100%;height:100%;object-fit:cover;transition:transform 0.6s cubic-bezier(0.16,1,0.3,1)}
+  .work-item:hover img{transform:scale(1.05)}
+  .work-item:nth-child(1){grid-column:1/6}
+  .work-item:nth-child(2){grid-column:6/9}
+  .work-item:nth-child(3){grid-column:9/13}
+  .work-item:nth-child(4){grid-column:1/5}
+  .work-item:nth-child(5){grid-column:5/13}
+  .work-overlay{position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,0.6));display:flex;align-items:flex-end;padding:20px}
+  .work-overlay span{font-size:14px;font-weight:600}
+
+  /* ═══════════════════════════════════
+     CONTACT
+     ═══════════════════════════════════ */
+  .contact{
+    min-height:70vh;padding:140px 48px;text-align:center;
+    background:linear-gradient(180deg,#0c0c14,var(--bg));
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .contact-blob{
+    position:absolute;width:500px;height:500px;border-radius:50%;
+    background:radial-gradient(circle,rgba(0,212,170,0.12),transparent 70%);
+    top:50%;left:50%;transform:translate(-50%,-50%);filter:blur(100px);pointer-events:none;
+  }
+  .contact h2{font-size:clamp(32px,5vw,56px);font-weight:700;letter-spacing:-2px;margin-bottom:16px;position:relative;z-index:1}
+  .contact p{color:var(--muted);font-size:16px;margin-bottom:40px;position:relative;z-index:1}
+
+  /* ═══════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════ */
+  footer{text-align:center;padding:48px 24px;border-top:1px solid rgba(255,255,255,0.04)}
+  footer p{font-size:12px;color:var(--muted)}
+
+  /* Keyframes */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes revealUp{from{transform:translateY(110%)}to{transform:translateY(0)}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+  @keyframes scrollPulse{0%{top:-50%}100%{top:150%}}
+
+  /* Responsive */
+  @media(max-width:768px){
+    .nav-links{display:none}
+    .nav-menu{display:block}
+    .features-grid{grid-template-columns:1fr}
+    .work-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+    .work-item:nth-child(n){grid-column:auto}
+    .work-item:nth-child(5){grid-column:span 2}
+    .about,.work,.contact{padding:100px 20px}
+    .navbar{left:8px;right:8px;top:8px;height:50px}
+    .navbar-inner{padding:0 16px}
+    .nav-logo{font-size:15px}
+  }
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav class="navbar" id="navbar">
+  <canvas class="navbar-caustics" id="caustics"></canvas>
+  <div class="navbar-light" id="navLight"></div>
+  <div class="navbar-prism" id="navPrism"></div>
+  <div class="navbar-edge" id="navEdge"></div>
+  <div class="navbar-border"></div>
+  <div class="navbar-reflect"></div>
+  <div class="navbar-inner">
+    <a class="nav-logo" href="#">PRISM</a>
+    <div class="nav-links" id="navLinks">
+      <a class="nav-link active" href="#hero">Home</a>
+      <a class="nav-link" href="#about">About</a>
+      <a class="nav-link" href="#work">Work</a>
+      <a class="nav-link" href="#contact">Contact</a>
+    </div>
+    <button class="nav-cta" id="navCta">Get Started</button>
+    <button class="nav-menu" id="navMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-blob hb1"></div>
+  <div class="hero-blob hb2"></div>
+  <div class="hero-blob hb3"></div>
+  <div class="hero-overline">Interface Design Studio</div>
+  <h1 class="hero-title">
+    <span class="line"><span class="line-inner">Liquid Glass</span></span>
+    <span class="line"><span class="line-inner">Interfaces</span></span>
+  </h1>
+  <p class="hero-sub">We craft digital surfaces that feel alive — refracting light, responding to touch, and blurring the boundary between screen and physical space.</p>
+  <div class="hero-cta">
+    <a href="#work" class="btn-glass btn-glass-primary">View Projects <i class="fa-solid fa-arrow-right" style="font-size:11px"></i></a>
+    <a href="#about" class="btn-glass btn-glass-ghost">Our Process</a>
+  </div>
+  <div class="hero-scroll"><span>Scroll</span><div class="scroll-line"></div></div>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section class="about" id="about">
+  <div class="sect-label">Capabilities</div>
+  <h2 class="sect-title">Crafted with precision, animated with life</h2>
+  <p class="sect-desc">Every surface we design responds to its environment — light, motion, and context shape the experience in real time.</p>
+  <div class="features-grid" id="featGrid">
+    <div class="feat-card" data-feat>
+      <div class="feat-icon"><i class="fa-solid fa-droplet"></i></div>
+      <div class="feat-title">Fluid Materials</div>
+      <div class="feat-desc">Surfaces that bend, refract, and flow — not static rectangles, but living materials that respond to interaction.</div>
+    </div>
+    <div class="feat-card" data-feat>
+      <div class="feat-icon"><i class="fa-solid fa-sun"></i></div>
+      <div class="feat-title">Light Simulation</div>
+      <div class="feat-desc">Real-time caustics, prismatic dispersion, and specular highlights that make digital glass indistinguishable from the physical.</div>
+    </div>
+    <div class="feat-card" data-feat>
+      <div class="feat-icon"><i class="fa-solid fa-hand-pointer"></i></div>
+      <div class="feat-title">Tactile Response</div>
+      <div class="feat-desc">Every hover, press, and gesture produces physical feedback — ripples, distortions, and elastic rebounds.</div>
+    </div>
+    <div class="feat-card" data-feat>
+      <div class="feat-icon"><i class="fa-solid fa-gauge-high"></i></div>
+      <div class="feat-title">60fps Always</div>
+      <div class="feat-desc">GPU-accelerated compositing and minimal paint operations ensure buttery smoothness on every device.</div>
+    </div>
+    <div class="feat-card" data-feat>
+      <div class="feat-icon"><i class="fa-solid fa-layer-group"></i></div>
+      <div class="feat-title">Layered Depth</div>
+      <div class="feat-desc">Multiple glass surfaces at different depths create parallax and dimensionality impossible with flat design.</div>
+    </div>
+    <div class="feat-card" data-feat>
+      <div class="feat-icon"><i class="fa-solid fa-palette"></i></div>
+      <div class="feat-title">Adaptive Tint</div>
+      <div class="feat-desc">Glass opacity and color shift based on scroll position and content behind — always readable, always beautiful.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WORK ═══ -->
+<section class="work" id="work">
+  <div class="sect-label">Selected Work</div>
+  <h2 class="sect-title">Projects that push boundaries</h2>
+  <p class="sect-desc">A selection of interfaces where glass, light, and motion converge into something you can feel.</p>
+  <div class="work-grid" id="workGrid">
+    <div class="work-item" data-work><img src="https://picsum.photos/seed/glass-p1/600/560" alt="Project"><div class="work-overlay"><span>Aurora Dashboard</span></div></div>
+    <div class="work-item" data-work><img src="https://picsum.photos/seed/glass-p2/400/560" alt="Project"><div class="work-overlay"><span>Prism Commerce</span></div></div>
+    <div class="work-item" data-work><img src="https://picsum.photos/seed/glass-p3/500/560" alt="Project"><div class="work-overlay"><span>Fluid Music</span></div></div>
+    <div class="work-item" data-work><img src="https://picsum.photos/seed/glass-p4/500/560" alt="Project"><div class="work-overlay"><span>Crystal Analytics</span></div></div>
+    <div class="work-item" data-work><img src="https://picsum.photos/seed/glass-p5/900/560" alt="Project"><div class="work-overlay"><span>Glass OS Concept</span></div></div>
+  </div>
+</section>
+
+<!-- ═══ CONTACT ═══ -->
+<section class="contact" id="contact">
+  <div class="contact-blob"></div>
+  <div class="sect-label">Get in Touch</div>
+  <h2>Let's build something extraordinary</h2>
+  <p>Have a project that deserves more than flat design? We should talk.</p>
+  <a href="#" class="btn-glass btn-glass-primary" style="position:relative;z-index:1">Start a Project <i class="fa-solid fa-arrow-right" style="font-size:11px"></i></a>
+</section>
+
+<footer><p>PRISM Studio — Liquid Glass Interfaces</p></footer>
+
+<script>
+/* ═══════════════════════════════════
+   MOUSE TRACKING
+   ═══════════════════════════════════ */
+const navbar = document.getElementById('navbar');
+const navLight = document.getElementById('navLight');
+const navPrism = document.getElementById('navPrism');
+const navEdge = document.getElementById('navEdge');
+let mx = -300, my = -300;
+let navRect = navbar.getBoundingClientRect();
+
+function updateNavRect() { navRect = navbar.getBoundingClientRect(); }
+updateNavRect();
+window.addEventListener('resize', updateNavRect);
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  const rx = mx - navRect.left;
+  const ry = my - navRect.top;
+  const inNav = ry > -40 && ry < navRect.height + 40 && mx > navRect.left - 20 && mx < navRect.right + 20;
+
+  // Light spot position
+  navbar.style.setProperty('--lx', rx + 'px');
+  navbar.style.setProperty('--ly', ry + 'px');
+
+  // Prismatic position — shifts with mouse X across the nav width
+  if (inNav) {
+    const pct = Math.max(0, Math.min(100, (rx / navRect.width) * 100));
+    navbar.style.setProperty('--ppos', (pct - 50) + '% 0');
+  }
+
+  // Bottom edge light
+  navbar.style.setProperty('--ex', rx + 'px');
+});
+
+document.addEventListener('mouseleave', () => {
+  navbar.style.setProperty('--lx', '-300px');
+  navbar.style.setProperty('--ly', '-300px');
+  navbar.style.setProperty('--ex', '-200px');
+});
+
+/* ═══════════════════════════════════
+   SCROLL — LIQUID STATE TRANSITION
+   ═══════════════════════════════════ */
+let scrolled = false;
+function onScroll() {
+  const s = window.scrollY;
+  const shouldScroll = s > 40;
+  if (shouldScroll !== scrolled) {
+    scrolled = shouldScroll;
+    navbar.classList.toggle('scrolled', scrolled);
+  }
+  // Parallax hero content for enhanced refraction illusion
+  const hero = document.querySelector('.hero-inner') || document.querySelector('.hero');
+  if (hero && s < window.innerHeight) {
+    hero.style.transform = `translateY(${s * 0.25}px)`;
+  }
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+/* ═══════════════════════════════════
+   CAUSTICS CANVAS
+   ═══════════════════════════════════ */
+const causticsCanvas = document.getElementById('caustics');
+const ctx = causticsCanvas.getContext('2d');
+const causticBlobs = [];
+
+function initCaustics() {
+  updateNavRect();
+  causticsCanvas.width = navRect.width;
+  causticsCanvas.height = navRect.height;
+  causticBlobs.length = 0;
+  for (let i = 0; i < 7; i++) {
+    causticBlobs.push({
+      cx: Math.random() * causticsCanvas.width,
+      cy: Math.random() * causticsCanvas.height,
+      r: 35 + Math.random() * 55,
+      sx: 0.3 + Math.random() * 0.5,
+      sy: 0.2 + Math.random() * 0.4,
+      px: Math.random() * Math.PI * 2,
+      py: Math.random() * Math.PI * 2,
+      alpha: 0.012 + Math.random() * 0.01,
+    });
+  }
+}
+initCaustics();
+window.addEventListener('resize', initCaustics);
+
+function drawCaustics(time) {
+  ctx.clearRect(0, 0, causticsCanvas.width, causticsCanvas.height);
+  ctx.globalCompositeOperation = 'lighter';
+  const t = time * 0.001;
+  causticBlobs.forEach(b => {
+    const x = b.cx + Math.sin(t * b.sx + b.px) * (causticsCanvas.width * 0.3);
+    const y = b.cy + Math.cos(t * b.sy + b.py) * (causticsCanvas.height * 0.3);
+    const r = Math.max(1, b.r);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(255,255,255,${b.alpha})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/* ═══════════════════════════════════
+   CLICK RIPPLES ON NAV LINKS
+   ═══════════════════════════════════ */
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const rip = document.createElement('span');
+    rip.className = 'nav-ripple';
+    rip.style.left = (e.clientX - rect.left) + 'px';
+    rip.style.top = (e.clientY - rect.top) + 'px';
+    this.appendChild(rip);
+    rip.addEventListener('animationend', () => rip.remove());
+
+    // Active state
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// CTA ripple
+document.getElementById('navCta').addEventListener('click', function(e) {
+  const rect = this.getBoundingClientRect();
+  const rip = document.createElement('span');
+  rip.className = 'nav-ripple';
+  rip.style.left = (e.clientX - rect.left) + 'px';
+  rip.style.top = (e.clientY - rect.top) + 'px';
+  this.appendChild(rip);
+  rip.addEventListener('animationend', () => rip.remove());
+});
+
+/* ═══════════════════════════════════
+   SCROLL REVEAL — Features & Work
+   ═══════════════════════════════════ */
+function revealItems(sectionId, itemSelector, stagger) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  const items = section.querySelectorAll(itemSelector);
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      items.forEach((item, i) => {
+        setTimeout(() => item.classList.add('vis'), i * (stagger || 80));
+      });
+      obs.unobserve(section);
+    }
+  }, { threshold: 0.1 });
+  obs.observe(section);
+}
+revealItems('featGrid', '.feat-card', 80);
+revealItems('workGrid', '.work-item', 100);
+
+/* ═══════════════════════════════════
+   SMOOTH ANCHOR SCROLL
+   ═══════════════════════════════════ */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', function(e) {
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+  });
+});
+
+/* ═══════════════════════════════════
+   MAIN ANIMATION LOOP
+   ═══════════════════════════════════ */
+function loop(time) {
+  drawCaustics(time);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

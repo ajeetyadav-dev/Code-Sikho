@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurum — Private Wealth</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-deep: #06060a;
+    --bg-base: #0c0c12;
+    --bg-elevated: #13131b;
+    --bg-card: rgba(255,255,255,0.025);
+    --bg-card-hover: rgba(255,255,255,0.045);
+    --border: rgba(255,255,255,0.06);
+    --border-accent: rgba(201,169,110,0.25);
+    --gold: #c9a96e;
+    --gold-light: #e0c98f;
+    --gold-dim: rgba(201,169,110,0.12);
+    --text-primary: #f0ece4;
+    --text-secondary: rgba(240,236,228,0.55);
+    --text-tertiary: rgba(240,236,228,0.3);
+    --green: #5ec69a;
+    --green-dim: rgba(94,198,154,0.12);
+    --red: #e05a6d;
+    --red-dim: rgba(224,90,109,0.12);
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Ambient background */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .ambient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.35;
+    animation: orbFloat 20s ease-in-out infinite;
+  }
+  .ambient-orb:nth-child(1) {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(201,169,110,0.18), transparent 70%);
+    top: -15%; left: -10%;
+    animation-delay: 0s;
+  }
+  .ambient-orb:nth-child(2) {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,169,110,0.1), transparent 70%);
+    bottom: -20%; right: -5%;
+    animation-delay: -7s;
+    animation-duration: 25s;
+  }
+  .ambient-orb:nth-child(3) {
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(94,198,154,0.08), transparent 70%);
+    top: 40%; left: 50%;
+    animation-delay: -14s;
+    animation-duration: 30s;
+  }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.05); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  /* Noise overlay */
+  .noise {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+  }
+
+  /* Layout */
+  .app {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 260px;
+    padding: 28px 20px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: rgba(6,6,10,0.8);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
+    margin-bottom: 40px;
+  }
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--gold), #a8884a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #0a0a0b;
+    font-weight: 700;
+    box-shadow: 0 4px 20px rgba(201,169,110,0.25);
+  }
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+  }
+
+  .nav-section {
+    margin-bottom: 32px;
+  }
+  .nav-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 12px;
+    margin-bottom: 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .nav-item i {
+    width: 18px;
+    text-align: center;
+    font-size: 0.9rem;
+    transition: color 0.25s ease;
+  }
+  .nav-item:hover {
+    color: var(--text-primary);
+    background: var(--bg-card-hover);
+  }
+  .nav-item.active {
+    color: var(--gold-light);
+    background: var(--gold-dim);
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 18px;
+    background: var(--gold);
+    border-radius: 0 3px 3px 0;
+  }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--gold-dim);
+    color: var(--gold);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid rgba(201,169,110,0.15);
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 8px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2a2a3a, #1a1a28);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gold);
+  }
+  .user-info { flex: 1; }
+  .user-name { font-size: 0.8rem; font-weight: 500; color: var(--text-primary); }
+  .user-role { font-size: 0.68rem; color: var(--text-tertiary); }
+
+  /* Main content */
+  .main {
+    flex: 1;
+    margin-left: 260px;
+    padding: 32px 40px;
+    max-width: 1400px;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+  }
+  .topbar-left h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.85rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .topbar-left p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    font-size: 0.9rem;
+  }
+  .topbar-btn:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .topbar-btn .notif-dot {
+    position: absolute;
+    top: 9px; right: 9px;
+    width: 7px; height: 7px;
+    background: var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(201,169,110,0.5);
+  }
+  .cta-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--gold), #a8884a);
+    color: #0a0a0b;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 24px rgba(201,169,110,0.2);
+  }
+  .cta-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(201,169,110,0.35);
+  }
+  .cta-btn:active { transform: translateY(0); }
+
+  /* Stat cards row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: all 0.35s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,169,110,0.3), transparent);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .stat-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+  }
+  .stat-card:hover::before { opacity: 1; }
+
+  .stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .stat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+  }
+  .stat-icon.gold { background: var(--gold-dim); color: var(--gold); }
+  .stat-icon.green { background: var(--green-dim); color: var(--green); }
+  .stat-icon.red { background: var(--red-dim); color: var(--red); }
+  .stat-icon.neutral { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+
+  .stat-change {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .stat-change.up { color: var(--green); background: var(--green-dim); }
+  .stat-change.down { color: var(--red); background: var(--red-dim); }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.65rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+  }
+
+  /* Main grid */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+  }
+  .card:hover { border-color: rgba(255,255,255,0.09); }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 0;
+  }
+  .card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .card-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+  .card-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .tab-pill {
+    padding: 5px 14px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab-pill:hover { color: var(--text-secondary); }
+  .tab-pill.active {
+    background: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  /* Chart area */
+  .chart-area {
+    padding: 20px 24px 24px;
+    height: 280px;
+    position: relative;
+  }
+  .chart-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Portfolio list */
+  .portfolio-list {
+    padding: 16px 20px;
+  }
+  .portfolio-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-bottom: 2px;
+  }
+  .portfolio-item:hover { background: var(--bg-card-hover); }
+  .portfolio-token {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .portfolio-info { flex: 1; min-width: 0; }
+  .portfolio-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .portfolio-ticker {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+  }
+  .portfolio-values { text-align: right; }
+  .portfolio-amount {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .portfolio-pct {
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .portfolio-pct.up { color: var(--green); }
+  .portfolio-pct.down { color: var(--red); }
+
+  /* Bottom grid */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* Transactions */
+  .tx-list {
+    padding: 12px 20px 20px;
+  }
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: default;
+    transition: background 0.2s ease;
+  }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+  .tx-icon.in { background: var(--green-dim); color: var(--green); }
+  .tx-icon.out { background: var(--red-dim); color: var(--red); }
+  .tx-icon.swap { background: var(--gold-dim); color: var(--gold); }
+
+  .tx-info { flex: 1; }
+  .tx-type { font-size: 0.82rem; font-weight: 500; color: var(--text-primary); }
+  .tx-detail { font-size: 0.72rem; color: var(--text-tertiary); margin-top: 1px; }
+  .tx-amount { text-align: right; }
+  .tx-value { font-size: 0.82rem; font-weight: 500; color: var(--text-primary); }
+  .tx-time { font-size: 0.68rem; color: var(--text-tertiary); margin-top: 1px; }
+
+  /* Quick actions */
+  .quick-actions {
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .quick-action {
+    padding: 20px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+  }
+  .quick-action:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+  }
+  .quick-action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    background: var(--gold-dim);
+    color: var(--gold);
+  }
+  .quick-action-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .quick-action-desc {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+  }
+
+  /* Floating particles */
+  .particles-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Scroll animation */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: revealUp 0.7s ease forwards;
+  }
+  .reveal:nth-child(1) { animation-delay: 0.05s; }
+  .reveal:nth-child(2) { animation-delay: 0.1s; }
+  .reveal:nth-child(3) { animation-delay: 0.15s; }
+  .reveal:nth-child(4) { animation-delay: 0.2s; }
+
+  @keyframes revealUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal-delay-1 { animation-delay: 0.25s !important; }
+  .reveal-delay-2 { animation-delay: 0.35s !important; }
+  .reveal-delay-3 { animation-delay: 0.45s !important; }
+
+  /* Sparkline in stat cards */
+  .sparkline-canvas {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+    .bottom-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 20px; }
+    .stats-row { grid-template-columns: 1fr; }
+    .topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient glow -->
+<div class="ambient">
+  <div class="ambient-orb"></div>
+  <div class="ambient-orb"></div>
+  <div class="ambient-orb"></div>
+</div>
+<div class="noise"></div>
+
+<!-- Floating particles -->
+<canvas class="particles-canvas" id="particlesCanvas"></canvas>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">A</div>
+      <span class="logo-text">Aurum</span>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-label">Overview</div>
+      <div class="nav-item active" data-page="dashboard">
+        <i class="fa-solid fa-grid-2"></i>
+        <span>Dashboard</span>
+      </div>
+      <div class="nav-item" data-page="portfolio">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Portfolio</span>
+      </div>
+      <div class="nav-item" data-page="markets">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Markets</span>
+        <span class="nav-badge">Live</span>
+      </div>
+    </nav>
+
+    <nav class="nav-section">
+      <div class="nav-label">Manage</div>
+      <div class="nav-item" data-page="transactions">
+        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+        <span>Transactions</span>
+      </div>
+      <div class="nav-item" data-page="vaults">
+        <i class="fa-solid fa-vault"></i>
+        <span>Vaults</span>
+      </div>
+      <div class="nav-item" data-page="rewards">
+        <i class="fa-solid fa-gem"></i>
+        <span>Rewards</span>
+        <span class="nav-badge">3</span>
+      </div>
+    </nav>
+
+    <nav class="nav-section">
+      <div class="nav-label">Account</div>
+      <div class="nav-item" data-page="settings">
+        <i class="fa-solid fa-gear"></i>
+        <span>Settings</span>
+      </div>
+      <div class="nav-item" data-page="security">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Security</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="avatar">JC</div>
+      <div class="user-info">
+        <div class="user-name">James Carter</div>
+        <div class="user-role">Private Client</div>
+      </div>
+      <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-tertiary); cursor: pointer; padding: 4px;"></i>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="topbar reveal">
+      <div class="topbar-left">
+        <h1>Good Evening, James</h1>
+        <p>Your portfolio is up <span style="color: var(--green); font-weight: 500;">+2.34%</span> today</p>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <button class="topbar-btn" aria-label="Notifications">
+          <i class="fa-solid fa-bell"></i>
+          <span class="notif-dot"></span>
+        </button>
+        <button class="cta-btn">
+          <i class="fa-solid fa-arrow-up-right"></i>
+          New Transfer
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card reveal">
+        <canvas class="sparkline-canvas" id="spark1"></canvas>
+        <div class="stat-header">
+          <div class="stat-icon gold"><i class="fa-solid fa-wallet"></i></div>
+          <div class="stat-change up"><i class="fa-solid fa-arrow-up" style="font-size:0.6rem;"></i> 12.5%</div>
+        </div>
+        <div class="stat-value">$4.28M</div>
+        <div class="stat-label">Total Net Worth</div>
+      </div>
+      <div class="stat-card reveal">
+        <canvas class="sparkline-canvas" id="spark2"></canvas>
+        <div class="stat-header">
+          <div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div>
+          <div class="stat-change up"><i class="fa-solid fa-arrow-up" style="font-size:0.6rem;"></i> 8.2%</div>
+        </div>
+        <div class="stat-value">$892K</div>
+        <div class="stat-label">Monthly Returns</div>
+      </div>
+      <div class="stat-card reveal">
+        <canvas class="sparkline-canvas" id="spark3"></canvas>
+        <div class="stat-header">
+          <div class="stat-icon neutral"><i class="fa-solid fa-layer-group"></i></div>
+          <div class="stat-change down"><i class="fa-solid fa-arrow-down" style="font-size:0.6rem;"></i> 3.1%</div>
+        </div>
+        <div class="stat-value">47</div>
+        <div class="stat-label">Active Positions</div>
+      </div>
+      <div class="stat-card reveal">
+        <canvas class="sparkline-canvas" id="spark4"></canvas>
+        <div class="stat-header">
+          <div class="stat-icon red"><i class="fa-solid fa-percent"></i></div>
+          <div class="stat-change up"><i class="fa-solid fa-arrow-up" style="font-size:0.6rem;"></i> 0.4%</div>
+        </div>
+        <div class="stat-value">18.7%</div>
+        <div class="stat-label">Avg. Yield</div>
+      </div>
+    </div>
+
+    <!-- Chart + Portfolio -->
+    <div class="content-grid">
+      <div class="card reveal reveal-delay-1">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Performance</div>
+            <div class="card-subtitle">Portfolio value over time</div>
+          </div>
+          <div class="card-actions">
+            <button class="tab-pill" data-range="1W">1W</button>
+            <button class="tab-pill" data-range="1M">1M</button>
+            <button class="tab-pill active" data-range="1Y">1Y</button>
+            <button class="tab-pill" data-range="ALL">ALL</button>
+          </div>
+        </div>
+        <div class="chart-area">
+          <canvas class="chart-canvas" id="mainChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card reveal reveal-delay-2">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Holdings</div>
+            <div class="card-subtitle">Top assets by value</div>
+          </div>
+          <button class="tab-pill active">All</button>
+        </div>
+        <div class="portfolio-list" id="portfolioList"></div>
+      </div>
+    </div>
+
+    <!-- Bottom section -->
+    <div class="bottom-grid">
+      <div class="card reveal reveal-delay-2">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recent Activity</div>
+            <div class="card-subtitle">Latest transactions</div>
+          </div>
+          <button class="tab-pill active">View All</button>
+        </div>
+        <div class="tx-list" id="txList"></div>
+      </div>
+
+      <div class="card reveal reveal-delay-3">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Quick Actions</div>
+            <div class="card-subtitle">Frequently used tools</div>
+          </div>
+        </div>
+        <div class="quick-actions">
+          <div class="quick-action" data-action="send">
+            <div class="quick-action-icon"><i class="fa-solid fa-paper-plane"></i></div>
+            <div class="quick-action-label">Send</div>
+            <div class="quick-action-desc">Transfer assets</div>
+          </div>
+          <div class="quick-action" data-action="receive">
+            <div class="quick-action-icon" style="background: var(--green-dim); color: var(--green);"><i class="fa-solid fa-download"></i></div>
+            <div class="quick-action-label">Receive</div>
+            <div class="quick-action-desc">Get deposit info</div>
+          </div>
+          <div class="quick-action" data-action="swap">
+            <div class="quick-action-icon" style="background: rgba(130,140,255,0.12); color: #828cff;"><i class="fa-solid fa-repeat"></i></div>
+            <div class="quick-action-label">Swap</div>
+            <div class="quick-action-desc">Instant exchange</div>
+          </div>
+          <div class="quick-action" data-action="bridge">
+            <div class="quick-action-icon" style="background: rgba(255,160,90,0.12); color: #ffa05a;"><i class="fa-solid fa-bridge"></i></div>
+            <div class="quick-action-label">Bridge</div>
+            <div class="quick-action-desc">Cross-chain</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" style="position:fixed; bottom:24px; right:24px; z-index:1000; display:flex; flex-direction:column; gap:8px;"></div>
+
+<script>
+// ========== DATA ==========
+const holdings = [
+  { name: 'Bitcoin', ticker: 'BTC', amount: '$1,842,600', pct: '+5.24%', up: true, color: '#f7931a', letter: 'B' },
+  { name: 'Ethereum', ticker: 'ETH', amount: '$894,200', pct: '+3.18%', up: true, color: '#627eea', letter: 'E' },
+  { name: 'Solana', ticker: 'SOL', amount: '$524,800', pct: '+8.91%', up: true, color: '#00ffa3', letter: 'S' },
+  { name: 'Avalanche', ticker: 'AVAX', amount: '$312,400', pct: '-1.42%', up: false, color: '#e84142', letter: 'A' },
+  { name: 'Chainlink', ticker: 'LINK', amount: '$247,100', pct: '+2.67%', up: true, color: '#2a5ada', letter: 'C' },
+];
+
+const transactions = [
+  { type: 'Received', detail: '2.4 BTC from Vault #3', value: '+$164,320', time: '2 min ago', icon: 'in' },
+  { type: 'Swapped', detail: '50 ETH → 4,200 SOL', value: '$89,400', time: '18 min ago', icon: 'swap' },
+  { type: 'Sent', detail: 'To 0x8f2...c4d1', value: '-$24,800', time: '1 hr ago', icon: 'out' },
+  { type: 'Received', detail: 'Yield from USDC Vault', value: '+$3,240', time: '3 hrs ago', icon: 'in' },
+  { type: 'Swapped', detail: '100,000 USDC → ETH', value: '$100,000', time: '5 hrs ago', icon: 'swap' },
+];
+
+// ========== RENDER PORTFOLIO ==========
+const portfolioList = document.getElementById('portfolioList');
+holdings.forEach(h => {
+  portfolioList.innerHTML += `
+    <div class="portfolio-item">
+      <div class="portfolio-token" style="background: ${h.color}22; color: ${h.color};">${h.letter}</div>
+      <div class="portfolio-info">
+        <div class="portfolio-name">${h.name}</div>
+        <div class="portfolio-ticker">${h.ticker}</div>
+      </div>
+      <div class="portfolio-values">
+        <div class="portfolio-amount">${h.amount}</div>
+        <div class="portfolio-pct ${h.up ? 'up' : 'down'}">${h.pct}</div>
+      </div>
+    </div>
+  `;
+});
+
+// ========== RENDER TRANSACTIONS ==========
+const txList = document.getElementById('txList');
+transactions.forEach(tx => {
+  const iconClass = tx.icon === 'in' ? 'in' : tx.icon === 'out' ? 'out' : 'swap';
+  const iconSymbol = tx.icon === 'in' ? 'fa-arrow-down' : tx.icon === 'out' ? 'fa-arrow-up' : 'fa-repeat';
+  txList.innerHTML += `
+    <div class="tx-item">
+      <div class="tx-icon ${iconClass}"><i class="fa-solid ${iconSymbol}"></i></div>
+      <div class="tx-info">
+        <div class="tx-type">${tx.type}</div>
+        <div class="tx-detail">${tx.detail}</div>
+      </div>
+      <div class="tx-amount">
+        <div class="tx-value">${tx.value}</div>
+        <div class="tx-time">${tx.time}</div>
+      </div>
+    </div>
+  `;
+});
+
+// ========== NAV INTERACTION ==========
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    showToast(`Navigated to ${item.querySelector('span').textContent}`);
+  });
+});
+
+// ========== TAB INTERACTION ==========
+document.querySelectorAll('.tab-pill[data-range]').forEach(pill => {
+  pill.addEventListener('click', () => {
+    pill.parentElement.querySelectorAll('.tab-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    drawMainChart(pill.dataset.range);
+  });
+});
+
+// ========== QUICK ACTIONS ==========
+document.querySelectorAll('.quick-action').forEach(action => {
+  action.addEventListener('click', () => {
+    showToast(`${action.querySelector('.quick-action-label').textContent} panel opened`);
+  });
+});
+
+// ========== TOAST ==========
+function showToast(msg) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    padding: 12px 20px;
+    border-radius: 12px;
+    background: rgba(19,19,27,0.95);
+    border: 1px solid var(--border-accent);
+    backdrop-filter: blur(20px);
+    color: var(--gold-light);
+    font-size: 0.82rem;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateX(40px);
+    opacity: 0;
+    transition: all 0.35s ease;
+  `;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.transform = 'translateX(0)';
+    toast.style.opacity = '1';
+  });
+  setTimeout(() => {
+    toast.style.transform = 'translateX(40px)';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 350);
+  }, 2500);
+}
+
+// ========== SPARKLINES ==========
+function drawSparkline(canvasId, data, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = 100;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = Math.max(max - min, 0.001);
+  const step = w / (data.length - 1);
+
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * h * 0.8 - h * 0.1;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill gradient
+  ctx.lineTo((data.length - 1) * step, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, color.replace(')', ',0.15)').replace('rgb', 'rgba'));
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+// Generate random sparkline data
+function genData(len, trend) {
+  const d = [];
+  let v = 50;
+  for (let i = 0; i < len; i++) {
+    v += (Math.random() - 0.45 + trend * 0.02) * 8;
+    v = Math.max(10, Math.min(90, v));
+    d.push(v);
+  }
+  return d;
+}
+
+drawSparkline('spark1', genData(30, 1), 'rgb(201,169,110)');
+drawSparkline('spark2', genData(30, 0.8), 'rgb(94,198,154)');
+drawSparkline('spark3', genData(30, -0.3), 'rgb(240,236,228)');
+drawSparkline('spark4', genData(30, 0.5), 'rgb(224,90,109)');
+
+// ========== MAIN CHART ==========
+function generateChartData(range) {
+  const points = range === '1W' ? 7 : range === '1M' ? 30 : range === '1Y' ? 52 : 120;
+  const data = [];
+  let v = 3200000;
+  for (let i = 0; i < points; i++) {
+    v += (Math.random() - 0.42) * 80000;
+    v = Math.max(2000000, v);
+    data.push(v);
+  }
+  // Ensure it ends high for a nice look
+  for (let i = Math.max(0, data.length - 10); i < data.length; i++) {
+    data[i] = data[i - 1] + Math.random() * 40000;
+  }
+  return data;
+}
+
+let mainChartData = generateChartData('1Y');
+let mainChartAnim = 0;
+
+function drawMainChart(range) {
+  mainChartData = generateChartData(range);
+  mainChartAnim = 0;
+  animateChart();
+}
+
+function animateChart() {
+  mainChartAnim = Math.min(1, mainChartAnim + 0.03);
+  const canvas = document.getElementById('mainChart');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const data = mainChartData;
+  const min = Math.min(...data) * 0.995;
+  const max = Math.max(...data) * 1.005;
+  const range = Math.max(max - min, 1);
+  const padTop = 20;
+  const padBottom = 40;
+  const drawH = h - padTop - padBottom;
+  const step = w / (data.length - 1);
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid lines
+  const gridLines = 5;
+  for (let i = 0; i <= gridLines; i++) {
+    const y = padTop + (drawH / gridLines) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Labels
+    const val = max - (range / gridLines) * i;
+    ctx.fillStyle = 'rgba(240,236,228,0.2)';
+    ctx.font = `${Math.round(w * 0.012)}px "DM Sans"`;
+    ctx.textAlign = 'left';
+    ctx.fillText('$' + (val / 1000000).toFixed(2) + 'M', 4, y - 6);
+  }
+
+  // Calculate points
+  const points = data.map((v, i) => ({
+    x: i * step,
+    y: padTop + drawH - ((v - min) / range) * drawH
+  }));
+
+  // Draw only up to animation progress
+  const visibleCount = Math.floor(points.length * easeOutCubic(mainChartAnim));
+  const visiblePoints = points.slice(0, Math.max(2, visibleCount));
+
+  // Area fill
+  ctx.beginPath();
+  ctx.moveTo(visiblePoints[0].x, visiblePoints[0].y);
+  for (let i = 1; i < visiblePoints.length; i++) {
+    const prev = visiblePoints[i - 1];
+    const curr = visiblePoints[i];
+    const cpx = (prev.x + curr.x) / 2;
+    ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+  }
+  ctx.lineTo(visiblePoints[visiblePoints.length - 1].x, h);
+  ctx.lineTo(visiblePoints[0].x, h);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, padTop, 0, h);
+  grad.addColorStop(0, 'rgba(201,169,110,0.12)');
+  grad.addColorStop(0.6, 'rgba(201,169,110,0.03)');
+  grad.addColorStop(1, 'rgba(201,169,110,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(visiblePoints[0].x, visiblePoints[0].y);
+  for (let i = 1; i < visiblePoints.length; i++) {
+    const prev = visiblePoints[i - 1];
+    const curr = visiblePoints[i];
+    const cpx = (prev.x + curr.x) / 2;
+    ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+  }
+  ctx.strokeStyle = '#c9a96e';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // End dot with glow
+  if (mainChartAnim >= 0.98 && visiblePoints.length > 0) {
+    const last = visiblePoints[visiblePoints.length - 1];
+    // Glow
+    const glowGrad = ctx.createRadialGradient(last.x, last.y, 0, last.x, last.y, 20);
+    glowGrad.addColorStop(0, 'rgba(201,169,110,0.4)');
+    glowGrad.addColorStop(1, 'rgba(201,169,110,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 20, 0, Math.PI * 2);
+    ctx.fill();
+    // Dot
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#c9a96e';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+  }
+
+  if (mainChartAnim < 1) requestAnimationFrame(animateChart);
+}
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+// Start chart animation after a short delay
+setTimeout(() => drawMainChart('1Y'), 400);
+
+// ========== PARTICLES ==========
+const pCanvas = document.getElementById('particlesCanvas');
+const pCtx = pCanvas.getContext('2d');
+let particles = [];
+
+function resizeParticles() {
+  pCanvas.width = window.innerWidth * 2;
+  pCanvas.height = window.innerHeight * 2;
+  pCanvas.style.width = window.innerWidth + 'px';
+  pCanvas.style.height = window.innerHeight + 'px';
+}
+resizeParticles();
+window.addEventListener('resize', () => {
+  resizeParticles();
+  // Redraw sparklines on resize
+  drawSparkline('spark1', genData(30, 1), 'rgb(201,169,110)');
+  drawSparkline('spark2', genData(30, 0.8), 'rgb(94,198,154)');
+  drawSparkline('spark3', genData(30, -0.3), 'rgb(240,236,228)');
+  drawSparkline('spark4', genData(30, 0.5), 'rgb(224,90,109)');
+  drawMainChart(document.querySelector('.tab-pill[data-range].active')?.dataset.range || '1Y');
+});
+
+// Create particles
+for (let i = 0; i < 40; i++) {
+  particles.push({
+    x: Math.random() * pCanvas.width,
+    y: Math.random() * pCanvas.height,
+    r: Math.random() * 1.5 + 0.5,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    alpha: Math.random() * 0.3 + 0.05,
+    pulse: Math.random() * Math.PI * 2,
+  });
+}
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.pulse += 0.01;
+    if (p.x < 0) p.x = pCanvas.width;
+    if (p.x > pCanvas.width) p.x = 0;
+    if (p.y < 0) p.y = pCanvas.height;
+    if (p.y > pCanvas.height) p.y = 0;
+
+    const alpha = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    pCtx.fillStyle = `rgba(201,169,110,${alpha})`;
+    pCtx.fill();
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ========== MOUSE PARALLAX ON STAT CARDS ==========
+document.querySelectorAll('.stat-card').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    card.style.transform = `translateY(-2px) perspective(600px) rotateX(${-y * 5}deg) rotateY(${x * 5}deg)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'translateY(0) perspective(600px) rotateX(0) rotateY(0)';
+  });
+});
+
+// ========== TOOLTIP ON CHART ==========
+const mainChartCanvas = document.getElementById('mainChart');
+let tooltipEl = null;
+
+mainChartCanvas.addEventListener('mousemove', (e) => {
+  const rect = mainChartCanvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width;
+  const idx = Math.floor(mx * (mainChartData.length - 1));
+  if (idx < 0 || idx >= mainChartData.length) return;
+
+  if (!tooltipEl) {
+    tooltipEl = document.createElement('div');
+    tooltipEl.style.cssText = `
+      position: fixed;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(19,19,27,0.95);
+      border: 1px solid var(--border-accent);
+      backdrop-filter: blur(20px);
+      color: var(--gold-light);
+      font-size: 0.78rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      transition: opacity 0.15s ease;
+    `;
+    document.body.appendChild(tooltipEl);
+  }
+
+  tooltipEl.textContent = '$' + (mainChartData[idx] / 1000000).toFixed(3) + 'M';
+  tooltipEl.style.left = (e.clientX + 16) + 'px';
+  tooltipEl.style.top = (e.clientY - 10) + 'px';
+  tooltipEl.style.opacity = '1';
+});
+
+mainChartCanvas.addEventListener('mouseleave', () => {
+  if (tooltipEl) tooltipEl.style.opacity = '0';
+});
+</script>
+</body>
+</html>

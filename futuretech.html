@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Future Tech Hover Effects</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #06060c;
+            --card: #0c0c18;
+            --border: #1a1a30;
+            --fg: #e4e4ec;
+            --muted: #5a5a72;
+            --accent: #00ffc8;
+            --accent-dim: rgba(0,255,200,0.12);
+            --accent2: #ff6b35;
+            --accent2-dim: rgba(255,107,53,0.12);
+            --red: #ff0040;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Dot grid background */
+        .bg-grid {
+            position: fixed; inset: 0;
+            background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0);
+            background-size: 44px 44px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* Ambient hero glow */
+        .hero-glow {
+            position: absolute;
+            width: 600px; height: 600px;
+            top: -200px; left: 50%;
+            transform: translateX(-50%);
+            background: radial-gradient(circle, rgba(0,255,200,0.06) 0%, rgba(255,107,53,0.03) 40%, transparent 70%);
+            pointer-events: none;
+            filter: blur(60px);
+        }
+
+        #particle-canvas {
+            position: fixed; inset: 0;
+            z-index: 0; pointer-events: none;
+        }
+
+        .content { position: relative; z-index: 1; }
+
+        /* Hero */
+        .hero-title {
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: clamp(2.4rem, 6vw, 4.8rem);
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 55%, var(--accent2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-sub {
+            color: var(--muted);
+            font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+            font-weight: 300;
+            max-width: 560px;
+            line-height: 1.7;
+        }
+        .hero-tag {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        /* Card grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1.75rem;
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Card base */
+        .hover-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 2.2rem 2rem;
+            min-height: 290px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            cursor: pointer;
+            /* Staggered entrance */
+            opacity: 0;
+            transform: translateY(40px);
+            animation: cardEnter 0.7s cubic-bezier(0.23,1,0.32,1) forwards;
+        }
+        .hover-card:nth-child(1) { animation-delay: 0.15s; }
+        .hover-card:nth-child(2) { animation-delay: 0.25s; }
+        .hover-card:nth-child(3) { animation-delay: 0.35s; }
+        .hover-card:nth-child(4) { animation-delay: 0.45s; }
+        .hover-card:nth-child(5) { animation-delay: 0.55s; }
+        .hover-card:nth-child(6) { animation-delay: 0.65s; }
+
+        @keyframes cardEnter {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-num {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 1.4rem;
+        }
+        .card-icon {
+            font-size: 1.8rem;
+            margin-bottom: 1.4rem;
+            position: relative; z-index: 2;
+        }
+        .card-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.7rem;
+            position: relative; z-index: 2;
+        }
+        .card-desc {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.65;
+            position: relative; z-index: 2;
+        }
+
+        /* === 1. GRAVITATIONAL WARP === */
+        .card-warp {
+            transform-style: preserve-3d;
+            transition: transform 0.12s ease-out, border-color 0.4s ease;
+        }
+        .card-warp .warp-glow {
+            position: absolute; inset: 0; border-radius: 18px;
+            opacity: 0; transition: opacity 0.4s ease;
+            background: radial-gradient(
+                600px circle at var(--mx, 50%) var(--my, 50%),
+                var(--accent-dim) 0%, transparent 55%
+            );
+        }
+        .card-warp .warp-ring {
+            position: absolute; inset: 0; border-radius: 18px;
+            opacity: 0; transition: opacity 0.4s ease;
+            box-shadow: inset 0 0 80px -20px rgba(0,255,200,0.08);
+        }
+        .card-warp:hover .warp-glow,
+        .card-warp:hover .warp-ring { opacity: 1; }
+        .card-warp:hover { border-color: rgba(0,255,200,0.25); }
+
+        /* === 2. HOLOGRAPHIC PRISM === */
+        .card-holo { transition: border-color 0.4s ease; }
+        .card-holo .holo-sheen {
+            position: absolute; inset: 0; border-radius: 18px;
+            opacity: 0; transition: opacity 0.4s ease;
+            background: linear-gradient(
+                var(--holo-angle, 135deg),
+                rgba(0,255,200,0.12) 0%, rgba(255,107,53,0.12) 20%,
+                rgba(0,200,255,0.12) 40%, rgba(255,220,0,0.1) 60%,
+                rgba(200,0,255,0.08) 80%, rgba(0,255,200,0.12) 100%
+            );
+            mix-blend-mode: screen;
+        }
+        .card-holo .holo-border {
+            position: absolute; inset: -1px; border-radius: 19px;
+            opacity: 0; transition: opacity 0.4s ease;
+            background: linear-gradient(
+                var(--holo-angle, 135deg),
+                #00ffc8, #ff6b35, #00c8ff, #ffdc00, #c800ff, #00ffc8
+            );
+            z-index: -1; filter: blur(2px);
+        }
+        .card-holo .holo-noise {
+            position: absolute; inset: 0; border-radius: 18px;
+            opacity: 0; transition: opacity 0.4s ease;
+            background: repeating-conic-gradient(
+                rgba(255,255,255,0.01) 0% 25%, transparent 0% 50%
+            ) 0 0 / 4px 4px;
+            mix-blend-mode: overlay;
+        }
+        .card-holo:hover .holo-sheen,
+        .card-holo:hover .holo-noise { opacity: 1; }
+        .card-holo:hover .holo-border { opacity: 0.5; }
+
+        /* === 3. NEON PULSE === */
+        .card-neon { transition: border-color 0.4s ease; }
+        .card-neon .neon-glow {
+            position: absolute; inset: -2px; border-radius: 20px;
+            opacity: 0; transition: opacity 0.4s ease;
+            background: conic-gradient(
+                from var(--neon-angle, 0deg),
+                transparent 0%, var(--accent) 8%, transparent 16%,
+                transparent 50%, var(--accent) 58%, transparent 66%
+            );
+            filter: blur(5px);
+            z-index: -1;
+        }
+        .card-neon .neon-spot {
+            position: absolute;
+            width: 250px; height: 250px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,255,200,0.15) 0%, transparent 65%);
+            transform: translate(-50%, -50%);
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .card-neon .neon-ring {
+            position: absolute;
+            width: 100px; height: 100px; border-radius: 50%;
+            border: 1px solid rgba(0,255,200,0.15);
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.4s ease;
+            opacity: 0;
+        }
+        .card-neon:hover .neon-glow { opacity: 1; }
+        .card-neon:hover .neon-spot { opacity: 1; }
+        .card-neon:hover .neon-ring { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+        .card-neon:hover { border-color: rgba(0,255,200,0.2); }
+
+        /* === 4. GLITCH FRAGMENT === */
+        .card-glitch { transition: border-color 0.4s ease; }
+        .card-glitch .glitch-lines {
+            position: absolute; inset: 0; border-radius: 18px;
+            opacity: 0; pointer-events: none; overflow: hidden;
+        }
+        .card-glitch .glitch-line {
+            position: absolute; left: 0; width: 100%; height: 2px;
+            opacity: 0;
+        }
+        .card-glitch .glitch-block {
+            position: absolute; height: 100%; opacity: 0;
+            mix-blend-mode: screen;
+        }
+        .card-glitch:hover .glitch-lines { opacity: 1; }
+        .card-glitch:hover { border-color: rgba(255,0,64,0.25); }
+
+        .glitch-title {
+            position: relative;
+            display: inline-block;
+        }
+        .card-glitch:hover .glitch-title {
+            animation: glitchShake 0.15s ease infinite;
+        }
+        .card-glitch:hover .glitch-title::before,
+        .card-glitch:hover .glitch-title::after {
+            content: attr(data-text);
+            position: absolute; left: 0; top: 0;
+            width: 100%; height: 100%;
+            opacity: 0.7;
+        }
+        .card-glitch:hover .glitch-title::before {
+            color: var(--red);
+            clip-path: polygon(0 0, 100% 0, 100% 42%, 0 42%);
+            animation: glitchClipTop 0.25s ease infinite;
+        }
+        .card-glitch:hover .glitch-title::after {
+            color: var(--accent);
+            clip-path: polygon(0 58%, 100% 58%, 100% 100%, 0 100%);
+            animation: glitchClipBot 0.25s ease infinite;
+        }
+
+        @keyframes glitchShake {
+            0%   { transform: translate(0); }
+            25%  { transform: translate(-2px, 1px); }
+            50%  { transform: translate(2px, -1px); }
+            75%  { transform: translate(-1px, -1px); }
+            100% { transform: translate(0); }
+        }
+        @keyframes glitchClipTop {
+            0%   { transform: translate(0); }
+            25%  { transform: translate(-4px, 0); }
+            50%  { transform: translate(3px, 0); }
+            75%  { transform: translate(-2px, 0); }
+            100% { transform: translate(0); }
+        }
+        @keyframes glitchClipBot {
+            0%   { transform: translate(0); }
+            25%  { transform: translate(3px, 0); }
+            50%  { transform: translate(-4px, 0); }
+            75%  { transform: translate(2px, 0); }
+            100% { transform: translate(0); }
+        }
+
+        /* === 5. SCAN DECRYPT === */
+        .card-scan { transition: border-color 0.4s ease; }
+        .card-scan .scan-beam {
+            position: absolute; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent 5%, var(--accent) 50%, transparent 95%);
+            box-shadow: 0 0 30px var(--accent), 0 0 80px rgba(0,255,200,0.2);
+            opacity: 0; top: 0; pointer-events: none;
+        }
+        .card-scan .scan-trail {
+            position: absolute; left: 0; width: 100%;
+            height: 60px; pointer-events: none;
+            background: linear-gradient(180deg, rgba(0,255,200,0.04), transparent);
+            opacity: 0; top: 0;
+        }
+        .encrypted-text {
+            font-family: 'Orbitron', monospace;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+            transition: color 0.15s ease;
+        }
+        .decrypted-text {
+            position: absolute; left: 0; top: 0;
+            color: var(--accent);
+            opacity: 0;
+            clip-path: inset(0 100% 0 0);
+            letter-spacing: 0.04em;
+            font-family: 'Orbitron', monospace;
+        }
+        .card-scan:hover .scan-beam {
+            opacity: 1;
+            animation: scanSweep 1.8s ease-in-out infinite;
+        }
+        .card-scan:hover .scan-trail {
+            opacity: 1;
+            animation: scanSweep 1.8s ease-in-out infinite;
+        }
+        .card-scan:hover { border-color: rgba(0,255,200,0.25); }
+
+        @keyframes scanSweep {
+            0%   { top: -5%; opacity: 0; }
+            8%   { opacity: 1; }
+            92%  { opacity: 1; }
+            100% { top: 105%; opacity: 0; }
+        }
+
+        /* === 6. MAGNETIC FIELD === */
+        .card-magnetic {
+            transition: transform 0.35s cubic-bezier(0.23,1,0.32,1), border-color 0.4s ease;
+        }
+        .card-magnetic .field-canvas {
+            position: absolute; inset: -60px;
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .card-magnetic:hover .field-canvas { opacity: 1; }
+        .card-magnetic:hover { border-color: rgba(255,107,53,0.25); }
+
+        /* Cursor */
+        .cursor-ring {
+            position: fixed;
+            width: 24px; height: 24px;
+            border: 1.5px solid rgba(0,255,200,0.35);
+            border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.35s ease, height 0.35s ease, border-color 0.35s ease, background 0.35s ease;
+        }
+        .cursor-ring.on-card {
+            width: 56px; height: 56px;
+            border-color: rgba(0,255,200,0.6);
+            background: rgba(0,255,200,0.04);
+        }
+        .cursor-dot {
+            position: fixed;
+            width: 4px; height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Footer */
+        .footer-note {
+            color: var(--muted);
+            font-size: 0.78rem;
+            text-align: center;
+            padding: 4rem 1.5rem 2.5rem;
+            letter-spacing: 0.02em;
+        }
+        .footer-note em {
+            color: var(--accent);
+            font-style: normal;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        @media (max-width: 768px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+                padding: 0 1rem;
+            }
+            .cursor-ring, .cursor-dot { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+    <canvas id="particle-canvas" aria-hidden="true"></canvas>
+
+    <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+    <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+
+    <div class="content">
+        <!-- Hero -->
+        <header class="relative flex flex-col items-center text-center pt-24 pb-20 px-6">
+            <div class="hero-glow" aria-hidden="true"></div>
+            <p class="hero-tag mb-6">Interactive Showcase</p>
+            <h1 class="hero-title mb-6">Future Hover<br>Effects</h1>
+            <p class="hero-sub">Six experimental cursor interactions that push the boundary of what web interfaces can feel like. Hover over each card.</p>
+        </header>
+
+        <!-- Cards -->
+        <main class="cards-grid pb-8">
+
+            <!-- 1 — Gravitational Warp -->
+            <article class="hover-card card-warp" data-effect="warp" aria-label="Gravitational Warp hover effect demo">
+                <div class="warp-glow"></div>
+                <div class="warp-ring"></div>
+                <div>
+                    <span class="card-num">001 &mdash; Warp</span>
+                    <div class="card-icon" style="color:var(--accent)"><i class="fas fa-atom"></i></div>
+                    <h2 class="card-title">Gravitational Warp</h2>
+                    <p class="card-desc">Space bends around your cursor. The card tilts in 3D with a parallax glow that tracks your every move, creating depth from a flat surface.</p>
+                </div>
+            </article>
+
+            <!-- 2 — Holographic Prism -->
+            <article class="hover-card card-holo" data-effect="holo" aria-label="Holographic Prism hover effect demo">
+                <div class="holo-border"></div>
+                <div class="holo-sheen"></div>
+                <div class="holo-noise"></div>
+                <div>
+                    <span class="card-num">002 &mdash; Prism</span>
+                    <div class="card-icon" style="color:var(--accent2)"><i class="fas fa-gem"></i></div>
+                    <h2 class="card-title">Holographic Prism</h2>
+                    <p class="card-desc">Iridescent light bends across the surface at different angles, mimicking how real holographic materials refract and scatter visible spectrum.</p>
+                </div>
+            </article>
+
+            <!-- 3 — Neon Pulse -->
+            <article class="hover-card card-neon" data-effect="neon" aria-label="Neon Pulse hover effect demo">
+                <div class="neon-glow"></div>
+                <div class="neon-spot"></div>
+                <div class="neon-ring"></div>
+                <div>
+                    <span class="card-num">003 &mdash; Pulse</span>
+                    <div class="card-icon" style="color:var(--accent)"><i class="fas fa-bolt"></i></div>
+                    <h2 class="card-title">Neon Pulse</h2>
+                    <p class="card-desc">A concentrated energy source traces your cursor position, radiating a soft glow that breathes life into the otherwise dormant border.</p>
+                </div>
+            </article>
+
+            <!-- 4 — Glitch Fragment -->
+            <article class="hover-card card-glitch" data-effect="glitch" aria-label="Glitch Fragment hover effect demo">
+                <div class="glitch-lines"></div>
+                <div>
+                    <span class="card-num">004 &mdash; Fragment</span>
+                    <div class="card-icon" style="color:var(--red)"><i class="fas fa-bug"></i></div>
+                    <h2 class="card-title glitch-title" data-text="Glitch Fragment">Glitch Fragment</h2>
+                    <p class="card-desc">Digital corruption splits visual layers, separating color channels and disrupting spatial coherence in a beautifully controlled chaos.</p>
+                </div>
+            </article>
+
+            <!-- 5 — Scan Decrypt -->
+            <article class="hover-card card-scan" data-effect="scan" aria-label="Scan Decrypt hover effect demo">
+                <div class="scan-beam"></div>
+                <div class="scan-trail"></div>
+                <div>
+                    <span class="card-num">005 &mdash; Decrypt</span>
+                    <div class="card-icon" style="color:var(--accent)"><i class="fas fa-fingerprint"></i></div>
+                    <h2 class="card-title" style="position:relative;">
+                        <span class="encrypted-text" id="enc-1">&#x2593;&#x2592;&#x2591; SC&#x2592;N D&#x2593;CR&#x2592;PT &#x2591;&#x2592;&#x2593;</span>
+                        <span class="decrypted-text" id="dec-1">Scan Decrypt</span>
+                    </h2>
+                    <p class="card-desc">A horizontal beam sweeps the surface, progressively decoding encrypted data into readable intelligence right before your eyes.</p>
+                </div>
+            </article>
+
+            <!-- 6 — Magnetic Field -->
+            <article class="hover-card card-magnetic" data-effect="magnetic" aria-label="Magnetic Field hover effect demo">
+                <canvas class="field-canvas" aria-hidden="true"></canvas>
+                <div>
+                    <span class="card-num">006 &mdash; Field</span>
+                    <div class="card-icon" style="color:var(--accent2)"><i class="fas fa-magnet"></i></div>
+                    <h2 class="card-title">Magnetic Field</h2>
+                    <p class="card-desc">The card is drawn toward your cursor as if magnetized, while invisible field lines materialize as particles align to the force.</p>
+                </div>
+            </article>
+
+        </main>
+
+        <footer class="footer-note">
+            Built with raw CSS, vanilla JS &amp; imagination &mdash; <em>no frameworks harmed</em>
+        </footer>
+    </div>
+
+<script>
+/* ========================================
+   Custom Cursor
+   ======================================== */
+const ring = document.getElementById('cursorRing');
+const dot  = document.getElementById('cursorDot');
+let mx = -100, my = -100, rx = -100, ry = -100;
+
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+(function tickCursor() {
+    rx += (mx - rx) * 0.14;
+    ry += (my - ry) * 0.14;
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    dot.style.left  = mx + 'px';
+    dot.style.top   = my + 'px';
+    requestAnimationFrame(tickCursor);
+})();
+
+document.querySelectorAll('.hover-card').forEach(c => {
+    c.addEventListener('mouseenter', () => ring.classList.add('on-card'));
+    c.addEventListener('mouseleave', () => ring.classList.remove('on-card'));
+});
+
+/* ========================================
+   1 — Gravitational Warp
+   ======================================== */
+document.querySelectorAll('.card-warp').forEach(card => {
+    const glow = card.querySelector('.warp-glow');
+
+    card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const cx = r.width / 2, cy = r.height / 2;
+        const rotX = ((y - cy) / cy) * -14;
+        const rotY = ((x - cx) / cx) * 14;
+        card.style.transform =
+            `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.03,1.03,1.03)`;
+        glow.style.setProperty('--mx', (x / r.width * 100) + '%');
+        glow.style.setProperty('--my', (y / r.height * 100) + '%');
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+    });
+});
+
+/* ========================================
+   2 — Holographic Prism
+   ======================================== */
+document.querySelectorAll('.card-holo').forEach(card => {
+    card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const angle = Math.atan2(y - r.height / 2, x - r.width / 2) * (180 / Math.PI);
+        card.style.setProperty('--holo-angle', angle + 'deg');
+    });
+});
+
+/* ========================================
+   3 — Neon Pulse
+   ======================================== */
+document.querySelectorAll('.card-neon').forEach(card => {
+    const spot = card.querySelector('.neon-spot');
+    const ringEl = card.querySelector('.neon-ring');
+    let angle = 0;
+
+    card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        spot.style.left = x + 'px';
+        spot.style.top  = y + 'px';
+        ringEl.style.left = x + 'px';
+        ringEl.style.top  = y + 'px';
+        angle = (angle + 3) % 360;
+        card.style.setProperty('--neon-angle', angle + 'deg');
+    });
+});
+
+/* ========================================
+   4 — Glitch Fragment
+   ======================================== */
+document.querySelectorAll('.card-glitch').forEach(card => {
+    const container = card.querySelector('.glitch-lines');
+    let iv = null;
+
+    card.addEventListener('mouseenter', () => {
+        iv = setInterval(() => {
+            container.innerHTML = '';
+            const n = 2 + Math.floor(Math.random() * 6);
+            for (let i = 0; i < n; i++) {
+                /* Horizontal scan lines */
+                if (Math.random() > 0.3) {
+                    const line = document.createElement('div');
+                    line.className = 'glitch-line';
+                    line.style.top = Math.random() * 100 + '%';
+                    line.style.height = (1 + Math.random() * 3) + 'px';
+                    line.style.opacity = 0.1 + Math.random() * 0.45;
+                    line.style.background = Math.random() > 0.5 ? 'var(--accent)' : 'var(--red)';
+                    line.style.transform = `translateX(${(Math.random()-0.5)*24}px)`;
+                    container.appendChild(line);
+                }
+                /* Color blocks */
+                if (Math.random() > 0.7) {
+                    const block = document.createElement('div');
+                    block.className = 'glitch-block';
+                    block.style.top = Math.random() * 100 + '%';
+                    block.style.width = (10 + Math.random() * 40) + '%';
+                    block.style.left = Math.random() * 60 + '%';
+                    block.style.opacity = 0.06 + Math.random() * 0.08;
+                    block.style.background = Math.random() > 0.5 ? 'var(--red)' : 'var(--accent)';
+                    container.appendChild(block);
+                }
+            }
+        }, 90);
+    });
+    card.addEventListener('mouseleave', () => {
+        clearInterval(iv);
+        container.innerHTML = '';
+    });
+});
+
+/* ========================================
+   5 — Scan Decrypt
+   ======================================== */
+document.querySelectorAll('.card-scan').forEach(card => {
+    const encEl = card.querySelector('.encrypted-text');
+    const decEl = card.querySelector('.decrypted-text');
+    const plain = 'Scan Decrypt';
+    const glyphs = '\u2593\u2592\u2591\u2588\u2584\u2580\u25A0\u25A1';
+    let scramIv = null, decIv = null;
+
+    function scramble() {
+        return plain.split('').map(c => c === ' ' ? ' ' : glyphs[Math.floor(Math.random() * glyphs.length)]).join('');
+    }
+
+    card.addEventListener('mouseenter', () => {
+        encEl.style.color = 'var(--muted)';
+        decEl.style.clipPath = 'inset(0 100% 0 0)';
+        let progress = 0;
+
+        scramIv = setInterval(() => { encEl.textContent = scramble(); }, 70);
+
+        decIv = setInterval(() => {
+            progress += 2.5;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(decIv);
+                clearInterval(scramIv);
+                encEl.textContent = plain;
+                encEl.style.color = 'var(--accent)';
+            }
+            decEl.style.clipPath = `inset(0 ${100 - progress}% 0 0)`;
+        }, 40);
+    });
+
+    card.addEventListener('mouseleave', () => {
+        clearInterval(scramIv);
+        clearInterval(decIv);
+        encEl.textContent = '\u2593\u2592\u2591 SC\u2592N D\u2593CR\u2592PT \u2591\u2592\u2593';
+        encEl.style.color = 'var(--muted)';
+        decEl.style.clipPath = 'inset(0 100% 0 0)';
+    });
+});
+
+/* ========================================
+   6 — Magnetic Field (canvas-drawn field lines)
+   ======================================== */
+document.querySelectorAll('.card-magnetic').forEach(card => {
+    const cvs = card.querySelector('.field-canvas');
+    const ctx = cvs.getContext('2d');
+    let localX = 0.5, localY = 0.5;
+    let raf = null;
+    let hovering = false;
+
+    function sizeCanvas() {
+        const r = card.getBoundingClientRect();
+        cvs.width  = r.width + 120;
+        cvs.height = r.height + 120;
+    }
+    sizeCanvas();
+    window.addEventListener('resize', sizeCanvas);
+
+    /* Field particles */
+    const pts = [];
+    for (let i = 0; i < 50; i++) {
+        pts.push({
+            x: Math.random(), y: Math.random(),
+            vx: 0, vy: 0,
+            size: 1 + Math.random() * 2,
+            alpha: 0
+        });
+    }
+
+    function drawField() {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        if (!hovering) return;
+
+        const w = cvs.width, h = cvs.height;
+        const cx = localX * w, cy = localY * h;
+
+        /* Draw curved field lines */
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const dist = 40 + Math.sin(Date.now() * 0.002 + i) * 15;
+            const sx = cx + Math.cos(angle) * dist;
+            const sy = cy + Math.sin(angle) * dist;
+            const ex = cx + Math.cos(angle) * (dist + 80 + Math.sin(Date.now()*0.003+i*0.5)*20);
+            const ey = cy + Math.sin(angle) * (dist + 80 + Math.cos(Date.now()*0.003+i*0.5)*20);
+
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            const cpx = (sx + ex) / 2 + Math.sin(Date.now()*0.004 + i) * 20;
+            const cpy = (sy + ey) / 2 + Math.cos(Date.now()*0.004 + i) * 20;
+            ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+            ctx.strokeStyle = `rgba(255,107,53,${0.12 + Math.sin(Date.now()*0.003+i)*0.06})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+        }
+
+        /* Draw particles */
+        pts.forEach(p => {
+            const px = p.x * w, py = p.y * h;
+            const dx = cx - px, dy = cy - py;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const force = Math.min(1, 60 / dist);
+
+            p.vx += (dx / dist) * force * 0.15;
+            p.vy += (dy / dist) * force * 0.15;
+            p.vx *= 0.92;
+            p.vy *= 0.92;
+            p.x += p.vx / w;
+            p.y += p.vy / h;
+            p.alpha += (force * 0.7 - p.alpha) * 0.1;
+
+            if (p.x < -0.1) p.x = 1.1;
+            if (p.x > 1.1) p.x = -0.1;
+            if (p.y < -0.1) p.y = 1.1;
+            if (p.y > 1.1) p.y = -0.1;
+
+            ctx.beginPath();
+            ctx.arc(px, py, Math.max(0.5, p.size * force), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,107,53,${p.alpha * 0.6})`;
+            ctx.fill();
+        });
+
+        raf = requestAnimationFrame(drawField);
+    }
+
+    card.addEventListener('mouseenter', () => {
+        hovering = true;
+        sizeCanvas();
+        drawField();
+    });
+    card.addEventListener('mouseleave', () => {
+        hovering = false;
+        cancelAnimationFrame(raf);
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        card.style.transform = 'translate(0,0)';
+        pts.forEach(p => { p.vx = 0; p.vy = 0; p.alpha = 0; });
+    });
+    card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        localX = (x + 60) / (r.width + 120);
+        localY = (y + 60) / (r.height + 120);
+
+        const pullX = (x - r.width / 2) / r.width * 18;
+        const pullY = (y - r.height / 2) / r.height * 18;
+        card.style.transform = `translate(${pullX}px, ${pullY}px)`;
+    });
+});
+
+/* ========================================
+   Background Particle Network
+   ======================================== */
+const bgCvs = document.getElementById('particle-canvas');
+const bgCtx = bgCvs.getContext('2d');
+let bgW, bgH;
+const netPts = [];
+
+function resizeBg() {
+    bgW = bgCvs.width  = window.innerWidth;
+    bgH = bgCvs.height = window.innerHeight;
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+const NET_COUNT = Math.min(70, Math.floor(window.innerWidth * window.innerHeight / 18000));
+for (let i = 0; i < NET_COUNT; i++) {
+    netPts.push({
+        x: Math.random() * bgW,
+        y: Math.random() * bgH,
+        vx: (Math.random() - 0.5) * 0.28,
+        vy: (Math.random() - 0.5) * 0.28,
+        r: 0.6 + Math.random() * 1.2,
+        a: 0.04 + Math.random() * 0.18
+    });
+}
+
+(function animBg() {
+    bgCtx.clearRect(0, 0, bgW, bgH);
+    for (let i = 0; i < netPts.length; i++) {
+        const p = netPts[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > bgW) p.vx *= -1;
+        if (p.y < 0 || p.y > bgH) p.vy *= -1;
+
+        bgCtx.beginPath();
+        bgCtx.arc(p.x, p.y, Math.max(0.3, p.r), 0, Math.PI * 2);
+        bgCtx.fillStyle = `rgba(0,255,200,${p.a})`;
+        bgCtx.fill();
+
+        for (let j = i + 1; j < netPts.length; j++) {
+            const q = netPts[j];
+            const dx = p.x - q.x, dy = p.y - q.y;
+            const d = dx * dx + dy * dy;
+            if (d < 14400) { // 120^2
+                bgCtx.beginPath();
+                bgCtx.moveTo(p.x, p.y);
+                bgCtx.lineTo(q.x, q.y);
+                bgCtx.strokeStyle = `rgba(0,255,200,${0.04 * (1 - Math.sqrt(d) / 120)})`;
+                bgCtx.lineWidth = 0.5;
+                bgCtx.stroke();
+            }
+        }
+    }
+    requestAnimationFrame(animBg);
+})();
+</script>
+</body>
+</html>

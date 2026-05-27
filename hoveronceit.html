@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hover Once… It Wakes Up</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #050505;
+      --fg: #F5EDE3;
+      --muted: #7A6E64;
+      --accent: #FF6B35;
+      --accent2: #00E5A0;
+      --card: rgba(255, 107, 53, 0.04);
+      --border: rgba(255, 107, 53, 0.12);
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'Space Grotesk', sans-serif;
+      --mouse-x: 50%;
+      --mouse-y: 50%;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: radial-gradient(ellipse at center, #0a0808 0%, var(--bg) 100%);
+      color: var(--fg);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ── Background Effects ── */
+    .bg-effect {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #gridBg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.3;
+      transition: opacity 1.2s ease;
+    }
+
+    body.awake #gridBg {
+      opacity: 1;
+      background-image:
+        linear-gradient(rgba(255,107,53,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,107,53,0.022) 1px, transparent 1px);
+    }
+
+    #mouseGlow {
+      background: radial-gradient(700px circle at var(--mouse-x) var(--mouse-y),
+        rgba(255,107,53,0.045), transparent 60%);
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    body.awake #mouseGlow { opacity: 1; }
+
+    /* ── Particle Canvas ── */
+    #particleCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ── Ripple & Flash ── */
+    .ripple-ring {
+      position: fixed;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 3px solid var(--accent);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+    }
+
+    .ripple-ring.active { animation: rippleExpand 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    #ripple2 { border-color: var(--accent2); border-width: 2px; }
+
+    @keyframes rippleExpand {
+      0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+      100% { transform: translate(-50%, -50%) scale(130); opacity: 0; }
+    }
+
+    #flash {
+      position: fixed;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,107,53,0.55), rgba(255,107,53,0.1) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+    }
+
+    #flash.active { animation: flashBurst 1.1s ease-out forwards; }
+
+    @keyframes flashBurst {
+      0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(0px);
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.9s ease, transform 0.9s ease, backdrop-filter 0.9s ease;
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake nav {
+      opacity: 1;
+      transform: translateY(0);
+      backdrop-filter: blur(12px);
+      background: rgba(5,5,5,0.4);
+      border-bottom: 1px solid rgba(255,107,53,0.06);
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 1.5px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .nav-links a:hover { color: var(--fg); }
+    .nav-links a:hover::after { width: 100%; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    /* Sleeping layer */
+    .sleeping-layer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      z-index: 10;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    body.awake .sleeping-layer {
+      opacity: 0;
+      transform: scale(2.5);
+      pointer-events: none;
+    }
+
+    .heartbeat-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: heartbeat 2.4s ease-in-out infinite;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1);   opacity: 0.15; box-shadow: 0 0 0 0 rgba(255,107,53,0); }
+      8%       { transform: scale(2);   opacity: 0.9;  box-shadow: 0 0 24px 6px rgba(255,107,53,0.35); }
+      18%      { transform: scale(1);   opacity: 0.2;  box-shadow: 0 0 0 0 rgba(255,107,53,0); }
+      26%      { transform: scale(1.5); opacity: 0.65; box-shadow: 0 0 16px 4px rgba(255,107,53,0.2); }
+      36%      { transform: scale(1);   opacity: 0.15; box-shadow: 0 0 0 0 rgba(255,107,53,0); }
+    }
+
+    .sleep-text {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: lowercase;
+      color: rgba(245, 237, 227, 0.12);
+      animation: sleepPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes sleepPulse {
+      0%, 100% { opacity: 0.12; }
+      50%      { opacity: 0.22; }
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 40px;
+      color: rgba(245,237,227,0.07);
+      font-size: 1.2rem;
+      animation: hintFloat 2.5s ease-in-out infinite;
+    }
+
+    @keyframes hintFloat {
+      0%, 100% { transform: translateY(0); opacity: 0.07; }
+      50%      { transform: translateY(10px); opacity: 0.15; }
+    }
+
+    /* Awake layer */
+    .awake-layer {
+      position: relative;
+      z-index: 5;
+      text-align: center;
+      padding: 0 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake .awake-layer { opacity: 1; pointer-events: auto; }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(4rem, 13vw, 11rem);
+      font-weight: 800;
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+      color: var(--fg);
+      will-change: transform;
+    }
+
+    .title-word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(90px) rotateX(-30deg);
+      transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: var(--wake-delay, 0s);
+      margin: 0 0.08em;
+    }
+
+    body.awake .title-word {
+      opacity: 1;
+      transform: translateY(0) rotateX(0);
+    }
+
+    .title-word:nth-child(2) { color: var(--accent); }
+
+    .hero-sub {
+      margin-top: 28px;
+      font-size: 1.15rem;
+      font-weight: 300;
+      color: var(--muted);
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.7;
+      opacity: 0;
+      transform: translateY(25px);
+      transition: opacity 0.9s ease, transform 0.9s ease;
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake .hero-sub { opacity: 1; transform: translateY(0); }
+
+    .hero-hint {
+      margin-top: 48px;
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: rgba(245,237,227,0.2);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 1s ease;
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake .hero-hint { opacity: 1; }
+
+    /* ── Features ── */
+    .features {
+      position: relative;
+      z-index: 2;
+      padding: 40px 40px 100px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      grid-column: 1 / -1;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      transition-delay: var(--wake-delay, 0s);
+      margin-bottom: 12px;
+    }
+
+    body.awake .section-label { opacity: 1; transform: translateY(0); }
+
+    .feature-card {
+      position: relative;
+      padding: 40px 32px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.025);
+      background: transparent;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(50px) scale(0.94);
+      transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake .feature-card {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      background: var(--card);
+      border-color: var(--border);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+    }
+
+    body.awake .feature-card:hover {
+      border-color: rgba(255,107,53,0.35);
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 60px rgba(255,107,53,0.08);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle 200px at var(--card-mx, 50%) var(--card-my, 50%),
+        rgba(255,107,53,0.08), transparent);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      pointer-events: none;
+      border-radius: 16px;
+    }
+
+    body.awake .feature-card:hover::before { opacity: 1; }
+
+    .feature-card i {
+      font-size: 1.6rem;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    body.awake .feature-card:hover i { transform: scale(1.15) rotate(-5deg); }
+
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--fg);
+    }
+
+    .feature-card p {
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    /* ── Stats ── */
+    .stats {
+      position: relative;
+      z-index: 2;
+      padding: 20px 40px 100px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 36px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.025);
+      background: transparent;
+      opacity: 0;
+      transform: translateY(35px);
+      transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake .stat-item {
+      opacity: 1;
+      transform: translateY(0);
+      background: var(--card);
+      border-color: var(--border);
+    }
+
+    body.awake .stat-item:hover {
+      border-color: rgba(255,107,53,0.25);
+      transform: translateY(-3px);
+    }
+
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 500;
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 2;
+      padding: 48px 40px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.02);
+      opacity: 0;
+      transform: translateY(15px);
+      transition: all 0.9s ease;
+      transition-delay: var(--wake-delay, 0s);
+    }
+
+    body.awake footer {
+      opacity: 1;
+      transform: translateY(0);
+      border-color: rgba(255,107,53,0.06);
+    }
+
+    footer p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 300;
+    }
+
+    footer span { color: var(--accent); font-weight: 600; }
+
+    /* ── Reset Button ── */
+    #resetBtn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: rgba(5,5,5,0.85);
+      color: var(--muted);
+      cursor: pointer;
+      z-index: 200;
+      opacity: 0;
+      transform: scale(0) rotate(-90deg);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: 2.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      backdrop-filter: blur(10px);
+    }
+
+    body.awake #resetBtn {
+      opacity: 0.7;
+      transform: scale(1) rotate(0deg);
+    }
+
+    #resetBtn:hover {
+      opacity: 1 !important;
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: scale(1.12) rotate(0deg) !important;
+      box-shadow: 0 0 20px rgba(255,107,53,0.15);
+    }
+
+    #resetBtn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      right: 28px;
+      z-index: 300;
+      background: rgba(5,5,5,0.9);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.4s ease;
+      pointer-events: none;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+      nav { padding: 16px 20px; }
+      .features { padding: 20px 20px 80px; gap: 16px; }
+      .nav-links { display: none; }
+      .hero-title { font-size: clamp(3rem, 16vw, 6rem); }
+      .feature-card { padding: 28px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      .stats { grid-template-columns: 1fr 1fr; padding: 20px 16px 80px; }
+      .stat-item { padding: 24px 12px; }
+    }
+
+    /* ── Reduced Motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .heartbeat-dot { animation: none; opacity: 0.3; }
+      .sleep-text { animation: none; }
+      .scroll-hint { animation: none; }
+      .title-word { transition-duration: 0.3s !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background layers -->
+  <div id="gridBg" class="bg-effect"></div>
+  <div id="mouseGlow" class="bg-effect"></div>
+
+  <!-- Particle canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Awakening effects -->
+  <div id="ripple1" class="ripple-ring"></div>
+  <div id="ripple2" class="ripple-ring"></div>
+  <div id="flash"></div>
+
+  <!-- Navigation -->
+  <nav data-wake>
+    <div class="nav-logo">AWAKE.</div>
+    <ul class="nav-links">
+      <li><a href="#hero">Experience</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#stats">Stats</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero" id="hero">
+      <div class="sleeping-layer" id="sleepingLayer">
+        <div class="heartbeat-dot" id="heartbeatDot"></div>
+        <p class="sleep-text">hover once…</p>
+        <div class="scroll-hint"><i class="fas fa-chevron-down"></i></div>
+      </div>
+      <div class="awake-layer" data-wake>
+        <h1 class="hero-title" id="heroTitle">
+          <span class="title-word">IT</span>
+          <span class="title-word">WAKES</span>
+          <span class="title-word">UP</span>
+        </h1>
+        <p class="hero-sub" data-wake>A single hover brought an entire website to life. Every element, every color, every particle — awakened by your cursor.</p>
+        <p class="hero-hint" data-wake>move your cursor to feel it breathe</p>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+      <div class="section-label" data-wake>What Just Happened</div>
+      <div class="feature-card" data-wake>
+        <i class="fas fa-bullseye"></i>
+        <h3>Ripple Shockwave</h3>
+        <p>A shockwave expanded from your cursor — the first heartbeat of a page that was holding its breath.</p>
+      </div>
+      <div class="feature-card" data-wake>
+        <i class="fas fa-droplet"></i>
+        <h3>Color Cascade</h3>
+        <p>Color flooded outward from the point of contact, waking every element in its path based on distance.</p>
+      </div>
+      <div class="feature-card" data-wake>
+        <i class="fas fa-fire"></i>
+        <h3>Particle Storm</h3>
+        <p>Dozens of particles burst from the impact point and continue drifting through the newly awakened space.</p>
+      </div>
+      <div class="feature-card" data-wake>
+        <i class="fas fa-wind"></i>
+        <h3>Living Motion</h3>
+        <p>Nothing stays still. Particles drift, glows follow your cursor, cards respond to your presence.</p>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats" id="stats">
+      <div class="stat-item" data-wake>
+        <div class="stat-number" data-target="16" data-suffix="ms">0ms</div>
+        <div class="stat-label">Response Time</div>
+      </div>
+      <div class="stat-item" data-wake>
+        <div class="stat-number" data-target="1247" data-suffix="">0</div>
+        <div class="stat-label">Particles Spawned</div>
+      </div>
+      <div class="stat-item" data-wake>
+        <div class="stat-number" data-target="100" data-suffix="%">0%</div>
+        <div class="stat-label">Elements Awakened</div>
+      </div>
+      <div class="stat-item" data-wake>
+        <div class="stat-number" data-target="60" data-suffix="fps">0fps</div>
+        <div class="stat-label">Frames Per Second</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer data-wake>
+    <p>You hovered once. <span>Everything changed.</span></p>
+  </footer>
+
+  <!-- Reset button -->
+  <button id="resetBtn" data-wake aria-label="Put the website back to sleep">
+    <i class="fas fa-moon"></i>
+  </button>
+
+  <!-- Toast for reset feedback -->
+  <div class="toast" id="toast">The page is sleeping again… hover to wake it.</div>
+
+  <script>
+    /* ── State ── */
+    let isAwake = false;
+    let canAwaken = true;
+    let particles = [];
+    let animFrameId = null;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const MAX_PARTICLES = reducedMotion ? 30 : 130;
+
+    /* ── Canvas Setup ── */
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    /* ── Particle Colors (RGB arrays) ── */
+    const pColors = [
+      [255, 107, 53],
+      [255, 170, 90],
+      [0, 229, 160],
+      [245, 237, 227],
+      [255, 130, 70],
+    ];
+
+    /* ── Particle Class ── */
+    class Particle {
+      constructor(x, y, burst) {
+        this.x = x !== undefined ? x : Math.random() * canvas.width;
+        this.y = y !== undefined ? y : Math.random() * canvas.height;
+        this.size = Math.random() * 2.5 + 0.5;
+        this.speedX = burst ? (Math.random() - 0.5) * 5 : (Math.random() - 0.5) * 0.35;
+        this.speedY = burst ? (Math.random() - 0.5) * 5 : -Math.random() * 0.55 - 0.1;
+        this.opacity = Math.random() * 0.45 + 0.1;
+        this.life = 1;
+        this.decay = burst ? (Math.random() * 0.012 + 0.006) : (Math.random() * 0.0025 + 0.0008);
+        if (burst) this.size = Math.random() * 3.5 + 1;
+        const c = pColors[Math.floor(Math.random() * pColors.length)];
+        this.r = c[0]; this.g = c[1]; this.b = c[2];
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (!burst) this.speedX *= 0.999;
+        this.life -= this.decay;
+      }
+      draw() {
+        const a = Math.max(0, this.life * this.opacity);
+        const s = Math.max(0.1, this.size * this.life);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, s, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${this.r},${this.g},${this.b},${a})`;
+        ctx.fill();
+        /* Subtle glow for larger particles */
+        if (s > 1.5) {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, s * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${this.r},${this.g},${this.b},${a * 0.12})`;
+          ctx.fill();
+        }
+      }
+    }
+
+    /* ── Particle Animation Loop ── */
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      /* Spawn ambient particles */
+      if (particles.length < MAX_PARTICLES && Math.random() < 0.35) {
+        particles.push(new Particle());
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0 || particles[i].y < -20 || particles[i].x < -20 || particles[i].x > canvas.width + 20) {
+          particles.splice(i, 1);
+        }
+      }
+      animFrameId = requestAnimationFrame(animateParticles);
+    }
+
+    /* ── Set Wake Delays (distance-based cascade) ── */
+    function setWakeDelays(cx, cy) {
+      document.querySelectorAll('[data-wake]').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const ex = rect.left + rect.width / 2;
+        const ey = rect.top + rect.height / 2;
+        const dist = Math.sqrt((ex - cx) ** 2 + (ey - cy) ** 2);
+        const delay = Math.max(0.12, dist * 0.0007);
+        el.style.setProperty('--wake-delay', delay + 's');
+      });
+
+      /* Special stagger for title words */
+      document.querySelectorAll('.title-word').forEach((w, i) => {
+        const base = 0.18 + i * 0.16;
+        w.style.setProperty('--wake-delay', base + 's');
+      });
+
+      /* Hero sub and hint */
+      const sub = document.querySelector('.hero-sub');
+      if (sub) sub.style.setProperty('--wake-delay', '0.85s');
+      const hint = document.querySelector('.hero-hint');
+      if (hint) hint.style.setProperty('--wake-delay', '1.3s');
+
+      /* Awake layer overall */
+      const al = document.querySelector('.awake-layer');
+      if (al) al.style.setProperty('--wake-delay', '0.08s');
+    }
+
+    /* ── Create Ripple & Flash ── */
+    function createRipple(x, y) {
+      const r1 = document.getElementById('ripple1');
+      const r2 = document.getElementById('ripple2');
+      const fl = document.getElementById('flash');
+
+      [r1, r2, fl].forEach(el => {
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+      });
+
+      fl.classList.add('active');
+      r1.classList.add('active');
+      setTimeout(() => r2.classList.add('active'), 160);
+
+      /* Burst particles from cursor */
+      const burstCount = reducedMotion ? 10 : 50;
+      for (let i = 0; i < burstCount; i++) {
+        particles.push(new Particle(x, y, true));
+      }
+    }
+
+    /* ── Animate Stat Counters ── */
+    function animateCounters() {
+      document.querySelectorAll('[data-target]').forEach(el => {
+        const target = parseInt(el.getAttribute('data-target'));
+        const suffix = el.getAttribute('data-suffix') || '';
+        const duration = 2200;
+        const start = performance.now();
+
+        function tick(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          /* Ease out quart */
+          const eased = 1 - Math.pow(1 - progress, 4);
+          const current = Math.round(eased * target);
+          el.textContent = current.toLocaleString() + suffix;
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+
+    /* ── Parallax (hero title follows cursor subtly) ── */
+    let parallaxActive = false;
+    function handleParallax(e) {
+      if (!parallaxActive) return;
+      const nx = (e.clientX / window.innerWidth - 0.5) * 2;
+      const ny = (e.clientY / window.innerHeight - 0.5) * 2;
+
+      const title = document.getElementById('heroTitle');
+      if (title) title.style.transform = `translate(${nx * -10}px, ${ny * -6}px)`;
+
+      /* Update mouse glow */
+      document.body.style.setProperty('--mouse-x', e.clientX + 'px');
+      document.body.style.setProperty('--mouse-y', e.clientY + 'px');
+    }
+
+    /* ── Card Spotlight ── */
+    document.querySelectorAll('.feature-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--card-mx', (e.clientX - rect.left) + 'px');
+        card.style.setProperty('--card-my', (e.clientY - rect.top) + 'px');
+      });
+    });
+
+    /* ── Smooth Scroll for Nav Links ── */
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    /* ── Show Toast ── */
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 3000);
+    }
+
+    /* ── THE AWAKENING ── */
+    function awaken(x, y) {
+      if (isAwake) return;
+      isAwake = true;
+
+      /* 1. Calculate cascade delays based on cursor position */
+      setWakeDelays(x, y);
+
+      /* 2. Fire visual effects */
+      createRipple(x, y);
+
+      /* 3. Add awake class (triggers all CSS transitions) */
+      setTimeout(() => {
+        document.body.classList.add('awake');
+      }, 80);
+
+      /* 4. Start ambient particle system */
+      setTimeout(() => {
+        animateParticles();
+      }, 250);
+
+      /* 5. Start stat counters */
+      setTimeout(() => {
+        animateCounters();
+      }, 1100);
+
+      /* 6. Enable parallax + mouse glow */
+      setTimeout(() => {
+        parallaxActive = true;
+        document.addEventListener('mousemove', handleParallax);
+      }, 400);
+    }
+
+    /* ── Reset to Sleeping State ── */
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      isAwake = false;
+      parallaxActive = false;
+      document.removeEventListener('mousemove', handleParallax);
+
+      /* Remove awake class */
+      document.body.classList.remove('awake');
+
+      /* Stop & clear particles */
+      particles = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+
+      /* Reset ripple/flash classes */
+      document.querySelectorAll('.ripple-ring').forEach(r => r.classList.remove('active'));
+      const fl = document.getElementById('flash');
+      fl.classList.remove('active');
+      /* Force reflow so animations can replay */
+      void fl.offsetWidth;
+
+      /* Reset counters */
+      document.querySelectorAll('[data-target]').forEach(c => {
+        c.textContent = '0' + (c.getAttribute('data-suffix') || '');
+      });
+
+      /* Reset hero title transform */
+      const title = document.getElementById('heroTitle');
+      if (title) title.style.transform = '';
+
+      /* Prevent immediate re-trigger */
+      canAwaken = false;
+      showToast('The page is sleeping again… hover to wake it.');
+      setTimeout(() => { canAwaken = true; }, 600);
+    });
+
+    /* ── Listen for First Hover / Touch ── */
+    document.addEventListener('mousemove', e => {
+      if (!isAwake && canAwaken) {
+        awaken(e.clientX, e.clientY);
+      }
+      /* Also update glow if awake but parallax not yet active */
+      if (isAwake && !parallaxActive) {
+        document.body.style.setProperty('--mouse-x', e.clientX + 'px');
+        document.body.style.setProperty('--mouse-y', e.clientY + 'px');
+      }
+    });
+
+    document.addEventListener('touchstart', e => {
+      if (!isAwake && canAwaken) {
+        const t = e.touches[0];
+        awaken(t.clientX, t.clientY);
+      }
+    }, { passive: true });
+  </script>
+</body>
+</html>

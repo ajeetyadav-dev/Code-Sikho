@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS Command Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #060a14;
+            --fg: #d8e2ec;
+            --muted: #2a3a55;
+            --accent: #00f0ff;
+            --accent2: #ff6b2b;
+            --accent3: #00ff88;
+            --card: rgba(8, 16, 32, 0.78);
+            --border: rgba(0, 240, 255, 0.13);
+            --danger: #ff2255;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: var(--bg);
+            color: var(--fg);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        .font-display { font-family: 'Orbitron', sans-serif; }
+
+        /* === Boot Screen === */
+        #boot {
+            background: #000;
+            cursor: pointer;
+        }
+        .boot-cursor::after {
+            content: '█';
+            animation: blink 0.8s step-end infinite;
+            color: var(--accent);
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* === Overlays === */
+        #bg-canvas { position: fixed; inset: 0; z-index: 0; }
+        .scan-line {
+            position: fixed; left: 0; right: 0; height: 2px; z-index: 90;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.25;
+            animation: scanMove 5s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scanMove { from{top:-2px} to{top:100vh} }
+        .scanlines {
+            position: fixed; inset: 0; z-index: 89; pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+        }
+        .vignette {
+            position: fixed; inset: 0; z-index: 88; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+        }
+
+        /* === Panels === */
+        .panel {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            backdrop-filter: blur(12px);
+            animation: panelBreathe 5s ease-in-out infinite;
+            overflow: hidden;
+        }
+        .panel::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, rgba(0,240,255,0.06) 1px, transparent 1px);
+            background-size: 18px 18px;
+            pointer-events: none;
+            border-radius: inherit;
+        }
+        @keyframes panelBreathe {
+            0%,100% { box-shadow: 0 0 20px rgba(0,240,255,0.04), inset 0 0 20px rgba(0,240,255,0.01); }
+            50% { box-shadow: 0 0 35px rgba(0,240,255,0.09), inset 0 0 30px rgba(0,240,255,0.03); }
+        }
+        .panel:hover {
+            border-color: rgba(0,240,255,0.3);
+            box-shadow: 0 0 40px rgba(0,240,255,0.1), inset 0 0 30px rgba(0,240,255,0.04);
+        }
+
+        /* === Diag Bars === */
+        .diag-bar {
+            transition: width 0.8s ease;
+            position: relative;
+        }
+        .diag-bar::after {
+            content: '';
+            position: absolute; right: 0; top: 0; bottom: 0; width: 20px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15));
+            border-radius: 0 9999px 9999px 0;
+        }
+
+        /* === Threat Segments === */
+        .threat-seg {
+            background: rgba(255,255,255,0.04);
+            border-radius: 2px;
+            transition: all 0.5s;
+        }
+        .threat-seg.active {
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        /* === Waveform === */
+        .wave-bar {
+            width: 3px;
+            border-radius: 1px;
+            background: var(--accent);
+            animation: waveAnim 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes waveAnim { from{height:20%} to{height:100%} }
+
+        /* === Scroll Text === */
+        .scroll-wrap { overflow: hidden; }
+        .scroll-text {
+            display: inline-block;
+            white-space: nowrap;
+            animation: scrollTxt 45s linear infinite;
+            padding-left: 100%;
+        }
+        @keyframes scrollTxt { from{transform:translateX(0)} to{transform:translateX(-100%)} }
+
+        /* === Float === */
+        @keyframes floatY {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* === Comm entry === */
+        .comm-entry { transition: all 0.35s ease; }
+
+        /* === Glitch === */
+        @keyframes glitch {
+            0%,92%,100% { transform: none; opacity: 1; }
+            93% { transform: translateX(-3px) skewX(-1deg); opacity: 0.8; }
+            95% { transform: translateX(2px) skewX(0.5deg); opacity: 0.9; }
+            97% { transform: translateX(-1px); opacity: 1; }
+        }
+        .glitch-text { animation: glitch 6s ease-in-out infinite; }
+
+        /* === Responsive === */
+        @media (max-width: 1024px) {
+            .main-grid { grid-template-columns: 1fr !important; }
+            .side-panel { display: none !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<!-- ====== BOOT SCREEN ====== -->
+<div id="boot" class="fixed inset-0 z-[200] flex items-center justify-center">
+    <div class="text-center">
+        <div id="boot-line1" class="font-display text-xl md:text-2xl tracking-[0.25em] boot-cursor" style="color: var(--accent)"></div>
+        <div id="boot-line2" class="text-sm mt-5 tracking-wider boot-cursor" style="color: var(--muted)"></div>
+        <div class="mt-8 w-72 md:w-80 h-1 rounded-full overflow-hidden mx-auto" style="background: rgba(255,255,255,0.06)">
+            <div id="boot-bar" class="h-full rounded-full" style="background: var(--accent); width:0%; transition:width 0.15s"></div>
+        </div>
+        <div id="boot-status" class="font-display text-xs mt-5 tracking-[0.4em] opacity-0" style="color: var(--accent3); transition: opacity 0.4s;">SYSTEM ONLINE</div>
+        <div class="text-[10px] mt-8 tracking-wider" style="color: rgba(255,255,255,0.15)">CLICK TO SKIP</div>
+    </div>
+</div>
+
+<!-- ====== MAIN UI ====== -->
+<div id="main-ui" class="fixed inset-0 flex flex-col" style="opacity:0; z-index:1;">
+
+    <canvas id="bg-canvas"></canvas>
+    <div class="scan-line"></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <!-- Header -->
+    <header class="relative z-10 flex items-center justify-between px-4 md:px-6 py-2.5 shrink-0" style="border-bottom:1px solid var(--border); background:rgba(6,10,20,0.85); backdrop-filter:blur(14px);">
+        <div class="flex items-center gap-3 md:gap-5">
+            <div class="font-display font-bold text-base md:text-lg tracking-[0.2em] glitch-text" style="color:var(--accent)">NEXUS</div>
+            <div class="hidden sm:block text-[10px] tracking-wider" style="color:var(--muted)">COMMAND v4.7.2</div>
+            <div class="flex items-center gap-1.5 ml-2">
+                <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--danger)"></div>
+                <span class="text-[10px] tracking-wider" style="color:var(--danger)">REC</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 md:gap-6">
+            <div class="hidden md:flex items-center gap-2">
+                <i class="fas fa-satellite-dish text-[10px]" style="color:var(--accent)"></i>
+                <span class="text-[10px]">LINK ACTIVE</span>
+            </div>
+            <div class="hidden md:flex items-center gap-2">
+                <i class="fas fa-shield-halved text-[10px]" style="color:var(--accent3)"></i>
+                <span class="text-[10px]">SHIELDS 100%</span>
+            </div>
+            <div class="flex items-end gap-[2px] h-3">
+                <div class="wave-bar" style="animation-delay:0s"></div>
+                <div class="wave-bar" style="animation-delay:0.15s"></div>
+                <div class="wave-bar" style="animation-delay:0.3s"></div>
+                <div class="wave-bar" style="animation-delay:0.45s"></div>
+                <div class="wave-bar" style="animation-delay:0.6s"></div>
+            </div>
+            <div id="clock" class="font-display text-xs md:text-sm tracking-[0.15em]" style="color:var(--accent)"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-grid relative z-10 flex-1 grid grid-cols-[260px_1fr_280px] gap-3 p-3 min-h-0">
+
+        <!-- Left Panel: Diagnostics -->
+        <aside class="side-panel panel p-4 flex flex-col gap-3 overflow-y-auto">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full" style="background:var(--accent)"></div>
+                <h2 class="font-display text-[10px] tracking-[0.2em]">SYSTEM DIAGNOSTICS</h2>
+            </div>
+
+            <!-- CPU -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>CPU LOAD</span><span id="cpu-val" style="color:var(--accent)">78.4%</span></div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.04)">
+                    <div id="cpu-bar" class="diag-bar h-full rounded-full" style="width:78.4%; background:linear-gradient(90deg, var(--accent), rgba(0,240,255,0.5))"></div>
+                </div>
+            </div>
+            <!-- Memory -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>MEMORY</span><span id="mem-val" style="color:var(--accent)">72.1%</span></div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.04)">
+                    <div id="mem-bar" class="diag-bar h-full rounded-full" style="width:72.1%; background:linear-gradient(90deg, var(--accent), rgba(0,240,255,0.5))"></div>
+                </div>
+            </div>
+            <!-- Power -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>REACTOR OUTPUT</span><span id="pow-val" style="color:var(--accent3)">94.2%</span></div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.04)">
+                    <div id="pow-bar" class="diag-bar h-full rounded-full" style="width:94.2%; background:linear-gradient(90deg, var(--accent3), rgba(0,255,136,0.5))"></div>
+                </div>
+            </div>
+            <!-- Shield -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>SHIELD INTEGRITY</span><span id="shd-val" style="color:var(--accent3)">100.0%</span></div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.04)">
+                    <div id="shd-bar" class="diag-bar h-full rounded-full" style="width:100%; background:linear-gradient(90deg, var(--accent3), rgba(0,255,136,0.5))"></div>
+                </div>
+            </div>
+            <!-- Thermal -->
+            <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>THERMAL</span><span id="tmp-val" style="color:var(--accent2)">44.7°C</span></div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.04)">
+                    <div id="tmp-bar" class="diag-bar h-full rounded-full" style="width:44.7%; background:linear-gradient(90deg, var(--accent2), rgba(255,107,43,0.5))"></div>
+                </div>
+            </div>
+
+            <!-- Threat Level -->
+            <div class="mt-2 pt-3" style="border-top:1px solid var(--border)">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-1.5 h-1.5 rounded-full" style="background:var(--accent2)"></div>
+                    <h2 class="font-display text-[10px] tracking-[0.2em]">THREAT ASSESSMENT</h2>
+                </div>
+                <div id="threat-label" class="font-display text-2xl font-bold tracking-wider" style="color:var(--accent2)">ELEVATED</div>
+                <div class="flex gap-1 mt-2" id="threat-bar">
+                    <div class="threat-seg h-2 flex-1 active" style="color:var(--accent3); background:var(--accent3)"></div>
+                    <div class="threat-seg h-2 flex-1 active" style="color:var(--accent3); background:var(--accent3)"></div>
+                    <div class="threat-seg h-2 flex-1" style="color:#e8c840"></div>
+                    <div class="threat-seg h-2 flex-1" style="color:#e8c840"></div>
+                    <div class="threat-seg h-2 flex-1 active" style="color:var(--accent2); background:var(--accent2)"></div>
+                    <div class="threat-seg h-2 flex-1 active" style="color:var(--accent2); background:var(--accent2)"></div>
+                    <div class="threat-seg h-2 flex-1" style="color:var(--danger)"></div>
+                    <div class="threat-seg h-2 flex-1" style="color:var(--danger)"></div>
+                </div>
+            </div>
+
+            <!-- Subsystems -->
+            <div class="mt-2 pt-3" style="border-top:1px solid var(--border)">
+                <h3 class="font-display text-[10px] tracking-[0.15em] mb-2" style="color:var(--muted)">SUBSYSTEMS</h3>
+                <div class="flex flex-col gap-1.5 text-[11px]">
+                    <div class="flex justify-between"><span>NAVIGATION</span><span style="color:var(--accent3)">ONLINE</span></div>
+                    <div class="flex justify-between"><span>LIFE SUPPORT</span><span style="color:var(--accent3)">ONLINE</span></div>
+                    <div class="flex justify-between"><span>WEAPONS ARRAY</span><span style="color:var(--accent3)">ONLINE</span></div>
+                    <div class="flex justify-between"><span>CLOAKING</span><span style="color:var(--accent2)">STANDBY</span></div>
+                    <div class="flex justify-between"><span>WARP DRIVE</span><span style="color:var(--muted)">OFFLINE</span></div>
+                    <div class="flex justify-between"><span>COMMS RELAY</span><span style="color:var(--accent3)">ONLINE</span></div>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-3 text-[10px]" style="border-top:1px solid var(--border); color:var(--muted)">
+                <span class="boot-cursor">AWAITING INPUT</span>
+            </div>
+        </aside>
+
+        <!-- Center: Globe -->
+        <section class="relative flex items-center justify-center min-h-0">
+            <canvas id="globe-canvas" class="w-full h-full"></canvas>
+
+            <!-- Floating Data Cards -->
+            <div class="panel absolute top-4 left-4 p-3 text-[11px] z-10" style="animation:floatY 6s ease-in-out infinite; min-width:130px;">
+                <div style="color:var(--muted)">ENTITIES TRACKED</div>
+                <div class="font-display text-xl font-bold mt-1" style="color:var(--accent)" id="entity-count">2,847</div>
+            </div>
+            <div class="panel absolute top-4 right-4 p-3 text-[11px] z-10" style="animation:floatY 6s ease-in-out infinite 2s; min-width:130px;">
+                <div style="color:var(--muted)">DATA THROUGHPUT</div>
+                <div class="font-display text-xl font-bold mt-1" style="color:var(--accent3)" id="throughput">847 TB/s</div>
+            </div>
+            <div class="panel absolute bottom-12 left-4 p-3 text-[11px] z-10" style="animation:floatY 6s ease-in-out infinite 4s; min-width:130px;">
+                <div style="color:var(--muted)">ACTIVE ALERTS</div>
+                <div class="font-display text-xl font-bold mt-1" style="color:var(--accent2)" id="alerts-count">23</div>
+            </div>
+
+            <!-- Globe Label -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 text-center z-10">
+                <div class="font-display text-[11px] tracking-[0.35em]" style="color:var(--accent)">SECTOR 7-G</div>
+                <div class="text-[10px] mt-0.5" style="color:var(--muted)">ACTIVE MONITORING</div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Communications -->
+        <aside class="side-panel panel p-4 flex flex-col min-h-0">
+            <div class="flex items-center gap-2 mb-3 shrink-0">
+                <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--accent)"></div>
+                <h2 class="font-display text-[10px] tracking-[0.2em]">COMMUNICATIONS LOG</h2>
+            </div>
+            <div id="comms-log" class="flex-1 overflow-y-auto flex flex-col gap-2 text-[11px] pr-1 min-h-0"></div>
+            <div class="mt-3 pt-3 shrink-0 flex items-center justify-between" style="border-top:1px solid var(--border)">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full" style="background:var(--accent3)"></div>
+                    <span class="text-[10px]">CHANNEL OPEN</span>
+                </div>
+                <span class="text-[10px]" style="color:var(--muted)">FREQ 447.8 MHz</span>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 flex items-center px-4 md:px-6 py-2 text-[10px] shrink-0" style="border-top:1px solid var(--border); background:rgba(6,10,20,0.85); backdrop-filter:blur(14px);">
+        <div class="flex items-center gap-3 md:gap-5 shrink-0">
+            <span style="color:var(--muted)">LAT <span style="color:var(--fg)">45.234°N</span></span>
+            <span style="color:var(--muted)">LON <span style="color:var(--fg)">127.891°W</span></span>
+            <span class="hidden sm:inline" style="color:var(--muted)">ALT <span style="color:var(--fg)">42,000 KM</span></span>
+        </div>
+        <div class="scroll-wrap flex-1 mx-4 md:mx-8">
+            <div class="scroll-text" style="color:var(--muted)">
+                NEXUS COMMAND SYSTEM — CLASSIFIED OPERATIONS DIVISION — AUTHORIZED PERSONNEL ONLY — CLEARANCE LEVEL OMEGA — ALL TRANSMISSIONS MONITORED — SECTOR 7-G ACTIVE MONITORING ENGAGED — PRIORITY ALPHA DIRECTIVES IN EFFECT — DEFCON STATUS: 3 — NEXT FLEET SYNC: 04:00:00 UTC — ANOMALY DETECTION SENSITIVITY: MAXIMUM — PERIMETER INTEGRITY: NOMINAL —
+            </div>
+        </div>
+        <div class="shrink-0 flex items-center gap-2">
+            <span style="color:var(--accent3)">UPLINK</span>
+            <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--accent3)"></div>
+        </div>
+    </footer>
+</div>
+
+<script>
+/* ============================================================
+   NEXUS COMMAND INTERFACE — Main Script
+   ============================================================ */
+
+const dpr = window.devicePixelRatio || 1;
+
+// ——— Utility ———
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function typeText(el, text, speed = 50) {
+    return new Promise(resolve => {
+        let i = 0;
+        const iv = setInterval(() => {
+            el.textContent += text[i]; i++;
+            if (i >= text.length) { clearInterval(iv); resolve(); }
+        }, speed);
+    });
+}
+
+// ——— Boot Sequence ———
+(async function boot() {
+    const line1 = document.getElementById('boot-line1');
+    const line2 = document.getElementById('boot-line2');
+    const bar   = document.getElementById('boot-bar');
+    const status = document.getElementById('boot-status');
+    const bootEl = document.getElementById('boot');
+    const mainEl = document.getElementById('main-ui');
+    let done = false;
+
+    function finish() {
+        if (done) return; done = true;
+        bootEl.style.transition = 'opacity 0.6s ease';
+        bootEl.style.opacity = '0';
+        mainEl.style.transition = 'opacity 0.8s ease 0.2s';
+        mainEl.style.opacity = '1';
+        setTimeout(() => bootEl.remove(), 800);
+    }
+
+    bootEl.addEventListener('click', finish);
+
+    await typeText(line1, 'NEXUS COMMAND SYSTEM', 55);
+    await delay(250);
+    await typeText(line2, 'INITIALIZING SUBSYSTEMS...', 35);
+
+    for (let i = 0; i <= 100; i += 2) {
+        bar.style.width = i + '%';
+        await delay(18);
+    }
+    await delay(250);
+    status.style.opacity = '1';
+    await delay(700);
+    finish();
+})();
+
+// ——— Background Particles ———
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+
+function resizeBg() {
+    bgCanvas.width = window.innerWidth * dpr;
+    bgCanvas.height = window.innerHeight * dpr;
+    bgCanvas.style.width = window.innerWidth + 'px';
+    bgCanvas.style.height = window.innerHeight + 'px';
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+const particles = [];
+const PCOUNT = 90;
+const CDIST = 130;
+
+for (let i = 0; i < PCOUNT; i++) {
+    particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+        size: Math.random() * 1.5 + 0.5
+    });
+}
+
+function drawParticles() {
+    const w = window.innerWidth, h = window.innerHeight;
+    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bgCtx.clearRect(0, 0, w, h);
+
+    // Subtle radial ambient glow
+    const rg = bgCtx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.45, w * 0.6);
+    rg.addColorStop(0, 'rgba(0, 240, 255, 0.015)');
+    rg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    bgCtx.fillStyle = rg;
+    bgCtx.fillRect(0, 0, w, h);
+
+    for (const p of particles) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+        bgCtx.beginPath();
+        bgCtx.arc(p.x, p.y, Math.max(0.3, p.size), 0, Math.PI * 2);
+        bgCtx.fillStyle = 'rgba(0, 240, 255, 0.35)';
+        bgCtx.fill();
+    }
+
+    for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const d = dx * dx + dy * dy;
+            if (d < CDIST * CDIST) {
+                const opacity = (1 - Math.sqrt(d) / CDIST) * 0.1;
+                bgCtx.beginPath();
+                bgCtx.moveTo(particles[i].x, particles[i].y);
+                bgCtx.lineTo(particles[j].x, particles[j].y);
+                bgCtx.strokeStyle = `rgba(0, 240, 255, ${opacity})`;
+                bgCtx.lineWidth = 0.5;
+                bgCtx.stroke();
+            }
+        }
+    }
+}
+
+// ——— Wireframe Globe ———
+const globeCanvas = document.getElementById('globe-canvas');
+const globeCtx = globeCanvas.getContext('2d');
+
+function resizeGlobe() {
+    const c = globeCanvas.parentElement;
+    globeCanvas.width = c.clientWidth * dpr;
+    globeCanvas.height = c.clientHeight * dpr;
+    globeCanvas.style.width = c.clientWidth + 'px';
+    globeCanvas.style.height = c.clientHeight + 'px';
+}
+resizeGlobe();
+window.addEventListener('resize', resizeGlobe);
+
+const globe = {
+    rot: 0,
+    speed: 0.25,
+    nodes: [],
+    arcs: [],
+    ripples: []
+};
+
+// Create data nodes on the sphere
+for (let i = 0; i < 20; i++) {
+    globe.nodes.push({
+        lat: (Math.random() - 0.5) * 150,
+        lon: Math.random() * 360,
+        phase: Math.random() * Math.PI * 2,
+        size: 1.8 + Math.random() * 2.2,
+        isAlert: Math.random() > 0.75
+    });
+}
+
+// Create connection arcs between random node pairs
+for (let i = 0; i < 12; i++) {
+    let a = Math.floor(Math.random() * globe.nodes.length);
+    let b = Math.floor(Math.random() * globe.nodes.length);
+    while (b === a) b = Math.floor(Math.random() * globe.nodes.length);
+    globe.arcs.push({ a, b, t: Math.random(), spd: 0.0015 + Math.random() * 0.003 });
+}
+
+function proj(lat, lon, r, cx, cy, rot) {
+    const phi = lat * Math.PI / 180;
+    const theta = (lon + rot) * Math.PI / 180;
+    return {
+        x: cx + r * Math.cos(phi) * Math.sin(theta),
+        y: cy - r * Math.sin(phi),
+        z: r * Math.cos(phi) * Math.cos(theta)
+    };
+}
+
+function drawGlobe() {
+    const w = globeCanvas.width / dpr;
+    const h = globeCanvas.height / dpr;
+    const cx = w / 2, cy = h / 2;
+    const r = Math.max(10, Math.min(w, h) * 0.34);
+
+    globeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    globeCtx.clearRect(0, 0, w, h);
+
+    // Chromatic glow layers
+    const glows = [
+        { color: '255, 60, 100', ox: -3, a: 0.02 },
+        { color: '0, 240, 255',  ox: 0,  a: 0.05 },
+        { color: '0, 255, 120',  ox: 3,  a: 0.02 }
+    ];
+    for (const g of glows) {
+        const grd = globeCtx.createRadialGradient(cx + g.ox, cy, r * 0.85, cx + g.ox, cy, r * 1.35);
+        grd.addColorStop(0, `rgba(${g.color}, ${g.a})`);
+        grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        globeCtx.fillStyle = grd;
+        globeCtx.fillRect(0, 0, w, h);
+    }
+
+    // Latitude lines
+    for (let lat = -60; lat <= 60; lat += 30) {
+        globeCtx.beginPath();
+        let on = false;
+        for (let lon = 0; lon <= 360; lon += 2) {
+            const p = proj(lat, lon, r, cx, cy, globe.rot);
+            if (p.z > 0) { if (!on) { globeCtx.moveTo(p.x, p.y); on = true; } else globeCtx.lineTo(p.x, p.y); }
+            else on = false;
+        }
+        globeCtx.strokeStyle = lat === 0 ? 'rgba(0, 240, 255, 0.35)' : 'rgba(0, 240, 255, 0.12)';
+        globeCtx.lineWidth = lat === 0 ? 0.8 : 0.4;
+        globeCtx.stroke();
+    }
+
+    // Longitude lines
+    for (let lon = 0; lon < 360; lon += 30) {
+        globeCtx.beginPath();
+        let on = false;
+        for (let lat = -90; lat <= 90; lat += 2) {
+            const p = proj(lat, lon, r, cx, cy, globe.rot);
+            if (p.z > 0) { if (!on) { globeCtx.moveTo(p.x, p.y); on = true; } else globeCtx.lineTo(p.x, p.y); }
+            else on = false;
+        }
+        globeCtx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
+        globeCtx.lineWidth = 0.4;
+        globeCtx.stroke();
+    }
+
+    // Connection arcs
+    for (const arc of globe.arcs) {
+        const nA = globe.nodes[arc.a], nB = globe.nodes[arc.b];
+        const pA = proj(nA.lat, nA.lon, r, cx, cy, globe.rot);
+        const pB = proj(nB.lat, nB.lon, r, cx, cy, globe.rot);
+        if (pA.z > 0 && pB.z > 0) {
+            const pC = proj((nA.lat + nB.lat) / 2, (nA.lon + nB.lon) / 2, r * 1.22, cx, cy, globe.rot);
+            const op = Math.min(pA.z, pB.z) / r * 0.5;
+
+            globeCtx.beginPath();
+            globeCtx.moveTo(pA.x, pA.y);
+            globeCtx.quadraticCurveTo(pC.x, pC.y, pB.x, pB.y);
+            globeCtx.strokeStyle = `rgba(0, 240, 255, ${op})`;
+            globeCtx.lineWidth = 0.8;
+            globeCtx.setLineDash([3, 5]);
+            globeCtx.stroke();
+            globeCtx.setLineDash([]);
+
+            // Traveling dot
+            const t = arc.t;
+            const dx = (1 - t) * (1 - t) * pA.x + 2 * (1 - t) * t * pC.x + t * t * pB.x;
+            const dy = (1 - t) * (1 - t) * pA.y + 2 * (1 - t) * t * pC.y + t * t * pB.y;
+            globeCtx.beginPath();
+            globeCtx.arc(dx, dy, 1.8, 0, Math.PI * 2);
+            globeCtx.fillStyle = `rgba(0, 240, 255, ${Math.min(1, op * 2)})`;
+            globeCtx.fill();
+
+            arc.t += arc.spd;
+            if (arc.t > 1) arc.t = 0;
+        }
+    }
+
+    // Data nodes
+    for (const node of globe.nodes) {
+        const p = proj(node.lat, node.lon, r, cx, cy, globe.rot);
+        if (p.z > 0) {
+            const depth = p.z / r;
+            const pulse = Math.sin(node.phase) * 0.5 + 0.5;
+            const sz = Math.max(0.5, node.size * (0.7 + pulse * 0.3));
+            const rgb = node.isAlert ? '255, 107, 43' : '0, 240, 255';
+
+            // Outer glow
+            globeCtx.beginPath();
+            globeCtx.arc(p.x, p.y, sz * 5, 0, Math.PI * 2);
+            globeCtx.fillStyle = `rgba(${rgb}, ${0.06 * depth * pulse})`;
+            globeCtx.fill();
+
+            // Mid ring
+            globeCtx.beginPath();
+            globeCtx.arc(p.x, p.y, sz * 2.5, 0, Math.PI * 2);
+            globeCtx.fillStyle = `rgba(${rgb}, ${0.12 * depth})`;
+            globeCtx.fill();
+
+            // Core
+            globeCtx.beginPath();
+            globeCtx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+            globeCtx.fillStyle = `rgba(${rgb}, ${0.5 + depth * 0.5})`;
+            globeCtx.fill();
+        }
+        node.phase += 0.028;
+    }
+
+    // Click ripples
+    globe.ripples = globe.ripples.filter(rp => rp.op > 0.01);
+    for (const rp of globe.ripples) {
+        globeCtx.beginPath();
+        globeCtx.arc(rp.x, rp.y, Math.max(0.1, rp.r), 0, Math.PI * 2);
+        globeCtx.strokeStyle = `rgba(0, 240, 255, ${rp.op})`;
+        globeCtx.lineWidth = 1.5;
+        globeCtx.stroke();
+        rp.r += 1.8;
+        rp.op *= 0.97;
+    }
+
+    globe.rot += globe.speed * 0.016;
+}
+
+globeCanvas.addEventListener('click', e => {
+    const rect = globeCanvas.getBoundingClientRect();
+    globe.ripples.push({ x: e.clientX - rect.left, y: e.clientY - rect.top, r: 5, op: 0.7 });
+});
+
+// Hover parallax effect
+let globeMouseX = 0.5, globeMouseY = 0.5;
+globeCanvas.addEventListener('mousemove', e => {
+    const rect = globeCanvas.getBoundingClientRect();
+    globeMouseX = (e.clientX - rect.left) / rect.width;
+    globeMouseY = (e.clientY - rect.top) / rect.height;
+    globe.speed = 0.2 + globeMouseX * 0.15;
+});
+
+// ——— Diagnostics Updates ———
+const diags = [
+    { id: 'cpu', base: 76, range: 10 },
+    { id: 'mem', base: 71, range: 8 },
+    { id: 'pow', base: 93, range: 5 },
+    { id: 'shd', base: 100, range: 1.5 },
+    { id: 'tmp', base: 44, range: 12 }
+];
+
+function updateDiags() {
+    for (const d of diags) {
+        const v = d.base + (Math.random() - 0.5) * d.range;
+        const display = v.toFixed(1) + (d.id === 'tmp' ? '°C' : '%');
+        document.getElementById(d.id + '-val').textContent = display;
+        const pct = d.id === 'tmp' ? Math.min(100, v) : Math.min(100, v);
+        document.getElementById(d.id + '-bar').style.width = pct + '%';
+    }
+}
+setInterval(updateDiags, 2200);
+
+// ——— Communications Log ———
+const commMsgs = [
+    { from: 'SECTOR 4-ALPHA', text: 'Anomaly detected at grid ref 447-882. Spectral analysis in progress.', pri: 'warn' },
+    { from: 'STATION ECHO', text: 'Supply convoy ETA 04:30:00. All cargo manifests verified and sealed.', pri: 'ok' },
+    { from: 'PATROL UNIT 7', text: 'Perimeter sweep complete. Zero contacts. Sector is clear.', pri: 'ok' },
+    { from: 'DEEP SPACE RELAY', text: 'Fragmented signal intercepted. Origin unknown. Running decryption.', pri: 'alert' },
+    { from: 'FLEET COMMAND', text: 'Task force repositioning to coordinate 892-447. Arrival in 6 hours.', pri: 'ok' },
+    { from: 'RESEARCH LAB 3', text: 'Experiment XR-7 showing anomalous readings. Containment holding.', pri: 'warn' },
+    { from: 'OUTPOST DELTA', text: 'Micrometeorite impact on hull section 12-C. Auto-repair engaged.', pri: 'warn' },
+    { from: 'INTELLIGENCE', text: 'Decoded hostile transmission confirms movement in Sector 9.', pri: 'alert' },
+    { from: 'MEDICAL BAY', text: 'Crew health status nominal. Next scheduled evaluation at 08:00.', pri: 'ok' },
+    { from: 'ENGINEERING', text: 'Fusion core output stable at 98.7%. Minor recalibration scheduled.', pri: 'ok' },
+    { from: 'QUANTUM LAB', text: 'Entanglement link established with Probe 14. Data stream active.', pri: 'ok' },
+    { from: 'SECURITY', text: 'Unauthorized access attempt on deck 7. Intruder neutralized.', pri: 'alert' },
+    { from: 'NAVIGATION', text: 'Course correction applied. New heading 247.3 mark 12.', pri: 'ok' },
+    { from: 'STATION OMEGA', text: 'Dock clamps secure. Boarding party standing by for inspection.', pri: 'ok' }
+];
+
+const commsLog = document.getElementById('comms-log');
+const priColors = { ok: 'var(--muted)', warn: 'var(--accent2)', alert: 'var(--danger)' };
+
+function addComm(msg) {
+    const t = new Date().toTimeString().slice(0, 8);
+    const el = document.createElement('div');
+    el.className = 'comm-entry p-2 rounded';
+    el.style.cssText = `background:rgba(0,240,255,0.025); border-left:2px solid ${priColors[msg.pri]}; opacity:0; transform:translateY(-8px);`;
+    el.innerHTML = `
+        <div class="flex justify-between mb-0.5">
+            <span class="font-display text-[9px] tracking-wider" style="color:var(--accent)">${msg.from}</span>
+            <span style="color:var(--muted)">${t}</span>
+        </div>
+        <div style="opacity:0.85; line-height:1.4">${msg.text}</div>`;
+    commsLog.prepend(el);
+    requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+    while (commsLog.children.length > 25) commsLog.removeChild(commsLog.lastChild);
+}
+
+// Seed initial messages
+for (let i = 0; i < 6; i++) addComm(commMsgs[i]);
+setInterval(() => addComm(commMsgs[Math.floor(Math.random() * commMsgs.length)]), 3800);
+
+// ——— Floating Data Updates ———
+function updateFloating() {
+    document.getElementById('entity-count').textContent = (2800 + Math.floor(Math.random() * 100)).toLocaleString();
+    document.getElementById('throughput').textContent = (800 + Math.floor(Math.random() * 100)) + ' TB/s';
+    document.getElementById('alerts-count').textContent = 18 + Math.floor(Math.random() * 12);
+}
+setInterval(updateFloating, 3200);
+
+// ——— Clock ———
+function tickClock() {
+    const n = new Date();
+    document.getElementById('clock').textContent =
+        String(n.getHours()).padStart(2, '0') + ':' +
+        String(n.getMinutes()).padStart(2, '0') + ':' +
+        String(n.getSeconds()).padStart(2, '0');
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ——— Coordinate drift ———
+let coordLat = 45.234, coordLon = -127.891;
+setInterval(() => {
+    coordLat += (Math.random() - 0.5) * 0.01;
+    coordLon += (Math.random() - 0.5) * 0.01;
+    const spans = document.querySelectorAll('footer span span');
+    if (spans[0]) spans[0].textContent = Math.abs(coordLat).toFixed(3) + '°' + (coordLat >= 0 ? 'N' : 'S');
+    if (spans[1]) spans[1].textContent = Math.abs(coordLon).toFixed(3) + '°' + (coordLon >= 0 ? 'E' : 'W');
+}, 2000);
+
+// ——— Animation Loop ———
+function animate() {
+    drawParticles();
+    drawGlobe();
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumina — Mouse Light Spotlight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #06060a;
+    --fg: #e8dcc8;
+    --fg-dim: #5a5040;
+    --accent: #e8a040;
+    --light-color: #e8a040;
+    --glow-size: 500px;
+    --font: 'Space Grotesk', sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg);color:var(--fg);overflow-x:hidden;-webkit-font-smoothing:antialiased;cursor:none;line-height:1.6}
+
+  /* ── Fog Canvas ── */
+  #fogCanvas{position:fixed;inset:0;z-index:3;pointer-events:none;transition:opacity .3s ease}
+  /* ── Particle Canvas ── */
+  #particleCanvas{position:fixed;inset:0;z-index:2;pointer-events:none}
+  /* ── Light Glow ── */
+  #lightGlow{
+    position:fixed;width:var(--glow-size);height:var(--glow-size);border-radius:50%;
+    background:radial-gradient(circle,rgba(232,160,64,.18) 0%,rgba(232,140,50,.06) 35%,transparent 70%);
+    pointer-events:none;z-index:4;transform:translate(-50%,-50%);filter:blur(20px);
+    transition:width .4s ease,height .4s ease,background .5s ease;
+  }
+  /* ── Cursor ── */
+  .cursor-dot{
+    position:fixed;width:8px;height:8px;border-radius:50%;
+    background:var(--light-color);
+    box-shadow:0 0 10px var(--light-color),0 0 30px var(--light-color);
+    pointer-events:none;z-index:100;transform:translate(-50%,-50%);
+    transition:background .3s,box-shadow .3s,width .2s,height .2s;
+  }
+  .cursor-ring{
+    position:fixed;width:36px;height:36px;border-radius:50%;
+    border:1px solid var(--light-color);opacity:.25;
+    pointer-events:none;z-index:100;transform:translate(-50%,-50%);
+    transition:border-color .3s,width .25s,height .25s,opacity .25s;
+  }
+  .cursor-ring.expand{width:52px;height:52px;opacity:.15}
+  .cursor-dot.expand{width:6px;height:6px}
+  @media(hover:none){.cursor-dot,.cursor-ring{display:none}body{cursor:auto}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+  /* ── Hint ── */
+  #hint{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:6;
+    text-align:center;pointer-events:none;
+    animation:hintPulse 2.5s ease-in-out infinite;
+    transition:opacity .8s ease;
+  }
+  #hint.hidden{opacity:0}
+  #hint span{font-size:14px;letter-spacing:3px;text-transform:uppercase;color:var(--fg-dim);font-weight:400}
+  #hint .hint-icon{font-size:24px;color:var(--fg-dim);margin-bottom:16px;display:block}
+  @keyframes hintPulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+  /* ── Progress Bar ── */
+  #progressBar{position:fixed;bottom:0;left:0;height:2px;background:var(--light-color);width:0;z-index:50;transition:width .6s ease,background .3s ease;opacity:.5}
+
+  /* ── Toolbar ── */
+  .toolbar{
+    position:fixed;top:16px;left:16px;right:16px;height:48px;z-index:60;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:0 20px;
+    background:rgba(12,12,18,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.06);border-radius:12px;
+  }
+  .toolbar-left{display:flex;align-items:center;gap:16px;flex-shrink:0}
+  .toolbar-brand{font-size:13px;font-weight:700;letter-spacing:3px;color:var(--fg-dim)}
+  .toolbar-discovery{
+    font-size:12px;font-family:monospace;color:var(--fg-dim);
+    background:rgba(255,255,255,.04);padding:4px 10px;border-radius:6px;
+    border:1px solid rgba(255,255,255,.04);min-width:60px;text-align:center;
+  }
+  .toolbar-right{display:flex;align-items:center;gap:12px;overflow-x:auto;scrollbar-width:none}
+  .toolbar-right::-webkit-scrollbar{display:none}
+  .toolbar-group{display:flex;align-items:center;gap:6px}
+  .toolbar-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--fg-dim);white-space:nowrap}
+  .toolbar-sep{width:1px;height:20px;background:rgba(255,255,255,.06);flex-shrink:0}
+
+  input[type=range]{
+    width:80px;height:4px;-webkit-appearance:none;appearance:none;
+    background:rgba(255,255,255,.08);border-radius:2px;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--fg);cursor:pointer;border:none;
+  }
+  .color-btn{
+    padding:5px 12px;border:1px solid rgba(255,255,255,.06);border-radius:6px;
+    background:transparent;color:var(--fg-dim);font-size:11px;font-weight:600;
+    font-family:var(--font);cursor:pointer;letter-spacing:.5px;
+    transition:all .2s ease;white-space:nowrap;
+  }
+  .color-btn:hover{border-color:rgba(255,255,255,.15);color:var(--fg)}
+  .color-btn.active{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:var(--fg)}
+  .tool-btn{
+    padding:5px 12px;border:1px solid rgba(255,255,255,.06);border-radius:6px;
+    background:transparent;color:var(--fg-dim);font-size:11px;font-weight:500;
+    font-family:var(--font);cursor:pointer;display:flex;align-items:center;gap:6px;
+    transition:all .2s ease;white-space:nowrap;
+  }
+  .tool-btn:hover{border-color:rgba(255,255,255,.15);color:var(--fg)}
+  .tool-btn.active{background:rgba(232,160,64,.1);border-color:rgba(232,160,64,.2);color:var(--accent)}
+  .tool-btn i{font-size:10px}
+
+  /* ── Toast ── */
+  .toast{
+    position:fixed;bottom:50px;left:50%;transform:translateX(-50%) translateY(16px);
+    background:rgba(16,16,22,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.08);padding:10px 24px;border-radius:10px;
+    font-size:13px;color:var(--fg);z-index:70;white-space:nowrap;
+    animation:toastIn .4s ease,toastOut .4s ease 2.4s forwards;
+    display:flex;align-items:center;gap:8px;
+  }
+  .toast i{color:var(--light-color);font-size:12px}
+  @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes toastOut{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-8px)}}
+
+  /* ═══════════════════════════════════
+     CONTENT
+     ═══════════════════════════════════ */
+  main{position:relative;z-index:1}
+
+  .section{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 40px;text-align:center}
+  .section-overline{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--fg-dim);margin-bottom:16px}
+  .section-title{font-size:clamp(24px,4vw,40px);font-weight:700;letter-spacing:-1.5px;margin-bottom:48px}
+
+  /* Hero */
+  .hero-title{
+    font-size:clamp(52px,12vw,150px);font-weight:800;letter-spacing:-5px;line-height:.92;
+    margin-bottom:28px;color:var(--fg);
+  }
+  .hero-sub{font-size:16px;color:var(--fg-dim);max-width:440px;line-height:1.7;font-weight:300}
+
+  /* Quote Grid */
+  .quote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:960px;width:100%}
+  .quote-card{
+    background:rgba(255,255,255,.015);border:1px solid rgba(255,255,255,.03);
+    border-radius:12px;padding:28px 24px;text-align:left;
+    transition:border-color .3s,transform .3s;
+  }
+  .quote-card:hover{border-color:rgba(255,255,255,.06);transform:translateY(-2px)}
+  .quote-text{font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:16px;font-style:italic}
+  .quote-author{font-size:12px;color:var(--fg-dim);font-weight:600;letter-spacing:.5px}
+
+  /* Gallery */
+  .gallery-grid{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:240px 240px;gap:14px;max-width:900px;width:100%}
+  .gallery-item{border-radius:12px;overflow:hidden;position:relative}
+  .gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.16,1,.3,1)}
+  .gallery-item:hover img{transform:scale(1.04)}
+  .gallery-item:nth-child(1){grid-row:span 2}
+  .gallery-item:nth-child(4){grid-column:span 2}
+  .gallery-caption{position:absolute;bottom:0;left:0;right:0;padding:14px;background:linear-gradient(transparent,rgba(0,0,0,.7));font-size:12px;font-weight:500;letter-spacing:.5px}
+
+  /* Reveal Cards */
+  .reveal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:800px;width:100%}
+  .reveal-card{
+    background:rgba(255,255,255,.015);border:1px solid rgba(255,255,255,.03);
+    border-radius:14px;padding:32px 24px;text-align:center;cursor:default;
+    transition:border-color .3s,transform .3s;
+  }
+  .reveal-card:hover{border-color:rgba(255,255,255,.08);transform:translateY(-3px)}
+  .reveal-icon{font-size:28px;margin-bottom:16px;display:block;color:var(--fg-dim);transition:color .3s}
+  .reveal-card:hover .reveal-icon{color:var(--fg)}
+  .reveal-label{font-size:18px;font-weight:700;letter-spacing:-.5px;margin-bottom:8px}
+  .reveal-hidden{max-height:0;opacity:0;overflow:hidden;transition:max-height .5s ease,opacity .4s ease .1s}
+  .reveal-card:hover .reveal-hidden{max-height:80px;opacity:1}
+  .reveal-hidden p{font-size:13px;color:var(--fg-dim);line-height:1.6;margin-top:4px}
+
+  /* Finale */
+  .finale-quote{font-size:clamp(22px,4vw,38px);font-weight:300;font-style:italic;letter-spacing:-.5px;max-width:700px;line-height:1.5;margin-bottom:20px}
+  .finale-cite{font-size:14px;color:var(--fg-dim);font-weight:500}
+
+  /* Responsive */
+  @media(max-width:768px){
+    .toolbar{top:8px;left:8px;right:8px;height:44px;padding:0 12px}
+    .toolbar-label,.toolbar-brand{display:none}
+    .toolbar-sep:nth-child(n+3){display:none}
+    .quote-grid,.reveal-grid{grid-template-columns:1fr}
+    .gallery-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+    .gallery-item:nth-child(n){grid-row:auto;grid-column:auto}
+    .section{padding:100px 20px}
+    input[type=range]{width:60px}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="fogCanvas"></canvas>
+<canvas id="particleCanvas"></canvas>
+<div id="lightGlow"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div id="hint"><span class="hint-icon"><i class="fa-regular fa-hand-pointer"></i></span><span>Move your cursor to illuminate</span></div>
+<div id="progressBar"></div>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <span class="toolbar-brand">LUMINA</span>
+    <span class="toolbar-discovery" id="discoveryDisplay">0%</span>
+  </div>
+  <div class="toolbar-right">
+    <div class="toolbar-group">
+      <span class="toolbar-label">Radius</span>
+      <input type="range" id="radiusSlider" min="60" max="400" value="180">
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group">
+      <button class="color-btn active" data-color="warm">Warm</button>
+      <button class="color-btn" data-color="cool">Cool</button>
+      <button class="color-btn" data-color="white">White</button>
+      <button class="color-btn" data-color="neon">Neon</button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="toolbar-group">
+      <button class="tool-btn" id="flickerBtn"><i class="fa-solid fa-fire"></i> Flicker</button>
+      <button class="tool-btn" id="resetBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="section">
+    <div class="section-overline">Interactive Experience</div>
+    <h1 class="hero-title">Explore the<br>Darkness</h1>
+    <p class="hero-sub">Move your cursor to reveal what lies beneath. Every path you take is permanently illuminated — a map of your curiosity.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-overline">Perspectives</div>
+    <h2 class="section-title">Voices in the Light</h2>
+    <div class="quote-grid">
+      <div class="quote-card"><p class="quote-text">"Light thinks it travels the fastest, but wherever it goes, darkness is already there."</p><p class="quote-author">Terry Pratchett</p></div>
+      <div class="quote-card"><p class="quote-text">"The darkness declares the glory of light. Here is the opposition that completes the revelation."</p><p class="quote-author">Rabindranath Tagore</p></div>
+      <div class="quote-card"><p class="quote-text">"We are all in the gutter, but some of us are looking at the stars."</p><p class="quote-author">Oscar Wilde</p></div>
+      <div class="quote-card"><p class="quote-text">"To light a candle is to cast a shadow. It is the nature of being."</p><p class="quote-author">Ursula K. Le Guin</p></div>
+      <div class="quote-card"><p class="quote-text">"In the middle of difficulty lies opportunity. You just need the light to see it."</p><p class="quote-author">Albert Einstein</p></div>
+      <div class="quote-card"><p class="quote-text">"Not all those who wander are lost. The darkness holds its own kind of guidance."</p><p class="quote-author">J.R.R. Tolkien</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-overline">Sights Unseen</div>
+    <h2 class="section-title">Hidden Vistas</h2>
+    <div class="gallery-grid">
+      <div class="gallery-item"><img src="https://picsum.photos/seed/dark-forest-42/600/800" alt="Dark forest"><div class="gallery-caption">The Ancient Wood</div></div>
+      <div class="gallery-item"><img src="https://picsum.photos/seed/night-ocean-17/400/400" alt="Night ocean"><div class="gallery-caption">Midnight Tide</div></div>
+      <div class="gallery-item"><img src="https://picsum.photos/seed/mountain-fog-88/400/400" alt="Mountain fog"><div class="gallery-caption">Shrouded Peak</div></div>
+      <div class="gallery-item"><img src="https://picsum.photos/seed/city-rain-55/800/400" alt="City rain"><div class="gallery-caption">Neon Reflections</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-overline">Revelations</div>
+    <h2 class="section-title">Touch to Awaken</h2>
+    <div class="reveal-grid">
+      <div class="reveal-card">
+        <span class="reveal-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+        <div class="reveal-label">Patience</div>
+        <div class="reveal-hidden"><p>The reward of patience is always worth the wait. What is earned slowly is held longest.</p></div>
+      </div>
+      <div class="reveal-card">
+        <span class="reveal-icon"><i class="fa-solid fa-shield-halved"></i></span>
+        <div class="reveal-label">Courage</div>
+        <div class="reveal-hidden"><p>Courage is not the absence of fear, but rather the judgment that something else is more important.</p></div>
+      </div>
+      <div class="reveal-card">
+        <span class="reveal-icon"><i class="fa-solid fa-eye"></i></span>
+        <div class="reveal-label">Wonder</div>
+        <div class="reveal-hidden"><p>He who can no longer pause to wonder and stand rapt in awe is as good as dead.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <blockquote class="finale-quote">"The important thing is not to stop questioning. Curiosity has its own reason for existing."</blockquote>
+    <cite class="finale-cite">— Albert Einstein</cite>
+  </section>
+</main>
+
+<script>
+/* ═══════════════════════════════════
+   Configuration & State
+   ═══════════════════════════════════ */
+const COLORS = {
+  warm:  { hex:'#e8a040', inner:'rgba(232,160,64,.18)', mid:'rgba(232,140,50,.06)', outer:'rgba(200,100,30,.02)', particle:'rgba(255,180,80,' },
+  cool:  { hex:'#8ec8ff', inner:'rgba(142,200,255,.14)', mid:'rgba(120,170,230,.05)', outer:'rgba(80,140,200,.015)', particle:'rgba(160,200,255,' },
+  white: { hex:'#e8e8e8', inner:'rgba(255,255,255,.14)', mid:'rgba(220,220,220,.04)', outer:'rgba(180,180,180,.01)', particle:'rgba(255,255,255,' },
+  neon:  { hex:'#00dca8', inner:'rgba(0,220,168,.14)', mid:'rgba(0,180,140,.05)', outer:'rgba(0,140,110,.015)', particle:'rgba(0,220,168,' },
+};
+const MILESTONES = [10,25,50,75,100];
+let currentColor = 'warm';
+let lightRadius = 180;
+let flickerOn = false;
+let mx = -500, my = -500;
+let hasInteracted = false;
+let discovery = 0;
+let discoveryFrame = 0;
+
+/* ═══════════════════════════════════
+   DOM References
+   ═══════════════════════════════════ */
+const fogCanvas = document.getElementById('fogCanvas');
+const fogCtx = fogCanvas.getContext('2d', { willReadFrequently: true });
+const partCanvas = document.getElementById('particleCanvas');
+const partCtx = partCanvas.getContext('2d');
+const lightGlow = document.getElementById('lightGlow');
+const cursorDot = document.getElementById('cursorDot');
+const cursorRing = document.getElementById('cursorRing');
+const hint = document.getElementById('hint');
+const progressBar = document.getElementById('progressBar');
+const discoveryDisplay = document.getElementById('discoveryDisplay');
+const radiusSlider = document.getElementById('radiusSlider');
+
+/* ═══════════════════════════════════
+   Light Texture (offscreen canvas)
+   ═══════════════════════════════════ */
+let lightTex = document.createElement('canvas');
+let lightTexCtx = lightTex.getContext('2d');
+
+function buildLightTexture() {
+  const r = lightRadius;
+  const size = r * 2;
+  lightTex.width = size;
+  lightTex.height = size;
+  const g = lightTexCtx.createRadialGradient(r, r, 0, r, r, r);
+  g.addColorStop(0, 'rgba(255,255,255,0.07)');
+  g.addColorStop(0.4, 'rgba(255,255,255,0.04)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.015)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  lightTexCtx.clearRect(0, 0, size, size);
+  lightTexCtx.fillStyle = g;
+  lightTexCtx.fillRect(0, 0, size, size);
+}
+buildLightTexture();
+
+/* ═══════════════════════════════════
+   Fog Canvas Setup
+   ═══════════════════════════════════ */
+function sizeCanvases() {
+  fogCanvas.width = window.innerWidth;
+  fogCanvas.height = window.innerHeight;
+  partCanvas.width = window.innerWidth;
+  partCanvas.height = window.innerHeight;
+  fillFog();
+}
+
+function fillFog() {
+  fogCtx.fillStyle = 'rgba(6,6,10,0.985)';
+  fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+}
+
+sizeCanvases();
+window.addEventListener('resize', sizeCanvases);
+
+/* ═══════════════════════════════════
+   Particles
+   ═══════════════════════════════════ */
+const particles = [];
+function initParticles() {
+  particles.length = 0;
+  for (let i = 0; i < 90; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -0.15 - Math.random() * 0.35,
+      size: 1 + Math.random() * 2.5,
+      baseAlpha: 0.015 + Math.random() * 0.025,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+initParticles();
+
+/* ═══════════════════════════════════
+   Mouse / Touch Input
+   ═══════════════════════════════════ */
+function onFirstInteraction() {
+  if (!hasInteracted) {
+    hasInteracted = true;
+    hint.classList.add('hidden');
+  }
+}
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursorDot.style.left = mx + 'px';
+  cursorDot.style.top = my + 'px';
+  cursorRing.style.left = mx + 'px';
+  cursorRing.style.top = my + 'px';
+  lightGlow.style.left = mx + 'px';
+  lightGlow.style.top = my + 'px';
+  onFirstInteraction();
+});
+
+document.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  mx = t.clientX; my = t.clientY;
+  lightGlow.style.left = mx + 'px';
+  lightGlow.style.top = my + 'px';
+  onFirstInteraction();
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  mx = t.clientX; my = t.clientY;
+  lightGlow.style.left = mx + 'px';
+  lightGlow.style.top = my + 'px';
+}, { passive: true });
+
+document.addEventListener('touchend', () => { mx = -500; my = -500; });
+
+/* Cursor ring expand on interactive elements */
+document.querySelectorAll('button,input,.quote-card,.reveal-card,.gallery-item').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursorRing.classList.add('expand'); cursorDot.classList.add('expand'); });
+  el.addEventListener('mouseleave', () => { cursorRing.classList.remove('expand'); cursorDot.classList.remove('expand'); });
+});
+
+/* ═══════════════════════════════════
+   Color Switching
+   ═══════════════════════════════════ */
+function applyColor(name) {
+  currentColor = name;
+  const c = COLORS[name];
+  document.documentElement.style.setProperty('--light-color', c.hex);
+  lightGlow.style.background = `radial-gradient(circle, ${c.inner} 0%, ${c.mid} 35%, ${c.outer} 60%, transparent 70%)`;
+  cursorDot.style.background = c.hex;
+  cursorDot.style.boxShadow = `0 0 10px ${c.hex}, 0 0 30px ${c.hex}`;
+  cursorRing.style.borderColor = c.hex;
+  progressBar.style.background = c.hex;
+  document.querySelectorAll('.color-btn').forEach(b => b.classList.toggle('active', b.dataset.color === name));
+  if (flickerOn) document.getElementById('flickerBtn').style.background = `rgba(${name==='cool'?'142,200,255':name==='white'?'232,232,232':name==='neon'?'0,220,168':'232,160,64'},.1)`;
+}
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+  btn.addEventListener('click', () => applyColor(btn.dataset.color));
+});
+
+/* ═══════════════════════════════════
+   Radius Slider
+   ═══════════════════════════════════ */
+radiusSlider.addEventListener('input', () => {
+  lightRadius = parseInt(radiusSlider.value);
+  const glowSize = lightRadius * 2.8;
+  document.documentElement.style.setProperty('--glow-size', glowSize + 'px');
+  buildLightTexture();
+});
+
+/* ═══════════════════════════════════
+   Flicker Toggle
+   ═══════════════════════════════════ */
+document.getElementById('flickerBtn').addEventListener('click', function() {
+  flickerOn = !flickerOn;
+  this.classList.toggle('active', flickerOn);
+});
+
+/* ═══════════════════════════════════
+   Reset Fog
+   ═══════════════════════════════════ */
+document.getElementById('resetBtn').addEventListener('click', () => {
+  // Brief flash — reveal everything for a split second
+  fogCanvas.style.transition = 'opacity .12s ease';
+  fogCanvas.style.opacity = '0';
+  setTimeout(() => {
+    fillFog();
+    fogCanvas.style.transition = 'opacity .35s ease';
+    fogCanvas.style.opacity = '1';
+    discovery = 0;
+    discoveryDisplay.textContent = '0%';
+    progressBar.style.width = '0%';
+    MILESTONES.length = 0; // prevent re-triggering
+  }, 180);
+});
+
+/* ═══════════════════════════════════
+   Toast
+   ═══════════════════════════════════ */
+function showToast(text, icon) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${text}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+/* ═══════════════════════════════════
+   Discovery Calculation
+   ═══════════════════════════════════ */
+let milestoneIdx = 0;
+const originalMilestones = [10,25,50,75,100];
+
+function calcDiscovery() {
+  const w = fogCanvas.width, h = fogCanvas.height;
+  if (w === 0 || h === 0) return;
+  const data = fogCtx.getImageData(0, 0, w, h).data;
+  const step = 16;
+  let found = 0, total = 0;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      if (data[(y * w + x) * 4 + 3] < 120) found++;
+      total++;
+    }
+  }
+  discovery = Math.round((found / total) * 100);
+  discoveryDisplay.textContent = discovery + '%';
+  progressBar.style.width = discovery + '%';
+
+  if (milestoneIdx < originalMilestones.length && discovery >= originalMilestones[milestoneIdx]) {
+    const pct = originalMilestones[milestoneIdx];
+    const icons = { 10:'compass', 25:'map', 50:'star-half-stroke', 75:'star', 100:'trophy' };
+    const msgs = { 10:'First steps into the dark', 25:'A quarter of the world revealed', 50:'Halfway there — keep exploring', 75:'Almost fully illuminated', 100:'Every shadow dispelled — well done' };
+    showToast(msgs[pct], icons[pct]);
+    milestoneIdx++;
+  }
+}
+
+/* ═══════════════════════════════════
+   Flicker Helper
+   ═══════════════════════════════════ */
+function getFlicker() {
+  if (!flickerOn) return { x: 0, y: 0, skip: false, scale: 1 };
+  const skip = Math.random() < 0.035;
+  return {
+    x: (Math.random() - 0.5) * 5,
+    y: (Math.random() - 0.5) * 5,
+    skip,
+    scale: 0.88 + Math.random() * 0.24,
+  };
+}
+
+/* ═══════════════════════════════════
+   Main Animation Loop
+   ═══════════════════════════════════ */
+function loop() {
+  /* ── Erase fog at mouse position ── */
+  if (mx > -200 && my > -200) {
+    const fl = getFlicker();
+    if (!fl.skip) {
+      fogCtx.globalCompositeOperation = 'destination-out';
+      fogCtx.save();
+      fogCtx.translate(mx + fl.x, my + fl.y);
+      fogCtx.scale(fl.scale, fl.scale);
+      fogCtx.drawImage(lightTex, -lightRadius, -lightRadius);
+      fogCtx.restore();
+      fogCtx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  /* ── Discovery tracking (every 45 frames) ── */
+  discoveryFrame++;
+  if (discoveryFrame % 45 === 0 && hasInteracted) calcDiscovery();
+
+  /* ── Draw particles ── */
+  const w = partCanvas.width, h = partCanvas.height;
+  const pc = COLORS[currentColor].particle;
+  partCtx.clearRect(0, 0, w, h);
+  const time = performance.now() * 0.001;
+
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Wrap around
+    if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+    if (p.x < -10) p.x = w + 10;
+    if (p.x > w + 10) p.x = -10;
+
+    // Distance to mouse
+    const dx = p.x - mx, dy = p.y - my;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const inLight = dist < lightRadius * 1.5;
+    const proximity = inLight ? Math.max(0, 1 - dist / (lightRadius * 1.5)) : 0;
+
+    // Alpha: dim in dark, bright in light
+    const twinkle = 0.5 + 0.5 * Math.sin(time * 2 + p.phase);
+    const alpha = p.baseAlpha + proximity * 0.6 * twinkle;
+
+    if (alpha < 0.005) continue;
+
+    // Draw glow (larger, dimmer)
+    if (proximity > 0.1) {
+      partCtx.fillStyle = pc + (proximity * 0.15) + ')';
+      partCtx.beginPath();
+      partCtx.arc(p.x, p.y, Math.max(0.5, p.size * 3), 0, Math.PI * 2);
+      partCtx.fill();
+    }
+
+    // Draw core
+    partCtx.fillStyle = pc + alpha + ')';
+    partCtx.beginPath();
+    partCtx.arc(p.x, p.y, Math.max(0.5, p.size), 0, Math.PI * 2);
+    partCtx.fill();
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ═══════════════════════════════════
+   Initialize
+   ═══════════════════════════════════ */
+applyColor('warm');
+document.documentElement.style.setProperty('--glow-size', (lightRadius * 2.8) + 'px');
+</script>
+</body>
+</html>
