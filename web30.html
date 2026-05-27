@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WEB30 — Websites In 2030</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <style>
+    @property --border-angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    :root {
+      --bg: #050508;
+      --fg: #e8e8f0;
+      --muted: #7a7a90;
+      --accent: #00ff88;
+      --accent2: #ff6b35;
+      --card: rgba(255,255,255,0.025);
+      --border: rgba(255,255,255,0.07);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color:var(--accent) var(--bg); }
+    body {
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg);
+      color:var(--fg);
+      overflow-x:hidden;
+      cursor:none;
+    }
+    h1,h2,h3,h4,h5,h6 { font-family:'Space Grotesk',sans-serif; }
+
+    /* Custom cursor */
+    .cur-dot,.cur-ring { position:fixed; pointer-events:none; z-index:10000; border-radius:50%; mix-blend-mode:screen; transform:translate(-50%,-50%); }
+    .cur-dot { width:8px; height:8px; background:var(--accent); }
+    .cur-ring { width:40px; height:40px; border:1.5px solid var(--accent); transition:width .3s,height .3s,border-color .3s; }
+    .cur-ring.hov { width:64px; height:64px; border-color:var(--accent2); }
+
+    #bg-canvas { position:fixed; inset:0; width:100%; height:100%; z-index:0; }
+    .content { position:relative; z-index:1; }
+
+    /* Scroll progress */
+    .scroll-bar { position:fixed; top:0; left:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); z-index:10001; width:0; }
+
+    /* Noise */
+    .noise { position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.025;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Nav */
+    .nav-glass { background:rgba(5,5,8,.72); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid var(--border); }
+
+    /* Animated gradient border card */
+    .g-border { position:relative; background:var(--card); border-radius:16px; overflow:hidden; }
+    .g-border::before {
+      content:''; position:absolute; inset:-1px; border-radius:17px; z-index:-1;
+      background:conic-gradient(from var(--border-angle), var(--accent), transparent 25%, transparent 75%, var(--accent2));
+      animation:spinBorder 6s linear infinite;
+    }
+    .g-border::after {
+      content:''; position:absolute; inset:0; border-radius:16px; z-index:-1; background:var(--bg);
+    }
+    @keyframes spinBorder { to { --border-angle:360deg; } }
+
+    /* Glow text — no shadow, pure color */
+    .glow { color:var(--accent); font-weight:700; }
+    .glow2 { color:var(--accent2); font-weight:700; }
+
+    /* Morph blob */
+    @keyframes morph {
+      0%,100%{border-radius:60% 40% 30% 70%/60% 30% 70% 40%}
+      25%{border-radius:30% 60% 70% 40%/50% 60% 30% 60%}
+      50%{border-radius:50% 60% 30% 60%/30% 60% 70% 40%}
+      75%{border-radius:60% 30% 60% 40%/60% 40% 30% 70%}
+    }
+    .morph { animation:morph 10s ease-in-out infinite; }
+
+    /* Reveal */
+    .rv { opacity:0; transform:translateY(50px); transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1); }
+    .rv.vis { opacity:1; transform:translateY(0); }
+
+    /* Pulse ring */
+    @keyframes pulseR { 0%{transform:translate(-50%,-50%) scale(1);opacity:.5} 100%{transform:translate(-50%,-50%) scale(2.8);opacity:0} }
+
+    /* Section divider */
+    .divider { height:1px; background:linear-gradient(90deg,transparent,var(--border),var(--accent),var(--border),transparent); opacity:.4; }
+
+    /* Typing cursor */
+    .tcur { display:inline-block; width:2px; height:1em; background:var(--accent); margin-left:2px; vertical-align:text-bottom; animation:blink 1s step-end infinite; }
+    @keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:0} }
+
+    /* Holographic shimmer */
+    .holo {
+      background:linear-gradient(135deg,rgba(0,255,136,.08) 0%,rgba(255,107,53,.08) 25%,rgba(0,255,136,.03) 50%,rgba(255,107,53,.08) 75%,rgba(0,255,136,.08) 100%);
+      background-size:200% 200%; animation:holoShim 8s ease infinite;
+    }
+    @keyframes holoShim { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+    /* Dash bar */
+    .dbar { height:6px; border-radius:3px; background:rgba(255,255,255,.04); overflow:hidden; }
+    .dbar-fill { height:100%; border-radius:3px; width:0; transition:width 1.6s cubic-bezier(.16,1,.3,1); }
+
+    /* Magnetic button */
+    .mag { position:relative; overflow:hidden; transition:transform .3s cubic-bezier(.16,1,.3,1); }
+    .mag::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,var(--accent),var(--accent2)); opacity:0; transition:opacity .3s; border-radius:inherit; }
+    .mag:hover::after { opacity:1; }
+    .mag span { position:relative; z-index:1; }
+
+    /* Feature icon glow */
+    .ficon { position:relative; }
+    .ficon::after { content:''; position:absolute; inset:-6px; border-radius:50%; filter:blur(12px); opacity:0; transition:opacity .3s; }
+    .ficon.glow-g::after { background:var(--accent); }
+    .ficon.glow-o::after { background:var(--accent2); }
+    .ficon:hover::after { opacity:.35; }
+
+    /* Toast */
+    .toast-container { position:fixed; bottom:24px; right:24px; z-index:10002; display:flex; flex-direction:column; gap:8px; }
+    .toast { padding:14px 20px; border-radius:12px; background:rgba(10,10,16,.9); border:1px solid var(--border); backdrop-filter:blur(16px);
+      font-size:13px; color:var(--fg); transform:translateX(120%); transition:transform .4s cubic-bezier(.16,1,.3,1),opacity .4s; opacity:0; }
+    .toast.show { transform:translateX(0); opacity:1; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--accent); border-radius:3px; }
+
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+    @media(max-width:768px){body{cursor:auto}.cur-dot,.cur-ring{display:none}}
+  </style>
+</head>
+<body>
+
+  <div class="scroll-bar" id="scrollBar"></div>
+  <div class="cur-dot" id="cDot"></div>
+  <div class="cur-ring" id="cRing"></div>
+  <div class="noise"></div>
+  <canvas id="bg-canvas"></canvas>
+  <div class="toast-container" id="toasts"></div>
+
+  <div class="content">
+
+    <!-- Nav -->
+    <nav class="nav-glass fixed top-0 left-0 right-0 z-50 px-6 py-4" role="navigation" aria-label="Main navigation">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2.5 group" data-h>
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent2)] flex items-center justify-center">
+            <i class="fas fa-cube text-black text-sm"></i>
+          </div>
+          <span class="font-bold text-lg tracking-tight">WEB30</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8 text-sm text-[var(--muted)]">
+          <a href="#pillars" class="hover:text-[var(--fg)] transition-colors" data-h>Vision</a>
+          <a href="#spatial" class="hover:text-[var(--fg)] transition-colors" data-h>Spatial</a>
+          <a href="#neural" class="hover:text-[var(--fg)] transition-colors" data-h>Neural</a>
+          <a href="#future" class="hover:text-[var(--fg)] transition-colors" data-h>Future</a>
+        </div>
+        <button class="mag px-5 py-2.5 rounded-full border border-[var(--accent)] text-[var(--accent)] text-sm font-medium" data-h data-action="explore">
+          <span>Explore 2030</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="min-h-screen flex flex-col items-center justify-center px-6 text-center relative">
+      <div class="absolute top-1/4 left-1/5 w-72 h-72 morph bg-[var(--accent)] opacity-[0.035] blur-[80px]" style="animation-delay:-2s"></div>
+      <div class="absolute bottom-1/3 right-1/5 w-56 h-56 morph bg-[var(--accent2)] opacity-[0.03] blur-[80px]" style="animation-delay:-6s"></div>
+
+      <div class="rv" data-d="0">
+        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-[var(--border)] bg-[var(--card)] text-xs text-[var(--muted)] mb-8">
+          <span class="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse"></span>
+          A glimpse into the next era of the web
+        </div>
+      </div>
+
+      <h1 class="rv text-5xl sm:text-7xl md:text-8xl lg:text-[9rem] font-bold leading-[.88] tracking-tight mb-6" data-d="80">
+        Websites<br><span class="glow">In 2030</span>
+      </h1>
+
+      <p class="rv text-lg md:text-xl text-[var(--muted)] max-w-2xl mb-10 leading-relaxed" data-d="160">
+        The death of flat pages. The birth of living, breathing digital spaces that respond, adapt, and evolve around every visitor.
+      </p>
+
+      <div class="rv flex flex-col sm:flex-row gap-4" data-d="240">
+        <button class="mag px-8 py-4 rounded-full bg-[var(--accent)] text-black font-semibold text-sm" data-h data-action="enter">
+          <span class="flex items-center gap-2">Enter the Future <i class="fas fa-arrow-right text-xs"></i></span>
+        </button>
+        <button class="mag px-8 py-4 rounded-full border border-[var(--border)] text-[var(--fg)] font-medium text-sm hover:border-[var(--muted)] transition-colors" data-h data-action="demo">
+          <span class="flex items-center gap-2"><i class="fas fa-play text-[10px]"></i> Watch Demo</span>
+        </button>
+      </div>
+
+      <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[var(--muted)] text-xs rv" data-d="400">
+        <span>Scroll to explore</span>
+        <div class="w-5 h-9 rounded-full border border-[var(--border)] flex justify-center pt-2">
+          <div class="w-1 h-2.5 rounded-full bg-[var(--accent)] animate-bounce"></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="divider max-w-4xl mx-auto"></div>
+
+    <!-- Six Pillars -->
+    <section id="pillars" class="py-28 md:py-36 px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-20">
+          <h2 class="rv text-4xl md:text-6xl font-bold mb-6">The Six Pillars</h2>
+          <p class="rv text-[var(--muted)] text-lg max-w-xl mx-auto" data-d="80">Every website in 2030 will be built on these foundational shifts in how we experience the web.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="pillarGrid"></div>
+      </div>
+    </section>
+
+    <div class="divider max-w-4xl mx-auto"></div>
+
+    <!-- Spatial Cards -->
+    <section id="spatial" class="py-28 md:py-36 px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-20">
+          <h2 class="rv text-4xl md:text-6xl font-bold mb-6">Spatial Interfaces</h2>
+          <p class="rv text-[var(--muted)] text-lg max-w-xl mx-auto" data-d="80">Hover and move your cursor across these cards. Feel the depth.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-7" id="spatialGrid"></div>
+      </div>
+    </section>
+
+    <div class="divider max-w-4xl mx-auto"></div>
+
+    <!-- Neural Dashboard -->
+    <section id="neural" class="py-28 md:py-36 px-6">
+      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <h2 class="rv text-4xl md:text-6xl font-bold mb-6 leading-tight">Neural<br>Dashboards</h2>
+          <p class="rv text-[var(--muted)] text-lg mb-8 leading-relaxed" data-d="80">Interfaces that think with you. Data surfaces proactively, visualizations reshape to highlight what matters, and every metric tells a story.</p>
+          <div class="rv g-border rounded-2xl p-6" data-d="160">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-2 h-2 rounded-full bg-[var(--accent)]"></div>
+              <span class="text-xs text-[var(--muted)]">Neural Analysis — Live</span>
+            </div>
+            <div class="text-sm leading-relaxed text-[var(--muted)]">
+              <span id="typeText"></span><span class="tcur"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rv g-border rounded-2xl p-6 holo" data-d="120">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent2)]"></div>
+              <div>
+                <div class="text-sm font-semibold">System Health</div>
+                <div class="text-xs text-[var(--muted)]">All nodes operational</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 text-[var(--accent)] text-xs font-medium">
+              <i class="fas fa-circle text-[4px] animate-pulse"></i> Live
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-4 mb-7" id="dashStats"></div>
+          <div class="space-y-4 mb-6" id="dashBars"></div>
+          <canvas id="waveC" class="w-full rounded-lg" height="60" style="background:rgba(255,255,255,.02)"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider max-w-4xl mx-auto"></div>
+
+    <!-- Stats -->
+    <section class="py-28 md:py-36 px-6">
+      <div class="max-w-5xl mx-auto text-center">
+        <h2 class="rv text-4xl md:text-6xl font-bold mb-16">The Shift Is <span class="glow">Already</span> Happening</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8" id="statsGrid"></div>
+      </div>
+    </section>
+
+    <div class="divider max-w-4xl mx-auto"></div>
+
+    <!-- Timeline -->
+    <section class="py-28 md:py-36 px-6">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="rv text-4xl md:text-5xl font-bold mb-16 text-center">The Road to 2030</h2>
+        <div class="relative" id="timeline">
+          <div class="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-[var(--border)] md:-translate-x-px"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider max-w-4xl mx-auto"></div>
+
+    <!-- Future CTA -->
+    <section id="future" class="py-32 md:py-44 px-6 relative overflow-hidden">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] morph bg-gradient-to-br from-[var(--accent)] to-[var(--accent2)] opacity-[.04] blur-[120px]"></div>
+      <div class="max-w-4xl mx-auto text-center relative">
+        <h2 class="rv text-5xl md:text-7xl lg:text-[5.5rem] font-bold leading-[.88] mb-8">
+          The future<br>is not a page.<br><span class="glow">It's a place.</span>
+        </h2>
+        <p class="rv text-[var(--muted)] text-lg max-w-xl mx-auto mb-12" data-d="80">
+          Every website you build today is a prototype for the spatial web. The question isn't whether this shift happens — it's whether you'll be leading it.
+        </p>
+        <div class="rv" data-d="160">
+          <button class="mag px-10 py-5 rounded-full bg-[var(--accent)] text-black font-bold text-base" data-h data-action="build">
+            <span class="flex items-center gap-3">Start Building the Future <i class="fas fa-arrow-right"></i></span>
+          </button>
+        </div>
+        <div class="relative inline-flex items-center justify-center mt-16 w-20 h-20">
+          <div class="absolute w-20 h-20 rounded-full border border-[var(--accent)] opacity-20" style="animation:pulseR 3s ease-out infinite"></div>
+          <div class="absolute w-20 h-20 rounded-full border border-[var(--accent)] opacity-20" style="animation:pulseR 3s ease-out infinite 1s"></div>
+          <div class="absolute w-20 h-20 rounded-full border border-[var(--accent)] opacity-20" style="animation:pulseR 3s ease-out infinite 2s"></div>
+          <div class="w-16 h-16 rounded-full border border-[var(--accent)] opacity-30 flex items-center justify-center">
+            <i class="fas fa-chevron-down text-[var(--accent)] animate-bounce text-sm"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-16 px-6 border-t border-[var(--border)]" role="contentinfo">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+          <div>
+            <div class="flex items-center gap-2.5 mb-4">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent2)] flex items-center justify-center">
+                <i class="fas fa-cube text-black text-sm"></i>
+              </div>
+              <span class="font-bold text-lg tracking-tight">WEB30</span>
+            </div>
+            <p class="text-[var(--muted)] text-sm leading-relaxed">Charting the evolution of web experience from flat pages to living digital spaces.</p>
+          </div>
+          <div>
+            <h4 class="font-semibold mb-4 text-sm">Explore</h4>
+            <ul class="space-y-2.5 text-sm text-[var(--muted)]">
+              <li><a href="#pillars" class="hover:text-[var(--fg)] transition-colors" data-h>The Six Pillars</a></li>
+              <li><a href="#spatial" class="hover:text-[var(--fg)] transition-colors" data-h>Spatial Interfaces</a></li>
+              <li><a href="#neural" class="hover:text-[var(--fg)] transition-colors" data-h>Neural Dashboards</a></li>
+              <li><a href="#future" class="hover:text-[var(--fg)] transition-colors" data-h>The Future</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold mb-4 text-sm">Resources</h4>
+            <ul class="space-y-2.5 text-sm text-[var(--muted)]">
+              <li><a href="#" class="hover:text-[var(--fg)] transition-colors" data-h data-action="spec">Specification Draft</a></li>
+              <li><a href="#" class="hover:text-[var(--fg)] transition-colors" data-h data-action="toolkit">Developer Toolkit</a></li>
+              <li><a href="#" class="hover:text-[var(--fg)] transition-colors" data-h data-action="cases">Case Studies</a></li>
+              <li><a href="#" class="hover:text-[var(--fg)] transition-colors" data-h data-action="papers">Research Papers</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold mb-4 text-sm">Connect</h4>
+            <div class="flex gap-3">
+              <a href="#" class="w-10 h-10 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors" data-h aria-label="GitHub"><i class="fab fa-github"></i></a>
+              <a href="#" class="w-10 h-10 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors" data-h aria-label="X / Twitter"><i class="fab fa-x-twitter"></i></a>
+              <a href="#" class="w-10 h-10 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors" data-h aria-label="Discord"><i class="fab fa-discord"></i></a>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[var(--border)] text-xs text-[var(--muted)]">
+          <span>2030 Vision Project. Not affiliated with any standards body.</span>
+          <span class="mt-2 md:mt-0">Built with the tools of today, imagining the web of tomorrow.</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Three.js 3D Background -->
+  <script type="module">
+    import * as THREE from 'three';
+
+    const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
+    camera.position.z = 16;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setClearColor(0x050508, 1);
+
+    // Mouse
+    const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+    addEventListener('mousemove', e => {
+      mouse.tx = (e.clientX / innerWidth) * 2 - 1;
+      mouse.ty = -(e.clientY / innerHeight) * 2 + 1;
+    });
+
+    // Generate glow texture
+    function makeGlow(r, g, b) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const ctx = c.getContext('2d');
+      const grd = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
+      grd.addColorStop(0.25, `rgba(${r},${g},${b},0.5)`);
+      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    }
+
+    const texG = makeGlow(0, 255, 136);
+    const texO = makeGlow(255, 107, 53);
+
+    // Green particles
+    const N = 2000;
+    const pos = new Float32Array(N * 3);
+    for (let i = 0; i < N * 3; i++) pos[i] = (Math.random() - 0.5) * 44;
+    const geoG = new THREE.BufferGeometry();
+    geoG.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const matG = new THREE.PointsMaterial({ map: texG, size: 0.28, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, opacity: 0.65 });
+    const ptsG = new THREE.Points(geoG, matG);
+    scene.add(ptsG);
+
+    // Orange particles (fewer)
+    const NO = 400;
+    const posO = new Float32Array(NO * 3);
+    for (let i = 0; i < NO * 3; i++) posO[i] = (Math.random() - 0.5) * 44;
+    const geoO = new THREE.BufferGeometry();
+    geoO.setAttribute('position', new THREE.BufferAttribute(posO, 3));
+    const matO = new THREE.PointsMaterial({ map: texO, size: 0.22, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, opacity: 0.45 });
+    const ptsO = new THREE.Points(geoO, matO);
+    scene.add(ptsO);
+
+    // Connection lines
+    const LC = 120;
+    const lPos = new Float32Array(LC * 6);
+    const geoL = new THREE.BufferGeometry();
+    geoL.setAttribute('position', new THREE.BufferAttribute(lPos, 3));
+    const matL = new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending });
+    const lines = new THREE.LineSegments(geoL, matL);
+    scene.add(lines);
+
+    // Wave floor
+    const wGeo = new THREE.PlaneGeometry(60, 60, 60, 60);
+    const wMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, wireframe: true, transparent: true, opacity: 0.025 });
+    const wave = new THREE.Mesh(wGeo, wMat);
+    wave.rotation.x = -Math.PI / 2;
+    wave.position.y = -14;
+    scene.add(wave);
+
+    // Scroll
+    let scrollY = 0;
+    addEventListener('scroll', () => scrollY = scrollY);
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      mouse.x += (mouse.tx - mouse.x) * 0.04;
+      mouse.y += (mouse.ty - mouse.y) * 0.04;
+
+      camera.position.x = mouse.x * 2.5;
+      camera.position.y = mouse.y * 1.8;
+      camera.position.z = 16 + scrollY * 0.002;
+      camera.lookAt(0, 0, 0);
+
+      // Green particles
+      const g = geoG.attributes.position.array;
+      for (let i = 0; i < N; i++) {
+        const i3 = i * 3;
+        g[i3 + 1] += Math.sin(t * 0.4 + g[i3] * 0.25) * 0.003;
+        g[i3] += Math.cos(t * 0.25 + g[i3 + 2] * 0.18) * 0.002;
+        const dx = mouse.x * 16 - g[i3], dy = mouse.y * 11 - g[i3 + 1];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 6) { const f = (6 - d) * 0.0015; g[i3] -= dx * f; g[i3 + 1] -= dy * f; }
+        if (g[i3] > 22) g[i3] = -22; if (g[i3] < -22) g[i3] = 22;
+        if (g[i3 + 1] > 22) g[i3 + 1] = -22; if (g[i3 + 1] < -22) g[i3 + 1] = 22;
+      }
+      geoG.attributes.position.needsUpdate = true;
+
+      // Orange particles
+      const o = geoO.attributes.position.array;
+      for (let i = 0; i < NO; i++) {
+        const i3 = i * 3;
+        o[i3 + 1] += Math.sin(t * 0.35 + o[i3] * 0.4) * 0.004;
+        o[i3] += Math.cos(t * 0.2 + o[i3 + 2] * 0.3) * 0.003;
+      }
+      geoO.attributes.position.needsUpdate = true;
+
+      // Lines
+      const la = geoL.attributes.position.array;
+      let li = 0;
+      for (let i = 0; i < N && li < LC; i += 18) {
+        for (let j = i + 18; j < N && li < LC; j += 22) {
+          const a = i * 3, b = j * 3;
+          const dx = g[a] - g[b], dy = g[a + 1] - g[b + 1], dz = g[a + 2] - g[b + 2];
+          if (dx * dx + dy * dy + dz * dz < 16) {
+            const p = li * 6;
+            la[p] = g[a]; la[p + 1] = g[a + 1]; la[p + 2] = g[a + 2];
+            la[p + 3] = g[b]; la[p + 4] = g[b + 1]; la[p + 5] = g[b + 2];
+            li++;
+          }
+        }
+      }
+      for (let i = li * 6; i < LC * 6; i++) la[i] = 0;
+      geoL.attributes.position.needsUpdate = true;
+
+      // Wave
+      const wp = wGeo.attributes.position.array;
+      for (let i = 0; i < wp.length; i += 3) {
+        const x = wGeo.attributes.position.getX(i / 3);
+        const y = wGeo.attributes.position.getY(i / 3);
+        wp[i + 2] = Math.sin(x * 0.25 + t * 0.7) * 0.6 + Math.cos(y * 0.18 + t * 0.5) * 0.4;
+      }
+      wGeo.attributes.position.needsUpdate = true;
+
+      ptsG.rotation.y = t * 0.015;
+      ptsO.rotation.y = -t * 0.012;
+      lines.rotation.y = t * 0.015;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+
+  <!-- UI Logic -->
+  <script>
+    /* ── Data ── */
+    const pillars = [
+      { icon: 'fa-layer-group', color: 'g', title: 'Spatial Depth', desc: 'Pages are no longer flat. Every element exists in 3D space, responding to your gaze and scroll with parallax depth layers.' },
+      { icon: 'fa-brain', color: 'o', title: 'Neural Adaptation', desc: 'Layouts, copy, and visuals reorganize in real-time based on visitor behavior patterns and attention heatmaps.' },
+      { icon: 'fa-wind', color: 'g', title: 'Fluid Motion', desc: 'Stiff transitions are gone. Every state change flows like liquid, with spring physics and gesture-driven choreography.' },
+      { icon: 'fa-dna', color: 'o', title: 'Living Typography', desc: 'Text breathes, stretches, and reacts. Font weight, size, and spacing shift dynamically to create rhythmic visual narratives.' },
+      { icon: 'fa-shield-halved', color: 'g', title: 'Zero-Trust UI', desc: 'Security is invisible but absolute. Biometric layers, encrypted rendering, and decentralized identity built into every pixel.' },
+      { icon: 'fa-atom', color: 'o', title: 'Ambient Intelligence', desc: 'Websites sense time of day, weather, device state, and ambient noise — adapting mood, palette, and energy level.' },
+    ];
+
+    const spatialCards = [
+      { img: 'spatial2030a', label: '3D Layout', labelC: 'g', title: 'Depth-Aware Grids', desc: 'Content layers shift independently based on scroll velocity and cursor trajectory.' },
+      { img: 'spatial2030b', label: 'Adaptive', labelC: 'o', title: 'Context Meshing', desc: 'UI components dissolve and reform based on the user\'s current task and intent signals.' },
+      { img: 'spatial2030c', label: 'Holographic', labelC: 'g', title: 'Volumetric Displays', desc: 'Product showcases render in true 3D space, rotatable by gaze or gesture without touch.' },
+    ];
+
+    const dashStatsData = [
+      { val: 99.97, dec: 2, label: 'Uptime %' },
+      { val: 2.4, dec: 1, label: 'Response ms' },
+      { val: 847, dec: 0, label: 'Active Users' },
+    ];
+
+    const dashBarsData = [
+      { label: 'Neural Compute', pct: 92, c1: 'var(--accent)', c2: 'var(--accent2)' },
+      { label: 'Memory Allocated', pct: 67, c1: 'var(--accent2)', c2: 'var(--accent)' },
+      { label: 'Bandwidth Usage', pct: 45, c1: 'var(--accent)', c2: 'var(--accent2)' },
+    ];
+
+    const statsData = [
+      { val: 340, color: 'glow', sub1: 'Million spatial', sub2: 'pages by 2028' },
+      { val: 89, color: 'glow2', sub1: 'Percent faster', sub2: 'interaction models' },
+      { val: 12, color: 'glow', sub1: 'New CSS specs', sub2: 'enabling spatial web' },
+      { val: 0, color: 'glow2', sub1: 'Flat pages that', sub2: 'will survive 2030' },
+    ];
+
+    const timelineData = [
+      { year: '2025', title: 'CSS Gets Spatial', desc: 'Container queries go mainstream. View transitions become native. The first production spatial-web frameworks appear.' },
+      { year: '2027', title: 'AI Layout Engines', desc: 'On-device AI rearranges page structure in real-time. A/B testing becomes obsolete — every visit is uniquely optimized.' },
+      { year: '2028', title: 'WebGPU Matures', desc: 'Real-time 3D rendering in the browser matches native apps. WebGL fades as WebGPU becomes the default.' },
+      { year: '2029', title: 'Gaze & Gesture', desc: 'Eye-tracking and hand-gesture input reach mass adoption. Cursor-free navigation becomes viable for mainstream sites.' },
+      { year: '2030', title: 'The Living Web', desc: 'Websites are now persistent digital spaces. They remember, adapt, and evolve. The flat page era officially ends.' },
+    ];
+
+    const typeMsgs = [
+      "Analyzing visitor flow patterns... Detected 3 micro-conversion opportunities in the current layout. Recommending spatial reorganization of the hero section to increase engagement by 34%.",
+      "Attention heatmap indicates high focus on the lower-right quadrant. Shifting CTA placement and adjusting parallax depth to align with natural gaze trajectory.",
+      "Neural mesh updated. Visitor 847's session shows strong purchase intent signals. Dynamically increasing product detail density and enabling holographic preview.",
+      "Ambient conditions detected: Evening local time, warm lighting. Adjusting color temperature to 3200K and reducing motion intensity for comfortable browsing.",
+    ];
+
+    /* ── Render dynamic sections ── */
+    // Pillars
+    const pillarGrid = document.getElementById('pillarGrid');
+    pillars.forEach((p, i) => {
+      const isG = p.color === 'g';
+      pillarGrid.innerHTML += `
+        <div class="rv g-border p-7 rounded-2xl" data-d="${i % 3 * 100}">
+          <div class="ficon ${isG ? 'glow-g' : 'glow-o'} w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+               style="background:${isG ? 'rgba(0,255,136,.08)' : 'rgba(255,107,53,.08)'}">
+            <i class="fas ${p.icon}" style="color:${isG ? 'var(--accent)' : 'var(--accent2)'}"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">${p.title}</h3>
+          <p class="text-[var(--muted)] text-sm leading-relaxed">${p.desc}</p>
+        </div>`;
+    });
+
+    // Spatial cards
+    const spatialGrid = document.getElementById('spatialGrid');
+    spatialCards.forEach((c, i) => {
+      const isG = c.labelC === 'g';
+      spatialGrid.innerHTML += `
+        <div class="rv tilt-card" data-d="${i * 140}">
+          <div class="tilt-inner g-border rounded-2xl overflow-hidden">
+            <div class="aspect-[4/3] relative overflow-hidden">
+              <img src="https://picsum.photos/seed/${c.img}/600/450.jpg" alt="${c.title}" class="w-full h-full object-cover transition-transform duration-700 hover:scale-110" loading="lazy">
+              <div class="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-transparent"></div>
+              <div class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium border"
+                   style="background:${isG ? 'rgba(0,255,136,.08)' : 'rgba(255,107,53,.08)'};color:${isG ? 'var(--accent)' : 'var(--accent2)'};border-color:${isG ? 'rgba(0,255,136,.2)' : 'rgba(255,107,53,.2)'}">
+                ${c.label}
+              </div>
+            </div>
+            <div class="p-6">
+              <h3 class="text-lg font-bold mb-2">${c.title}</h3>
+              <p class="text-[var(--muted)] text-sm">${c.desc}</p>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    // Dashboard stats
+    const dashStats = document.getElementById('dashStats');
+    dashStatsData.forEach(s => {
+      dashStats.innerHTML += `
+        <div>
+          <div class="text-2xl font-bold stat-v" style="font-variant-numeric:tabular-nums" data-count="${s.val}" data-dec="${s.dec}">0</div>
+          <div class="text-xs text-[var(--muted)]">${s.label}</div>
+        </div>`;
+    });
+
+    // Dashboard bars
+    const dashBars = document.getElementById('dashBars');
+    dashBarsData.forEach(b => {
+      dashBars.innerHTML += `
+        <div>
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-[var(--muted)]">${b.label}</span>
+            <span style="color:${b.c1}">${b.pct}%</span>
+          </div>
+          <div class="dbar"><div class="dbar-fill" data-w="${b.pct}%" style="background:linear-gradient(90deg,${b.c1},${b.c2})"></div></div>
+        </div>`;
+    });
+
+    // Stats
+    const statsGrid = document.getElementById('statsGrid');
+    statsData.forEach((s, i) => {
+      statsGrid.innerHTML += `
+        <div class="rv" data-d="${i * 100}">
+          <div class="text-4xl md:text-5xl font-bold ${s.color}" style="font-variant-numeric:tabular-nums" data-count="${s.val}" data-dec="0">${s.val}</div>
+          <div class="text-sm text-[var(--muted)] mt-2">${s.sub1}<br>${s.sub2}</div>
+        </div>`;
+    });
+
+    // Timeline
+    const timeline = document.getElementById('timeline');
+    timelineData.forEach((t, i) => {
+      const isLeft = i % 2 === 0;
+      timeline.innerHTML += `
+        <div class="rv relative flex items-start mb-12 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}" data-d="${i * 80}">
+          <div class="hidden md:block w-1/2 ${isLeft ? 'pr-12 text-right' : 'pl-12 text-left'}">
+            <div class="g-border rounded-xl p-5 inline-block text-left" style="max-width:320px">
+              <div class="text-xs font-bold glow mb-2">${t.year}</div>
+              <h3 class="font-bold mb-2">${t.title}</h3>
+              <p class="text-[var(--muted)] text-sm leading-relaxed">${t.desc}</p>
+            </div>
+          </div>
+          <div class="absolute left-6 md:left-1/2 w-3 h-3 rounded-full bg-[var(--accent)] border-2 border-[var(--bg)] -translate-x-1.5 mt-2 z-10" style="box-shadow:0 0 12px rgba(0,255,136,.4)"></div>
+          <div class="md:hidden ml-14 g-border rounded-xl p-5">
+            <div class="text-xs font-bold glow mb-2">${t.year}</div>
+            <h3 class="font-bold mb-2">${t.title}</h3>
+            <p class="text-[var(--muted)] text-sm leading-relaxed">${t.desc}</p>
+          </div>
+          <div class="hidden md:block w-1/2"></div>
+        </div>`;
+    });
+
+    /* ── Custom Cursor ── */
+    const cDot = document.getElementById('cDot');
+    const cRing = document.getElementById('cRing');
+    let cx = 0, cy = 0, rx = 0, ry = 0;
+
+    document.addEventListener('mousemove', e => {
+      cx = e.clientX; cy = e.clientY;
+      cDot.style.left = cx + 'px'; cDot.style.top = cy + 'px';
+    });
+
+    (function curLoop() {
+      rx += (cx - rx) * 0.13; ry += (cy - ry) * 0.13;
+      cRing.style.left = rx + 'px'; cRing.style.top = ry + 'px';
+      requestAnimationFrame(curLoop);
+    })();
+
+    document.querySelectorAll('[data-h]').forEach(el => {
+      el.addEventListener('mouseenter', () => cRing.classList.add('hov'));
+      el.addEventListener('mouseleave', () => cRing.classList.remove('hov'));
+    });
+
+    /* ── Scroll Progress ── */
+    const scrollBar = document.getElementById('scrollBar');
+    addEventListener('scroll', () => {
+      const pct = (scrollY / (document.documentElement.scrollHeight - innerHeight)) * 100;
+      scrollBar.style.width = pct + '%';
+    });
+
+    /* ── Scroll Reveal ── */
+    const rvObs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('vis'), parseInt(e.target.dataset.d || 0));
+          rvObs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.rv').forEach(el => rvObs.observe(el));
+
+    /* ── 3D Tilt ── */
+    document.querySelectorAll('.tilt-card').forEach(card => {
+      const inner = card.querySelector('.tilt-inner');
+      card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        inner.style.transform = `perspective(800px) rotateX(${(y - r.height / 2) / r.height * -10}deg) rotateY(${(x - r.width / 2) / r.width * 10}deg) scale3d(1.03,1.03,1.03)`;
+      });
+      card.addEventListener('mouseleave', () => {
+        inner.style.transition = 'transform .5s cubic-bezier(.16,1,.3,1)';
+        inner.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+        setTimeout(() => inner.style.transition = '', 500);
+      });
+    });
+
+    /* ── Counters ── */
+    let countersRan = false;
+    function runCounters() {
+      if (countersRan) return;
+      countersRan = true;
+      document.querySelectorAll('[data-count]').forEach(el => {
+        const target = parseFloat(el.dataset.count);
+        const dec = parseInt(el.dataset.dec || 0);
+        const dur = 2200, start = performance.now();
+        (function tick(now) {
+          const p = Math.min((now - start) / dur, 1);
+          const ease = 1 - Math.pow(1 - p, 3);
+          el.textContent = (target * ease).toFixed(dec);
+          if (p < 1) requestAnimationFrame(tick);
+          else el.textContent = target.toFixed(dec);
+        })(start);
+      });
+    }
+    new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) { runCounters(); this.disconnect(); }
+    }, { threshold: 0.25 }).observe(document.getElementById('statsGrid'));
+
+    /* ── Dashboard Bars ── */
+    const barObs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.querySelectorAll('[data-w]').forEach((b, i) => {
+            setTimeout(() => b.style.width = b.dataset.w, 300 + i * 200);
+          });
+          barObs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('#dashBars').forEach(el => barObs.observe(el));
+
+    /* ── Typing Effect ── */
+    let tIdx = 0, tChar = 0, tDel = false;
+    const tEl = document.getElementById('typeText');
+    function typeLoop() {
+      const msg = typeMsgs[tIdx];
+      if (!tDel) {
+        tEl.textContent = msg.substring(0, ++tChar);
+        if (tChar === msg.length) { tDel = true; setTimeout(typeLoop, 2800); return; }
+        setTimeout(typeLoop, 18 + Math.random() * 28);
+      } else {
+        tEl.textContent = msg.substring(0, --tChar);
+        if (tChar === 0) { tDel = false; tIdx = (tIdx + 1) % typeMsgs.length; setTimeout(typeLoop, 400); return; }
+        setTimeout(typeLoop, 7);
+      }
+    }
+    new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) { typeLoop(); this.disconnect(); }
+    }, { threshold: 0.4 }).observe(tEl);
+
+    /* ── Wave Canvas ── */
+    const wC = document.getElementById('waveC');
+    if (wC) {
+      const ctx = wC.getContext('2d');
+      function sizeWave() { wC.width = wC.offsetWidth * 2; wC.height = 120; }
+      sizeWave(); addEventListener('resize', sizeWave);
+
+      (function drawW() {
+        ctx.clearRect(0, 0, wC.width, wC.height);
+        const t = performance.now() * 0.002, w = wC.width, h = wC.height;
+        const layers = [
+          { color: 'rgba(0,255,136,0.18)', off: 0 },
+          { color: 'rgba(255,107,53,0.14)', off: 1.2 },
+          { color: 'rgba(0,255,136,0.08)', off: 2.5 },
+        ];
+        layers.forEach(l => {
+          ctx.beginPath(); ctx.strokeStyle = l.color; ctx.lineWidth = 1.5;
+          for (let x = 0; x < w; x += 2) {
+            const y = h / 2 + Math.sin(x * 0.007 + t + l.off) * 16 + Math.sin(x * 0.014 + t * 1.3 + l.off) * 9 + Math.cos(x * 0.003 + t * 0.4) * 11;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        });
+        requestAnimationFrame(drawW);
+      })();
+    }
+
+    /* ── Magnetic Buttons ── */
+    document.querySelectorAll('.mag').forEach(btn => {
+      btn.addEventListener('mousemove', e => {
+        const r = btn.getBoundingClientRect();
+        btn.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.22}px,${(e.clientY - r.top - r.height / 2) * 0.22}px)`;
+      });
+      btn.addEventListener('mouseleave', () => btn.style.transform = '');
+    });
+
+    /* ── Toast System ── */
+    function toast(msg, icon = 'fa-check') {
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = `<i class="fas ${icon} text-[var(--accent)] mr-2"></i>${msg}`;
+      document.getElementById('toasts').appendChild(el);
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+      setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 400);
+      }, 3000);
+    }
+
+    /* ── Button Actions ── */
+    document.querySelectorAll('[data-action]').forEach(el => {
+      el.addEventListener('click', e => {
+        const a = el.dataset.action;
+        if (a === 'enter') {
+          document.getElementById('pillars').scrollIntoView({ behavior: 'smooth' });
+        } else if (a === 'explore' || a === 'build') {
+          toast('Spatial web prototype loading... This is a vision, not a product — yet.', 'fa-rocket');
+        } else if (a === 'demo') {
+          toast('Demo reel coming soon. The future is being rendered as we speak.', 'fa-film');
+        } else if (a === 'spec') {
+          toast('Specification Draft v0.3 — Community review in progress.', 'fa-file-code');
+        } else if (a === 'toolkit') {
+          toast('Developer Toolkit includes spatial layout primitives, neural adapters, and fluid motion libraries.', 'fa-toolbox');
+        } else if (a === 'cases') {
+          toast('12 case studies from early spatial web adopters documented.', 'fa-book-open');
+        } else if (a === 'papers') {
+          toast('Research papers on spatial cognition, adaptive UI, and ambient intelligence available.', 'fa-graduation-cap');
+        }
+      });
+    });
+
+    /* ── Smooth Anchor Scroll ── */
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
+</body>
+</html>
