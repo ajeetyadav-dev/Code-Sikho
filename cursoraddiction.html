@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Addiction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #050510;
+            overflow: hidden;
+            cursor: none;
+            font-family: 'Space Grotesk', sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0; left: 0;
+        }
+        .hint {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.25);
+            font-size: 15px;
+            font-weight: 300;
+            letter-spacing: 7px;
+            text-transform: uppercase;
+            pointer-events: none;
+            transition: opacity 2s ease;
+            z-index: 10;
+            animation: hintPulse 2.5s ease-in-out infinite;
+        }
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.45; }
+        }
+        .hint.hidden { opacity: 0; animation: none; }
+        .tips {
+            position: fixed;
+            bottom: 22px; right: 26px;
+            display: flex; flex-direction: column;
+            gap: 5px; align-items: flex-end;
+            pointer-events: none; z-index: 10;
+        }
+        .tip {
+            color: rgba(255,255,255,0.12);
+            font-size: 10px; font-weight: 300;
+            letter-spacing: 1.8px; text-transform: uppercase;
+            opacity: 0; transition: opacity 1.2s ease;
+        }
+        .tip.show { opacity: 1; }
+        .tip.hide { opacity: 0; }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div class="hint" id="hint">Move your cursor</div>
+    <div class="tips">
+        <div class="tip" id="tip1">click for burst</div>
+        <div class="tip" id="tip2">hold to stream</div>
+    </div>
+
+    <script>
+    (() => {
+        /* ── Canvas ── */
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let W, H;
+        function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+        addEventListener('resize', resize);
+        resize();
+
+        /* ── Tuning ── */
+        const TRAIL_LEN   = 58;
+        const MAX_P       = 500;
+        const LERP        = 0.13;
+        const HUE_SPD     = 0.35;
+
+        /* ── State ── */
+        const mouse     = { x: -300, y: -300, px: -300, py: -300, speed: 0, active: false, down: false };
+        const sm        = { x: -300, y: -300 };
+        const smDir     = { x: 0, y: 0 };
+        let trail       = [];
+        let particles   = [];
+        let ripples     = [];
+        let baseHue     = 12;
+        let frame       = 0;
+        let hintUp      = true;
+
+        /* ── Ambient dust ── */
+        const dust = Array.from({ length: 75 }, () => ({
+            x: Math.random() * W, y: Math.random() * H,
+            vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2,
+            sz: Math.random() * 1.2 + 0.3, a: Math.random() * 0.18 + 0.03,
+            h: Math.random() * 360
+        }));
+
+        /* ── Orbiters (idle state) ── */
+        const orbs = Array.from({ length: 7 }, (_, i) => ({
+            ang: (Math.PI * 2 / 7) * i,
+            d: 22 + Math.random() * 18,
+            spd: 0.014 + Math.random() * 0.02,
+            sz: 1.5 + Math.random() * 2,
+            ho: i * 42
+        }));
+
+        /* ── Input ── */
+        function onMove(x, y) {
+            mouse.px = mouse.x; mouse.py = mouse.y;
+            mouse.x = x; mouse.y = y;
+            mouse.speed = Math.hypot(x - mouse.px, y - mouse.py);
+            mouse.active = true;
+            if (hintUp) { hintUp = false; document.getElementById('hint').classList.add('hidden'); }
+        }
+        canvas.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+        canvas.addEventListener('touchstart', e => { onMove(e.touches[0].clientX, e.touches[0].clientY); mouse.down = true; });
+        canvas.addEventListener('mousedown', () => mouse.down = true);
+        canvas.addEventListener('mouseup',   () => mouse.down = false);
+        canvas.addEventListener('touchend',  () => mouse.down = false);
+        document.addEventListener('mouseleave', () => mouse.active = false);
+        document.addEventListener('mouseenter', () => mouse.active = true);
+
+        /* ── Click: ripple + burst ── */
+        canvas.addEventListener('click', () => {
+            if (!mouse.active) return;
+            ripples.push({ x: sm.x, y: sm.y, r: 0, mr: 145, l: 1, h: baseHue });
+            ripples.push({ x: sm.x, y: sm.y, r: 0, mr: 75,  l: 1, h: (baseHue + 45) % 360 });
+            for (let i = 0; i < 42; i++) {
+                const a = (Math.PI * 2 / 42) * i + Math.random() * 0.25;
+                const sp = 2.5 + Math.random() * 5.5;
+                addP(sm.x, sm.y, Math.cos(a)*sp, Math.sin(a)*sp,
+                     35 + Math.random()*28, 1.5 + Math.random()*4,
+                     (baseHue + Math.random()*70 - 35 + 360) % 360,
+                     Math.random() > 0.4 ? 'g' : 's');
+            }
+        });
+
+        /* ── Particle helper ── */
+        function addP(x,y,vx,vy,life,sz,hue,type) {
+            if (particles.length >= MAX_P) return;
+            particles.push({ x,y,vx,vy,life,ml:life,sz,hue,type });
+        }
+
+        /* ── Timed tips ── */
+        setTimeout(() => document.getElementById('tip1').classList.add('show'), 2800);
+        setTimeout(() => document.getElementById('tip2').classList.add('show'), 4800);
+        setTimeout(() => { document.getElementById('tip1').classList.add('hide'); document.getElementById('tip2').classList.add('hide'); }, 9500);
+
+        /* ── UPDATE ── */
+        function update() {
+            frame++;
+            baseHue = (baseHue + HUE_SPD) % 360;
+
+            /* Smooth cursor follow */
+            sm.x += (mouse.x - sm.x) * LERP;
+            sm.y += (mouse.y - sm.y) * LERP;
+
+            /* Direction tracking + turn detection */
+            if (mouse.speed > 1) {
+                const dx = mouse.x - mouse.px, dy = mouse.y - mouse.py;
+                const m = Math.hypot(dx, dy);
+                if (m > 0) { smDir.x = smDir.x*0.7 + (dx/m)*0.3; smDir.y = smDir.y*0.7 + (dy/m)*0.3; }
+                if (dx*smDir.x + dy*smDir.y < 0 && mouse.speed > 7) {
+                    for (let i = 0; i < 16; i++) {
+                        const a = Math.random()*Math.PI*2, sp = 1 + Math.random()*4.5;
+                        addP(sm.x, sm.y, Math.cos(a)*sp, Math.sin(a)*sp,
+                             22+Math.random()*18, 1+Math.random()*3,
+                             (baseHue+Math.random()*55)%360, 's');
+                    }
+                }
+            }
+
+            /* Trail history */
+            if (mouse.active) {
+                trail.unshift({ x: sm.x, y: sm.y, h: baseHue, sp: mouse.speed });
+                while (trail.length > TRAIL_LEN) trail.pop();
+            } else if (trail.length && frame % 2 === 0) trail.pop();
+
+            /* Speed-based particles */
+            if (mouse.speed > 3 && mouse.active) {
+                const cnt = Math.min(Math.ceil(mouse.speed * 0.13), 5);
+                const pa = Math.atan2(mouse.y - mouse.py, mouse.x - mouse.px) + Math.PI/2;
+                for (let i = 0; i < cnt; i++) {
+                    const side = Math.random() > 0.5 ? 1 : -1;
+                    const off = 5 + Math.random()*14;
+                    addP(sm.x + Math.cos(pa)*off*side, sm.y + Math.sin(pa)*off*side,
+                         (Math.random()-0.5)*1.3, (Math.random()-0.5)*1.3,
+                         24+Math.random()*18, 1+Math.random()*3,
+                         (baseHue+Math.random()*50-25+360)%360, 'g');
+                }
+            }
+
+            /* Hold-to-stream */
+            if (mouse.down && mouse.active) {
+                for (let i = 0; i < 4; i++) {
+                    const a = Math.random()*Math.PI*2, sp = 0.5+Math.random()*2.8;
+                    addP(sm.x, sm.y, Math.cos(a)*sp, Math.sin(a)*sp - 0.7,
+                         28+Math.random()*18, 1.5+Math.random()*2.2,
+                         (baseHue+Math.random()*90)%360, 's');
+                }
+            }
+
+            /* Particles physics */
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life--;
+                if (p.type === 'g') { p.vx *= 0.96; p.vy *= 0.96; }
+                else { p.vx *= 0.975; p.vy *= 0.975; p.vy += 0.025; }
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            /* Ripples */
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.r += (r.mr - r.r) * 0.065;
+                r.l -= 0.017;
+                if (r.l <= 0) ripples.splice(i, 1);
+            }
+
+            /* Dust */
+            for (const d of dust) {
+                d.x += d.vx; d.y += d.vy; d.h = (d.h + 0.08) % 360;
+                if (d.x < -10) d.x = W+10; if (d.x > W+10) d.x = -10;
+                if (d.y < -10) d.y = H+10; if (d.y > H+10) d.y = -10;
+                if (mouse.active) {
+                    const dx = sm.x - d.x, dy = sm.y - d.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 260 && dist > 1) {
+                        const f = 0.009 * (1 - dist/260);
+                        d.vx += (dx/dist)*f; d.vy += (dy/dist)*f;
+                    }
+                }
+                d.vx *= 0.995; d.vy *= 0.995;
+            }
+
+            /* Orbiters */
+            for (const o of orbs) o.ang += o.spd;
+        }
+
+        /* ── DRAW ── */
+        function draw() {
+            /* Full clear */
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, W, H);
+
+            /* Vignette */
+            const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.28, W/2, H/2, Math.max(W,H)*0.78);
+            vig.addColorStop(0, 'rgba(5,5,16,0)');
+            vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            /* Cursor background glow */
+            if (mouse.active) {
+                const bg = ctx.createRadialGradient(sm.x, sm.y, 0, sm.x, sm.y, 300);
+                bg.addColorStop(0, `hsla(${baseHue},70%,22%,0.07)`);
+                bg.addColorStop(1, 'rgba(5,5,16,0)');
+                ctx.fillStyle = bg;
+                ctx.fillRect(sm.x-310, sm.y-310, 620, 620);
+            }
+
+            /* ── Additive blending ── */
+            ctx.globalCompositeOperation = 'lighter';
+
+            /* Dust */
+            for (const d of dust) {
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.sz, 0, Math.PI*2);
+                ctx.fillStyle = `hsla(${d.h},50%,60%,${d.a})`;
+                ctx.fill();
+            }
+
+            /* Trail — 4-layer glow per point */
+            const tL = trail.length;
+            for (let i = 0; i < tL; i++) {
+                const t  = 1 - i / tL;          // 1 = head, 0 = tail
+                const pt = trail[i];
+                const a  = t * t;                // quadratic falloff
+                const w  = 1 + t * 12;
+                const h  = (pt.h + i * 1.8) % 360;
+
+                /* Layer 1: wide soft glow */
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, w * 3.8, 0, Math.PI*2);
+                ctx.fillStyle = `hsla(${h},100%,42%,${a * 0.035})`;
+                ctx.fill();
+
+                /* Layer 2: mid glow */
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, w * 1.7, 0, Math.PI*2);
+                ctx.fillStyle = `hsla(${h},100%,54%,${a * 0.11})`;
+                ctx.fill();
+
+                /* Layer 3: core */
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, w * 0.5, 0, Math.PI*2);
+                ctx.fillStyle = `hsla(${h},70%,80%,${a * 0.45})`;
+                ctx.fill();
+
+                /* Layer 4: hot center (near head only) */
+                if (t > 0.65) {
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, w * 0.16, 0, Math.PI*2);
+                    ctx.fillStyle = `hsla(${h},18%,97%,${a * 0.55})`;
+                    ctx.fill();
+                }
+            }
+
+            /* Particles */
+            for (const p of particles) {
+                const t  = p.life / p.ml;
+                const fa = t * (t < 0.25 ? t / 0.25 : 1);   // ease-out fade
+
+                if (p.type === 'g') {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.sz * 3.2, 0, Math.PI*2);
+                    ctx.fillStyle = `hsla(${p.hue},100%,48%,${fa * 0.055})`;
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.sz, 0, Math.PI*2);
+                    ctx.fillStyle = `hsla(${p.hue},100%,68%,${fa * 0.32})`;
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.sz * 2.2, 0, Math.PI*2);
+                    ctx.fillStyle = `hsla(${p.hue},100%,58%,${fa * 0.07})`;
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.sz * 0.5, 0, Math.PI*2);
+                    ctx.fillStyle = `hsla(${p.hue},55%,92%,${fa * 0.65})`;
+                    ctx.fill();
+                }
+            }
+
+            /* Ripples */
+            for (const r of ripples) {
+                const rad = Math.max(1, r.r);
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, rad, 0, Math.PI*2);
+                ctx.strokeStyle = `hsla(${r.h},100%,63%,${r.l * 0.32})`;
+                ctx.lineWidth = 2.8 * r.l;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, rad * 0.96, 0, Math.PI*2);
+                ctx.strokeStyle = `hsla(${r.h},100%,88%,${r.l * 0.13})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            /* Orbiters — appear when idle */
+            if (mouse.active) {
+                const idle = Math.max(0, 1 - mouse.speed / 3);
+                if (idle > 0.01) {
+                    for (const o of orbs) {
+                        const wobble = Math.sin(frame * 0.028 + o.ho) * 5;
+                        const ox = sm.x + Math.cos(o.ang) * (o.d + wobble);
+                        const oy = sm.y + Math.sin(o.ang) * (o.d + wobble);
+                        const h  = (baseHue + o.ho) % 360;
+
+                        ctx.beginPath();
+                        ctx.arc(ox, oy, o.sz * 3.8, 0, Math.PI*2);
+                        ctx.fillStyle = `hsla(${h},100%,52%,${idle * 0.055})`;
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(ox, oy, o.sz, 0, Math.PI*2);
+                        ctx.fillStyle = `hsla(${h},100%,76%,${idle * 0.45})`;
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(ox, oy, o.sz * 0.3, 0, Math.PI*2);
+                        ctx.fillStyle = `hsla(${h},18%,96%,${idle * 0.65})`;
+                        ctx.fill();
+
+                        /* Faint connector line to cursor */
+                        ctx.beginPath();
+                        ctx.moveTo(sm.x, sm.y);
+                        ctx.lineTo(ox, oy);
+                        ctx.strokeStyle = `hsla(${h},100%,60%,${idle * 0.04})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            /* Cursor head glow */
+            if (mouse.active) {
+                const pulse = 0.84 + Math.sin(frame * 0.055) * 0.16;
+                const cg = ctx.createRadialGradient(sm.x, sm.y, 0, sm.x, sm.y, 38 * pulse);
+                cg.addColorStop(0, `hsla(${baseHue},100%,68%,0.22)`);
+                cg.addColorStop(0.45, `hsla(${baseHue},100%,52%,0.06)`);
+                cg.addColorStop(1, `hsla(${baseHue},100%,50%,0)`);
+                ctx.fillStyle = cg;
+                ctx.beginPath();
+                ctx.arc(sm.x, sm.y, 38 * pulse, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(sm.x, sm.y, 7.5, 0, Math.PI*2);
+                ctx.fillStyle = `hsla(${baseHue},100%,78%,0.18)`;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(sm.x, sm.y, 3, 0, Math.PI*2);
+                ctx.fillStyle = `hsla(${baseHue},22%,96%,0.88)`;
+                ctx.fill();
+            }
+
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        /* ── Loop ── */
+        (function loop() { update(); draw(); requestAnimationFrame(loop); })();
+    })();
+    </script>
+</body>
+</html>

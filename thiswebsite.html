@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>This Website Doesn't Feel Real</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: #F0EDE8;
+            --muted: #6B6560;
+            --accent: #E8A838;
+            --accent2: #FF4D4D;
+            --accent3: #00E5C8;
+            --card: rgba(255,255,255,0.03);
+            --border: rgba(255,255,255,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        h1, h2, h3 { font-family: 'Syne', sans-serif; }
+
+        /* === Custom Cursor === */
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transition: width 0.3s, height 0.3s, border-color 0.3s;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+        }
+        .cursor.hover {
+            width: 50px;
+            height: 50px;
+            border-color: var(--accent3);
+        }
+        .cursor-dot {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+        @media (hover: none) {
+            .cursor, .cursor-dot { display: none; }
+            body { cursor: auto; }
+        }
+
+        /* === Canvas Layer === */
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        #canvas-container canvas {
+            display: block;
+            filter: brightness(1.08) contrast(1.04);
+        }
+
+        /* === Atmospheric Overlays === */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg, transparent, transparent 2px,
+                rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+        .vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.65) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* === Content Overlay === */
+        #content { position: relative; z-index: 2; }
+
+        /* === Glitch Text === */
+        .glitch {
+            position: relative;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+        }
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .glitch::before {
+            color: var(--accent2);
+            animation: glitch1 5s infinite linear;
+        }
+        .glitch::after {
+            color: var(--accent3);
+            animation: glitch2 5s infinite linear;
+        }
+        @keyframes glitch1 {
+            0%, 93% { opacity: 0; transform: translate(0); }
+            94% { opacity: 0.8; transform: translate(-4px, 2px); clip-path: inset(20% 0 40% 0); }
+            95% { opacity: 0; transform: translate(0); }
+            97% { opacity: 0.6; transform: translate(4px, -1px); clip-path: inset(60% 0 10% 0); }
+            98% { opacity: 0; transform: translate(0); }
+            100% { opacity: 0; }
+        }
+        @keyframes glitch2 {
+            0%, 91% { opacity: 0; transform: translate(0); }
+            92% { opacity: 0.7; transform: translate(3px, -3px); clip-path: inset(50% 0 20% 0); }
+            93% { opacity: 0; transform: translate(0); }
+            96% { opacity: 0.8; transform: translate(-3px, 1px); clip-path: inset(10% 0 70% 0); }
+            97% { opacity: 0; transform: translate(0); }
+            100% { opacity: 0; }
+        }
+
+        /* === Chromatic Aberration === */
+        .chromatic {
+            text-shadow:
+                -1.5px 0 rgba(255,77,77,0.35),
+                1.5px 0 rgba(0,229,200,0.35);
+        }
+
+        /* === Glass Card === */
+        .glass-card {
+            background: var(--card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.5s cubic-bezier(0.23,1,0.32,1), border-color 0.4s, box-shadow 0.4s;
+        }
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(232,168,56,0.2);
+            box-shadow: 0 24px 64px rgba(232,168,56,0.06);
+        }
+
+        /* === Scroll Reveal === */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.9s cubic-bezier(0.23,1,0.32,1), transform 0.9s cubic-bezier(0.23,1,0.32,1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* === Scroll Indicator === */
+        .scroll-indicator { animation: float 2.5s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(12px); opacity: 0.5; }
+        }
+
+        /* === Reality Break === */
+        .reality-break { animation: realityGlitch 0.6s ease; }
+        @keyframes realityGlitch {
+            0% { filter: none; transform: none; }
+            8% { filter: invert(1) hue-rotate(90deg); transform: translate(-5px, 3px) skewX(2deg); }
+            16% { filter: none; transform: none; }
+            24% { filter: hue-rotate(180deg) saturate(3); transform: translate(5px, -3px) skewX(-2deg); }
+            32% { filter: none; transform: none; }
+            40% { filter: invert(1); transform: translate(-3px, -5px) scale(1.02); }
+            50% { filter: none; transform: none; }
+            60% { filter: hue-rotate(90deg); transform: translate(3px, 5px); }
+            70% { filter: none; transform: none; }
+            80% { filter: brightness(2) contrast(2); transform: skewX(1deg); }
+            100% { filter: none; transform: none; }
+        }
+
+        /* === Hero Dark Backdrop === */
+        .hero-backdrop {
+            position: absolute;
+            width: 700px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(5,5,5,0.75), transparent 70%);
+            pointer-events: none;
+        }
+
+        /* === Loading Screen === */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease;
+        }
+        #loader.hidden { opacity: 0; pointer-events: none; }
+        .loader-bar {
+            width: 120px; height: 1px;
+            background: var(--border);
+            margin-top: 1.5rem;
+            overflow: hidden;
+            border-radius: 1px;
+        }
+        .loader-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            animation: loadFill 1.5s ease forwards;
+        }
+        @keyframes loadFill { 0% { width: 0; } 100% { width: 100%; } }
+
+        /* === Dissolving Footer === */
+        .dissolve {
+            mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+        }
+
+        /* === Sections === */
+        .section-hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+        }
+        .section-content {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem;
+        }
+
+        .accent-line { width: 60px; height: 2px; background: var(--accent); }
+
+        /* === Button Styles === */
+        button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 4px;
+        }
+
+        /* === Pulse Ring on Break Button === */
+        .pulse-ring {
+            position: relative;
+        }
+        .pulse-ring::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 9999px;
+            border: 1px solid var(--accent);
+            opacity: 0;
+            animation: pulseRing 2.5s ease-out infinite;
+        }
+        @keyframes pulseRing {
+            0% { opacity: 0.6; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.3); }
+        }
+
+        /* === Reduced Motion === */
+        @media (prefers-reduced-motion: reduce) {
+            .glitch::before, .glitch::after { animation: none; }
+            .scroll-indicator { animation: none; }
+            .reveal { transition: none; opacity: 1; transform: none; }
+            .pulse-ring::after { animation: none; }
+            .loader-bar-fill { animation: none; width: 100%; }
+        }
+
+        /* === Responsive === */
+        @media (max-width: 768px) {
+            .glass-card { padding: 1.5rem; }
+            .cards-grid { grid-template-columns: 1fr !important; }
+            .hero-backdrop { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loader" role="status" aria-label="Loading">
+        <div class="flex flex-col items-center">
+            <div class="text-sm tracking-[0.3em] uppercase" style="color: var(--muted); font-family: 'Syne', sans-serif;">Loading Reality</div>
+            <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor" id="cursor" aria-hidden="true"></div>
+    <div class="cursor-dot" id="cursor-dot" aria-hidden="true"></div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container" aria-hidden="true"></div>
+
+    <!-- Atmospheric Overlays -->
+    <div class="scanlines" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <!-- Scrollable Content -->
+    <div id="content">
+        <!-- Hero -->
+        <header class="section-hero">
+            <div class="hero-backdrop" aria-hidden="true"></div>
+            <div class="reveal" style="transition-delay: 0.3s">
+                <p class="text-sm tracking-[0.3em] uppercase mb-6" style="color: var(--accent);">What you're seeing isn't real</p>
+            </div>
+            <h1 class="glitch chromatic reveal" data-text="This Website Doesn't Feel Real" style="transition-delay: 0.5s; max-width: 900px; position: relative; z-index: 1;">
+                This Website Doesn't Feel Real
+            </h1>
+            <div class="reveal" style="transition-delay: 0.7s; position: relative; z-index: 1;">
+                <p class="mt-6 text-lg mx-auto" style="color: var(--muted); max-width: 500px;">
+                    A hallucination rendered in real-time. Nothing here exists outside your screen.
+                </p>
+            </div>
+            <div class="scroll-indicator mt-20 reveal" style="transition-delay: 1.2s; position: relative; z-index: 1;">
+                <div class="flex flex-col items-center gap-2" style="color: var(--muted);">
+                    <span class="text-xs tracking-[0.2em] uppercase">Scroll</span>
+                    <svg width="16" height="24" viewBox="0 0 16 24" fill="none" aria-hidden="true">
+                        <path d="M8 4L8 20M8 20L2 14M8 20L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- Perception Cards -->
+        <section class="section-content" aria-label="Perception facts">
+            <div class="text-center mb-16 reveal">
+                <div class="accent-line mx-auto mb-6"></div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Your Brain Is Lying To You</h2>
+                <p class="mx-auto" style="color: var(--muted); max-width: 550px;">
+                    Every visual on this page is a mathematical approximation. Your mind fills in the rest.
+                </p>
+            </div>
+            <div class="cards-grid grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
+                <div class="glass-card reveal" style="transition-delay: 0.1s">
+                    <div class="text-3xl font-bold mb-3" style="color: var(--accent); font-family: 'Syne', sans-serif;">10M</div>
+                    <p class="text-sm" style="color: var(--muted);">Bits per second your eyes process, but only <span style="color: var(--fg);">50 bits</span> reach conscious awareness.</p>
+                </div>
+                <div class="glass-card reveal" style="transition-delay: 0.2s">
+                    <div class="text-3xl font-bold mb-3" style="color: var(--accent2); font-family: 'Syne', sans-serif;">80ms</div>
+                    <p class="text-sm" style="color: var(--muted);">Delay between light hitting your retina and your brain constructing the experience of "now."</p>
+                </div>
+                <div class="glass-card reveal" style="transition-delay: 0.3s">
+                    <div class="text-3xl font-bold mb-3" style="color: var(--accent3); font-family: 'Syne', sans-serif;">86B</div>
+                    <p class="text-sm" style="color: var(--muted);">Neurons in your brain, each firing up to <span style="color: var(--fg);">200 times per second</span> to build this moment.</p>
+                </div>
+                <div class="glass-card reveal" style="transition-delay: 0.4s">
+                    <div class="text-3xl font-bold mb-3" style="color: var(--fg); font-family: 'Syne', sans-serif;">0</div>
+                    <p class="text-sm" style="color: var(--muted);">Pixels in physical reality. The world has no resolution — your brain <span style="color: var(--fg);">invents</span> the detail.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reality Break -->
+        <section class="section-content" aria-label="Reality break interaction">
+            <div class="text-center reveal">
+                <h2 class="text-6xl md:text-8xl font-extrabold chromatic" style="opacity: 0.12;">WAKE UP</h2>
+                <p class="mt-8 text-lg mx-auto" style="color: var(--muted); max-width: 450px;">
+                    You're staring at arranged light-emitting diodes, interpreting patterns as meaning.
+                </p>
+                <div class="mt-10 flex gap-4 justify-center flex-wrap">
+                    <button class="pulse-ring px-8 py-3 rounded-full text-sm font-medium tracking-wider uppercase transition-all duration-300 hover:scale-105"
+                            style="background: var(--accent); color: var(--bg);"
+                            id="glitch-btn" aria-label="Trigger reality break effect">
+                        Break Reality
+                    </button>
+                    <button class="px-8 py-3 rounded-full text-sm font-medium tracking-wider uppercase transition-all duration-300 hover:scale-105 hover:border-opacity-30"
+                            style="border: 1px solid var(--border); color: var(--fg);"
+                            id="calm-btn" aria-label="Subtle pulse effect">
+                        Stay Asleep
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dissolving Footer -->
+        <footer class="dissolve py-32 text-center">
+            <div class="reveal">
+                <p class="text-xs tracking-[0.3em] uppercase mb-2" style="color: var(--muted);">None of this is real</p>
+                <p class="text-xs" style="color: rgba(255,255,255,0.1);">Rendered in your browser at 60fps</p>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // === Scene Setup ===
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+        container.appendChild(renderer.domElement);
+
+        // === Mouse Tracking ===
+        const mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+        document.addEventListener('mousemove', (e) => {
+            mouse.targetX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.targetY = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        // === Custom Cursor ===
+        const cursorEl = document.getElementById('cursor');
+        const cursorDotEl = document.getElementById('cursor-dot');
+        let cursorX = window.innerWidth / 2, cursorY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (e) => {
+            cursorDotEl.style.left = e.clientX + 'px';
+            cursorDotEl.style.top = e.clientY + 'px';
+        });
+
+        // Hover expansion on interactive elements
+        document.querySelectorAll('button, .glass-card, a').forEach(el => {
+            el.addEventListener('mouseenter', () => cursorEl.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursorEl.classList.remove('hover'));
+        });
+
+        // === Blob Shaders ===
+        const vertexShader = `
+            uniform float uTime;
+            uniform vec2 uMouse;
+            uniform float uIntensity;
+
+            varying vec3 vNorm;
+            varying vec3 vWorldPos;
+            varying vec3 vViewDir;
+            varying float vDisp;
+
+            // Multi-octave sine noise for organic displacement
+            float disp(vec3 p, float t) {
+                float d = 0.0;
+                d += sin(p.x * 2.0 + t * 0.8) * cos(p.y * 2.0 + t * 0.6) * 0.25;
+                d += sin(p.z * 3.0 + t * 1.2) * cos(p.x * 1.5 + t * 0.4) * 0.18;
+                d += sin(p.y * 4.0 + t * 0.7) * sin(p.z * 2.5 + t * 0.9) * 0.12;
+                d += cos(p.x * 5.0 + p.z * 4.0 + t * 1.5) * 0.06;
+                d += sin(p.y * 6.0 + p.x * 3.0 + t * 1.1) * 0.04;
+                // Mouse influence — deforms toward cursor
+                d += sin(p.x * 3.0 + uMouse.x * 2.5) * cos(p.y * 3.0 + uMouse.y * 2.5) * 0.15;
+                return d;
+            }
+
+            void main() {
+                vec3 pos = position;
+                float d = disp(pos, uTime) * uIntensity;
+                pos += normal * d;
+
+                vDisp = d;
+                vNorm = normalize(normalMatrix * normal);
+                vec4 wp = modelMatrix * vec4(pos, 1.0);
+                vWorldPos = wp.xyz;
+                vViewDir = normalize(cameraPosition - wp.xyz);
+
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            uniform float uTime;
+            uniform vec3 uColor1;
+            uniform vec3 uColor2;
+            uniform vec3 uColor3;
+
+            varying vec3 vNorm;
+            varying vec3 vWorldPos;
+            varying vec3 vViewDir;
+            varying float vDisp;
+
+            void main() {
+                // Fresnel — bright edges
+                float fresnel = pow(1.0 - max(dot(vNorm, vViewDir), 0.0), 3.0);
+
+                // Iridescent color from normal direction + time
+                float t = vNorm.x * 0.5 + vNorm.y * 0.3 + vNorm.z * 0.2 + uTime * 0.15;
+                vec3 col = mix(uColor1, uColor2, sin(t * 3.14) * 0.5 + 0.5);
+                col = mix(col, uColor3, sin(t * 2.0 + 1.5) * 0.4 + 0.3);
+
+                // Highlight displaced areas
+                col += abs(vDisp) * uColor3 * 1.6;
+
+                // Fresnel rim light
+                col += fresnel * mix(uColor3, uColor1, 0.5) * 0.7;
+
+                // Base darkening + fresnel lift
+                col *= 0.5 + fresnel * 1.0;
+                col += vec3(0.015);
+
+                gl_FragColor = vec4(col, 0.93);
+            }
+        `;
+
+        // === Create Blob ===
+        const blobGeo = new THREE.IcosahedronGeometry(Math.max(0.01, 1.5), 4);
+        const blobMat = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime:      { value: 0 },
+                uMouse:     { value: new THREE.Vector2(0, 0) },
+                uIntensity: { value: 1.0 },
+                uColor1:    { value: new THREE.Color('#E8A838') },
+                uColor2:    { value: new THREE.Color('#FF4D4D') },
+                uColor3:    { value: new THREE.Color('#00E5C8') },
+            },
+            vertexShader,
+            fragmentShader,
+            transparent: true,
+            side: THREE.DoubleSide,
+        });
+        const blob = new THREE.Mesh(blobGeo, blobMat);
+        scene.add(blob);
+
+        // === Particle Layer 1 (inner, gold) ===
+        const p1Count = 1200;
+        const p1Pos = new Float32Array(p1Count * 3);
+        const p1Orig = new Float32Array(p1Count * 3);  // Original positions for oscillation
+        const p1Speed = new Float32Array(p1Count);
+
+        for (let i = 0; i < p1Count; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 2.5 + Math.random() * 2.0;
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+            p1Pos[i * 3] = x; p1Pos[i * 3 + 1] = y; p1Pos[i * 3 + 2] = z;
+            p1Orig[i * 3] = x; p1Orig[i * 3 + 1] = y; p1Orig[i * 3 + 2] = z;
+            p1Speed[i] = 0.2 + Math.random() * 0.8;
+        }
+
+        const p1Geo = new THREE.BufferGeometry();
+        p1Geo.setAttribute('position', new THREE.BufferAttribute(p1Pos, 3));
+        const p1Mat = new THREE.PointsMaterial({
+            size: 0.018,
+            color: new THREE.Color('#E8A838'),
+            transparent: true,
+            opacity: 0.45,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true,
+        });
+        const particles1 = new THREE.Points(p1Geo, p1Mat);
+        scene.add(particles1);
+
+        // === Particle Layer 2 (outer, teal, sparse) ===
+        const p2Count = 400;
+        const p2Pos = new Float32Array(p2Count * 3);
+
+        for (let i = 0; i < p2Count; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 4.5 + Math.random() * 3.5;
+            p2Pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+            p2Pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            p2Pos[i * 3 + 2] = r * Math.cos(phi);
+        }
+
+        const p2Geo = new THREE.BufferGeometry();
+        p2Geo.setAttribute('position', new THREE.BufferAttribute(p2Pos, 3));
+        const p2Mat = new THREE.PointsMaterial({
+            size: 0.035,
+            color: new THREE.Color('#00E5C8'),
+            transparent: true,
+            opacity: 0.18,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true,
+        });
+        const particles2 = new THREE.Points(p2Geo, p2Mat);
+        scene.add(particles2);
+
+        // === Scroll Tracking ===
+        let scrollProgress = 0;
+        window.addEventListener('scroll', () => {
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            scrollProgress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+        });
+
+        // === Reality Break ===
+        let isBreaking = false;
+        const originalColors = {
+            p1: '#E8A838',
+            p2: '#00E5C8',
+        };
+
+        function triggerRealityBreak() {
+            if (isBreaking) return;
+            isBreaking = true;
+            document.getElementById('content').classList.add('reality-break');
+
+            // Spike blob intensity
+            blobMat.uniforms.uIntensity.value = 4.5;
+            p1Mat.color.set('#FF4D4D');
+            p2Mat.color.set('#E8A838');
+
+            setTimeout(() => {
+                document.getElementById('content').classList.remove('reality-break');
+                p1Mat.color.set(originalColors.p1);
+                p2Mat.color.set(originalColors.p2);
+                isBreaking = false;
+            }, 650);
+        }
+
+        document.getElementById('glitch-btn').addEventListener('click', triggerRealityBreak);
+
+        document.getElementById('calm-btn').addEventListener('click', () => {
+            blobMat.uniforms.uIntensity.value = 2.2;
+            setTimeout(() => { if (!isBreaking) blobMat.uniforms.uIntensity.value = 1.0; }, 500);
+        });
+
+        // Auto-trigger at ~60% scroll (once)
+        let autoBreakTriggered = false;
+
+        // === Resize ===
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // === Animation Loop ===
+        const clock = new THREE.Clock();
+        const tmpColor = new THREE.Color();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            // Smooth mouse interpolation
+            mouse.x += (mouse.targetX - mouse.x) * 0.05;
+            mouse.y += (mouse.targetY - mouse.y) * 0.05;
+
+            // Smooth cursor follow
+            const dx = parseFloat(cursorDotEl.style.left || cursorX) - cursorX;
+            const dy = parseFloat(cursorDotEl.style.top || cursorY) - cursorY;
+            cursorX += dx * 0.12;
+            cursorY += dy * 0.12;
+            cursorEl.style.left = cursorX + 'px';
+            cursorEl.style.top = cursorY + 'px';
+
+            // Update shader uniforms
+            blobMat.uniforms.uTime.value = t;
+            blobMat.uniforms.uMouse.value.set(mouse.x, mouse.y);
+
+            // Scroll-driven intensity
+            if (!isBreaking) {
+                const targetIntensity = 1.0 + scrollProgress * 0.8;
+                blobMat.uniforms.uIntensity.value += (targetIntensity - blobMat.uniforms.uIntensity.value) * 0.04;
+            }
+
+            // Scroll-driven color shift (gold → red)
+            tmpColor.lerpColors(new THREE.Color('#E8A838'), new THREE.Color('#FF4D4D'), scrollProgress);
+            blobMat.uniforms.uColor1.value.lerp(tmpColor, 0.015);
+
+            // Blob rotation
+            blob.rotation.y = t * 0.1 + scrollProgress * Math.PI * 0.5;
+            blob.rotation.x = Math.sin(t * 0.05) * 0.2 + mouse.y * 0.3;
+            blob.rotation.z = Math.cos(t * 0.07) * 0.1 + mouse.x * 0.2;
+
+            // Subtle breathing scale
+            const s = 1.0 + Math.sin(t * 0.5) * 0.025;
+            blob.scale.setScalar(s);
+
+            // Particles 1 — rotate + oscillate around original positions
+            particles1.rotation.y = t * 0.05;
+            particles1.rotation.x = t * 0.02;
+            const posArr = p1Geo.attributes.position.array;
+            for (let i = 0; i < p1Count; i++) {
+                const ix = i * 3;
+                const sp = p1Speed[i];
+                posArr[ix]     = p1Orig[ix]     + Math.sin(t * sp + i * 0.1) * 0.06;
+                posArr[ix + 1] = p1Orig[ix + 1] + Math.cos(t * sp * 0.7 + i * 0.2) * 0.06;
+                posArr[ix + 2] = p1Orig[ix + 2] + Math.sin(t * sp * 0.5 + i * 0.3) * 0.06;
+            }
+            p1Geo.attributes.position.needsUpdate = true;
+
+            // Particles 2 — slow counter-rotation
+            particles2.rotation.y = -t * 0.03;
+            particles2.rotation.z = t * 0.012;
+
+            // Camera parallax
+            camera.position.x = mouse.x * 0.3;
+            camera.position.y = mouse.y * 0.2;
+            camera.lookAt(0, 0, 0);
+
+            // Auto reality break at ~60% scroll
+            if (scrollProgress > 0.58 && !autoBreakTriggered) {
+                autoBreakTriggered = true;
+                triggerRealityBreak();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // === Scroll Reveal (IntersectionObserver) ===
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.08 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // === Hide Loader ===
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            loader.classList.add('hidden');
+            setTimeout(() => loader.remove(), 800);
+        }, 2000);
+
+        // === Start ===
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactive UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#06060A',
+                        fg: '#EDEAE4',
+                        muted: '#5A5766',
+                        accent: '#00FF88',
+                        'accent-dim': '#00CC6A',
+                        card: '#0E0E16',
+                        bdr: '#1A1A26',
+                    },
+                    fontFamily: {
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                        body: ['"DM Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #06060A;
+            --fg: #EDEAE4;
+            --muted: #5A5766;
+            --accent: #00FF88;
+            --card: #0E0E16;
+            --border: #1A1A26;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        /* Hide default cursor on non-touch */
+        @media (hover: hover) {
+            * { cursor: none !important; }
+        }
+        @media (hover: none) {
+            #cursor-dot, #cursor-ring { display: none !important; }
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow-x: hidden;
+        }
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Custom cursor */
+        #cursor-dot {
+            position: fixed; width: 8px; height: 8px;
+            background: var(--accent); border-radius: 50%;
+            pointer-events: none; z-index: 10000;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+        }
+        #cursor-ring {
+            position: fixed; width: 40px; height: 40px;
+            border: 1.5px solid var(--accent); border-radius: 50%;
+            pointer-events: none; z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: width 0.25s ease, height 0.25s ease, opacity 0.25s ease;
+            opacity: 0.5;
+        }
+        #cursor-ring.hover {
+            width: 64px; height: 64px; opacity: 0.8;
+            border-color: var(--accent);
+        }
+
+        /* FX canvas overlay */
+        #fx-canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 9999;
+        }
+
+        /* Background blobs */
+        .blob {
+            position: fixed; border-radius: 50%;
+            filter: blur(120px); pointer-events: none;
+            z-index: 0; will-change: transform;
+            left: 0; top: 0;
+        }
+        .blob-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(0,255,136,0.12), transparent 70%);
+        }
+        .blob-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(0,204,106,0.08), transparent 70%);
+        }
+
+        /* Noise texture */
+        .noise-overlay {
+            position: fixed; inset: 0; z-index: 1;
+            pointer-events: none; opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 128px 128px;
+        }
+
+        /* Vignette */
+        .vignette {
+            position: fixed; inset: 0; z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(6,6,10,0.7) 100%);
+        }
+
+        /* Hero letters */
+        .hero-letter {
+            display: inline-block;
+            will-change: transform;
+            transition: color 0.2s;
+        }
+
+        /* 3D tilt cards */
+        .tilt-card { perspective: 800px; }
+        .tilt-card-inner {
+            transform-style: preserve-3d;
+            transition: transform 0.12s ease-out;
+            will-change: transform;
+        }
+        .card-shine {
+            position: absolute; inset: 0; border-radius: inherit;
+            background: radial-gradient(circle at var(--shine-x, 50%) var(--shine-y, 50%), rgba(0,255,136,0.12), transparent 60%);
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tilt-card:hover .card-shine { opacity: 1; }
+
+        /* Eyes */
+        .eye-container {
+            position: relative;
+            width: var(--eye-size, 80px);
+            height: var(--eye-size, 80px);
+            border-radius: 50%;
+            background: var(--card);
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+        .eye-container:hover { border-color: var(--accent); }
+        .eye-pupil {
+            width: var(--pupil-size, 24px);
+            height: var(--pupil-size, 24px);
+            background: var(--accent);
+            border-radius: 50%; position: absolute;
+            box-shadow: 0 0 16px rgba(0,255,136,0.5), 0 0 40px rgba(0,255,136,0.15);
+            transition: transform 0.06s ease-out, width 0.3s, height 0.3s;
+        }
+        .eye-container:hover .eye-pupil {
+            width: calc(var(--pupil-size, 24px) * 1.35);
+            height: calc(var(--pupil-size, 24px) * 1.35);
+        }
+        .eye-iris {
+            width: calc(var(--pupil-size, 24px) * 1.8);
+            height: calc(var(--pupil-size, 24px) * 1.8);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,255,136,0.35) 20%, rgba(0,255,136,0.1) 60%, transparent);
+            position: absolute;
+            transition: transform 0.06s ease-out;
+        }
+        .eye-lid {
+            position: absolute; top: -100%; left: -10%;
+            width: 120%; height: 100%;
+            background: var(--bg);
+            border-radius: 0 0 50% 50%;
+            transition: top 0.12s ease-in;
+            z-index: 2;
+        }
+        .eye-container.blink .eye-lid { top: 0%; }
+
+        /* Dot grid canvas */
+        #dot-grid-canvas { display: block; }
+
+        /* Scroll reveal */
+        .reveal {
+            opacity: 0; transform: translateY(50px);
+            transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* Magnetic button */
+        .magnetic-btn {
+            position: relative;
+            transition: transform 0.2s ease-out, box-shadow 0.3s;
+            will-change: transform;
+        }
+
+        /* Click ripple */
+        .click-ripple {
+            position: fixed; width: 200px; height: 200px;
+            border: 1.5px solid var(--accent); border-radius: 50%;
+            pointer-events: none; z-index: 9998;
+            transform: translate(-50%, -50%) scale(0);
+            animation: rippleExpand 0.7s ease-out forwards;
+        }
+        @keyframes rippleExpand {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        section { position: relative; z-index: 2; }
+
+        /* Subtle glow for section labels */
+        .section-label {
+            letter-spacing: 0.2em;
+            text-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+    </style>
+</head>
+<body class="bg-bg text-fg font-body">
+
+    <!-- Noise texture overlay -->
+    <div class="noise-overlay" aria-hidden="true"></div>
+    <!-- Vignette -->
+    <div class="vignette" aria-hidden="true"></div>
+    <!-- Background blobs -->
+    <div class="blob blob-1" aria-hidden="true"></div>
+    <div class="blob blob-2" aria-hidden="true"></div>
+    <!-- FX canvas for trail + particles -->
+    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+    <!-- Custom cursor -->
+    <div id="cursor-dot" aria-hidden="true"></div>
+    <div id="cursor-ring" aria-hidden="true"></div>
+
+    <main>
+        <!-- HERO -->
+        <section class="min-h-screen flex flex-col items-center justify-center px-6 relative">
+            <div class="text-center">
+                <h1 id="hero-title" class="font-display font-bold tracking-tighter text-[clamp(3.2rem,11vw,9rem)] leading-[0.85] mb-8" aria-label="IT SEES YOU"></h1>
+                <p class="text-muted text-lg md:text-xl max-w-lg mx-auto leading-relaxed">
+                    Every pixel responds to your presence.
+                    <span class="text-accent font-medium">Move.</span> Click. Scroll. Watch.
+                </p>
+            </div>
+            <div class="absolute bottom-10 text-muted animate-bounce">
+                <i class="fa-solid fa-chevron-down text-sm"></i>
+            </div>
+        </section>
+
+        <!-- 3D TILT CARDS -->
+        <section class="py-28 md:py-36 px-6">
+            <div class="max-w-5xl mx-auto">
+                <div class="reveal mb-14">
+                    <span class="section-label text-accent text-xs font-display font-medium">INTERACTION</span>
+                    <h2 class="font-display text-4xl md:text-5xl font-bold mt-3 tracking-tight">GRAB THEM</h2>
+                </div>
+                <div class="grid md:grid-cols-3 gap-5 reveal" style="transition-delay:0.15s">
+                    <!-- Card 1 -->
+                    <div class="tilt-card rounded-2xl border border-bdr bg-card/80 backdrop-blur-sm p-7 relative overflow-hidden" data-interactive>
+                        <div class="tilt-card-inner">
+                            <div class="card-shine rounded-2xl"></div>
+                            <div class="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center mb-5">
+                                <i class="fa-solid fa-magnet text-accent text-lg"></i>
+                            </div>
+                            <h3 class="font-display text-lg font-bold mb-2">Magnetic Pull</h3>
+                            <p class="text-muted text-sm leading-relaxed">Elements gravitate toward your cursor, bending the space around every movement you make.</p>
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="tilt-card rounded-2xl border border-bdr bg-card/80 backdrop-blur-sm p-7 relative overflow-hidden" data-interactive>
+                        <div class="tilt-card-inner">
+                            <div class="card-shine rounded-2xl"></div>
+                            <div class="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center mb-5">
+                                <i class="fa-solid fa-cube text-accent text-lg"></i>
+                            </div>
+                            <h3 class="font-display text-lg font-bold mb-2">Depth Perception</h3>
+                            <p class="text-muted text-sm leading-relaxed">Every surface responds to your perspective, tilting and shining as you explore its contours.</p>
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="tilt-card rounded-2xl border border-bdr bg-card/80 backdrop-blur-sm p-7 relative overflow-hidden" data-interactive>
+                        <div class="tilt-card-inner">
+                            <div class="card-shine rounded-2xl"></div>
+                            <div class="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center mb-5">
+                                <i class="fa-solid fa-wand-magic-sparkles text-accent text-lg"></i>
+                            </div>
+                            <h3 class="font-display text-lg font-bold mb-2">Living Canvas</h3>
+                            <p class="text-muted text-sm leading-relaxed">Particles, ripples, and light trails — the page breathes and reacts with every gesture.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EYES -->
+        <section class="py-28 md:py-36 px-6">
+            <div class="max-w-5xl mx-auto text-center">
+                <div class="reveal mb-14">
+                    <span class="section-label text-accent text-xs font-display font-medium">AWARENESS</span>
+                    <h2 class="font-display text-4xl md:text-5xl font-bold mt-3 tracking-tight">ALWAYS WATCHING</h2>
+                </div>
+                <div id="eyes-container" class="reveal flex items-end justify-center gap-4 sm:gap-6 md:gap-8 flex-wrap" style="transition-delay:0.15s"></div>
+                <p class="text-muted text-sm mt-8 reveal" style="transition-delay:0.3s">They follow you everywhere. Try moving fast.</p>
+            </div>
+        </section>
+
+        <!-- DOT GRID -->
+        <section class="py-28 md:py-36 px-6">
+            <div class="max-w-5xl mx-auto">
+                <div class="reveal mb-14 text-center">
+                    <span class="section-label text-accent text-xs font-display font-medium">FIELD</span>
+                    <h2 class="font-display text-4xl md:text-5xl font-bold mt-3 tracking-tight">RIPPLE FIELD</h2>
+                </div>
+                <div id="dot-grid-wrap" class="reveal rounded-2xl border border-bdr bg-card/40 overflow-hidden relative" style="transition-delay:0.15s; height:380px;">
+                    <canvas id="dot-grid-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="py-28 md:py-36 px-6 text-center">
+            <div class="reveal">
+                <p class="font-display text-3xl md:text-5xl font-bold mb-8 tracking-tight">STILL HERE?</p>
+                <button id="magnetic-btn" class="magnetic-btn px-12 py-4 bg-accent text-bg font-display font-bold text-lg rounded-full transition-shadow hover:shadow-[0_0_50px_rgba(0,255,136,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg" data-interactive aria-label="Prove it button">
+                    PROVE IT
+                </button>
+            </div>
+            <p class="text-muted text-xs mt-20 tracking-wide">Built with raw reactivity. No frameworks needed.</p>
+        </footer>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // ==================== UTILITIES ====================
+        function debounce(fn, ms) {
+            let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+        }
+
+        // ==================== STATE ====================
+        const state = {
+            mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+            smooth: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+            trail: [],
+            particles: [],
+            scrollY: 0,
+        };
+
+        // ==================== CURSOR ====================
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+
+        function updateCursor() {
+            cursorDot.style.left = state.mouse.x + 'px';
+            cursorDot.style.top = state.mouse.y + 'px';
+            cursorRing.style.left = state.smooth.x + 'px';
+            cursorRing.style.top = state.smooth.y + 'px';
+        }
+
+        // Hover detection for cursor ring
+        function setupCursorHover() {
+            document.querySelectorAll('[data-interactive]').forEach(el => {
+                el.addEventListener('mouseenter', () => cursorRing.classList.add('hover'));
+                el.addEventListener('mouseleave', () => cursorRing.classList.remove('hover'));
+            });
+        }
+
+        // ==================== FX CANVAS ====================
+        const fxCanvas = document.getElementById('fx-canvas');
+        const fxCtx = fxCanvas.getContext('2d');
+
+        function resizeFxCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            fxCanvas.width = window.innerWidth * dpr;
+            fxCanvas.height = window.innerHeight * dpr;
+            fxCanvas.style.width = window.innerWidth + 'px';
+            fxCanvas.style.height = window.innerHeight + 'px';
+            fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resizeFxCanvas();
+        window.addEventListener('resize', debounce(resizeFxCanvas, 200));
+
+        // ==================== TRAIL ====================
+        const TRAIL_LEN = 22;
+
+        function updateTrail() {
+            state.trail.push({ x: state.smooth.x, y: state.smooth.y });
+            if (state.trail.length > TRAIL_LEN) state.trail.shift();
+
+            for (let i = 0; i < state.trail.length; i++) {
+                const t = i / state.trail.length;
+                const alpha = t * 0.35;
+                const radius = Math.max(0.5, t * 4.5);
+                fxCtx.beginPath();
+                fxCtx.arc(state.trail[i].x, state.trail[i].y, radius, 0, Math.PI * 2);
+                fxCtx.fillStyle = `rgba(0,255,136,${alpha})`;
+                fxCtx.fill();
+            }
+        }
+
+        // ==================== PARTICLES ====================
+        function spawnParticles(x, y, count, speedMul) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (2 + Math.random() * 5) * (speedMul || 1);
+                state.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 1.5 + Math.random() * 3.5,
+                    life: 1,
+                    decay: 0.012 + Math.random() * 0.02,
+                    hue: 140 + Math.random() * 40,
+                });
+            }
+        }
+
+        function updateParticles() {
+            state.particles = state.particles.filter(p => p.life > 0);
+            state.particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.965;
+                p.vy *= 0.965;
+                p.vy += 0.04;
+                p.life -= p.decay;
+                const r = Math.max(0.5, p.size * p.life);
+                fxCtx.beginPath();
+                fxCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                fxCtx.fillStyle = `hsla(${p.hue},100%,65%,${p.life * 0.75})`;
+                fxCtx.fill();
+            });
+        }
+
+        // ==================== CLICK EFFECTS ====================
+        function setupClickEffects() {
+            document.addEventListener('click', (e) => {
+                spawnParticles(e.clientX, e.clientY, 28, 1);
+                // CSS ripple
+                const ripple = document.createElement('div');
+                ripple.className = 'click-ripple';
+                ripple.style.left = e.clientX + 'px';
+                ripple.style.top = e.clientY + 'px';
+                document.body.appendChild(ripple);
+                ripple.addEventListener('animationend', () => ripple.remove());
+            });
+
+            // Big explosion on PROVE IT
+            document.getElementById('magnetic-btn').addEventListener('click', (e) => {
+                spawnParticles(e.clientX, e.clientY, 80, 2.2);
+            });
+        }
+
+        // ==================== BACKGROUND BLOBS ====================
+        const blob1 = document.querySelector('.blob-1');
+        const blob2 = document.querySelector('.blob-2');
+
+        function updateBlobs() {
+            const t = performance.now() * 0.001;
+            const b1x = state.smooth.x - 250 + Math.sin(t * 0.6) * 35;
+            const b1y = state.smooth.y - 250 + Math.cos(t * 0.8) * 28;
+            blob1.style.transform = `translate(${b1x}px,${b1y}px)`;
+
+            const b2x = state.smooth.x * 0.4 - 200 + Math.cos(t * 0.5) * 45;
+            const b2y = state.smooth.y * 0.4 - 200 + Math.sin(t * 0.7) * 35;
+            blob2.style.transform = `translate(${b2x}px,${b2y}px)`;
+        }
+
+        // ==================== HERO LETTERS ====================
+        let letterData = [];
+        const heroTitle = document.getElementById('hero-title');
+        const TITLE_TEXT = 'IT SEES YOU';
+
+        // Build letter spans
+        TITLE_TEXT.split('').forEach((ch, i) => {
+            const span = document.createElement('span');
+            span.className = 'hero-letter';
+            span.textContent = ch === ' ' ? '\u00A0' : ch;
+            heroTitle.appendChild(span);
+        });
+
+        function cacheLetterPositions() {
+            letterData = Array.from(heroTitle.querySelectorAll('.hero-letter')).map(el => {
+                const r = el.getBoundingClientRect();
+                return { el, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+            });
+        }
+        cacheLetterPositions();
+        window.addEventListener('resize', debounce(cacheLetterPositions, 200));
+
+        function updateHeroLetters() {
+            // Skip if hero is off-screen
+            if (state.scrollY > window.innerHeight * 1.2) return;
+            const threshold = 220;
+            const maxD = 35;
+            letterData.forEach(d => {
+                const dx = d.cx - state.mouse.x;
+                const dy = d.cy - state.mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                let tx = 0, ty = 0;
+                if (dist < threshold && dist > 1) {
+                    const force = ((threshold - dist) / threshold);
+                    const eased = force * force;
+                    tx = (dx / dist) * eased * maxD;
+                    ty = (dy / dist) * eased * maxD;
+                }
+                d.el.style.transform = `translate(${tx}px,${ty}px)`;
+            });
+        }
+
+        // ==================== 3D TILT CARDS ====================
+        function setupCards() {
+            document.querySelectorAll('.tilt-card').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const cx = rect.width / 2;
+                    const cy = rect.height / 2;
+                    const rotY = ((x - cx) / cx) * 14;
+                    const rotX = ((cy - y) / cy) * 14;
+                    const inner = card.querySelector('.tilt-card-inner');
+                    inner.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(10px)`;
+                    card.style.setProperty('--shine-x', (x / rect.width * 100) + '%');
+                    card.style.setProperty('--shine-y', (y / rect.height * 100) + '%');
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.querySelector('.tilt-card-inner').style.transform = 'rotateX(0) rotateY(0) translateZ(0)';
+                });
+            });
+        }
+
+        // ==================== EYES ====================
+        const eyeConfigs = [
+            { size: 44, pupil: 12 },
+            { size: 58, pupil: 16 },
+            { size: 76, pupil: 22 },
+            { size: 100, pupil: 28 },
+            { size: 76, pupil: 22 },
+            { size: 58, pupil: 16 },
+            { size: 44, pupil: 12 },
+        ];
+        const eyesContainer = document.getElementById('eyes-container');
+        const eyeElements = [];
+
+        eyeConfigs.forEach(cfg => {
+            const div = document.createElement('div');
+            div.className = 'eye-container';
+            div.setAttribute('data-interactive', '');
+            div.style.setProperty('--eye-size', cfg.size + 'px');
+            div.style.setProperty('--pupil-size', cfg.pupil + 'px');
+            div.innerHTML = `<div class="eye-lid"></div><div class="eye-iris"></div><div class="eye-pupil"></div>`;
+            eyesContainer.appendChild(div);
+            eyeElements.push(div);
+        });
+
+        function updateEyes() {
+            eyeElements.forEach(eye => {
+                const rect = eye.getBoundingClientRect();
+                const ecx = rect.left + rect.width / 2;
+                const ecy = rect.top + rect.height / 2;
+                const dx = state.mouse.x - ecx;
+                const dy = state.mouse.y - ecy;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const maxOff = rect.width * 0.22;
+                const off = Math.min(dist * 0.12, maxOff);
+                const ox = (dx / dist) * off;
+                const oy = (dy / dist) * off;
+                const pupil = eye.querySelector('.eye-pupil');
+                const iris = eye.querySelector('.eye-iris');
+                if (pupil) pupil.style.transform = `translate(${ox}px,${oy}px)`;
+                if (iris) iris.style.transform = `translate(${ox * 0.75}px,${oy * 0.75}px)`;
+            });
+        }
+
+        // Random blinking
+        function randomBlink() {
+            const idx = Math.floor(Math.random() * eyeElements.length);
+            const eye = eyeElements[idx];
+            eye.classList.add('blink');
+            setTimeout(() => eye.classList.remove('blink'), 160);
+
+            // Occasionally blink all
+            if (Math.random() < 0.15) {
+                eyeElements.forEach((e, i) => {
+                    if (i !== idx) {
+                        setTimeout(() => {
+                            e.classList.add('blink');
+                            setTimeout(() => e.classList.remove('blink'), 140);
+                        }, Math.random() * 120);
+                    }
+                });
+            }
+            setTimeout(randomBlink, 1500 + Math.random() * 3500);
+        }
+        setTimeout(randomBlink, 2000);
+
+        // ==================== DOT GRID ====================
+        const dgCanvas = document.getElementById('dot-grid-canvas');
+        const dgCtx = dgCanvas.getContext('2d');
+        let dgDots = [];
+        const DG_SPACING = 26;
+        const DG_RADIUS = 1.8;
+        const DG_MAX_DISP = 20;
+        const DG_SIGMA = 110;
+
+        function initDotGrid() {
+            const wrap = document.getElementById('dot-grid-wrap');
+            const w = wrap.clientWidth;
+            const h = wrap.clientHeight;
+            const dpr = window.devicePixelRatio || 1;
+            dgCanvas.width = w * dpr;
+            dgCanvas.height = h * dpr;
+            dgCanvas.style.width = w + 'px';
+            dgCanvas.style.height = h + 'px';
+            dgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const cols = Math.floor(w / DG_SPACING);
+            const rows = Math.floor(h / DG_SPACING);
+            const offX = (w - (cols - 1) * DG_SPACING) / 2;
+            const offY = (h - (rows - 1) * DG_SPACING) / 2;
+            dgDots = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    dgDots.push({ hx: offX + c * DG_SPACING, hy: offY + r * DG_SPACING });
+                }
+            }
+        }
+        initDotGrid();
+        window.addEventListener('resize', debounce(initDotGrid, 200));
+
+        function updateDotGrid() {
+            const rect = dgCanvas.getBoundingClientRect();
+            // Skip if off-screen
+            if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+            const mx = state.mouse.x - rect.left;
+            const my = state.mouse.y - rect.top;
+            const w = rect.width;
+            const h = rect.height;
+            dgCtx.clearRect(0, 0, w, h);
+
+            const sig2 = 2 * DG_SIGMA * DG_SIGMA;
+            for (let i = 0; i < dgDots.length; i++) {
+                const dot = dgDots[i];
+                const dx = dot.hx - mx;
+                const dy = dot.hy - my;
+                const dist2 = dx * dx + dy * dy;
+                let dispX = 0, dispY = 0, intensity = 0;
+                if (dist2 < sig2 * 4.5) {
+                    const dist = Math.sqrt(dist2) || 1;
+                    intensity = Math.exp(-dist2 / sig2);
+                    dispX = (dx / dist) * intensity * DG_MAX_DISP;
+                    dispY = (dy / dist) * intensity * DG_MAX_DISP;
+                }
+                const x = dot.hx + dispX;
+                const y = dot.hy + dispY;
+                // Muted: rgb(90,87,102) -> Accent: rgb(0,255,136)
+                const cr = Math.round(90 + (0 - 90) * intensity);
+                const cg = Math.round(87 + (255 - 87) * intensity);
+                const cb = Math.round(102 + (136 - 102) * intensity);
+                const ca = 0.25 + intensity * 0.75;
+                const radius = Math.max(0.5, DG_RADIUS + intensity * 2.5);
+                dgCtx.beginPath();
+                dgCtx.arc(x, y, radius, 0, Math.PI * 2);
+                dgCtx.fillStyle = `rgba(${cr},${cg},${cb},${ca})`;
+                dgCtx.fill();
+            }
+        }
+
+        // ==================== MAGNETIC BUTTON ====================
+        function setupMagneticBtn() {
+            const btn = document.getElementById('magnetic-btn');
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = e.clientX - cx;
+                const dy = e.clientY - cy;
+                btn.style.transform = `translate(${dx * 0.35}px,${dy * 0.35}px)`;
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'translate(0,0)';
+            });
+        }
+
+        // ==================== SCROLL REVEAL ====================
+        function setupScrollReveal() {
+            const obs = new IntersectionObserver((entries) => {
+                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+            }, { threshold: 0.08 });
+            document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+        }
+
+        // ==================== MOUSE / TOUCH EVENTS ====================
+        document.addEventListener('mousemove', (e) => {
+            state.mouse.x = e.clientX;
+            state.mouse.y = e.clientY;
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length) {
+                state.mouse.x = e.touches[0].clientX;
+                state.mouse.y = e.touches[0].clientY;
+            }
+        }, { passive: true });
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length) {
+                state.mouse.x = e.touches[0].clientX;
+                state.mouse.y = e.touches[0].clientY;
+            }
+        }, { passive: true });
+        window.addEventListener('scroll', () => { state.scrollY = window.scrollY; }, { passive: true });
+
+        // ==================== INIT ====================
+        setupCursorHover();
+        setupCards();
+        setupClickEffects();
+        setupMagneticBtn();
+        setupScrollReveal();
+
+        // ==================== ANIMATION LOOP ====================
+        function animate() {
+            // Lerp smooth mouse
+            state.smooth.x += (state.mouse.x - state.smooth.x) * 0.12;
+            state.smooth.y += (state.mouse.y - state.smooth.y) * 0.12;
+
+            // Clear FX canvas
+            fxCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+            updateCursor();
+            updateTrail();
+            updateParticles();
+            updateBlobs();
+            updateHeroLetters();
+            updateEyes();
+            updateDotGrid();
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Recalculate letter positions after fonts load
+        document.fonts.ready.then(() => {
+            setTimeout(cacheLetterPositions, 100);
+        });
+    });
+    </script>
+</body>
+</html>
