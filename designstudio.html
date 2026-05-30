@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aether — Design Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#0b0a08;--bg2:#141310;--bg3:#1a1916;
+  --fg:#ede8df;--fg-dim:#b5b0a5;--fg-muted:#6b665c;
+  --accent:#c94a2f;--accent-h:#e05a3c;--accent-glow:rgba(201,74,47,.12);
+  --border:#2a2825;--border-h:#3d3a35;
+  --serif:'Instrument Serif',Georgia,serif;
+  --sans:'Sora',system-ui,sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:var(--sans);background:var(--bg);color:var(--fg);overflow-x:hidden;line-height:1.6;cursor:none}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--accent);color:#fff}
+a{color:inherit;text-decoration:none}
+img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* ── Scroll progress ── */
+.scroll-progress{position:fixed;top:0;left:0;height:2px;background:var(--accent);z-index:1001;width:0%;pointer-events:none}
+
+/* ── Custom cursor ── */
+.cursor{position:fixed;top:0;left:0;pointer-events:none;z-index:10000;mix-blend-mode:difference}
+.cursor-ring{width:40px;height:40px;border:1px solid rgba(237,232,223,.5);border-radius:50%;transition:width .3s var(--ease),height .3s var(--ease),border-color .3s,opacity .3s;transform:translate(-50%,-50%)}
+.cursor-dot{width:5px;height:5px;background:#ede8df;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:opacity .2s}
+.cursor.hovering .cursor-ring{width:64px;height:64px;border-color:var(--accent)}
+.cursor.hovering .cursor-dot{opacity:0}
+.cursor.text-mode .cursor-ring{width:4px;height:28px;border-radius:2px;border:none;background:rgba(237,232,223,.6)}
+.cursor.text-mode .cursor-dot{display:none}
+@media(pointer:coarse){.cursor{display:none}body{cursor:auto}}
+
+/* ── Nav ── */
+#mainNav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:1.5rem 3rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid transparent;transition:background .4s,border-color .4s,backdrop-filter .4s,padding .4s}
+#mainNav.scrolled{background:rgba(11,10,8,.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom-color:var(--border);padding:1rem 3rem}
+.nav-logo{font-family:var(--serif);font-size:1.6rem;letter-spacing:-.02em}
+.nav-links{display:flex;gap:2.5rem;align-items:center}
+.nav-links a{font-size:.75rem;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-dim);position:relative;transition:color .3s}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--accent);transition:width .35s var(--ease)}
+.nav-links a:hover{color:var(--fg)}
+.nav-links a:hover::after{width:100%}
+.nav-cta{padding:.55rem 1.4rem;border:1px solid var(--border);border-radius:100px;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim);transition:all .35s var(--ease);margin-left:.5rem}
+.nav-cta:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+.menu-btn{display:none;background:none;border:none;color:var(--fg);font-size:1.3rem;cursor:none;padding:.5rem}
+
+/* ── Mobile menu overlay ── */
+.menu-overlay{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .5s var(--ease)}
+.menu-overlay.active{opacity:1;pointer-events:all}
+.menu-overlay nav{display:flex;flex-direction:column;gap:2rem;text-align:center}
+.menu-overlay a{font-family:var(--serif);font-size:clamp(2rem,6vw,3.5rem);color:var(--fg-dim);transition:color .3s,transform .4s var(--ease);transform:translateY(20px);opacity:0}
+.menu-overlay.active a{transform:translateY(0);opacity:1}
+.menu-overlay a:nth-child(2){transition-delay:.08s}
+.menu-overlay a:nth-child(3){transition-delay:.16s}
+.menu-overlay a:nth-child(4){transition-delay:.24s}
+.menu-overlay a:nth-child(5){transition-delay:.32s}
+.menu-overlay a:hover{color:var(--accent)}
+.menu-close{position:absolute;top:1.5rem;right:2rem;background:none;border:none;color:var(--fg);font-size:1.5rem;cursor:none}
+
+/* ── Reveal animations ── */
+.reveal{overflow:hidden}
+.reveal-inner{display:block;transform:translateY(110%);transition:transform .9s var(--ease);transition-delay:var(--d,0s)}
+.reveal.visible .reveal-inner{transform:translateY(0)}
+.fade-up{opacity:0;transform:translateY(30px);transition:opacity .8s var(--ease),transform .8s var(--ease);transition-delay:var(--d,0s)}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+
+/* ── Hero ── */
+.hero{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:8rem 3rem 4rem;overflow:hidden}
+.hero-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);pointer-events:none;transform:translate(-50%,-50%);opacity:0;transition:opacity .6s}
+.hero:hover .hero-glow{opacity:1}
+.hero-meta{display:flex;align-items:center;gap:1.2rem;margin-bottom:3rem;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--fg-muted)}
+.meta-divider{width:40px;height:1px;background:var(--border)}
+.hero h1{font-family:var(--serif);font-size:clamp(3rem,8.5vw,8rem);line-height:.95;letter-spacing:-.02em;font-weight:400;margin-bottom:2.5rem}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero-sub{max-width:440px;font-size:1rem;color:var(--fg-dim);line-height:1.7;margin-bottom:3.5rem;font-weight:300}
+.hero-bottom{display:flex;align-items:center;gap:2rem;margin-top:auto}
+.scroll-hint{display:flex;align-items:center;gap:.8rem;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--fg-muted)}
+.scroll-line{width:1px;height:48px;background:var(--border);position:relative;overflow:hidden}
+.scroll-line::after{content:'';position:absolute;top:-100%;left:0;width:100%;height:50%;background:var(--accent);animation:scrollPulse 2s ease-in-out infinite}
+@keyframes scrollPulse{0%{top:-50%}100%{top:150%}}
+.hero-deco{position:absolute;right:3rem;bottom:4rem;font-family:var(--serif);font-size:clamp(6rem,14vw,13rem);font-weight:400;color:var(--border);line-height:.85;user-select:none;pointer-events:none;opacity:.4}
+
+/* ── Section shared ── */
+section{padding:7rem 3rem;position:relative}
+.section-label{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:1rem;display:flex;align-items:center;gap:1rem}
+.section-label::before{content:'';width:24px;height:1px;background:var(--accent)}
+.section-num{font-family:var(--sans);font-size:clamp(3.5rem,7vw,7rem);font-weight:200;color:var(--border);line-height:1;user-select:none;margin-bottom:2rem;position:absolute;top:5.5rem;right:3rem}
+
+/* ── Manifesto ── */
+.manifesto{padding:8rem 3rem;max-width:1100px;margin:0 auto;text-align:center}
+.manifesto blockquote{font-family:var(--serif);font-size:clamp(1.6rem,3.8vw,3.2rem);line-height:1.35;letter-spacing:-.01em;color:var(--fg);font-weight:400}
+.manifesto blockquote em{font-style:italic;color:var(--accent)}
+
+/* ── Capabilities ── */
+.capabilities{max-width:1200px;margin:0 auto}
+.capabilities-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4rem;flex-wrap:wrap;gap:1rem}
+.capabilities-head h2{font-family:var(--serif);font-size:clamp(2rem,4vw,3.2rem);font-weight:400}
+.capabilities-head p{color:var(--fg-muted);font-size:.9rem;max-width:360px;font-weight:300}
+.cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.cap-card{background:var(--bg);padding:2.5rem 2rem;transition:background .4s,transform .4s var(--ease);position:relative}
+.cap-card:hover{background:var(--bg2);transform:translateY(-3px)}
+.cap-num{font-size:.7rem;letter-spacing:.15em;color:var(--fg-muted);margin-bottom:2rem;font-weight:400}
+.cap-card h3{font-family:var(--serif);font-size:1.4rem;margin-bottom:.8rem;font-weight:400;transition:color .3s}
+.cap-card:hover h3{color:var(--accent)}
+.cap-card p{font-size:.85rem;color:var(--fg-muted);line-height:1.7;font-weight:300}
+.cap-card .cap-icon{font-size:1.1rem;color:var(--border);margin-bottom:1.5rem;transition:color .3s}
+.cap-card:hover .cap-icon{color:var(--accent)}
+
+/* ── Work ── */
+.work{max-width:1200px;margin:0 auto}
+.work-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem}
+.work-item{position:relative;overflow:hidden;border-radius:4px;aspect-ratio:4/3}
+.work-item:nth-child(1){grid-column:span 2;aspect-ratio:21/9}
+.work-item img{transition:transform .7s var(--ease)}
+.work-item:hover img{transform:scale(1.04)}
+.work-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(11,10,8,.85) 0%,rgba(11,10,8,0) 50%);display:flex;flex-direction:column;justify-content:flex-end;padding:2rem;opacity:0;transition:opacity .4s}
+.work-item:hover .work-overlay{opacity:1}
+.work-overlay h3{font-family:var(--serif);font-size:1.5rem;margin-bottom:.3rem;transform:translateY(10px);transition:transform .5s var(--ease)}
+.work-item:hover .work-overlay h3{transform:translateY(0)}
+.work-overlay span{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-muted);transform:translateY(10px);transition:transform .5s var(--ease) .05s}
+.work-item:hover .work-overlay span{transform:translateY(0)}
+.work-view-all{display:flex;justify-content:center;margin-top:3.5rem}
+.btn-outline{display:inline-flex;align-items:center;gap:.8rem;padding:.85rem 2rem;border:1px solid var(--border);border-radius:100px;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-dim);transition:all .35s var(--ease);overflow:hidden;position:relative}
+.btn-outline::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);transition:left .5s}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-outline:hover::before{left:100%}
+.btn-outline i{font-size:.65rem;transition:transform .3s}
+.btn-outline:hover i{transform:translateX(4px)}
+
+/* ── Numbers ── */
+.numbers{border-top:1px solid var(--border);border-bottom:1px solid var(--border);max-width:1200px;margin:0 auto}
+.num-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.num-item{padding:4rem 2rem;text-align:center;border-right:1px solid var(--border);position:relative}
+.num-item:last-child{border-right:none}
+.num-val{font-family:var(--serif);font-size:clamp(2.5rem,5vw,4rem);font-weight:400;line-height:1;margin-bottom:.6rem}
+.num-val .num-accent{color:var(--accent)}
+.num-label{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-muted);font-weight:400}
+
+/* ── Testimonial ── */
+.testimonial{max-width:800px;margin:0 auto;text-align:center}
+.test-quote{font-family:var(--serif);font-size:clamp(1.3rem,2.5vw,1.9rem);line-height:1.5;color:var(--fg);font-style:italic;margin-bottom:2.5rem;font-weight:400}
+.test-quote::before{content:'\201C';display:block;font-size:4rem;line-height:1;color:var(--accent);font-style:normal;margin-bottom:1rem}
+.test-author{display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.test-name{font-size:.85rem;font-weight:500;letter-spacing:.05em}
+.test-role{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-muted)}
+
+/* ── CTA ── */
+.cta{max-width:1200px;margin:0 auto;text-align:center;padding:10rem 3rem}
+.cta h2{font-family:var(--serif);font-size:clamp(2.2rem,5vw,4rem);font-weight:400;margin-bottom:1.5rem;line-height:1.1}
+.cta h2 em{font-style:italic;color:var(--accent)}
+.cta p{color:var(--fg-muted);font-size:1rem;margin-bottom:3rem;font-weight:300;max-width:480px;margin-left:auto;margin-right:auto}
+.btn-primary{display:inline-flex;align-items:center;gap:.8rem;padding:1rem 2.5rem;background:var(--accent);color:#fff;border:none;border-radius:100px;font-family:var(--sans);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500;transition:background .3s,transform .3s var(--ease),box-shadow .3s;overflow:hidden;position:relative;cursor:none}
+.btn-primary::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transition:left .6s}
+.btn-primary:hover{background:var(--accent-h);transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,74,47,.25)}
+.btn-primary:hover::before{left:100%}
+.btn-primary i{font-size:.7rem;transition:transform .3s}
+.btn-primary:hover i{transform:translateX(4px)}
+
+/* ── Footer ── */
+footer{border-top:1px solid var(--border);padding:4rem 3rem 2rem}
+.footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:3rem;margin-bottom:4rem}
+.footer-brand .nav-logo{margin-bottom:1rem;display:block}
+.footer-brand p{font-size:.85rem;color:var(--fg-muted);line-height:1.7;font-weight:300;max-width:280px}
+.footer-col h4{font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:1.2rem}
+.footer-col a{display:block;font-size:.85rem;color:var(--fg-dim);padding:.3rem 0;transition:color .25s,transform .25s var(--ease)}
+.footer-col a:hover{color:var(--accent);transform:translateX(4px)}
+.footer-bottom{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;padding-top:2rem;border-top:1px solid var(--border);flex-wrap:wrap;gap:1rem}
+.footer-bottom span{font-size:.72rem;color:var(--fg-muted);letter-spacing:.05em}
+.footer-socials{display:flex;gap:1.2rem}
+.footer-socials a{color:var(--fg-muted);font-size:.9rem;transition:color .25s,transform .25s}
+.footer-socials a:hover{color:var(--accent);transform:translateY(-2px)}
+
+/* ── Responsive ── */
+@media(max-width:1024px){
+  .cap-grid{grid-template-columns:repeat(2,1fr)}
+  .num-grid{grid-template-columns:repeat(2,1fr)}
+  .num-item:nth-child(2){border-right:none}
+  .footer-inner{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .nav-links{display:none}
+  .menu-btn{display:block}
+  section{padding:5rem 1.5rem}
+  .hero{padding:7rem 1.5rem 3rem}
+  #mainNav{padding:1.2rem 1.5rem}
+  #mainNav.scrolled{padding:1rem 1.5rem}
+  .hero-deco{display:none}
+  .section-num{display:none}
+  .cap-grid{grid-template-columns:1fr}
+  .work-grid{grid-template-columns:1fr}
+  .work-item:nth-child(1){grid-column:span 1;aspect-ratio:4/3}
+  .num-grid{grid-template-columns:repeat(2,1fr)}
+  .footer-inner{grid-template-columns:1fr;gap:2rem}
+  .manifesto{padding:5rem 1.5rem}
+  .cta{padding:6rem 1.5rem}
+  footer{padding:3rem 1.5rem 1.5rem}
+}
+
+/* ── Reduced motion ── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .reveal-inner{transform:none!important}
+  .fade-up{opacity:1!important;transform:none!important}
+  .scroll-line::after{animation:none!important}
+  .menu-overlay a{transform:none!important;opacity:1!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Scroll progress -->
+<div class="scroll-progress" id="scrollProg"></div>
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor">
+  <div class="cursor-ring"></div>
+  <div class="cursor-dot"></div>
+</div>
+
+<!-- Nav -->
+<header id="mainNav">
+  <a href="#" class="nav-logo" data-hover>Aether</a>
+  <div class="nav-links">
+    <a href="#work" data-hover>Work</a>
+    <a href="#capabilities" data-hover>Capabilities</a>
+    <a href="#about" data-hover>About</a>
+    <a href="#contact" class="nav-cta" data-hover>Start a project</a>
+  </div>
+  <button class="menu-btn" id="menuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+</header>
+
+<!-- Mobile menu -->
+<div class="menu-overlay" id="menuOverlay">
+  <button class="menu-close" id="menuClose" aria-label="Close menu"><i class="fa-solid fa-xmark"></i></button>
+  <nav>
+    <a href="#work" data-hover>Work</a>
+    <a href="#capabilities" data-hover>Capabilities</a>
+    <a href="#about" data-hover>About</a>
+    <a href="#contact" data-hover>Contact</a>
+  </nav>
+</div>
+
+<main>
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-glow" id="heroGlow"></div>
+    <div class="hero-meta fade-up" style="--d:.2s">
+      <span>Est. 2012</span>
+      <span class="meta-divider"></span>
+      <span>New York</span>
+    </div>
+    <h1>
+      <div class="reveal" style="--d:.3s"><span class="reveal-inner">We design digital</span></div>
+      <div class="reveal" style="--d:.42s"><span class="reveal-inner">experiences that <em>refuse</em></span></div>
+      <div class="reveal" style="--d:.54s"><span class="reveal-inner">to be ignored.</span></div>
+    </h1>
+    <p class="hero-sub fade-up" style="--d:.7s">Aether is a design studio obsessed with craft, detail, and the kind of work that makes people stop scrolling.</p>
+    <div class="hero-bottom fade-up" style="--d:.85s">
+      <a href="#work" class="btn-primary" data-hover>Explore our work <i class="fa-solid fa-arrow-right"></i></a>
+      <div class="scroll-hint">
+        <div class="scroll-line"></div>
+        <span>Scroll</span>
+      </div>
+    </div>
+    <div class="hero-deco" aria-hidden="true">Ae</div>
+  </section>
+
+  <!-- Manifesto -->
+  <section class="manifesto" id="about">
+    <div class="section-label reveal" style="--d:0s"><span class="reveal-inner">Philosophy</span></div>
+    <blockquote>
+      <div class="reveal" style="--d:.1s"><span class="reveal-inner">We believe great design isn't about decoration —</span></div>
+      <div class="reveal" style="--d:.2s"><span class="reveal-inner">it's about <em>presence</em>. The kind that commands</span></div>
+      <div class="reveal" style="--d:.3s"><span class="reveal-inner">attention before a single word is read.</span></div>
+    </blockquote>
+  </section>
+
+  <!-- Capabilities -->
+  <section class="capabilities" id="capabilities">
+    <span class="section-num" aria-hidden="true">02</span>
+    <div class="capabilities-head">
+      <div>
+        <div class="section-label reveal" style="--d:0s"><span class="reveal-inner">What we do</span></div>
+        <h2 class="reveal" style="--d:.1s"><span class="reveal-inner">Capabilities</span></h2>
+      </div>
+      <p class="fade-up" style="--d:.2s">Every project is an opportunity to set a new standard. We don't do average.</p>
+    </div>
+    <div class="cap-grid">
+      <div class="cap-card fade-up" style="--d:.1s" data-hover>
+        <div class="cap-icon"><i class="fa-regular fa-gem"></i></div>
+        <div class="cap-num">01</div>
+        <h3>Brand Identity</h3>
+        <p>Visual systems that resonate deeply and refuse to fade into the background of memory.</p>
+      </div>
+      <div class="cap-card fade-up" style="--d:.18s" data-hover>
+        <div class="cap-icon"><i class="fa-regular fa-compass"></i></div>
+        <div class="cap-num">02</div>
+        <h3>Digital Products</h3>
+        <p>From concept to launch, products that people actually want to use, built with precision.</p>
+      </div>
+      <div class="cap-card fade-up" style="--d:.26s" data-hover>
+        <div class="cap-icon"><i class="fa-regular fa-circle-play"></i></div>
+        <div class="cap-num">03</div>
+        <h3>Motion Design</h3>
+        <p>Breathing life into every pixel, creating moments that linger long after the page closes.</p>
+      </div>
+      <div class="cap-card fade-up" style="--d:.34s" data-hover>
+        <div class="cap-icon"><i class="fa-regular fa-lightbulb"></i></div>
+        <div class="cap-num">04</div>
+        <h3>Creative Direction</h3>
+        <p>Finding clarity in chaos — transforming vague ambitions into sharply defined creative visions.</p>
+      </div>
+      <div class="cap-card fade-up" style="--d:.42s" data-hover>
+        <div class="cap-icon"><i class="fa-regular fa-image"></i></div>
+        <div class="cap-num">05</div>
+        <h3>Art Direction</h3>
+        <p>Curating every visual decision to ensure a cohesive narrative that feels unmistakable.</p>
+      </div>
+      <div class="cap-card fade-up" style="--d:.5s" data-hover>
+        <div class="cap-icon"><i class="fa-regular fa-file-code"></i></div>
+        <div class="cap-num">06</div>
+        <h3>Web Development</h3>
+        <p>Flawless execution that brings design to life without compromise on performance or polish.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Work -->
+  <section class="work" id="work">
+    <span class="section-num" aria-hidden="true">03</span>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div class="section-label reveal" style="--d:0s"><span class="reveal-inner">Selected projects</span></div>
+        <h2 class="reveal" style="--d:.1s"><span class="reveal-inner">Featured Work</span></h2>
+      </div>
+    </div>
+    <div class="work-grid">
+      <div class="work-item fade-up" style="--d:.15s" data-hover>
+        <img src="https://picsum.photos/seed/aether-lux/1200/520.jpg" alt="Lumière luxury rebrand project" loading="lazy">
+        <div class="work-overlay">
+          <h3>Lumière</h3>
+          <span>Brand Identity &middot; Digital Experience</span>
+        </div>
+      </div>
+      <div class="work-item fade-up" style="--d:.25s" data-hover>
+        <img src="https://picsum.photos/seed/aether-vtx/600/450.jpg" alt="Vertex tech product launch" loading="lazy">
+        <div class="work-overlay">
+          <h3>Vertex</h3>
+          <span>Product Design &middot; Motion</span>
+        </div>
+      </div>
+      <div class="work-item fade-up" style="--d:.32s" data-hover>
+        <img src="https://picsum.photos/seed/aether-sol/600/450.jpg" alt="Solstice fashion ecommerce" loading="lazy">
+        <div class="work-overlay">
+          <h3>Solstice</h3>
+          <span>E-Commerce &middot; Art Direction</span>
+        </div>
+      </div>
+      <div class="work-item fade-up" style="--d:.4s" data-hover>
+        <img src="https://picsum.photos/seed/aether-mrd/600/450.jpg" alt="Meridian architecture portfolio" loading="lazy">
+        <div class="work-overlay">
+          <h3>Meridian</h3>
+          <span>Web Development &middot; Creative Direction</span>
+        </div>
+      </div>
+      <div class="work-item fade-up" style="--d:.48s" data-hover>
+        <img src="https://picsum.photos/seed/aether-koa/600/450.jpg" alt="Koa wellness brand" loading="lazy">
+        <div class="work-overlay">
+          <h3>Koa</h3>
+          <span>Brand Identity &middot; Packaging</span>
+        </div>
+      </div>
+    </div>
+    <div class="work-view-all fade-up" style="--d:.55s">
+      <a href="#" class="btn-outline" data-hover>View all projects <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </section>
+
+  <!-- Numbers -->
+  <section class="numbers">
+    <div class="num-grid">
+      <div class="num-item fade-up" style="--d:.05s">
+        <div class="num-val"><span class="counter" data-target="147">0</span><span class="num-accent">+</span></div>
+        <div class="num-label">Projects Delivered</div>
+      </div>
+      <div class="num-item fade-up" style="--d:.13s">
+        <div class="num-val"><span class="counter" data-target="12">0</span></div>
+        <div class="num-label">Years of Craft</div>
+      </div>
+      <div class="num-item fade-up" style="--d:.21s">
+        <div class="num-val"><span class="counter" data-target="38">0</span></div>
+        <div class="num-label">Design Awards</div>
+      </div>
+      <div class="num-item fade-up" style="--d:.29s">
+        <div class="num-val"><span class="counter" data-target="96">0</span><span class="num-accent">%</span></div>
+        <div class="num-label">Client Retention</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonial -->
+  <section class="testimonial">
+    <div class="section-label reveal" style="--d:0s"><span class="reveal-inner">Client words</span></div>
+    <div class="test-quote fade-up" style="--d:.15s">
+      Working with Aether fundamentally changed how our audience perceives us. Their obsession with detail is something we've never experienced with another studio.
+    </div>
+    <div class="test-author fade-up" style="--d:.3s">
+      <span class="test-name">Elena Marchetti</span>
+      <span class="test-role">CEO, Lumière</span>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="contact">
+    <div class="section-label reveal" style="--d:0s" style="justify-content:center"><span class="reveal-inner">Ready?</span></div>
+    <h2>
+      <div class="reveal" style="--d:.1s"><span class="reveal-inner">Let's build something</span></div>
+      <div class="reveal" style="--d:.2s"><span class="reveal-inner"><em>impossible</em> to forget.</span></div>
+    </h2>
+    <p class="fade-up" style="--d:.35s">We take on a limited number of projects each year to ensure every one gets our full creative intensity.</p>
+    <a href="#" class="btn-primary fade-up" style="--d:.45s" data-hover>Start a conversation <i class="fa-solid fa-arrow-right"></i></a>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="nav-logo">Aether</span>
+      <p>A design studio in New York, crafting digital experiences that command attention and refuse to be forgotten.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Studio</h4>
+      <a href="#about" data-hover>About</a>
+      <a href="#capabilities" data-hover>Capabilities</a>
+      <a href="#work" data-hover>Work</a>
+      <a href="#" data-hover>Careers</a>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <a href="#" data-hover>Journal</a>
+      <a href="#" data-hover>Process</a>
+      <a href="#" data-hover>FAQ</a>
+      <a href="#" data-hover>Contact</a>
+    </div>
+    <div class="footer-col">
+      <h4>Connect</h4>
+      <a href="#" data-hover>Instagram</a>
+      <a href="#" data-hover>Dribbble</a>
+      <a href="#" data-hover>LinkedIn</a>
+      <a href="#" data-hover>Twitter</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2025 Aether Studio. All rights reserved.</span>
+    <div class="footer-socials">
+      <a href="#" data-hover aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+      <a href="#" data-hover aria-label="Dribbble"><i class="fa-brands fa-dribbble"></i></a>
+      <a href="#" data-hover aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+      <a href="#" data-hover aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ── Custom cursor ── */
+const cursor = document.getElementById('cursor');
+const ring = cursor.querySelector('.cursor-ring');
+let cx = -100, cy = -100, rx = -100, ry = -100;
+
+document.addEventListener('mousemove', e => {
+  cx = e.clientX; cy = e.clientY;
+});
+
+function tickCursor() {
+  rx += (cx - rx) * 0.15;
+  ry += (cy - ry) * 0.15;
+  cursor.style.transform = `translate(${rx}px, ${ry}px)`;
+  requestAnimationFrame(tickCursor);
+}
+tickCursor();
+
+/* Cursor states */
+document.querySelectorAll('[data-hover]').forEach(el => {
+  el.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
+  el.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
+});
+document.querySelectorAll('p, blockquote, .test-quote, h2, h3').forEach(el => {
+  el.addEventListener('mouseenter', () => cursor.classList.add('text-mode'));
+  el.addEventListener('mouseleave', () => cursor.classList.remove('text-mode'));
+});
+
+/* ── Hero glow follows mouse ── */
+const heroGlow = document.getElementById('heroGlow');
+const hero = document.getElementById('hero');
+hero.addEventListener('mousemove', e => {
+  heroGlow.style.left = e.clientX + 'px';
+  heroGlow.style.top = e.clientY + 'px';
+});
+
+/* ── Scroll progress ── */
+const scrollProg = document.getElementById('scrollProg');
+function updateScroll() {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+  scrollProg.style.width = pct + '%';
+
+  /* Nav state */
+  document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 60);
+}
+window.addEventListener('scroll', updateScroll, { passive: true });
+
+/* ── Intersection Observer for reveals ── */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal, .fade-up').forEach(el => io.observe(el));
+
+/* ── Counter animation ── */
+const counterIO = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = parseInt(el.dataset.target);
+    const dur = 1800;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / dur, 1);
+      /* Ease out cubic */
+      const ease = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(target * ease);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+    counterIO.unobserve(el);
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.counter').forEach(el => counterIO.observe(el));
+
+/* ── Mobile menu ── */
+const menuOverlay = document.getElementById('menuOverlay');
+document.getElementById('menuBtn').addEventListener('click', () => {
+  menuOverlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+});
+function closeMenu() {
+  menuOverlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.getElementById('menuClose').addEventListener('click', closeMenu);
+menuOverlay.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+
+/* ── Initial hero triggers (for elements already in view) ── */
+setTimeout(() => {
+  document.querySelectorAll('.hero .reveal, .hero .fade-up').forEach(el => {
+    el.classList.add('visible');
+  });
+}, 100);
+</script>
+</body>
+</html>

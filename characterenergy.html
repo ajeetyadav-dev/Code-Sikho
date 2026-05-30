@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Character Energy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --fg: #E8E0D4;
+            --muted: #4a4540;
+            --accent: #D4A853;
+            --accent-dim: rgba(212, 168, 83, 0.12);
+            --card: #131110;
+            --border: #2a2520;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ── Film Grain ── */
+        .grain {
+            position: fixed;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0.045;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            animation: grain 0.7s steps(8) infinite;
+        }
+        @keyframes grain {
+            0%,100%{transform:translate(0,0)}
+            10%{transform:translate(-5%,-10%)}
+            20%{transform:translate(-15%,5%)}
+            30%{transform:translate(7%,-25%)}
+            40%{transform:translate(-5%,25%)}
+            50%{transform:translate(-15%,10%)}
+            60%{transform:translate(15%,0%)}
+            70%{transform:translate(0%,15%)}
+            80%{transform:translate(3%,35%)}
+            90%{transform:translate(-10%,10%)}
+        }
+
+        /* ── Spotlight ── */
+        .spotlight {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: radial-gradient(800px circle at var(--mx,50%) var(--my,50%), rgba(212,168,83,0.045), transparent 50%);
+        }
+
+        /* ── Vignette ── */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.65) 100%);
+        }
+
+        /* ── Particles Canvas ── */
+        #particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+        /* ── Custom Cursor ── */
+        .cursor-dot {
+            position: fixed; width: 5px; height: 5px;
+            background: var(--accent); border-radius: 50%;
+            pointer-events: none; z-index: 10000;
+            transform: translate(-50%,-50%);
+            mix-blend-mode: difference;
+        }
+        .cursor-ring {
+            position: fixed; width: 36px; height: 36px;
+            border: 1px solid rgba(212,168,83,0.35);
+            border-radius: 50%;
+            pointer-events: none; z-index: 10000;
+            transform: translate(-50%,-50%);
+            transition: all 0.18s ease;
+        }
+
+        /* ── Letterbox Bars ── */
+        .letterbox {
+            position: fixed; left: 0; right: 0;
+            height: 7vh; background: #000;
+            z-index: 100;
+            transition: height 0.9s cubic-bezier(0.4,0,0.2,1);
+        }
+        .letterbox-top { top: 0; }
+        .letterbox-bottom { bottom: 0; }
+        .letterbox.wide { height: 11vh; }
+
+        /* ── Intro Screen ── */
+        .intro-screen {
+            position: fixed; inset: 0; z-index: 1000;
+            background: #000;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 1.4s ease, visibility 1.4s ease;
+        }
+        .intro-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .intro-text {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: clamp(1.15rem,3vw,1.9rem);
+            color: var(--fg);
+            opacity: 0; transform: translateY(24px);
+            animation: fadeUp 1.4s ease 0.4s forwards;
+            text-align: center; max-width: 560px;
+            padding: 0 2rem; line-height: 1.7;
+        }
+        .intro-btn {
+            margin-top: 3rem; padding: 1rem 3rem;
+            border: 1px solid var(--accent); background: transparent;
+            color: var(--accent);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem; font-weight: 500;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            cursor: pointer;
+            opacity: 0; transform: translateY(24px);
+            animation: fadeUp 1.4s ease 1.4s forwards;
+            transition: color 0.4s ease;
+            position: relative; overflow: hidden;
+        }
+        .intro-btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: var(--accent);
+            transform: scaleX(0); transform-origin: left;
+            transition: transform 0.45s ease; z-index: -1;
+        }
+        .intro-btn:hover { color: #000; }
+        .intro-btn:hover::before { transform: scaleX(1); }
+        .intro-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* ── Main Content ── */
+        .main-content { opacity: 0; transition: opacity 1.6s ease 0.5s; }
+        .main-content.visible { opacity: 1; }
+
+        /* ── Hero ── */
+        .hero {
+            height: 100vh; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            position: relative; z-index: 10;
+        }
+        .hero-glow {
+            position: absolute; width: 550px; height: 550px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212,168,83,0.07), transparent 70%);
+            animation: breathe 4.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes breathe {
+            0%,100%{transform:scale(1);opacity:0.5}
+            50%{transform:scale(1.25);opacity:1}
+        }
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(7rem,24vw,19rem);
+            line-height: 0.85;
+            color: var(--fg);
+            opacity: 0; transform: scale(0.75);
+            animation: heroReveal 2.2s cubic-bezier(0.16,1,0.3,1) 0.2s forwards;
+            letter-spacing: -0.02em;
+            position: relative;
+            transition: text-shadow 0.5s ease;
+        }
+        .hero-title:hover {
+            text-shadow: 0 0 100px rgba(212,168,83,0.15);
+        }
+        .hero-title::after {
+            content: ''; position: absolute;
+            bottom: -12px; left: 50%; transform: translateX(-50%);
+            width: 55%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0; animation: fadeUp 1s ease 2s forwards;
+        }
+        @keyframes heroReveal { to { opacity: 1; transform: scale(1); } }
+
+        .hero-sub {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: clamp(0.8rem,1.8vw,1.2rem);
+            color: var(--muted);
+            margin-top: 2.2rem;
+            opacity: 0; animation: fadeUp 1.5s ease 2.4s forwards;
+            letter-spacing: 0.18em; text-transform: uppercase;
+        }
+
+        .scroll-indicator {
+            position: absolute; bottom: 12vh;
+            left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column;
+            align-items: center; gap: 0.5rem;
+            opacity: 0; animation: fadeUp 1s ease 3.4s forwards;
+        }
+        .scroll-indicator span {
+            font-size: 0.6rem; letter-spacing: 0.35em;
+            text-transform: uppercase; color: var(--muted);
+        }
+        .scroll-line {
+            width: 1px; height: 38px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            animation: scrollPulse 2s ease infinite;
+        }
+        @keyframes scrollPulse {
+            0%,100%{opacity:0.25;transform:scaleY(0.4)}
+            50%{opacity:1;transform:scaleY(1)}
+        }
+
+        /* ── Sections ── */
+        section { padding: 6rem 2rem; position: relative; z-index: 10; }
+
+        .divider {
+            width: 100%; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin: 0; position: relative; z-index: 10;
+        }
+
+        /* ── Scene Headers ── */
+        .scene-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem; }
+        .scene-number {
+            font-size: 0.65rem; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase;
+            color: var(--accent); background: var(--accent-dim);
+            padding: 0.4rem 1rem;
+            border: 1px solid rgba(212,168,83,0.18);
+            white-space: nowrap;
+        }
+        .scene-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+        .scene-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: clamp(2rem,5vw,3.4rem);
+            line-height: 1.15; margin-bottom: 1.5rem;
+        }
+
+        /* ── Reveal ── */
+        .reveal {
+            opacity: 0; transform: translateY(40px);
+            transition: opacity 0.85s ease, transform 0.85s cubic-bezier(0.16,1,0.3,1);
+        }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .rd1{transition-delay:.1s}.rd2{transition-delay:.2s}
+        .rd3{transition-delay:.3s}.rd4{transition-delay:.4s}.rd5{transition-delay:.5s}
+
+        /* ── Monologue ── */
+        .monologue {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: clamp(1.2rem,2.8vw,1.85rem);
+            line-height: 1.85; max-width: 680px;
+            padding-left: 2rem;
+            border-left: 2px solid var(--accent);
+        }
+
+        /* ── Scene Cards ── */
+        .scene-card {
+            background: var(--card); border: 1px solid var(--border);
+            padding: 2.2rem; position: relative; overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+        .scene-card::before {
+            content: ''; position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            transform: scaleX(0); transition: transform 0.5s ease;
+        }
+        .scene-card:hover {
+            border-color: rgba(212,168,83,0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+        }
+        .scene-card:hover::before { transform: scaleX(1); }
+        .scene-card-num {
+            font-size: 0.6rem; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 1.3rem;
+        }
+        .scene-card-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700; font-size: 1.4rem;
+            margin-bottom: 0.9rem;
+        }
+        .scene-card-desc { font-size: 0.9rem; line-height: 1.75; color: #8a8279; }
+
+        /* ── Big Quote ── */
+        .big-quote {
+            font-family: 'Playfair Display', serif;
+            font-style: italic; font-weight: 400;
+            font-size: clamp(1.7rem,4.5vw,3.3rem);
+            line-height: 1.4; text-align: center;
+            max-width: 860px; position: relative;
+        }
+        .big-quote::before {
+            content: '\201C'; position: absolute;
+            top: -44px; left: -16px;
+            font-size: 5.5rem; color: var(--accent);
+            opacity: 0.25; font-style: normal; line-height: 1;
+        }
+
+        /* ── Track Items ── */
+        .track-item {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 0.9rem 1.2rem;
+            background: var(--card); border: 1px solid var(--border);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .track-item:hover { border-color: rgba(212,168,83,0.3); }
+        .track-play {
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all 0.3s ease;
+        }
+        .track-item:hover .track-play {
+            border-color: var(--accent); background: var(--accent-dim);
+        }
+        .track-item.playing .track-play {
+            border-color: var(--accent); background: var(--accent);
+        }
+        .track-item.playing .track-play i { color: #000; }
+        .track-item.playing .track-title { color: var(--accent); }
+
+        /* ── Credits ── */
+        .credit-item {
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.6s ease;
+        }
+        .credit-item.active { opacity: 1; transform: translateY(0); }
+        .credit-role {
+            font-size: 0.6rem; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 0.25rem;
+        }
+        .credit-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem; font-weight: 700;
+        }
+
+        /* ── Now Playing Widget ── */
+        .now-playing {
+            position: fixed;
+            bottom: calc(7vh + 1rem); right: 1.5rem;
+            z-index: 200;
+            background: rgba(19,17,16,0.92);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1.1rem;
+            display: flex; align-items: center; gap: 0.75rem;
+            min-width: 210px;
+            opacity: 0; transform: translateX(24px);
+            transition: all 0.9s cubic-bezier(0.16,1,0.3,1);
+            cursor: pointer;
+        }
+        .now-playing.visible { opacity: 1; transform: translateX(0); }
+        .now-playing:hover { border-color: rgba(212,168,83,0.3); }
+        .now-playing-art {
+            width: 36px; height: 36px; border-radius: 3px;
+            object-fit: cover; flex-shrink: 0;
+        }
+        .now-playing-info { flex: 1; min-width: 0; }
+        .now-playing-label {
+            font-size: 0.5rem; font-weight: 600;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 0.1rem;
+        }
+        .now-playing-song {
+            font-size: 0.78rem; font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .now-playing-artist { font-size: 0.68rem; color: var(--muted); }
+        .np-bars { display: flex; align-items: flex-end; gap: 2px; height: 16px; flex-shrink: 0; }
+        .np-bar {
+            width: 2px; background: var(--accent);
+            border-radius: 1px; animation: barPulse 1.2s ease infinite;
+        }
+        .np-bar:nth-child(1){height:40%;animation-delay:0s}
+        .np-bar:nth-child(2){height:70%;animation-delay:.2s}
+        .np-bar:nth-child(3){height:50%;animation-delay:.4s}
+        .np-bar:nth-child(4){height:90%;animation-delay:.1s}
+        @keyframes barPulse {
+            0%,100%{transform:scaleY(0.3)}
+            50%{transform:scaleY(1)}
+        }
+        .np-progress {
+            position: absolute; bottom: 0; left: 0;
+            height: 2px; background: var(--accent);
+            transition: width 0.15s linear;
+        }
+
+        /* ── Responsive ── */
+        @media(max-width:768px){
+            .letterbox{height:4vh}
+            .letterbox.wide{height:5.5vh}
+            .now-playing{bottom:calc(4vh+.7rem);right:.7rem;min-width:170px;padding:.6rem .8rem}
+            .cursor-dot,.cursor-ring{display:none!important}
+            section{padding:4rem 1.2rem}
+            .monologue{font-size:1.05rem;padding-left:1.2rem}
+            .scene-card{padding:1.5rem}
+        }
+
+        /* ── Reduced Motion ── */
+        @media(prefers-reduced-motion:reduce){
+            *,*::before,*::after{
+                animation-duration:0.01ms!important;
+                transition-duration:0.01ms!important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Atmospheric layers -->
+    <div class="grain" aria-hidden="true"></div>
+    <div class="spotlight" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <canvas id="particles" aria-hidden="true"></canvas>
+    <div class="cursor-dot" aria-hidden="true"></div>
+    <div class="cursor-ring" aria-hidden="true"></div>
+    <div class="letterbox letterbox-top" aria-hidden="true"></div>
+    <div class="letterbox letterbox-bottom" aria-hidden="true"></div>
+
+    <!-- Intro -->
+    <div class="intro-screen" id="intro" role="dialog" aria-label="Opening">
+        <p class="intro-text">Every story needs a protagonist.<br>Tonight, that's you.</p>
+        <button class="intro-btn" id="enterBtn" aria-label="Enter the scene">Enter the Scene</button>
+    </div>
+
+    <!-- Now Playing -->
+    <div class="now-playing" id="nowPlaying" aria-label="Now playing">
+        <img class="now-playing-art" src="https://picsum.photos/seed/mcenergy/72/72.jpg" alt="" width="36" height="36">
+        <div class="now-playing-info">
+            <div class="now-playing-label">Now Playing</div>
+            <div class="now-playing-song" id="songTitle">Midnight Drive</div>
+            <div class="now-playing-artist" id="songArtist">The Main Character</div>
+        </div>
+        <div class="np-bars"><div class="np-bar"></div><div class="np-bar"></div><div class="np-bar"></div><div class="np-bar"></div></div>
+        <div class="np-progress" id="songProgress"></div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+
+        <!-- HERO -->
+        <section class="hero" aria-label="Hero">
+            <div class="hero-glow" aria-hidden="true"></div>
+            <h1 class="hero-title">YOU</h1>
+            <p class="hero-sub">The main character didn't wait for permission</p>
+            <div class="scroll-indicator" aria-hidden="true">
+                <span>Scroll</span>
+                <div class="scroll-line"></div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- CHAPTER 1 -->
+        <section aria-label="Chapter One">
+            <div style="max-width:780px;margin:0 auto">
+                <div class="scene-header reveal">
+                    <div class="scene-number">Chapter One</div>
+                    <div class="scene-line"></div>
+                </div>
+                <h2 class="scene-title reveal rd1">The Entrance</h2>
+                <div class="monologue reveal rd2">
+                    You didn't just walk into the room. You arrived. The kind of entrance that makes the background music shift key, that makes strangers look up from their drinks and wonder who just walked in. Not because you were loud — because you were present. Completely, undeniably present. That's the thing about main characters: they don't need to announce themselves. The room knows.
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- CHAPTER 2 -->
+        <section aria-label="Chapter Two">
+            <div style="max-width:1100px;margin:0 auto">
+                <div class="scene-header reveal">
+                    <div class="scene-number">Chapter Two</div>
+                    <div class="scene-line"></div>
+                </div>
+                <h2 class="scene-title reveal rd1">The Montage</h2>
+                <p class="reveal rd2" style="color:#8a8279;font-size:.92rem;margin-bottom:2.8rem;max-width:480px;line-height:1.75">
+                    Every great story has a sequence where the protagonist levels up. Here are your scenes.
+                </p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.4rem">
+                    <article class="scene-card reveal rd1">
+                        <div class="scene-card-num">Scene 01</div>
+                        <h3 class="scene-card-title">The Decision</h3>
+                        <p class="scene-card-desc">When you chose the harder path because easy was never the point. The crossroads moment where everyone else turned right and you went left, into the unknown.</p>
+                    </article>
+                    <article class="scene-card reveal rd2">
+                        <div class="scene-card-num">Scene 02</div>
+                        <h3 class="scene-card-title">The Breakthrough</h3>
+                        <p class="scene-card-desc">The late night when everything finally clicked. The puzzle pieces aligning, the fog lifting, the sudden clarity that hits like lightning.</p>
+                    </article>
+                    <article class="scene-card reveal rd3">
+                        <div class="scene-card-num">Scene 03</div>
+                        <h3 class="scene-card-title">The Comeback</h3>
+                        <p class="scene-card-desc">When they counted you out and you came back sharper, stronger, more deliberate. The setback that became the setup.</p>
+                    </article>
+                    <article class="scene-card reveal rd4">
+                        <div class="scene-card-num">Scene 04</div>
+                        <h3 class="scene-card-title">The Legacy</h3>
+                        <p class="scene-card-desc">Writing your name into the story that actually matters. Not the one they wrote for you — the one you're writing right now.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- QUOTE -->
+        <section aria-label="Quote" style="display:flex;align-items:center;justify-content:center;min-height:55vh">
+            <blockquote class="big-quote reveal">
+                The camera always finds the one who refuses to be an extra.
+            </blockquote>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- CHAPTER 3: SOUNDTRACK -->
+        <section aria-label="Chapter Three">
+            <div style="max-width:580px;margin:0 auto">
+                <div class="scene-header reveal">
+                    <div class="scene-number">Chapter Three</div>
+                    <div class="scene-line"></div>
+                </div>
+                <h2 class="scene-title reveal rd1">The Soundtrack</h2>
+                <p class="reveal rd2" style="color:#8a8279;font-size:.92rem;margin-bottom:2.5rem;line-height:1.75">
+                    Every main character has one. The music that plays when no one else can hear it.
+                </p>
+                <div style="display:flex;flex-direction:column;gap:.65rem" id="tracklist"></div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- CREDITS -->
+        <section aria-label="Credits" style="min-height:75vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div style="max-width:560px;width:100%;display:flex;flex-direction:column;align-items:center;gap:2.2rem">
+                <div class="scene-header reveal" style="width:100%">
+                    <div class="scene-number">End Credits</div>
+                    <div class="scene-line"></div>
+                </div>
+                <div class="credit-item" data-delay="0">
+                    <div class="credit-role">Starring</div>
+                    <div class="credit-name">You</div>
+                </div>
+                <div class="credit-item" data-delay="120">
+                    <div class="credit-role">Directed By</div>
+                    <div class="credit-name">You</div>
+                </div>
+                <div class="credit-item" data-delay="240">
+                    <div class="credit-role">Written By</div>
+                    <div class="credit-name">You</div>
+                </div>
+                <div class="credit-item" data-delay="360">
+                    <div class="credit-role">Produced By</div>
+                    <div class="credit-name">You</div>
+                </div>
+                <div class="credit-item" data-delay="480">
+                    <div class="credit-role">Cinematography</div>
+                    <div class="credit-name">Life, Unfiltered</div>
+                </div>
+                <div class="credit-item" data-delay="600">
+                    <div class="credit-role">Costume Design</div>
+                    <div class="credit-name">Your Signature Style</div>
+                </div>
+                <div class="credit-item" data-delay="720">
+                    <div class="credit-role">Original Score</div>
+                    <div class="credit-name">The Beat in Your Head</div>
+                </div>
+                <div style="margin-top:1.5rem;text-align:center;opacity:0;transition:opacity 1.6s ease" id="finalCredit">
+                    <p style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.05rem;color:var(--muted);line-height:1.9">
+                        No animals were harmed in the making of this life.<br>
+                        <span style="color:var(--accent)">One main character was absolutely unleashed.</span>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <footer style="text-align:center;padding:3rem 2rem 12vh;position:relative;z-index:10">
+            <p style="font-size:.65rem;letter-spacing:.35em;text-transform:uppercase;color:var(--muted)">
+                This is your movie. Keep rolling.
+            </p>
+        </footer>
+    </main>
+
+    <script>
+    (function() {
+        /* ── Intro ── */
+        const intro = document.getElementById('intro');
+        const enterBtn = document.getElementById('enterBtn');
+        const mainContent = document.getElementById('mainContent');
+        const nowPlaying = document.getElementById('nowPlaying');
+
+        enterBtn.addEventListener('click', function() {
+            intro.classList.add('hidden');
+            setTimeout(function() {
+                mainContent.classList.add('visible');
+                nowPlaying.classList.add('visible');
+            }, 600);
+        });
+
+        /* ── Spotlight ── */
+        const spotlight = document.querySelector('.spotlight');
+        document.addEventListener('mousemove', function(e) {
+            var mx = (e.clientX / window.innerWidth) * 100;
+            var my = (e.clientY / window.innerHeight) * 100;
+            spotlight.style.setProperty('--mx', mx + '%');
+            spotlight.style.setProperty('--my', my + '%');
+        });
+
+        /* ── Custom Cursor ── */
+        var dot = document.querySelector('.cursor-dot');
+        var ring = document.querySelector('.cursor-ring');
+        var cx = 0, cy = 0, rx = 0, ry = 0;
+
+        document.addEventListener('mousemove', function(e) {
+            cx = e.clientX;
+            cy = e.clientY;
+            dot.style.left = cx + 'px';
+            dot.style.top = cy + 'px';
+        });
+
+        (function animRing() {
+            rx += (cx - rx) * 0.14;
+            ry += (cy - ry) * 0.14;
+            ring.style.left = rx + 'px';
+            ring.style.top = ry + 'px';
+            requestAnimationFrame(animRing);
+        })();
+
+        /* Cursor hover scaling */
+        document.querySelectorAll('button, .scene-card, .now-playing, .track-item').forEach(function(el) {
+            el.addEventListener('mouseenter', function() {
+                ring.style.transform = 'translate(-50%,-50%) scale(1.6)';
+                ring.style.borderColor = 'rgba(212,168,83,0.75)';
+            });
+            el.addEventListener('mouseleave', function() {
+                ring.style.transform = 'translate(-50%,-50%) scale(1)';
+                ring.style.borderColor = 'rgba(212,168,83,0.35)';
+            });
+        });
+
+        /* ── Particles ── */
+        var canvas = document.getElementById('particles');
+        var ctx = canvas.getContext('2d');
+        var particles = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function Particle() {
+            this.reset(true);
+        }
+        Particle.prototype.reset = function(initial) {
+            this.x = Math.random() * canvas.width;
+            this.y = initial ? Math.random() * canvas.height : canvas.height + 10;
+            this.size = Math.random() * 1.4 + 0.4;
+            this.vx = (Math.random() - 0.5) * 0.25;
+            this.vy = -(Math.random() * 0.28 + 0.08);
+            this.phase = Math.random() * Math.PI * 2;
+            this.ps = Math.random() * 0.018 + 0.004;
+        };
+        Particle.prototype.update = function() {
+            this.x += this.vx + Math.sin(this.phase) * 0.12;
+            this.y += this.vy;
+            this.phase += this.ps;
+            if (this.y < -10 || this.x < -10 || this.x > canvas.width + 10) this.reset(false);
+        };
+        Particle.prototype.draw = function() {
+            var op = 0.15 + Math.sin(this.phase) * 0.15;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(212,168,83,' + Math.max(0, op) + ')';
+            ctx.fill();
+        };
+
+        var pCount = Math.min(90, Math.floor(window.innerWidth / 14));
+        for (var i = 0; i < pCount; i++) particles.push(new Particle());
+
+        (function animP() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (var j = 0; j < particles.length; j++) {
+                particles[j].update();
+                particles[j].draw();
+            }
+            requestAnimationFrame(animP);
+        })();
+
+        /* ── Scroll Reveals ── */
+        var reveals = document.querySelectorAll('.reveal');
+        var rObs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(en) {
+                if (en.isIntersecting) en.target.classList.add('active');
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        reveals.forEach(function(el) { rObs.observe(el); });
+
+        /* Credits stagger */
+        var credits = document.querySelectorAll('.credit-item');
+        var cObs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(en) {
+                if (en.isIntersecting) {
+                    var d = parseInt(en.target.dataset.delay) || 0;
+                    setTimeout(function() { en.target.classList.add('active'); }, d);
+                }
+            });
+        }, { threshold: 0.25 });
+        credits.forEach(function(el) { cObs.observe(el); });
+
+        /* Final credit */
+        var fc = document.getElementById('finalCredit');
+        var fObs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(en) {
+                if (en.isIntersecting) setTimeout(function() { en.target.style.opacity = '1'; }, 1100);
+            });
+        }, { threshold: 0.4 });
+        fObs.observe(fc);
+
+        /* ── Letterbox ── */
+        var lbs = document.querySelectorAll('.letterbox');
+        var hero = document.querySelector('.hero');
+        window.addEventListener('scroll', function() {
+            if (hero.getBoundingClientRect().bottom < 0) {
+                lbs.forEach(function(l) { l.classList.add('wide'); });
+            } else {
+                lbs.forEach(function(l) { l.classList.remove('wide'); });
+            }
+        }, { passive: true });
+
+        /* ── Now Playing ── */
+        var tracks = [
+            { title: 'Midnight Drive', artist: 'The Main Character', dur: '3:24' },
+            { title: 'Golden Hour', artist: 'Cinematic Dreams', dur: '4:01' },
+            { title: 'Enter the Scene', artist: 'Plot Twist', dur: '2:47' },
+            { title: 'Unstoppable', artist: 'Main Theme', dur: '3:58' },
+            { title: 'Neon Soliloquy', artist: 'The Score', dur: '4:33' }
+        ];
+        var curTrack = 0;
+        var prog = 0;
+        var sDur = 22000;
+        var sTitle = document.getElementById('songTitle');
+        var sArtist = document.getElementById('songArtist');
+        var sProg = document.getElementById('songProgress');
+
+        setInterval(function() {
+            prog += 100 / (sDur / 50);
+            sProg.style.width = Math.min(prog, 100) + '%';
+            if (prog >= 100) {
+                prog = 0;
+                curTrack = (curTrack + 1) % tracks.length;
+                sTitle.textContent = tracks[curTrack].title;
+                sArtist.textContent = tracks[curTrack].artist;
+                updateTrackHighlight();
+            }
+        }, 50);
+
+        /* ── Tracklist ── */
+        var tl = document.getElementById('tracklist');
+        tracks.forEach(function(t, idx) {
+            var el = document.createElement('div');
+            el.className = 'track-item reveal rd' + Math.min(idx + 1, 5);
+            if (idx === 0) el.classList.add('playing');
+            el.dataset.idx = idx;
+            el.innerHTML =
+                '<div class="track-play"><i class="fas fa-play" style="font-size:.5rem;color:var(--accent);margin-left:2px"></i></div>' +
+                '<div style="flex:1;min-width:0">' +
+                    '<div class="track-title" style="font-size:.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + t.title + '</div>' +
+                    '<div style="font-size:.72rem;color:var(--muted)">' + t.artist + '</div>' +
+                '</div>' +
+                '<div style="font-size:.7rem;color:var(--muted)">' + t.dur + '</div>';
+            el.addEventListener('click', function() {
+                curTrack = idx;
+                prog = 0;
+                sTitle.textContent = t.title;
+                sArtist.textContent = t.artist;
+                updateTrackHighlight();
+            });
+            tl.appendChild(el);
+            rObs.observe(el);
+        });
+
+        function updateTrackHighlight() {
+            document.querySelectorAll('.track-item').forEach(function(el) {
+                if (parseInt(el.dataset.idx) === curTrack) {
+                    el.classList.add('playing');
+                    el.querySelector('.track-play i').className = 'fas fa-pause';
+                    el.querySelector('.track-play i').style.marginLeft = '0';
+                } else {
+                    el.classList.remove('playing');
+                    el.querySelector('.track-play i').className = 'fas fa-play';
+                    el.querySelector('.track-play i').style.marginLeft = '2px';
+                }
+            });
+        }
+        updateTrackHighlight();
+
+    })();
+    </script>
+</body>
+</html>

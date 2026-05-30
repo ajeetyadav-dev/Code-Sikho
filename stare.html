@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STARE</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;cursor:none}
+  canvas{display:block}
+  .hint{
+    position:fixed;bottom:40px;left:50%;transform:translateX(-50%);
+    color:rgba(180,150,90,0);font-family:Georgia,serif;font-size:13px;
+    letter-spacing:6px;text-transform:uppercase;pointer-events:none;
+    animation:fadeHint 6s 3s forwards;
+  }
+  @keyframes fadeHint{to{color:rgba(180,150,90,0.18)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint">don't blink</div>
+<script>
+const C = document.getElementById('c');
+const ctx = C.getContext('2d');
+
+/* ── State ── */
+let W, H, cx, cy, eyeR;
+let mx, my, sx, sy;
+let t = 0, dt = 0, last = 0, stareTime = 0;
+let blinkVal = 0, blinkDir = 0, nextBlink = 2.5 + Math.random() * 4, blinkCD = 0;
+
+/* ── Pre-generated data ── */
+const particles = [];
+const pulses = [];
+let pulseTimer = 0;
+const FIBER_COUNT = 220;
+const FLECK_COUNT = 18;
+
+/* ── Resize ── */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  C.width = W * dpr; C.height = H * dpr;
+  C.style.width = W + 'px'; C.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx = W / 2; cy = H / 2;
+  eyeR = Math.min(W, H) * 0.2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ── Input ── */
+mx = cx; my = cy; sx = cx; sy = cy;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+document.addEventListener('touchmove', e => {
+  e.preventDefault(); mx = e.touches[0].clientX; my = e.touches[0].clientY;
+}, { passive: false });
+document.addEventListener('touchstart', e => {
+  mx = e.touches[0].clientX; my = e.touches[0].clientY;
+}, { passive: true });
+
+/* ── Init particles ── */
+for (let i = 0; i < 140; i++) {
+  particles.push({
+    a: Math.random() * Math.PI * 2,
+    d: 0.6 + Math.random() * 2.5,
+    spd: (0.15 + Math.random() * 0.6) * (Math.random() < 0.5 ? 1 : -1),
+    sz: 0.4 + Math.random() * 2.2,
+    al: 0.1 + Math.random() * 0.45,
+    drift: 0, driftV: 0,
+    hue: 22 + Math.random() * 38,
+    sat: 45 + Math.random() * 35,
+  });
+}
+
+/* ── Eye almond path ── */
+function eyePath(r) {
+  const w = r * 1.13, h = r * 0.73;
+  ctx.beginPath();
+  ctx.moveTo(-w, 0);
+  ctx.bezierCurveTo(-w * 0.38, -h * 1.38, w * 0.38, -h * 1.38, w, 0);
+  ctx.bezierCurveTo(w * 0.38, h * 1.38, -w * 0.38, h * 1.38, -w, 0);
+  ctx.closePath();
+}
+
+/* ═══════════════════ DRAW LAYERS ═══════════════════ */
+
+function drawBg() {
+  const ox = Math.sin(t * 0.13) * 45, oy = Math.cos(t * 0.1) * 35;
+  const g = ctx.createRadialGradient(cx + ox, cy + oy, 0, cx, cy, Math.max(W, H) * 0.78);
+  const warm = Math.sin(t * 0.04) * 0.5 + 0.5;
+  g.addColorStop(0, `rgb(${12 + warm * 5|0},${10 + warm * 2|0},6)`);
+  g.addColorStop(0.45, '#050403');
+  g.addColorStop(1, '#000000');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawAmbientGlow() {
+  const pulse = 1 + Math.sin(t * 0.35) * 0.09 + stareTime * 0.0015;
+  const inten = Math.min(0.06 + stareTime * 0.0012, 0.2);
+  const g = ctx.createRadialGradient(cx, cy, eyeR * 0.2, cx, cy, eyeR * 3.2 * pulse);
+  g.addColorStop(0, `rgba(215,165,55,${inten})`);
+  g.addColorStop(0.35, `rgba(185,125,40,${inten * 0.4})`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawSacredGeometry() {
+  const bR = eyeR * 1.55;
+  const spd = 0.025 + stareTime * 0.0008;
+  const al = Math.min(0.04 + stareTime * 0.002, 0.13);
+  ctx.save(); ctx.translate(cx, cy);
+
+  // Triangle up
+  ctx.save(); ctx.rotate(t * spd);
+  ctx.strokeStyle = `rgba(200,160,80,${al})`; ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * bR, Math.sin(a) * bR);
+  }
+  ctx.closePath(); ctx.stroke(); ctx.restore();
+
+  // Triangle down
+  ctx.save(); ctx.rotate(-t * spd * 0.65 + Math.PI);
+  ctx.strokeStyle = `rgba(200,160,80,${al * 0.75})`; ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * bR, Math.sin(a) * bR);
+  }
+  ctx.closePath(); ctx.stroke(); ctx.restore();
+
+  // Outer circle
+  ctx.strokeStyle = `rgba(200,160,80,${al * 0.45})`; ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.arc(0, 0, bR, 0, Math.PI * 2); ctx.stroke();
+
+  // Inner hexagon
+  ctx.save(); ctx.rotate(-t * spd * 0.4);
+  ctx.strokeStyle = `rgba(200,160,80,${al * 0.3})`; ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * bR * 0.7, Math.sin(a) * bR * 0.7);
+  }
+  ctx.closePath(); ctx.stroke(); ctx.restore();
+
+  ctx.restore();
+}
+
+function drawHypnoticRings() {
+  for (let i = 0; i < 14; i++) {
+    const r = eyeR * (1.22 + i * 0.14);
+    const dir = i % 2 === 0 ? 1 : -1;
+    const spd = (0.04 + i * 0.006 + stareTime * 0.0015) * dir;
+    const rot = t * spd;
+    const al = Math.max(0, Math.min(0.1 - i * 0.006 + stareTime * 0.0015, 0.14));
+    if (al < 0.005) continue;
+
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot);
+    const segs = 3 + i * 2;
+    const segArc = (Math.PI * 2) / segs;
+    const gap = segArc * (0.18 + i * 0.015);
+    ctx.strokeStyle = `rgba(215,175,90,${al})`;
+    ctx.lineWidth = 0.4 + (i % 3 === 0 ? 1.2 : 0);
+
+    for (let s = 0; s < segs; s++) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, s * segArc + gap, (s + 1) * segArc - gap);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawPulses() {
+  pulseTimer += dt;
+  const interval = Math.max(1.5, 3.5 - stareTime * 0.05);
+  if (pulseTimer > interval) {
+    pulseTimer = 0;
+    pulses.push({ r: eyeR * 1.1, al: 0.12 + stareTime * 0.002, spd: 70 + stareTime * 3 });
+  }
+  for (let i = pulses.length - 1; i >= 0; i--) {
+    const p = pulses[i];
+    p.r += p.spd * dt;
+    p.al -= 0.06 * dt;
+    if (p.al <= 0) { pulses.splice(i, 1); continue; }
+    ctx.beginPath(); ctx.arc(cx, cy, p.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(210,165,65,${p.al})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    p.a += p.spd * dt;
+    const targetD = 1.1 + Math.sin(p.a * 1.5 + t * 0.3) * 0.6;
+    p.driftV += (targetD - p.d) * 0.4 * dt;
+    p.driftV *= 0.96;
+    p.d += p.driftV * dt;
+    p.d = Math.max(0.4, Math.min(p.d, 3.2));
+
+    const x = cx + Math.cos(p.a) * p.d * eyeR;
+    const y = cy + Math.sin(p.a) * p.d * eyeR;
+    const fade = Math.max(0, 1 - Math.abs(p.d - 1.2) / 2);
+    const a = p.al * fade;
+    if (a < 0.008) continue;
+
+    ctx.beginPath(); ctx.arc(x, y, p.sz, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${p.hue},${p.sat}%,65%,${a})`;
+    ctx.fill();
+  }
+}
+
+/* ── Eye look calculation ── */
+function getLook() {
+  const dx = sx - cx, dy = sy - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const inf = Math.min(dist / (W * 0.32), 1);
+  return { inf, ang: Math.atan2(dy, dx) };
+}
+
+function drawEye() {
+  const { inf, ang } = getLook();
+  const irisR = eyeR * 0.58;
+  const moveAmt = inf * irisR * 0.23;
+  const px = Math.cos(ang) * moveAmt;
+  const py = Math.sin(ang) * moveAmt;
+  const dil = 0.82 + inf * 0.18 + Math.sin(t * 0.28) * 0.025;
+  const pupilR = Math.max(2, irisR * 0.36 * dil);
+  const breath = 1 + Math.sin(t * 0.45) * 0.007;
+  const blinkScale = Math.max(0.01, 1 - blinkVal);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(breath, breath * blinkScale);
+
+  /* Sclera fill */
+  eyePath(eyeR);
+  const sg = ctx.createRadialGradient(px * 0.3, py * 0.3, 0, 0, 0, eyeR * 1.1);
+  sg.addColorStop(0, '#f3eee3');
+  sg.addColorStop(0.55, '#e6ddd0');
+  sg.addColorStop(1, '#c2b8a6');
+  ctx.fillStyle = sg;
+  ctx.fill();
+
+  /* Clip to eye for interior details */
+  ctx.save();
+  eyePath(eyeR);
+  ctx.clip();
+
+  /* ── IRIS ── */
+  const hueShift = Math.sin(t * 0.08) * 10;
+  const ig = ctx.createRadialGradient(px, py, pupilR * 0.8, px, py, irisR);
+  ig.addColorStop(0, `hsl(${42 + hueShift},78%,33%)`);
+  ig.addColorStop(0.25, `hsl(${44 + hueShift},82%,42%)`);
+  ig.addColorStop(0.55, `hsl(${40 + hueShift},78%,48%)`);
+  ig.addColorStop(0.82, `hsl(${36 + hueShift},72%,28%)`);
+  ig.addColorStop(1, `hsl(${28 + hueShift},60%,10%)`);
+  ctx.beginPath(); ctx.arc(px, py, irisR, 0, Math.PI * 2);
+  ctx.fillStyle = ig; ctx.fill();
+
+  /* Iris fibers */
+  const fibRot = t * 0.012;
+  for (let i = 0; i < FIBER_COUNT; i++) {
+    const a = (i / FIBER_COUNT) * Math.PI * 2 + fibRot;
+    const wobble = Math.sin(a * 7 + t * 0.35) * 0.012;
+    const inner = pupilR * (0.88 + Math.sin(a * 3 + t * 0.55) * 0.12);
+    const outer = irisR * (0.91 + Math.sin(a * 5 + t * 0.45) * 0.09);
+    const ca = a + wobble;
+
+    ctx.beginPath();
+    ctx.moveTo(px + Math.cos(ca) * inner, py + Math.sin(ca) * inner);
+    ctx.lineTo(px + Math.cos(ca) * outer, py + Math.sin(ca) * outer);
+
+    const fh = 34 + Math.sin(a * 4 + t * 0.25) * 16 + hueShift;
+    const fl = 36 + Math.sin(a * 7 + t * 0.18) * 20;
+    const fa = 0.11 + Math.sin(a * 3 + t * 0.3) * 0.07;
+    ctx.strokeStyle = `hsla(${fh},62%,${fl}%,${fa})`;
+    ctx.lineWidth = 0.5 + Math.sin(a * 6) * 0.25;
+    ctx.stroke();
+  }
+
+  /* Iris flecks (bright spots) */
+  for (let i = 0; i < FLECK_COUNT; i++) {
+    const fa = (i / FLECK_COUNT) * Math.PI * 2 + t * 0.008 + i * 1.3;
+    const fd = pupilR * 1.4 + ((i * 7 + 3) % 11) / 11 * (irisR * 0.55);
+    const fx = px + Math.cos(fa) * fd;
+    const fy = py + Math.sin(fa) * fd;
+    const fs = Math.max(0.5, 0.8 + Math.sin(t * 0.6 + i * 2.1) * 0.5);
+    ctx.beginPath(); ctx.arc(fx, fy, fs, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${48 + hueShift},85%,72%,${0.12 + Math.sin(t * 0.4 + i * 1.7) * 0.08})`;
+    ctx.fill();
+  }
+
+  /* Collarette ring */
+  ctx.beginPath(); ctx.arc(px, py, pupilR * 1.75, 0, Math.PI * 2);
+  ctx.strokeStyle = `hsla(${38 + hueShift},58%,32%,0.32)`;
+  ctx.lineWidth = 2.2 + Math.sin(t * 0.65) * 0.5;
+  ctx.stroke();
+
+  /* Secondary rings */
+  for (let r = 0; r < 4; r++) {
+    const rr = pupilR * (2.6 + r * 0.65);
+    if (rr > irisR - 4) continue;
+    ctx.beginPath(); ctx.arc(px, py, rr, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${34 + hueShift},48%,28%,${0.05 - r * 0.01})`;
+    ctx.lineWidth = 0.7; ctx.stroke();
+  }
+
+  /* Limbal ring (dark edge) */
+  ctx.beginPath(); ctx.arc(px, py, irisR - 1.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(22,16,4,0.78)';
+  ctx.lineWidth = 3.8; ctx.stroke();
+
+  /* ── PUPIL ── */
+  const pg = ctx.createRadialGradient(px, py, 0, px, py, pupilR);
+  pg.addColorStop(0, '#000000');
+  pg.addColorStop(0.88, '#000000');
+  pg.addColorStop(1, '#040200');
+  ctx.beginPath(); ctx.arc(px, py, pupilR, 0, Math.PI * 2);
+  ctx.fillStyle = pg; ctx.fill();
+
+  /* Pupil depth glow */
+  const dg = ctx.createRadialGradient(px, py, pupilR * 0.5, px, py, pupilR * 1.4);
+  dg.addColorStop(0, 'rgba(0,0,0,0.35)');
+  dg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.arc(px, py, pupilR * 1.4, 0, Math.PI * 2);
+  ctx.fillStyle = dg; ctx.fill();
+
+  /* ── REFLECTIONS ── */
+  const rx = px - irisR * 0.3, ry = py - irisR * 0.3;
+  const rr = Math.max(1.5, pupilR * 0.32);
+  const rg = ctx.createRadialGradient(rx, ry, 0, rx, ry, rr);
+  rg.addColorStop(0, 'rgba(255,255,255,0.93)');
+  rg.addColorStop(0.35, 'rgba(255,255,255,0.38)');
+  rg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath(); ctx.arc(rx, ry, rr, 0, Math.PI * 2);
+  ctx.fillStyle = rg; ctx.fill();
+
+  const rx2 = px + irisR * 0.2, ry2 = py + irisR * 0.24;
+  const rr2 = Math.max(0.8, pupilR * 0.14);
+  const rg2 = ctx.createRadialGradient(rx2, ry2, 0, rx2, ry2, rr2);
+  rg2.addColorStop(0, 'rgba(255,255,255,0.48)');
+  rg2.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath(); ctx.arc(rx2, ry2, rr2, 0, Math.PI * 2);
+  ctx.fillStyle = rg2; ctx.fill();
+
+  /* ── EYELID SHADOWS ── */
+  const ts = ctx.createLinearGradient(0, -eyeR * 0.9, 0, -eyeR * 0.1);
+  ts.addColorStop(0, 'rgba(12,8,4,0.58)');
+  ts.addColorStop(1, 'rgba(12,8,4,0)');
+  ctx.fillStyle = ts;
+  ctx.fillRect(-eyeR * 1.3, -eyeR * 0.95, eyeR * 2.6, eyeR * 0.85);
+
+  const bs = ctx.createLinearGradient(0, eyeR * 0.15, 0, eyeR * 0.75);
+  bs.addColorStop(0, 'rgba(12,8,4,0)');
+  bs.addColorStop(1, 'rgba(12,8,4,0.22)');
+  ctx.fillStyle = bs;
+  ctx.fillRect(-eyeR * 1.3, eyeR * 0.1, eyeR * 2.6, eyeR * 0.7);
+
+  ctx.restore(); /* un-clip */
+
+  /* Eye outline */
+  eyePath(eyeR);
+  ctx.strokeStyle = 'rgba(22,16,6,0.5)';
+  ctx.lineWidth = 1.8; ctx.stroke();
+
+  ctx.restore(); /* un-translate/scale */
+}
+
+function drawVignette() {
+  const g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.18, cx, cy, Math.max(W, H) * 0.72);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.65, 'rgba(0,0,0,0.28)');
+  g.addColorStop(1, 'rgba(0,0,0,0.72)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/* ── Scanline overlay (very subtle) ── */
+function drawScanlines() {
+  ctx.fillStyle = 'rgba(0,0,0,0.03)';
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillRect(0, y, W, 1);
+  }
+}
+
+/* ── Blink ── */
+function updateBlink() {
+  blinkCD += dt;
+  if (blinkDir === 0 && blinkCD > nextBlink) {
+    blinkDir = 1; blinkCD = 0;
+  }
+  if (blinkDir === 1) {
+    blinkVal += dt * 9;
+    if (blinkVal >= 1) { blinkVal = 1; blinkDir = -1; }
+  } else if (blinkDir === -1) {
+    blinkVal -= dt * 5.5;
+    if (blinkVal <= 0) {
+      blinkVal = 0; blinkDir = 0;
+      nextBlink = 2 + Math.random() * 5; blinkCD = 0;
+    }
+  }
+}
+
+/* ═══════════════════ MAIN LOOP ═══════════════════ */
+function frame(now) {
+  if (!last) last = now;
+  dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  t += dt;
+  stareTime = Math.min(stareTime + dt, 40);
+
+  /* Smooth mouse following (frame-rate independent) */
+  const lerpFactor = 1 - Math.exp(-5.5 * dt);
+  sx += (mx - sx) * lerpFactor;
+  sy += (my - sy) * lerpFactor;
+  eyeR = Math.min(W, H) * 0.2;
+
+  /* Draw layers bottom-to-top */
+  drawBg();
+  drawAmbientGlow();
+  drawSacredGeometry();
+  drawHypnoticRings();
+  drawPulses();
+  drawParticles();
+  drawEye();
+  drawScanlines();
+  drawVignette();
+  updateBlink();
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
