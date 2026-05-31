@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinematic Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --fg: #f0e6d3;
+            --muted: #6b6155;
+            --accent: #e8a838;
+            --accent2: #1a8a7d;
+            --card: #141210;
+            --border: #2a2520;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) var(--bg);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* Letterbox Bars */
+        .letterbox-top, .letterbox-bottom {
+            position: fixed;
+            left: 0; right: 0;
+            height: 8vh;
+            background: #000;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .letterbox-top { top: 0; }
+        .letterbox-bottom { bottom: 0; }
+
+        /* Film Grain Canvas */
+        #grainCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0.06;
+            mix-blend-mode: overlay;
+        }
+
+        /* Dust Particles Canvas */
+        #dustCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Light Leak Overlay */
+        .light-leak {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 4;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        .light-leak.active {
+            opacity: 1;
+        }
+        .light-leak::before {
+            content: '';
+            position: absolute;
+            top: -20%; right: -10%;
+            width: 60%; height: 80%;
+            background: radial-gradient(ellipse, rgba(232,168,56,0.15) 0%, transparent 70%);
+            filter: blur(40px);
+            animation: leakPulse 4s ease-in-out infinite;
+        }
+        .light-leak::after {
+            content: '';
+            position: absolute;
+            bottom: -10%; left: -5%;
+            width: 40%; height: 60%;
+            background: radial-gradient(ellipse, rgba(26,138,125,0.1) 0%, transparent 70%);
+            filter: blur(50px);
+            animation: leakPulse 5s ease-in-out infinite reverse;
+        }
+
+        @keyframes leakPulse {
+            0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+            50% { transform: scale(1.2) translate(2%, -3%); opacity: 1; }
+        }
+
+        /* Preloader */
+        .preloader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: opacity 1.2s ease, visibility 1.2s ease;
+        }
+        .preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .preloader-bar {
+            width: 200px;
+            height: 2px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 24px;
+        }
+        .preloader-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        .preloader-text {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 200;
+            font-size: 12px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-top: 12px;
+        }
+
+        /* Scene Container */
+        .scene {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Scene 1 - Hero */
+        .scene-hero {
+            background: radial-gradient(ellipse at 30% 50%, rgba(232,168,56,0.05) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 60%, rgba(26,138,125,0.04) 0%, transparent 50%),
+                        var(--bg);
+        }
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(3rem, 10vw, 9rem);
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+            color: var(--fg);
+            text-align: center;
+        }
+        .hero-title .line {
+            display: block;
+            overflow: hidden;
+        }
+        .hero-title .line-inner {
+            display: block;
+            transform: translateY(120%);
+            transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .hero-title.revealed .line-inner {
+            transform: translateY(0);
+        }
+        .hero-title .line:nth-child(2) .line-inner {
+            transition-delay: 0.15s;
+        }
+        .hero-title .line:nth-child(3) .line-inner {
+            transition-delay: 0.3s;
+        }
+        .hero-subtitle {
+            font-weight: 200;
+            font-size: clamp(0.8rem, 1.5vw, 1.1rem);
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1.2s ease 0.6s;
+        }
+        .hero-subtitle.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .hero-accent-line {
+            width: 60px;
+            height: 1px;
+            background: var(--accent);
+            margin: 2rem auto 0;
+            transform: scaleX(0);
+            transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.8s;
+        }
+        .hero-accent-line.revealed {
+            transform: scaleX(1);
+        }
+        .scroll-indicator {
+            position: absolute;
+            bottom: 12vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 1s ease 1.5s;
+        }
+        .scroll-indicator.revealed { opacity: 1; }
+        .scroll-indicator span {
+            font-size: 10px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .scroll-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            animation: scrollPulse 2s ease-in-out infinite;
+        }
+        @keyframes scrollPulse {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+            50% { opacity: 1; transform: scaleY(1); }
+        }
+
+        /* Scene 2 - Parallax Image + Text */
+        .scene-parallax {
+            position: relative;
+        }
+        .parallax-bg {
+            position: absolute;
+            inset: -20%;
+            background: url('https://picsum.photos/seed/cinematic-landscape/1920/1080.jpg') center/cover no-repeat;
+            filter: brightness(0.3) saturate(0.7);
+            will-change: transform;
+            transition: transform 0.1s linear;
+        }
+        .parallax-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.6) 50%, rgba(10,10,10,0.8) 100%);
+        }
+        .parallax-content {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            width: 100%;
+            padding: 0 4rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .parallax-content {
+                grid-template-columns: 1fr;
+                padding: 0 1.5rem;
+                gap: 2rem;
+            }
+        }
+        .parallax-tag {
+            font-size: 11px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 1s ease;
+        }
+        .parallax-heading {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            line-height: 1.1;
+            color: var(--fg);
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 1s ease 0.15s;
+        }
+        .parallax-body {
+            font-weight: 300;
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--muted);
+            max-width: 440px;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 1s ease 0.3s;
+        }
+        .parallax-image-frame {
+            position: relative;
+            aspect-ratio: 4/5;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            opacity: 0;
+            transform: translateX(40px) scale(0.95);
+            transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+        }
+        .parallax-image-frame img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: saturate(0.8) contrast(1.1);
+            transition: transform 1.5s ease;
+        }
+        .parallax-image-frame:hover img {
+            transform: scale(1.05);
+        }
+        .parallax-image-frame::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(232,168,56,0.1);
+            pointer-events: none;
+        }
+        .revealed .parallax-tag,
+        .revealed .parallax-heading,
+        .revealed .parallax-body {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .revealed .parallax-image-frame {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+
+        /* Scene 3 - Quote / Dramatic Text */
+        .scene-quote {
+            background: radial-gradient(ellipse at 50% 50%, rgba(26,138,125,0.06) 0%, transparent 60%), var(--bg);
+        }
+        .quote-wrapper {
+            max-width: 900px;
+            padding: 0 2rem;
+            text-align: center;
+        }
+        .quote-mark {
+            font-family: 'Playfair Display', serif;
+            font-size: 8rem;
+            color: var(--accent);
+            opacity: 0;
+            line-height: 0.5;
+            transform: scale(0.5);
+            transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .quote-text {
+            font-family: 'Playfair Display', serif;
+            font-weight: 400;
+            font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+            line-height: 1.5;
+            color: var(--fg);
+            margin: 1rem 0 2rem;
+        }
+        .quote-text .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(30px) rotateX(-40deg);
+            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .quote-text .word.visible {
+            opacity: 1;
+            transform: translateY(0) rotateX(0);
+        }
+        .quote-author {
+            font-weight: 200;
+            font-size: 0.85rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--muted);
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 1s ease;
+        }
+        .revealed .quote-mark {
+            opacity: 0.4;
+            transform: scale(1);
+        }
+        .revealed .quote-author {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.8s;
+        }
+
+        /* Scene 4 - Horizontal Gallery */
+        .scene-gallery {
+            overflow: hidden;
+        }
+        .gallery-track {
+            display: flex;
+            gap: 2rem;
+            padding: 0 4rem;
+            will-change: transform;
+        }
+        .gallery-item {
+            flex: 0 0 auto;
+            width: clamp(280px, 30vw, 420px);
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 3/4;
+            border: 1px solid var(--border);
+            opacity: 0.6;
+            transform: scale(0.92);
+            transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .gallery-item.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .gallery-item img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: saturate(0.6) brightness(0.7);
+            transition: all 0.8s ease;
+        }
+        .gallery-item.active img {
+            filter: saturate(0.9) brightness(0.85);
+        }
+        .gallery-item-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(10,10,10,0.9) 0%, transparent 50%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 2rem;
+        }
+        .gallery-item-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--fg);
+            transform: translateY(10px);
+            opacity: 0;
+            transition: all 0.6s ease 0.2s;
+        }
+        .gallery-item.active .gallery-item-title {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .gallery-item-sub {
+            font-weight: 200;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-top: 0.5rem;
+            transform: translateY(10px);
+            opacity: 0;
+            transition: all 0.6s ease 0.3s;
+        }
+        .gallery-item.active .gallery-item-sub {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .gallery-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            text-align: center;
+            pointer-events: none;
+        }
+        .gallery-label-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(2rem, 5vw, 4rem);
+            color: var(--fg);
+            text-shadow: 0 0 80px rgba(0,0,0,0.8);
+        }
+        .gallery-label-sub {
+            font-weight: 200;
+            font-size: 0.8rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-top: 0.5rem;
+        }
+
+        /* Scene 5 - Stats / Numbers */
+        .scene-stats {
+            background: radial-gradient(ellipse at 70% 30%, rgba(232,168,56,0.04) 0%, transparent 50%), var(--bg);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            max-width: 1000px;
+            width: 100%;
+            padding: 0 2rem;
+        }
+        @media (max-width: 640px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+        .stat-cell {
+            padding: 3rem 2rem;
+            text-align: center;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+        .stat-cell::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 100%, rgba(232,168,56,0.06) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+        .stat-cell:hover::before { opacity: 1; }
+        .revealed .stat-cell {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .revealed .stat-cell:nth-child(1) { transition-delay: 0.1s; }
+        .revealed .stat-cell:nth-child(2) { transition-delay: 0.25s; }
+        .revealed .stat-cell:nth-child(3) { transition-delay: 0.4s; }
+        .stat-number {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            color: var(--accent);
+            line-height: 1;
+        }
+        .stat-label {
+            font-weight: 200;
+            font-size: 0.75rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-top: 1rem;
+        }
+
+        /* Scene 6 - Closing */
+        .scene-closing {
+            background: radial-gradient(ellipse at 50% 40%, rgba(232,168,56,0.04) 0%, transparent 50%), var(--bg);
+        }
+        .closing-content {
+            text-align: center;
+            max-width: 700px;
+            padding: 0 2rem;
+        }
+        .closing-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(2.5rem, 7vw, 5rem);
+            line-height: 1;
+            color: var(--fg);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .revealed .closing-title {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .closing-body {
+            font-weight: 300;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--muted);
+            margin-top: 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease 0.3s;
+        }
+        .revealed .closing-body {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .closing-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 2.5rem;
+            padding: 16px 40px;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 400;
+            font-size: 0.85rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease 0.5s;
+        }
+        .revealed .closing-cta {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .closing-cta::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--accent);
+            transform: translateX(-101%);
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .closing-cta:hover::before {
+            transform: translateX(0);
+        }
+        .closing-cta:hover {
+            color: var(--bg);
+        }
+        .closing-cta span, .closing-cta i {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Credits Footer */
+        .credits {
+            padding: 4rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+        .credits-text {
+            font-weight: 200;
+            font-size: 0.7rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .credits-divider {
+            width: 30px;
+            height: 1px;
+            background: var(--border);
+            margin: 1.5rem auto;
+        }
+        .credits-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+        .credits-links a {
+            color: var(--muted);
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+        .credits-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Vignette */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.5) 100%);
+        }
+
+        /* Focus visible */
+        *:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 4px;
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-bar">
+            <div class="preloader-fill" id="preloaderFill"></div>
+        </div>
+        <div class="preloader-text">Loading</div>
+    </div>
+
+    <!-- Letterbox Bars -->
+    <div class="letterbox-top" aria-hidden="true"></div>
+    <div class="letterbox-bottom" aria-hidden="true"></div>
+
+    <!-- Film Grain -->
+    <canvas id="grainCanvas" aria-hidden="true"></canvas>
+
+    <!-- Dust Particles -->
+    <canvas id="dustCanvas" aria-hidden="true"></canvas>
+
+    <!-- Light Leak -->
+    <div class="light-leak" id="lightLeak" aria-hidden="true"></div>
+
+    <!-- Vignette -->
+    <div class="vignette" aria-hidden="true"></div>
+
+    <!-- Scene 1: Hero -->
+    <section class="scene scene-hero" aria-label="Opening title">
+        <div style="position: relative; z-index: 10;">
+            <h1 class="hero-title" id="heroTitle">
+                <span class="line"><span class="line-inner">Every Frame</span></span>
+                <span class="line"><span class="line-inner">Tells A</span></span>
+                <span class="line"><span class="line-inner" style="color: var(--accent);">Story</span></span>
+            </h1>
+            <p class="hero-subtitle" id="heroSubtitle">The art of cinematic motion</p>
+            <div class="hero-accent-line" id="heroLine"></div>
+        </div>
+        <div class="scroll-indicator" id="scrollIndicator">
+            <span>Scroll</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- Scene 2: Parallax -->
+    <section class="scene scene-parallax" aria-label="About cinematic art" style="min-height: 120vh;">
+        <div class="parallax-bg" id="parallaxBg"></div>
+        <div class="parallax-overlay"></div>
+        <div class="parallax-content" id="parallaxContent">
+            <div>
+                <p class="parallax-tag">Chapter One</p>
+                <h2 class="parallax-heading">Light Moves Through Silence Like Memory Through Time</h2>
+                <p class="parallax-body">Cinematic animation transforms static compositions into living moments. Each transition carries weight, each pause holds meaning, and every movement guides the viewer's eye through a deliberate visual narrative.</p>
+            </div>
+            <div class="parallax-image-frame">
+                <img src="https://picsum.photos/seed/cinematic-portrait/800/1000.jpg" alt="Cinematic portrait" loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 3: Quote -->
+    <section class="scene scene-quote" aria-label="Dramatic quote">
+        <div class="quote-wrapper" id="quoteWrapper">
+            <div class="quote-mark">"</div>
+            <p class="quote-text" id="quoteText">
+                Cinema is a matter of what's in the frame and what's out
+            </p>
+            <p class="quote-author" id="quoteAuthor">Martin Scorsese</p>
+        </div>
+    </section>
+
+    <!-- Scene 4: Horizontal Gallery -->
+    <section class="scene scene-gallery" aria-label="Gallery" id="gallerySection" style="min-height: 100vh;">
+        <div class="gallery-label">
+            <div class="gallery-label-title">Visual Language</div>
+            <div class="gallery-label-sub">Selected Frames</div>
+        </div>
+        <div class="gallery-track" id="galleryTrack">
+            <div class="gallery-item" data-index="0">
+                <img src="https://picsum.photos/seed/frame-mist/600/800.jpg" alt="Mist over mountains" loading="lazy">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">The Mist</div>
+                    <div class="gallery-item-sub">Atmosphere & Depth</div>
+                </div>
+            </div>
+            <div class="gallery-item" data-index="1">
+                <img src="https://picsum.photos/seed/frame-shadow/600/800.jpg" alt="Shadow play" loading="lazy">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">Shadow Play</div>
+                    <div class="gallery-item-sub">Contrast & Drama</div>
+                </div>
+            </div>
+            <div class="gallery-item" data-index="2">
+                <img src="https://picsum.photos/seed/frame-golden/600/800.jpg" alt="Golden hour" loading="lazy">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">Golden Hour</div>
+                    <div class="gallery-item-sub">Warmth & Mood</div>
+                </div>
+            </div>
+            <div class="gallery-item" data-index="3">
+                <img src="https://picsum.photos/seed/frame-urban/600/800.jpg" alt="Urban night" loading="lazy">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">Neon Nights</div>
+                    <div class="gallery-item-sub">Color & Energy</div>
+                </div>
+            </div>
+            <div class="gallery-item" data-index="4">
+                <img src="https://picsum.photos/seed/frame-ocean/600/800.jpg" alt="Ocean horizon" loading="lazy">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">Horizon Line</div>
+                    <div class="gallery-item-sub">Scale & Perspective</div>
+                </div>
+            </div>
+            <div class="gallery-item" data-index="5">
+                <img src="https://picsum.photos/seed/frame-forest/600/800.jpg" alt="Forest path" loading="lazy">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">The Path</div>
+                    <div class="gallery-item-sub">Leading Lines</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 5: Stats -->
+    <section class="scene scene-stats" aria-label="Statistics">
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-cell">
+                <div class="stat-number" data-target="24">0</div>
+                <div class="stat-label">Frames Per Second</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-number" data-target="360">0</div>
+                <div class="stat-label">Degrees of Emotion</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-number" data-target="1000">0</div>
+                <div class="stat-label">Words Unspoken</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 6: Closing -->
+    <section class="scene scene-closing" aria-label="Closing">
+        <div class="closing-content" id="closingContent">
+            <h2 class="closing-title">Feel It</h2>
+            <p class="closing-body">The difference between seeing and feeling is motion. When every element breathes, the screen dissolves and the experience remains.</p>
+            <button class="closing-cta" id="replayBtn" aria-label="Replay the experience">
+                <span>Replay</span>
+                <i class="fas fa-redo" style="font-size: 0.75rem;"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- Credits -->
+    <footer class="credits">
+        <p class="credits-text">Crafted with intention</p>
+        <div class="credits-divider"></div>
+        <div class="credits-links">
+            <a href="#" aria-label="Twitter"><i class="fab fa-x-twitter"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="Vimeo"><i class="fab fa-vimeo-v"></i></a>
+        </div>
+    </footer>
+
+    <script>
+        /* ================================================
+           PRELOADER
+           ================================================ */
+        const preloader = document.getElementById('preloader');
+        const preloaderFill = document.getElementById('preloaderFill');
+        let loadProgress = 0;
+
+        function advancePreloader() {
+            loadProgress += Math.random() * 15 + 5;
+            if (loadProgress > 100) loadProgress = 100;
+            preloaderFill.style.width = loadProgress + '%';
+            if (loadProgress < 100) {
+                setTimeout(advancePreloader, 150 + Math.random() * 200);
+            } else {
+                setTimeout(() => {
+                    preloader.classList.add('hidden');
+                    // Trigger hero reveal
+                    setTimeout(revealHero, 400);
+                }, 500);
+            }
+        }
+        advancePreloader();
+
+        /* ================================================
+           HERO REVEAL
+           ================================================ */
+        function revealHero() {
+            document.getElementById('heroTitle').classList.add('revealed');
+            document.getElementById('heroSubtitle').classList.add('revealed');
+            document.getElementById('heroLine').classList.add('revealed');
+            document.getElementById('scrollIndicator').classList.add('revealed');
+        }
+
+        /* ================================================
+           FILM GRAIN
+           ================================================ */
+        const grainCanvas = document.getElementById('grainCanvas');
+        const grainCtx = grainCanvas.getContext('2d');
+
+        function resizeGrain() {
+            // Use smaller resolution for performance
+            grainCanvas.width = window.innerWidth / 3;
+            grainCanvas.height = window.innerHeight / 3;
+        }
+        resizeGrain();
+        window.addEventListener('resize', resizeGrain);
+
+        function renderGrain() {
+            const w = grainCanvas.width;
+            const h = grainCanvas.height;
+            const imageData = grainCtx.createImageData(w, h);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const v = Math.random() * 255;
+                data[i] = v;
+                data[i + 1] = v;
+                data[i + 2] = v;
+                data[i + 3] = 255;
+            }
+            grainCtx.putImageData(imageData, 0, 0);
+            requestAnimationFrame(renderGrain);
+        }
+        renderGrain();
+
+        /* ================================================
+           DUST PARTICLES
+           ================================================ */
+        const dustCanvas = document.getElementById('dustCanvas');
+        const dustCtx = dustCanvas.getContext('2d');
+        let dustParticles = [];
+
+        function resizeDust() {
+            dustCanvas.width = window.innerWidth;
+            dustCanvas.height = window.innerHeight;
+        }
+        resizeDust();
+        window.addEventListener('resize', resizeDust);
+
+        class DustParticle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * dustCanvas.width;
+                this.y = Math.random() * dustCanvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.3;
+                this.speedY = -Math.random() * 0.2 - 0.05;
+                this.opacity = Math.random() * 0.4 + 0.1;
+                this.life = Math.random() * 600 + 200;
+                this.maxLife = this.life;
+                this.wobbleSpeed = Math.random() * 0.02 + 0.005;
+                this.wobbleAmp = Math.random() * 30 + 10;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+            update() {
+                this.life--;
+                this.x += this.speedX + Math.sin(this.phase) * 0.2;
+                this.y += this.speedY;
+                this.phase += this.wobbleSpeed;
+                if (this.life <= 0 || this.y < -10 || this.x < -10 || this.x > dustCanvas.width + 10) {
+                    this.reset();
+                    this.y = dustCanvas.height + 10;
+                }
+            }
+            draw(ctx) {
+                const lifeRatio = this.life / this.maxLife;
+                const fadeIn = Math.min(1, (this.maxLife - this.life) / 60);
+                const fadeOut = Math.min(1, this.life / 60);
+                const alpha = this.opacity * fadeIn * fadeOut;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(232,168,56,${alpha})`;
+                ctx.fill();
+            }
+        }
+
+        // Create particles
+        for (let i = 0; i < 60; i++) {
+            dustParticles.push(new DustParticle());
+        }
+
+        function renderDust() {
+            dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
+            for (const p of dustParticles) {
+                p.update();
+                p.draw(dustCtx);
+            }
+            requestAnimationFrame(renderDust);
+        }
+        renderDust();
+
+        /* ================================================
+           PARALLAX BACKGROUND
+           ================================================ */
+        const parallaxBg = document.getElementById('parallaxBg');
+
+        function handleParallax() {
+            const section = document.querySelector('.scene-parallax');
+            const rect = section.getBoundingClientRect();
+            const viewH = window.innerHeight;
+            // Only apply when section is in view
+            if (rect.bottom > 0 && rect.top < viewH) {
+                const progress = (viewH - rect.top) / (viewH + rect.height);
+                const offsetY = (progress - 0.5) * 20;
+                parallaxBg.style.transform = `translateY(${offsetY}%)`;
+            }
+        }
+
+        /* ================================================
+           HORIZONTAL GALLERY SCROLL
+           ================================================ */
+        const gallerySection = document.getElementById('gallerySection');
+        const galleryTrack = document.getElementById('galleryTrack');
+        const galleryItems = document.querySelectorAll('.gallery-item');
+
+        function handleGalleryScroll() {
+            const rect = gallerySection.getBoundingClientRect();
+            const viewH = window.innerHeight;
+            if (rect.bottom > 0 && rect.top < viewH) {
+                const progress = Math.max(0, Math.min(1, (viewH - rect.top) / (viewH + rect.height)));
+                const maxTranslate = galleryTrack.scrollWidth - window.innerWidth + 80;
+                const translateX = -progress * maxTranslate;
+                galleryTrack.style.transform = `translateX(${translateX}px)`;
+
+                // Activate nearest item
+                const centerX = window.innerWidth / 2;
+                let closestDist = Infinity;
+                let closestIdx = 0;
+                galleryItems.forEach((item, i) => {
+                    const itemRect = item.getBoundingClientRect();
+                    const itemCenterX = itemRect.left + itemRect.width / 2;
+                    const dist = Math.abs(itemCenterX - centerX);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestIdx = i;
+                    }
+                });
+                galleryItems.forEach((item, i) => {
+                    item.classList.toggle('active', i === closestIdx);
+                });
+            }
+        }
+
+        /* ================================================
+           INTERSECTION OBSERVER - SCROLL REVEALS
+           ================================================ */
+        const revealElements = [
+            { el: document.getElementById('parallaxContent'), threshold: 0.2 },
+            { el: document.getElementById('quoteWrapper'), threshold: 0.3 },
+            { el: document.getElementById('statsGrid'), threshold: 0.3 },
+            { el: document.getElementById('closingContent'), threshold: 0.3 },
+        ];
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+
+                    // Trigger quote word-by-word animation
+                    if (entry.target.id === 'quoteWrapper') {
+                        animateQuoteWords();
+                    }
+
+                    // Trigger stat counter animation
+                    if (entry.target.id === 'statsGrid') {
+                        animateCounters();
+                    }
+
+                    // Activate light leak for dramatic scenes
+                    if (entry.target.id === 'quoteWrapper' || entry.target.id === 'closingContent') {
+                        document.getElementById('lightLeak').classList.add('active');
+                        setTimeout(() => {
+                            document.getElementById('lightLeak').classList.remove('active');
+                        }, 4000);
+                    }
+                }
+            });
+        }, { threshold: (entry) => {
+            const config = revealElements.find(r => r.el === entry.target);
+            return config ? config.threshold : 0.2;
+        }});
+
+        revealElements.forEach(({ el }) => {
+            if (el) revealObserver.observe(el);
+        });
+
+        /* ================================================
+           QUOTE WORD-BY-WORD ANIMATION
+           ================================================ */
+        function animateQuoteWords() {
+            const quoteText = document.getElementById('quoteText');
+            const words = quoteText.querySelectorAll('.word');
+            words.forEach((word, i) => {
+                setTimeout(() => {
+                    word.classList.add('visible');
+                }, i * 80);
+            });
+        }
+
+        // Wrap quote words in spans (done once on load)
+        (function prepareQuote() {
+            const quoteText = document.getElementById('quoteText');
+            const text = quoteText.textContent.trim();
+            quoteText.innerHTML = text.split(' ').map(w =>
+                `<span class="word">${w}</span>`
+            ).join(' ');
+        })();
+
+        /* ================================================
+           STAT COUNTER ANIMATION
+           ================================================ */
+        let countersAnimated = false;
+        function animateCounters() {
+            if (countersAnimated) return;
+            countersAnimated = true;
+            document.querySelectorAll('.stat-number').forEach(el => {
+                const target = parseInt(el.dataset.target, 10);
+                const duration = 2000;
+                const start = performance.now();
+                function tick(now) {
+                    const elapsed = now - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    // Ease out cubic
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(eased * target);
+                    if (progress < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            });
+        }
+
+        /* ================================================
+           SCROLL HANDLER (RAF THROTTLED)
+           ================================================ */
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    handleParallax();
+                    handleGalleryScroll();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
+
+        /* ================================================
+           REPLAY BUTTON
+           ================================================ */
+        document.getElementById('replayBtn').addEventListener('click', () => {
+            // Reset all reveals
+            document.querySelectorAll('.revealed').forEach(el => el.classList.remove('revealed'));
+            document.querySelectorAll('.word.visible').forEach(el => el.classList.remove('visible'));
+            countersAnimated = false;
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Re-trigger hero after scroll completes
+            setTimeout(() => {
+                revealHero();
+            }, 800);
+        });
+
+        /* ================================================
+           MOUSE PARALLAX ON HERO
+           ================================================ */
+        const heroSection = document.querySelector('.scene-hero');
+        heroSection.addEventListener('mousemove', (e) => {
+            const rect = heroSection.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            const title = document.getElementById('heroTitle');
+            title.style.transform = `translate(${x * -10}px, ${y * -8}px)`;
+        });
+        heroSection.addEventListener('mouseleave', () => {
+            const title = document.getElementById('heroTitle');
+            title.style.transform = 'translate(0, 0)';
+            title.style.transition = 'transform 0.6s ease';
+            setTimeout(() => { title.style.transition = ''; }, 600);
+        });
+    </script>
+</body>
+</html>

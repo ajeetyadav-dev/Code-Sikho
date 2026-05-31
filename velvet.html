@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Velvet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: { display: ['Space Grotesk','sans-serif'], body: ['DM Sans','sans-serif'] } } } }
+</script>
+<style>
+:root {
+    --bg:#0B0B0D;--bg2:#111114;--card:#17171A;--card-h:#1D1D21;
+    --bdr:#25252A;--bdr2:#38383F;--muted:#6E6E7A;--fg:#F5F5F7;
+    --fg2:#A8A8B3;--accent:#FF6B3D;--accent-g:rgba(255,107,61,.12);
+    --mint:#34D399;--mint-g:rgba(52,211,153,.12);--violet:#A78BFA;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--fg);font-family:'DM Sans',sans-serif;overflow:hidden;height:100dvh;user-select:none}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
+.amb{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;will-change:transform;z-index:0}
+.amb1{width:420px;height:420px;background:var(--accent-g);opacity:.7}
+.amb2{width:320px;height:320px;background:var(--mint-g);opacity:.5}
+.shell{position:relative;z-index:1;max-width:430px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:10px 24px 2px;font-size:14px;font-weight:600;font-family:'Space Grotesk',sans-serif}
+.cscroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cscroll::-webkit-scrollbar{display:none}
+.tab-ind{position:absolute;bottom:0;height:2.5px;background:var(--accent);border-radius:2px;will-change:transform,width}
+.ttrack{display:flex;will-change:transform}
+.tpanel{min-width:100%;flex-shrink:0;padding:0 20px 24px}
+.tcard{background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:16px 16px 16px 18px;margin-bottom:10px;cursor:grab;will-change:transform,opacity;position:relative;overflow:hidden;touch-action:pan-y}
+.tcard:active{cursor:grabbing}
+.tcard .sbg{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:flex-end;padding-right:24px;background:rgba(52,211,153,.08);opacity:0;transition:opacity .15s}
+.tcard .sbg i{color:var(--mint);font-size:18px}
+.ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--bdr2);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:border-color .2s,background .25s cubic-bezier(.32,.72,0,1),transform .35s cubic-bezier(.34,1.56,.64,1)}
+.ck.done{border-color:var(--mint);background:var(--mint);transform:scale(1.05)}
+.ck i{font-size:11px;color:var(--bg);opacity:0;transform:scale(0) rotate(-45deg);transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.ck.done i{opacity:1;transform:scale(1) rotate(0)}
+.scard{background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:16px;flex:1;transition:border-color .2s,transform .15s ease-out;will-change:transform}
+.scard:hover{border-color:var(--bdr2)}
+.ph{background:#EF4444}.pm{background:#F59E0B}.pl{background:#6B7280}
+.pbar{background:var(--bg2);border-top:1px solid var(--bdr);padding:10px 20px 14px;display:flex;align-items:center;gap:14px}
+.pbtn{width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;will-change:transform;flex-shrink:0;transition:transform .2s cubic-bezier(.32,.72,0,1)}
+.pbtn:active{transform:scale(.9)}
+.pbtn i{color:#fff;font-size:13px}
+.ptrk{flex:1;height:4px;background:var(--bdr);border-radius:2px;cursor:pointer;position:relative}
+.pfill{height:100%;background:var(--accent);border-radius:2px;width:0%;will-change:width;transition:width .1s linear}
+.pthumb{position:absolute;top:50%;left:0%;width:14px;height:14px;background:var(--fg);border-radius:50%;transform:translate(-50%,-50%) scale(0);will-change:transform,left;box-shadow:0 0 10px rgba(0,0,0,.4);transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.ptrk:hover .pthumb,.ptrk.dragging .pthumb{transform:translate(-50%,-50%) scale(1)}
+.fab{position:absolute;bottom:76px;right:20px;width:56px;height:56px;border-radius:16px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;will-change:transform;box-shadow:0 4px 28px rgba(255,107,61,.35);z-index:10;transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.fab:active{transform:scale(.88)!important}
+.fab i{color:#fff;font-size:20px;will-change:transform;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.fab.open i{transform:rotate(45deg)}
+.fmenu{position:absolute;bottom:80px;right:20px;z-index:9;pointer-events:none}
+.fmi{display:flex;align-items:center;gap:10px;margin-bottom:12px;justify-content:flex-end;opacity:0;transform:translateY(10px) scale(.8);will-change:transform,opacity;transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.fmi.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.fmi span{background:var(--card);border:1px solid var(--bdr);padding:6px 14px;border-radius:10px;font-size:13px;font-weight:500;white-space:nowrap}
+.fmi button{width:44px;height:44px;border-radius:12px;border:1px solid var(--bdr);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--fg);transition:background .15s}
+.fmi button:hover{background:var(--card-h)}
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;will-change:opacity;transition:opacity .3s}
+.mov.on{pointer-events:auto;opacity:1}
+.msheet{background:var(--bg2);border:1px solid var(--bdr);border-bottom:none;border-radius:22px 22px 0 0;width:100%;max-width:430px;padding:10px 24px 36px;will-change:transform;transform:translateY(100%);transition:transform .45s cubic-bezier(.32,.72,0,1)}
+.mov.on .msheet{transform:translateY(0)}
+.mhandle{width:36px;height:4px;background:var(--bdr2);border-radius:2px;margin:0 auto 18px;cursor:grab}
+.toast{position:fixed;top:52px;left:50%;transform:translateX(-50%) translateY(-120px);background:var(--card);border:1px solid var(--bdr);padding:12px 20px;border-radius:14px;font-size:14px;font-weight:500;z-index:200;display:flex;align-items:center;gap:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);will-change:transform;white-space:nowrap}
+@keyframes bpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,61,.4)}50%{box-shadow:0 0 0 6px rgba(255,107,61,0)}}
+.nbadge{width:8px;height:8px;background:var(--accent);border-radius:50%;animation:bpulse 2s ease-in-out infinite}
+.tblock{display:flex;gap:16px;padding:10px 0;position:relative}
+.tblock:not(:last-child)::after{content:'';position:absolute;left:23px;top:44px;bottom:-10px;width:1px;background:var(--bdr)}
+.tdot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.ring-c{transition:stroke-dashoffset .9s cubic-bezier(.32,.72,0,1);transform:rotate(-90deg);transform-origin:50% 50%}
+.wbar{border-radius:4px;transition:height .7s cubic-bezier(.32,.72,0,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.ent{animation:slideUp .65s cubic-bezier(.32,.72,0,1) both}
+@keyframes wave{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.wvbar{width:3px;border-radius:2px;background:var(--accent);transform-origin:bottom;transition:height .15s}
+.wvbar.play{animation:wave .6s ease-in-out infinite}
+.sn{font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="amb amb1" id="blob1"></div>
+<div class="amb amb2" id="blob2"></div>
+
+<div class="shell" id="shell">
+  <!-- Status Bar -->
+  <div class="sbar ent" style="animation-delay:.05s">
+    <span id="clock">9:41</span>
+    <div class="flex items-center gap-1.5">
+      <i class="fa-solid fa-signal text-xs"></i>
+      <i class="fa-solid fa-wifi text-xs"></i>
+      <i class="fa-solid fa-battery-full text-xs"></i>
+    </div>
+  </div>
+
+  <!-- Scrollable Content -->
+  <div class="cscroll" id="scroll">
+    <!-- Header -->
+    <header class="px-5 pt-4 pb-5 ent" style="animation-delay:.1s">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/alexvlt/80/80.jpg" alt="Avatar" class="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--bdr)]">
+          <div>
+            <p class="text-sm" style="color:var(--fg2)" id="greeting">Good morning</p>
+            <h1 class="font-display font-bold text-xl tracking-tight">Alex Chen</h1>
+          </div>
+        </div>
+        <button class="relative w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--card);border:1px solid var(--bdr)" id="bellBtn" aria-label="Notifications">
+          <i class="fa-regular fa-bell text-sm" style="color:var(--fg2)"></i>
+          <span class="nbadge absolute top-2 right-2.5"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats Row -->
+    <div class="flex gap-2.5 px-5 mb-5" id="statsRow">
+      <div class="scard ent" style="animation-delay:.18s" data-tilt>
+        <p class="text-xs font-medium mb-1.5" style="color:var(--muted)">Completed</p>
+        <p class="font-display font-bold text-2xl sn" data-count="42">0</p>
+        <p class="text-xs mt-0.5" style="color:var(--fg2)">of 56 tasks</p>
+      </div>
+      <div class="scard ent" style="animation-delay:.26s" data-tilt>
+        <p class="text-xs font-medium mb-1.5" style="color:var(--muted)">Focus Time</p>
+        <p class="font-display font-bold text-2xl sn"><span data-count="6">0</span><span class="text-base font-medium" style="color:var(--fg2)">.5h</span></p>
+        <p class="text-xs mt-0.5" style="color:var(--accent)">+1.2h today</p>
+      </div>
+      <div class="scard ent" style="animation-delay:.34s" data-tilt>
+        <p class="text-xs font-medium mb-1.5" style="color:var(--muted)">Streak</p>
+        <p class="font-display font-bold text-2xl sn" data-count="12">0</p>
+        <p class="text-xs mt-0.5" style="color:var(--mint)">days</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="relative px-5 mb-4 ent" style="animation-delay:.4s">
+      <div class="flex gap-0 relative" id="tabBar">
+        <button class="tab-btn font-display font-semibold text-sm py-3 px-4 relative" style="color:var(--fg)" data-tab="0">Tasks</button>
+        <button class="tab-btn font-display font-semibold text-sm py-3 px-4 relative" style="color:var(--muted)" data-tab="1">Schedule</button>
+        <button class="tab-btn font-display font-semibold text-sm py-3 px-4 relative" style="color:var(--muted)" data-tab="2">Stats</button>
+        <div class="tab-ind" id="tabInd"></div>
+      </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div style="overflow:hidden" class="px-0">
+      <div class="ttrack" id="ttrack">
+        <!-- Tasks Panel -->
+        <div class="tpanel" id="panelTasks"></div>
+        <!-- Schedule Panel -->
+        <div class="tpanel" id="panelSchedule"></div>
+        <!-- Stats Panel -->
+        <div class="tpanel" id="panelStats"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Bar -->
+  <div class="pbar ent" style="animation-delay:.55s" id="playerBar">
+    <img src="https://picsum.photos/seed/albumart7/80/80.jpg" alt="Album" class="w-10 h-10 rounded-8 object-cover flex-shrink-0" style="border-radius:8px">
+    <div class="flex-1 min-w-0 mr-2">
+      <p class="text-sm font-medium truncate">Midnight City</p>
+      <p class="text-xs truncate" style="color:var(--muted)">M83</p>
+    </div>
+    <div class="flex items-end gap-[3px] h-4 mr-3" id="waveform"></div>
+    <button class="pbtn" id="playBtn" aria-label="Play/Pause">
+      <i class="fa-solid fa-play" id="playIcon"></i>
+    </button>
+    <div class="ptrk" id="ptrk">
+      <div class="pfill" id="pfill"></div>
+      <div class="pthumb" id="pthumb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab ent" style="animation-delay:.6s" id="fab" aria-label="Add task">
+  <i class="fa-solid fa-plus"></i>
+</button>
+<div class="fmenu" id="fmenu">
+  <div class="fmi" data-action="task"><span>New Task</span><button><i class="fa-solid fa-check"></i></button></div>
+  <div class="fmi" data-action="note"><span>Quick Note</span><button><i class="fa-solid fa-pen"></i></button></div>
+  <div class="fmi" data-action="reminder"><span>Set Reminder</span><button><i class="fa-solid fa-bell"></i></button></div>
+</div>
+
+<!-- Modal -->
+<div class="mov" id="modal">
+  <div class="msheet" id="msheet">
+    <div class="mhandle" id="mhandle"></div>
+    <h2 class="font-display font-bold text-lg mb-4">New Task</h2>
+    <div class="mb-3">
+      <label class="text-xs font-medium block mb-1.5" style="color:var(--muted)">Task Name</label>
+      <input type="text" id="taskInput" placeholder="What needs to be done?" class="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-[var(--accent)]" style="background:var(--card);border:1px solid var(--bdr);color:var(--fg)">
+    </div>
+    <div class="flex gap-2.5 mb-5">
+      <button class="pri-btn flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background:var(--accent);color:#fff;border:none;cursor:pointer;transition:transform .15s" onmousedown="this.style.transform='scale(.96)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'" id="addTaskBtn">Add Task</button>
+      <button class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background:var(--card);border:1px solid var(--bdr);color:var(--fg2);cursor:pointer;transition:transform .15s" onmousedown="this.style.transform='scale(.96)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'" id="cancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><i class="fa-solid fa-circle-check" style="color:var(--mint)"></i><span id="toastMsg">Task completed</span></div>
+
+<script>
+/* ── Spring Value ── */
+class Spring {
+    constructor(v, cfg = {}) {
+        this.v = v; this.t = v; this.vel = 0;
+        this.s = cfg.stiffness ?? 170; this.d = cfg.damping ?? 26;
+        this.fns = []; this.done = true;
+    }
+    set(t) { this.t = t; this.done = false; }
+    step(dt) {
+        if (this.done) return true;
+        const f = -this.s * (this.v - this.t), df = -this.d * this.vel;
+        this.vel += (f + df) * dt; this.v += this.vel * dt;
+        if (Math.abs(this.vel) < .005 && Math.abs(this.v - this.t) < .005) {
+            this.v = this.t; this.vel = 0; this.done = true;
+        }
+        for (const fn of this.fns) fn(this.v);
+        return this.done;
+    }
+    on(fn) { this.fns.push(fn); return this; }
+}
+
+/* ── Data ── */
+let tasks = [
+    { id:1, title:'Finalize design system', pri:'high', due:'Today', tag:'Design', done:false },
+    { id:2, title:'Review pull requests', pri:'medium', due:'Today', tag:'Dev', done:false },
+    { id:3, title:'Update dependencies', pri:'low', due:'Tomorrow', tag:'Dev', done:false },
+    { id:4, title:'Write API documentation', pri:'medium', due:'Wed', tag:'Docs', done:false },
+    { id:5, title:'Team standup notes', pri:'low', due:'Today', tag:'Team', done:false },
+    { id:6, title:'Deploy staging build', pri:'high', due:'Today', tag:'DevOps', done:false },
+];
+const schedule = [
+    { time:'9:00', title:'Morning standup', dur:'15 min', color:'#FF6B3D' },
+    { time:'10:30', title:'Design review', dur:'45 min', color:'#A78BFA' },
+    { time:'12:00', title:'Lunch break', dur:'1 hr', color:'#34D399' },
+    { time:'14:00', title:'Code review session', dur:'1 hr', color:'#F59E0B' },
+    { time:'16:00', title:'Sprint planning', dur:'1 hr', color:'#60A5FA' },
+];
+const weekDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const weekVals = [65,80,45,90,70,55,85];
+let nextId = 7;
+
+/* ── Springs ── */
+const blob1x = new Spring(0, {stiffness:60,damping:18});
+const blob1y = new Spring(0, {stiffness:60,damping:18});
+const blob2x = new Spring(0, {stiffness:45,damping:15});
+const blob2y = new Spring(0, {stiffness:45,damping:15});
+const tabSpring = new Spring(0, {stiffness:280,damping:28});
+const trackSpring = new Spring(0, {stiffness:280,damping:28});
+const toastSpring = new Spring(-120, {stiffness:220,damping:24});
+const allSprings = [blob1x,blob1y,blob2x,blob2y,tabSpring,trackSpring,toastSpring];
+
+let mx = window.innerWidth/2, my = window.innerHeight/2;
+let activeTab = 0, fabOpen = false, playing = false, progress = .35;
+let seekDrag = false;
+
+/* ── Animation Loop ── */
+let lt = null;
+function tick(t) {
+    if (!lt) lt = t;
+    const dt = Math.min((t - lt) / 1000, .064);
+    lt = t;
+    for (const s of allSprings) s.step(dt);
+    // Blobs
+    const b1 = document.getElementById('blob1');
+    const b2 = document.getElementById('blob2');
+    b1.style.transform = `translate(${blob1x.v - 210}px, ${blob1y.v - 210}px)`;
+    b2.style.transform = `translate(${blob2x.v - 160}px, ${blob2y.v - 160}px)`;
+    // Tab indicator
+    const ind = document.getElementById('tabInd');
+    ind.style.transform = `translateX(${tabSpring.v}px)`;
+    // Track
+    document.getElementById('ttrack').style.transform = `translateX(${trackSpring.v}px)`;
+    // Toast
+    document.getElementById('toast').style.transform = `translateX(-50%) translateY(${toastSpring.v}px)`;
+    requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ── Mouse Tracking ── */
+document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    const cx = window.innerWidth/2, cy = window.innerHeight/2;
+    blob1x.set(mx - cx); blob1y.set(my - cy);
+    blob2x.set(mx - cx * .7); blob2y.set(my - cy * .7);
+});
+
+/* ── Clock & Greeting ── */
+function updateClock() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+    document.getElementById('clock').textContent = `${h}:${m.toString().padStart(2,'0')}`;
+    const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting').textContent = g;
+}
+updateClock(); setInterval(updateClock, 30000);
+
+/* ── Counter Animation ── */
+function animateCounters() {
+    document.querySelectorAll('[data-count]').forEach(el => {
+        const target = +el.dataset.count;
+        const dur = 1200;
+        const start = performance.now();
+        function step(now) {
+            const p = Math.min((now - start) / dur, 1);
+            const ease = 1 - Math.pow(1 - p, 4);
+            el.textContent = Math.round(target * ease);
+            if (p < 1) requestAnimationFrame(step);
+        }
+        setTimeout(() => requestAnimationFrame(step), 500);
+    });
+}
+animateCounters();
+
+/* ── 3D Tilt ── */
+document.querySelectorAll('[data-tilt]').forEach(card => {
+    card.style.transition = 'transform .12s ease-out, border-color .2s';
+    card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - .5;
+        const y = (e.clientY - r.top) / r.height - .5;
+        card.style.transform = `perspective(600px) rotateY(${x*7}deg) rotateX(${-y*7}deg) scale(1.02)`;
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(600px) rotateY(0) rotateX(0) scale(1)';
+    });
+});
+
+/* ── Render Tasks ── */
+function renderTasks() {
+    const panel = document.getElementById('panelTasks');
+    panel.innerHTML = '';
+    tasks.forEach((t, i) => {
+        const card = document.createElement('div');
+        card.className = 'tcard ent';
+        card.style.animationDelay = `${.48 + i * .07}s`;
+        card.dataset.id = t.id;
+        card.innerHTML = `
+            <div class="sbg"><i class="fa-solid fa-check"></i></div>
+            <div class="flex items-start gap-3 relative z-[1]">
+                <div class="ck ${t.done ? 'done' : ''}" data-check="${t.id}">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold ${t.done ? 'line-through opacity-40' : ''}" style="transition:all .3s">${t.title}</p>
+                    <div class="flex items-center gap-2 mt-1.5">
+                        <span class="w-2 h-2 rounded-full p${t.pri[0]}"></span>
+                        <span class="text-xs" style="color:var(--muted)">${t.due}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-md" style="background:var(--accent-g);color:var(--accent)">${t.tag}</span>
+                    </div>
+                </div>
+                <i class="fa-solid fa-grip-vertical text-xs mt-1" style="color:var(--bdr2)"></i>
+            </div>`;
+        panel.appendChild(card);
+    });
+    initTaskInteractions();
+}
+
+/* ── Task Interactions ── */
+function initTaskInteractions() {
+    document.querySelectorAll('.tcard').forEach(card => {
+        let startX = 0, curX = 0, dragging = false;
+        const sbg = card.querySelector('.sbg');
+
+        card.addEventListener('pointerdown', e => {
+            if (e.target.closest('.ck')) return;
+            startX = e.clientX; curX = 0; dragging = true;
+            card.setPointerCapture(e.pointerId);
+            card.style.transition = 'none';
+        });
+        card.addEventListener('pointermove', e => {
+            if (!dragging) return;
+            curX = e.clientX - startX;
+            if (curX < 0) curX = 0;
+            const w = card.offsetWidth;
+            card.style.transform = `translateX(${curX}px)`;
+            sbg.style.opacity = Math.min(curX / (w * .3), 1);
+        });
+        card.addEventListener('pointerup', e => {
+            if (!dragging) return;
+            dragging = false;
+            const w = card.offsetWidth;
+            card.style.transition = 'transform .45s cubic-bezier(.32,.72,0,1), opacity .3s';
+            if (curX > w * .3) {
+                completeTask(card, +card.dataset.id);
+            } else {
+                card.style.transform = 'translateX(0)';
+                sbg.style.opacity = 0;
+            }
+        });
+        card.addEventListener('pointercancel', () => {
+            dragging = false;
+            card.style.transition = 'transform .45s cubic-bezier(.32,.72,0,1)';
+            card.style.transform = 'translateX(0)';
+            sbg.style.opacity = 0;
+        });
+    });
+
+    document.querySelectorAll('.ck').forEach(ck => {
+        ck.addEventListener('click', e => {
+            e.stopPropagation();
+            const id = +ck.dataset.check;
+            const card = ck.closest('.tcard');
+            completeTask(card, id);
+        });
+    });
+}
+
+function completeTask(card, id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task || task.done) return;
+    task.done = true;
+
+    // Animate card off
+    const w = card.offsetWidth;
+    card.style.transition = 'transform .4s cubic-bezier(.32,.72,0,1), opacity .25s .1s';
+    card.style.transform = `translateX(${w + 40}px)`;
+    card.style.opacity = '0';
+
+    // Collapse height
+    setTimeout(() => {
+        const h = card.offsetHeight;
+        card.style.height = h + 'px';
+        card.style.overflow = 'hidden';
+        card.style.transition = 'none';
+        card.offsetHeight; // force reflow
+        card.style.transition = 'height .4s cubic-bezier(.32,.72,0,1), margin .4s cubic-bezier(.32,.72,0,1), padding .4s cubic-bezier(.32,.72,0,1)';
+        card.style.height = '0';
+        card.style.marginBottom = '0';
+        card.style.paddingTop = '0';
+        card.style.paddingBottom = '0';
+        card.style.borderWidth = '0';
+    }, 350);
+
+    // Remove from data & re-render after animation
+    setTimeout(() => {
+        tasks = tasks.filter(t => t.id !== id);
+        renderTasks();
+        updateTaskCount();
+    }, 800);
+
+    showToast('Task completed');
+}
+
+function updateTaskCount() {
+    const remaining = tasks.filter(t => !t.done).length;
+    // Update the counter in the header area if needed
+}
+
+/* ── Render Schedule ── */
+function renderSchedule() {
+    const panel = document.getElementById('panelSchedule');
+    panel.innerHTML = schedule.map((s, i) => `
+        <div class="tblock ent" style="animation-delay:${.48 + i * .08}s">
+            <div class="w-12 text-right flex-shrink-0">
+                <span class="font-display font-semibold text-sm">${s.time}</span>
+            </div>
+            <div class="tdot" style="background:${s.color};box-shadow:0 0 8px ${s.color}44"></div>
+            <div class="flex-1 pb-2">
+                <p class="text-sm font-semibold">${s.title}</p>
+                <p class="text-xs mt-0.5" style="color:var(--muted)">${s.dur}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+/* ── Render Stats ── */
+function renderStats() {
+    const panel = document.getElementById('panelStats');
+    const pct = 75;
+    const r = 58, c = 2 * Math.PI * r;
+    const offset = c * (1 - pct / 100);
+    panel.innerHTML = `
+        <div class="flex flex-col items-center mb-6 ent" style="animation-delay:.48s">
+            <div class="relative">
+                <svg width="140" height="140" viewBox="0 0 140 140">
+                    <circle cx="70" cy="70" r="${r}" fill="none" stroke="var(--bdr)" stroke-width="8"/>
+                    <circle cx="70" cy="70" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8"
+                        stroke-dasharray="${c}" stroke-dashoffset="${c}" stroke-linecap="round"
+                        class="ring-c" id="ringC"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="font-display font-bold text-3xl sn">${pct}%</span>
+                    <span class="text-xs" style="color:var(--muted)">Complete</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2.5 mb-6">
+            <div class="scard text-center ent" style="animation-delay:.56s" data-tilt>
+                <p class="font-display font-bold text-lg" style="color:var(--accent)">87%</p>
+                <p class="text-xs mt-1" style="color:var(--muted)">Productivity</p>
+            </div>
+            <div class="scard text-center ent" style="animation-delay:.62s" data-tilt>
+                <p class="font-display font-bold text-lg" style="color:var(--mint)">6.5h</p>
+                <p class="text-xs mt-1" style="color:var(--muted)">Focus</p>
+            </div>
+            <div class="scard text-center ent" style="animation-delay:.68s" data-tilt>
+                <p class="font-display font-bold text-lg" style="color:var(--violet)">12</p>
+                <p class="text-xs mt-1" style="color:var(--muted)">Streak</p>
+            </div>
+        </div>
+        <div class="ent" style="animation-delay:.74s">
+            <p class="text-xs font-semibold mb-3" style="color:var(--muted)">THIS WEEK</p>
+            <div class="flex items-end justify-between gap-2" style="height:100px">
+                ${weekDays.map((d, i) => `
+                    <div class="flex-1 flex flex-col items-center gap-1.5">
+                        <div class="w-full rounded-md wbar" style="height:0;background:${i === 3 ? 'var(--accent)' : 'var(--bdr2)'}" data-h="${weekVals[i]}"></div>
+                        <span class="text-[10px]" style="color:var(--muted)">${d}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    // Animate ring
+    setTimeout(() => {
+        document.getElementById('ringC').style.strokeDashoffset = offset;
+    }, 600);
+    // Animate bars
+    setTimeout(() => {
+        document.querySelectorAll('.wbar[data-h]').forEach(bar => {
+            bar.style.height = bar.dataset.h + '%';
+        });
+    }, 700);
+    // Re-init tilt for new cards
+    document.querySelectorAll('[data-tilt]:not([data-tilt-init])').forEach(card => {
+        card.dataset.tiltInit = '1';
+        card.style.transition = 'transform .12s ease-out, border-color .2s';
+        card.addEventListener('mousemove', e => {
+            const r = card.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - .5;
+            const y = (e.clientY - r.top) / r.height - .5;
+            card.style.transform = `perspective(600px) rotateY(${x*7}deg) rotateX(${-y*7}deg) scale(1.02)`;
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'perspective(600px) rotateY(0) rotateX(0) scale(1)';
+        });
+    });
+}
+
+/* ── Tabs ── */
+function initTabs() {
+    const btns = document.querySelectorAll('.tab-btn');
+    const ind = document.getElementById('tabInd');
+
+    function setTab(idx) {
+        activeTab = idx;
+        btns.forEach((b, i) => {
+            b.style.color = i === idx ? 'var(--fg)' : 'var(--muted)';
+        });
+        const btn = btns[idx];
+        const barRect = document.getElementById('tabBar').getBoundingClientRect();
+        const btnRect = btn.getBoundingClientRect();
+        tabSpring.set(btnRect.left - barRect.left);
+        // Animate indicator width
+        ind.style.width = btnRect.width + 'px';
+        trackSpring.set(-idx * window.innerWidth);
+        // Trigger stats animations when switching to stats
+        if (idx === 2) {
+            setTimeout(() => {
+                const ring = document.getElementById('ringC');
+                if (ring) ring.style.strokeDashoffset = 2 * Math.PI * 58 * .25;
+                document.querySelectorAll('.wbar[data-h]').forEach(bar => {
+                    bar.style.height = bar.dataset.h + '%';
+                });
+            }, 100);
+        }
+    }
+
+    // Set initial indicator
+    requestAnimationFrame(() => {
+        const btn = btns[0];
+        const barRect = document.getElementById('tabBar').getBoundingClientRect();
+        const btnRect = btn.getBoundingClientRect();
+        ind.style.width = btnRect.width + 'px';
+        tabSpring.v = btnRect.left - barRect.left;
+        tabSpring.t = tabSpring.v;
+    });
+
+    btns.forEach((b, i) => b.addEventListener('click', () => setTab(i)));
+}
+
+/* ── FAB ── */
+function initFAB() {
+    const fab = document.getElementById('fab');
+    const menu = document.getElementById('fmenu');
+    const items = menu.querySelectorAll('.fmi');
+
+    fab.addEventListener('click', () => {
+        fabOpen = !fabOpen;
+        fab.classList.toggle('open', fabOpen);
+        items.forEach((item, i) => {
+            if (fabOpen) {
+                setTimeout(() => item.classList.add('show'), i * 60);
+            } else {
+                setTimeout(() => item.classList.remove('show'), (items.length - 1 - i) * 40);
+            }
+        });
+    });
+
+    items.forEach(item => {
+        item.querySelector('button').addEventListener('click', () => {
+            const action = item.dataset.action;
+            if (action === 'task') openModal();
+            else if (action === 'note') showToast('Note created');
+            else if (action === 'reminder') showToast('Reminder set');
+            // Close menu
+            fabOpen = false;
+            fab.classList.remove('open');
+            items.forEach(it => it.classList.remove('show'));
+        });
+    });
+
+    // Close FAB when clicking outside
+    document.addEventListener('click', e => {
+        if (fabOpen && !e.target.closest('#fab') && !e.target.closest('#fmenu')) {
+            fabOpen = false;
+            fab.classList.remove('open');
+            items.forEach(it => it.classList.remove('show'));
+        }
+    });
+}
+
+/* ── Modal ── */
+function initModal() {
+    const modal = document.getElementById('modal');
+    const sheet = document.getElementById('msheet');
+    const handle = document.getElementById('mhandle');
+    let startY = 0, curY = 0, dragging = false;
+
+    function open() { modal.classList.add('on'); document.getElementById('taskInput').value = ''; setTimeout(() => document.getElementById('taskInput').focus(), 400); }
+    function close() { modal.classList.remove('on'); }
+
+    handle.addEventListener('pointerdown', e => {
+        startY = e.clientY; curY = 0; dragging = true;
+        handle.setPointerCapture(e.pointerId);
+        sheet.style.transition = 'none';
+    });
+    handle.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        curY = Math.max(0, e.clientY - startY);
+        sheet.style.transform = `translateY(${curY}px)`;
+    });
+    handle.addEventListener('pointerup', () => {
+        if (!dragging) return;
+        dragging = false;
+        sheet.style.transition = 'transform .4s cubic-bezier(.32,.72,0,1)';
+        if (curY > 100) close();
+        else sheet.style.transform = 'translateY(0)';
+    });
+
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.getElementById('cancelBtn').addEventListener('click', close);
+    document.getElementById('addTaskBtn').addEventListener('click', () => {
+        const val = document.getElementById('taskInput').value.trim();
+        if (val) {
+            tasks.unshift({ id: nextId++, title: val, pri: 'medium', due: 'Today', tag: 'New', done: false });
+            renderTasks();
+            showToast('Task added');
+            close();
+        }
+    });
+
+    document.getElementById('bellBtn').addEventListener('click', () => open());
+    window.openModal = open;
+}
+
+/* ── Toast ── */
+let toastTimer = null;
+function showToast(msg) {
+    const el = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    toastSpring.set(0);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastSpring.set(-120), 2200);
+}
+
+/* ── Music Player ── */
+function initPlayer() {
+    const btn = document.getElementById('playBtn');
+    const icon = document.getElementById('playIcon');
+    const fill = document.getElementById('pfill');
+    const thumb = document.getElementById('pthumb');
+    const track = document.getElementById('ptrk');
+    const bars = document.querySelectorAll('.wvbar');
+
+    // Create waveform bars
+    const wf = document.getElementById('waveform');
+    for (let i = 0; i < 5; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'wvbar';
+        bar.style.height = (20 + Math.random() * 80) + '%';
+        bar.style.animationDelay = (i * .12) + 's';
+        wf.appendChild(bar);
+    }
+    const waveBars = wf.querySelectorAll('.wvbar');
+
+    btn.addEventListener('click', () => {
+        playing = !playing;
+        icon.className = playing ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+        if (!playing) icon.style.marginLeft = '2px';
+        else icon.style.marginLeft = '0';
+        waveBars.forEach(b => b.classList.toggle('play', playing));
+    });
+
+    // Progress tick
+    setInterval(() => {
+        if (playing && !seekDrag) {
+            progress += .0004;
+            if (progress > 1) progress = 0;
+            fill.style.width = (progress * 100) + '%';
+            thumb.style.left = (progress * 100) + '%';
+        }
+    }, 50);
+
+    // Seek
+    function seekTo(e) {
+        const r = track.getBoundingClientRect();
+        progress = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+        fill.style.width = (progress * 100) + '%';
+        thumb.style.left = (progress * 100) + '%';
+    }
+
+    track.addEventListener('pointerdown', e => {
+        seekDrag = true;
+        track.classList.add('dragging');
+        track.setPointerCapture(e.pointerId);
+        seekTo(e);
+    });
+    track.addEventListener('pointermove', e => { if (seekDrag) seekTo(e); });
+    track.addEventListener('pointerup', () => { seekDrag = false; track.classList.remove('dragging'); });
+    track.addEventListener('pointercancel', () => { seekDrag = false; track.classList.remove('dragging'); });
+
+    // Initial progress
+    fill.style.width = (progress * 100) + '%';
+    thumb.style.left = (progress * 100) + '%';
+}
+
+/* ── Init ── */
+renderTasks();
+renderSchedule();
+renderStats();
+initTabs();
+initFAB();
+initModal();
+initPlayer();
+
+// Handle resize for tab indicator
+window.addEventListener('resize', () => {
+    const btns = document.querySelectorAll('.tab-btn');
+    const ind = document.getElementById('tabInd');
+    const barRect = document.getElementById('tabBar').getBoundingClientRect();
+    const btnRect = btns[activeTab].getBoundingClientRect();
+    ind.style.width = btnRect.width + 'px';
+    tabSpring.set(btnRect.left - barRect.left);
+    trackSpring.set(-activeTab * window.innerWidth);
+});
+</script>
+</body>
+</html>

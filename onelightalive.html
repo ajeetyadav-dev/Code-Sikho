@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Light — Alive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                        body: ['"DM Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #080808;
+            --fg: #e8e4e0;
+            --muted: #6b6560;
+            --accent: #E8A849;
+            --card: #111111;
+            --border: rgba(255,255,255,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* Grain overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 9996;
+            pointer-events: none;
+            opacity: 0.028;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 200px 200px;
+        }
+
+        /* Custom cursor */
+        .cursor-dot {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            will-change: transform;
+            mix-blend-mode: screen;
+        }
+        .cursor-dot::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 1px solid rgba(232,168,73,0.25);
+        }
+
+        /* THE ONE EFFECT — spotlight */
+        .spotlight {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 750px;
+            height: 750px;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle,
+                rgba(232, 168, 73, 0.13) 0%,
+                rgba(232, 168, 73, 0.07) 20%,
+                rgba(232, 168, 73, 0.025) 42%,
+                transparent 62%
+            );
+            pointer-events: none;
+            z-index: 9995;
+            will-change: transform;
+            mix-blend-mode: screen;
+        }
+
+        /* Reactive elements — all driven by --p (proximity 0–1) */
+        .reactive-card {
+            --p: 0;
+            background: var(--card);
+            border: 1px solid rgba(232, 168, 73, calc(var(--p) * 0.28 + 0.04));
+            border-radius: 16px;
+            box-shadow:
+                0 4px 32px rgba(0,0,0,0.4),
+                0 0 calc(var(--p) * 55px) rgba(232, 168, 73, calc(var(--p) * 0.14)),
+                inset 0 1px 0 rgba(255,255,255, calc(var(--p) * 0.05));
+            transition: box-shadow 0.5s ease, border-color 0.5s ease, background 0.5s ease;
+        }
+
+        .reactive-text {
+            --p: 0;
+            text-shadow: 0 0 calc(var(--p) * 90px) rgba(232, 168, 73, calc(var(--p) * 0.35));
+            transition: text-shadow 0.5s ease;
+        }
+
+        .reactive-icon {
+            --p: 0;
+            color: rgb(
+                calc(107 + var(--p) * 125),
+                calc(101 + var(--p) * 67),
+                calc(96 - var(--p) * 23)
+            );
+            transition: color 0.5s ease, text-shadow 0.5s ease;
+            text-shadow: 0 0 calc(var(--p) * 25px) rgba(232, 168, 73, calc(var(--p) * 0.4));
+        }
+
+        .reactive-line {
+            --p: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(232, 168, 73, calc(var(--p) * 0.4 + 0.04)),
+                transparent
+            );
+            transition: background 0.5s ease;
+        }
+
+        /* Nav */
+        nav {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(8,8,8,0.7);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: #080808;
+            font-weight: 600;
+            padding: 15px 34px;
+            border-radius: 12px;
+            border: none;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px;
+            letter-spacing: 0.01em;
+            cursor: none;
+            transition: background 0.25s, transform 0.2s;
+        }
+        .btn-primary:hover { background: #f0b858; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            color: var(--fg);
+            font-weight: 500;
+            padding: 15px 34px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px;
+            cursor: none;
+            transition: border-color 0.25s, background 0.25s, transform 0.2s;
+        }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.03); transform: translateY(-1px); }
+        .btn-ghost:active { transform: translateY(0); }
+
+        /* Stat values */
+        .stat-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            line-height: 1;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 3px; }
+
+        /* Focus */
+        *:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .spotlight, .cursor-dot { display: none !important; }
+            body, .btn-primary, .btn-ghost { cursor: auto; }
+        }
+
+        /* Mobile */
+        @media (pointer: coarse) {
+            body { cursor: auto; }
+            .cursor-dot { display: none !important; }
+            .btn-primary, .btn-ghost { cursor: pointer; }
+        }
+
+        /* Subtle entrance */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up {
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards;
+        }
+        .fade-up-d1 { animation-delay: 0.1s; }
+        .fade-up-d2 { animation-delay: 0.25s; }
+        .fade-up-d3 { animation-delay: 0.4s; }
+        .fade-up-d4 { animation-delay: 0.55s; }
+    </style>
+</head>
+<body>
+
+    <!-- Cursor dot -->
+    <div class="cursor-dot" aria-hidden="true"></div>
+
+    <!-- THE spotlight -->
+    <div class="spotlight" aria-hidden="true"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 py-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="#" class="font-display font-bold text-lg tracking-tight" style="color: var(--fg);">
+                <i class="fa-solid fa-bolt-lightning mr-2" style="color: var(--accent); font-size: 14px;"></i>lumin
+            </a>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#features" class="text-sm font-medium" style="color: var(--muted); transition: color 0.2s;" onmouseenter="this.style.color='var(--fg)'" onmouseleave="this.style.color='var(--muted)'">Anatomy</a>
+                <a href="#philosophy" class="text-sm font-medium" style="color: var(--muted); transition: color 0.2s;" onmouseenter="this.style.color='var(--fg)'" onmouseleave="this.style.color='var(--muted)'">Philosophy</a>
+                <a href="#stats" class="text-sm font-medium" style="color: var(--muted); transition: color 0.2s;" onmouseenter="this.style.color='var(--fg)'" onmouseleave="this.style.color='var(--muted)'">Impact</a>
+            </div>
+            <button class="btn-primary !py-2.5 !px-5 !text-sm" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">
+                Get Started
+            </button>
+        </div>
+    </nav>
+
+    <main>
+
+        <!-- Hero -->
+        <section class="min-h-screen flex flex-col items-center justify-center px-6 text-center relative">
+            <div class="max-w-4xl mx-auto">
+                <p class="fade-up font-display text-sm tracking-[0.2em] uppercase mb-8" style="color: var(--accent);">
+                    A single interaction experiment
+                </p>
+                <h1 data-reactive class="reactive-text fade-up fade-up-d1 font-display font-bold leading-[0.95] tracking-tight mb-8"
+                    style="font-size: clamp(3.2rem, 10vw, 7.5rem);">
+                    One Light.
+                </h1>
+                <p class="fade-up fade-up-d2 font-display text-xl md:text-2xl font-light mb-6" style="color: var(--muted);">
+                    That's all it took to bring this page to life.
+                </p>
+                <p class="fade-up fade-up-d3 text-base md:text-lg max-w-xl mx-auto mb-12 leading-relaxed" style="color: var(--muted); opacity: 0.7;">
+                    Everything you see is static. No scroll animations. No auto-playing transitions.
+                    Just a single light that follows your cursor — and suddenly, the darkness responds.
+                </p>
+                <div class="fade-up fade-up-d4 flex flex-wrap items-center justify-center gap-4">
+                    <button class="btn-primary" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
+                        Explore <i class="fa-solid fa-arrow-down text-xs"></i>
+                    </button>
+                    <button class="btn-ghost" onclick="document.getElementById('philosophy').scrollIntoView({behavior:'smooth'})">
+                        The Philosophy
+                    </button>
+                </div>
+            </div>
+            <!-- Scroll hint -->
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 fade-up fade-up-d4" style="color: var(--muted); opacity: 0.4;">
+                <span class="text-xs font-display tracking-widest uppercase">Scroll</span>
+                <div style="width: 1px; height: 32px; background: linear-gradient(to bottom, var(--muted), transparent);"></div>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="reactive-line max-w-5xl mx-auto" style="height: 1px;" data-reactive></div>
+
+        <!-- Features -->
+        <section id="features" class="py-28 md:py-36 px-6">
+            <div class="max-w-6xl mx-auto">
+                <p class="font-display text-sm tracking-[0.15em] uppercase mb-4 text-center" style="color: var(--accent);">Anatomy</p>
+                <h2 data-reactive class="reactive-text font-display text-3xl md:text-5xl font-bold text-center mb-6 tracking-tight">
+                    Three Parts, One Effect
+                </h2>
+                <p class="text-center max-w-lg mx-auto mb-16" style="color: var(--muted);">
+                    A single spotlight is deceptively simple. Under the surface, three systems work in harmony.
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <!-- Card 1 -->
+                    <div data-reactive class="reactive-card p-8">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style="background: rgba(232,168,73,0.08);">
+                            <i data-reactive class="reactive-icon fa-solid fa-sun text-xl"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-lg mb-3">Reactive Illumination</h3>
+                        <p class="text-sm leading-relaxed" style="color: var(--muted);">
+                            A radial light source tracks your presence in real-time, casting warm amber across every surface it touches. The darkness isn't empty — it's waiting.
+                        </p>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div data-reactive class="reactive-card p-8">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style="background: rgba(232,168,73,0.08);">
+                            <i data-reactive class="reactive-icon fa-solid fa-bullseye text-xl"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-lg mb-3">Proximity Awareness</h3>
+                        <p class="text-sm leading-relaxed" style="color: var(--muted);">
+                            Every element on this page calculates its distance from the light. Cards glow, borders warm, icons ignite — each response proportional to how close you are.
+                        </p>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div data-reactive class="reactive-card p-8">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style="background: rgba(232,168,73,0.08);">
+                            <i data-reactive class="reactive-icon fa-solid fa-feather-pointed text-xl"></i>
+                        </div>
+                        <h3 class="font-display font-semibold text-lg mb-3">Organic Motion</h3>
+                        <p class="text-sm leading-relaxed" style="color: var(--muted);">
+                            Linear interpolation with a low factor creates a gentle lag. The light doesn't teleport — it drifts, breathes, and feels alive in a way instant tracking never could.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="reactive-line max-w-5xl mx-auto" style="height: 1px;" data-reactive></div>
+
+        <!-- Philosophy -->
+        <section id="philosophy" class="py-28 md:py-36 px-6">
+            <div class="max-w-3xl mx-auto text-center">
+                <i data-reactive class="reactive-icon fa-solid fa-quote-left text-3xl mb-8 block" style="color: var(--muted);"></i>
+                <blockquote data-reactive class="reactive-text font-display text-2xl md:text-4xl font-light leading-snug tracking-tight mb-8" style="color: var(--fg);">
+                    The difference between a page that exists and a page that lives isn't complexity. It's response.
+                </blockquote>
+                <blockquote data-reactive class="reactive-text font-display text-2xl md:text-4xl font-light leading-snug tracking-tight mb-12" style="color: var(--accent);">
+                    One signal that says: I see you.
+                </blockquote>
+                <p class="text-sm" style="color: var(--muted); opacity: 0.5;">
+                    We obsess over adding more — more animations, more effects, more elements.
+                    But the most powerful interfaces do less. They listen.
+                </p>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="reactive-line max-w-5xl mx-auto" style="height: 1px;" data-reactive></div>
+
+        <!-- Stats -->
+        <section id="stats" class="py-28 md:py-36 px-6">
+            <div class="max-w-5xl mx-auto">
+                <p class="font-display text-sm tracking-[0.15em] uppercase mb-4 text-center" style="color: var(--accent);">Impact</p>
+                <h2 data-reactive class="reactive-text font-display text-3xl md:text-5xl font-bold text-center mb-20 tracking-tight">
+                    The Numbers Behind the Feeling
+                </h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-6">
+                    <div data-reactive class="reactive-card p-6 md:p-8 text-center">
+                        <div data-reactive class="reactive-text stat-num mb-2" style="color: var(--accent);">300%</div>
+                        <p class="text-xs font-display uppercase tracking-wider" style="color: var(--muted);">Engagement lift</p>
+                    </div>
+                    <div data-reactive class="reactive-card p-6 md:p-8 text-center">
+                        <div data-reactive class="reactive-text stat-num mb-2" style="color: var(--accent);">2.4s</div>
+                        <p class="text-xs font-display uppercase tracking-wider" style="color: var(--muted);">Longer sessions</p>
+                    </div>
+                    <div data-reactive class="reactive-card p-6 md:p-8 text-center">
+                        <div data-reactive class="reactive-text stat-num mb-2" style="color: var(--accent);">1</div>
+                        <p class="text-xs font-display uppercase tracking-wider" style="color: var(--muted);">Effect added</p>
+                    </div>
+                    <div data-reactive class="reactive-card p-6 md:p-8 text-center">
+                        <div data-reactive class="reactive-text stat-num mb-2" style="color: var(--accent);">0</div>
+                        <p class="text-xs font-display uppercase tracking-wider" style="color: var(--muted);">Extra dependencies</p>
+                    </div>
+                </div>
+
+                <p class="text-center mt-10 text-xs" style="color: var(--muted); opacity: 0.4;">
+                    * Illustrative metrics based on interaction design research, not this specific page.
+                </p>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section id="cta" class="py-28 md:py-40 px-6">
+            <div class="max-w-2xl mx-auto text-center">
+                <h2 data-reactive class="reactive-text font-display text-3xl md:text-5xl font-bold tracking-tight mb-6">
+                    Ready to Add Your Light?
+                </h2>
+                <p class="mb-10 text-base" style="color: var(--muted);">
+                    You don't need a library. You don't need a framework.
+                    <br class="hidden md:block">
+                    You need a <span style="color: var(--accent);">radial gradient</span>, a <span style="color: var(--accent);">mousemove listener</span>, and the courage to do less.
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-4">
+                    <button class="btn-primary text-base" onclick="showToast()">
+                        View the Source <i class="fa-solid fa-code text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-6 py-10" style="border-top: 1px solid var(--border);">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <p class="text-xs" style="color: var(--muted); opacity: 0.5;">
+                One effect. Zero frameworks. Pure HTML, CSS, and JavaScript.
+            </p>
+            <p class="text-xs" style="color: var(--muted); opacity: 0.3;">
+                Move your cursor to feel it. That's the whole trick.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[10001] px-6 py-3 rounded-xl font-display text-sm font-medium pointer-events-none"
+         style="background: var(--accent); color: #080808; opacity: 0; transform: translate(-50%, 20px); transition: opacity 0.4s, transform 0.4s;">
+        Right-click → View Page Source. It's all there.
+    </div>
+
+    <script>
+        // ── THE ONE EFFECT ──────────────────────────────────
+        // A mouse-following spotlight with proximity-reactive elements.
+        // That's it. That's the whole effect.
+
+        const spotlight = document.querySelector('.spotlight');
+        const cursorDot = document.querySelector('.cursor-dot');
+        const reactives = document.querySelectorAll('[data-reactive]');
+
+        // Target position (where mouse actually is)
+        let targetX = window.innerWidth / 2;
+        let targetY = window.innerHeight / 2;
+
+        // Current position (where light actually is — lerped)
+        let currentX = targetX;
+        let currentY = targetY;
+
+        // Cursor position (faster follow)
+        let cursorX = targetX;
+        let cursorY = targetY;
+
+        // Hint animation state
+        let hintFrame = 0;
+        const hintDuration = 150; // ~2.5 seconds
+        let hinting = true;
+        let userMoved = false;
+
+        // Lerp factor for the spotlight (lower = more organic lag)
+        const LIGHT_LERP = 0.07;
+        // Lerp factor for the cursor dot (higher = snappier)
+        const CURSOR_LERP = 0.25;
+        // Max distance for proximity reaction
+        const PROXIMITY_RANGE = 380;
+
+        // ── Input handlers ────────────────────────────────
+        document.addEventListener('mousemove', (e) => {
+            targetX = e.clientX;
+            targetY = e.clientY;
+            if (hinting) {
+                hinting = false;
+                userMoved = true;
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            targetX = e.touches[0].clientX;
+            targetY = e.touches[0].clientY;
+            if (hinting) {
+                hinting = false;
+                userMoved = true;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchstart', (e) => {
+            targetX = e.touches[0].clientX;
+            targetY = e.touches[0].clientY;
+            if (hinting) {
+                hinting = false;
+                userMoved = true;
+            }
+        }, { passive: true });
+
+        // ── Main loop ─────────────────────────────────────
+        function loop() {
+            // Hint animation: gentle figure-8 to invite interaction
+            if (hinting) {
+                hintFrame++;
+                const progress = hintFrame / hintDuration;
+                const ease = Math.max(0, 1 - progress);
+                const cx = window.innerWidth / 2;
+                const cy = window.innerHeight / 2;
+                targetX = cx + Math.sin(hintFrame * 0.04) * 180 * ease;
+                targetY = cy + Math.cos(hintFrame * 0.025) * 90 * ease;
+                if (hintFrame >= hintDuration) {
+                    hinting = false;
+                    targetX = cx;
+                    targetY = cy;
+                }
+            }
+
+            // Lerp the spotlight position (organic, laggy)
+            currentX += (targetX - currentX) * LIGHT_LERP;
+            currentY += (targetY - currentY) * LIGHT_LERP;
+
+            // Lerp the cursor dot position (snappy)
+            cursorX += (targetX - cursorX) * CURSOR_LERP;
+            cursorY += (targetY - cursorY) * CURSOR_LERP;
+
+            // Apply spotlight transform (GPU-accelerated)
+            spotlight.style.transform = `translate(${currentX - 375}px, ${currentY - 375}px)`;
+
+            // Apply cursor dot transform
+            cursorDot.style.transform = `translate(${cursorX - 3}px, ${cursorY - 3}px)`;
+
+            // Update proximity for each reactive element
+            for (let i = 0; i < reactives.length; i++) {
+                const el = reactives[i];
+                const rect = el.getBoundingClientRect();
+                const elCenterX = rect.left + rect.width / 2;
+                const elCenterY = rect.top + rect.height / 2;
+                const dist = Math.hypot(currentX - elCenterX, currentY - elCenterY);
+                const intensity = Math.max(0, 1 - dist / PROXIMITY_RANGE);
+                // Smooth the intensity with a power curve for a softer falloff
+                const smooth = intensity * intensity * (3 - 2 * intensity); // smoothstep
+                el.style.setProperty('--p', smooth.toFixed(4));
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // Start the loop
+        loop();
+
+        // ── Toast notification ────────────────────────────
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 20px)';
+            }, 3000);
+        }
+
+        // ── Hide cursor when leaving window ───────────────
+        document.addEventListener('mouseleave', () => {
+            cursorDot.style.opacity = '0';
+        });
+        document.addEventListener('mouseenter', () => {
+            cursorDot.style.opacity = '1';
+        });
+    </script>
+</body>
+</html>
