@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOT AI GENERATED</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream: #F5F0EB;
+    --dark: #1A1A1A;
+    --accent: #FF4D2D;
+    --green: #2D5A3D;
+    --muted: #8B8578;
+    --card: #EDE8E2;
+    --border: #D4CFC8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    overflow-x: hidden;
+  }
+
+  /* Custom cursor */
+  .cursor-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    transition: transform 0.1s ease;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    width: 40px; height: 40px;
+    border: 1.5px solid var(--dark);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    transition: width 0.3s, height 0.3s, border-color 0.3s;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring.hover {
+    width: 64px; height: 64px;
+    border-color: var(--accent);
+  }
+
+  /* Grain overlay */
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+  }
+
+  /* Syne for display */
+  .font-display { font-family: 'Syne', sans-serif; }
+
+  /* Marquee */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 20s linear infinite;
+  }
+  .marquee-track:hover { animation-play-state: paused; }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Reveal animation */
+  .reveal {
+    opacity: 0;
+    transform: translateY(60px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-80px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-left.visible { opacity: 1; transform: translateX(0); }
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(80px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-right.visible { opacity: 1; transform: translateX(0); }
+
+  /* Wobble on hover */
+  .wobble-hover:hover {
+    animation: wobble 0.5s ease;
+  }
+  @keyframes wobble {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+  }
+
+  /* Hand-drawn underline */
+  .hand-underline {
+    position: relative;
+    display: inline-block;
+  }
+  .hand-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: -4px;
+    right: -4px;
+    height: 12px;
+    background: var(--accent);
+    opacity: 0.25;
+    border-radius: 4px;
+    transform: rotate(-1deg) skewX(-3deg);
+    z-index: -1;
+  }
+
+  /* Strikethrough animation */
+  .strike-through {
+    position: relative;
+    display: inline-block;
+  }
+  .strike-through::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0;
+    height: 3px;
+    background: var(--accent);
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .strike-through.visible::after { width: 100%; }
+
+  /* Folded corner on cards */
+  .fold-corner {
+    position: relative;
+    overflow: hidden;
+  }
+  .fold-corner::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 0 40px 40px 0;
+    border-color: transparent var(--cream) transparent transparent;
+    z-index: 2;
+  }
+  .fold-corner::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 40px; height: 40px;
+    background: linear-gradient(225deg, transparent 50%, var(--border) 50%);
+    z-index: 1;
+  }
+
+  /* Magnetic button */
+  .magnetic-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 36px;
+    background: var(--dark);
+    color: var(--cream);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: none;
+    transition: background 0.3s, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .magnetic-btn:hover { background: var(--accent); }
+  .magnetic-btn .btn-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 0;
+  }
+  .magnetic-btn:hover .btn-bg { transform: scaleX(1); }
+  .magnetic-btn span { position: relative; z-index: 1; }
+
+  /* Blob shape */
+  .blob {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    animation: blob-morph 8s ease-in-out infinite;
+  }
+  @keyframes blob-morph {
+    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+    50% { border-radius: 50% 60% 30% 60% / 30% 50% 70% 60%; }
+    75% { border-radius: 60% 30% 60% 40% / 70% 50% 40% 60%; }
+  }
+
+  /* Ticker number */
+  .ticker-num {
+    display: inline-block;
+    overflow: hidden;
+    height: 1.15em;
+    vertical-align: bottom;
+  }
+  .ticker-num .digit {
+    display: block;
+    transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Doodle SVG animation */
+  .doodle-path {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    transition: stroke-dashoffset 2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .doodle-path.visible { stroke-dashoffset: 0; }
+
+  /* Scroll progress */
+  .scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--accent);
+    z-index: 9998;
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  /* Sticky note */
+  .sticky-note {
+    background: #FFF9C4;
+    color: #5D4E37;
+    padding: 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.6;
+    box-shadow: 2px 4px 12px rgba(0,0,0,0.08);
+    transform: rotate(-2deg);
+    position: relative;
+  }
+  .sticky-note::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 16px;
+    background: rgba(200,180,120,0.5);
+    border-radius: 2px;
+  }
+
+  /* Image with mask */
+  .mask-reveal {
+    clip-path: inset(100% 0 0 0);
+    transition: clip-path 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .mask-reveal.visible {
+    clip-path: inset(0 0 0 0);
+  }
+
+  /* Horizontal rule doodle */
+  .doodle-hr {
+    border: none;
+    height: 2px;
+    background: var(--dark);
+    opacity: 0.15;
+    transform: rotate(-0.5deg) scaleX(0.95);
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: var(--dark);
+    color: var(--cream);
+    padding: 14px 28px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 10001;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .marquee-track { animation: none; }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    * { cursor: auto; }
+    .cursor-dot, .cursor-ring { display: none; }
+    .hero-title { font-size: 12vw !important; }
+    .big-text { font-size: 8vw !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Grain -->
+<div class="grain"></div>
+
+<!-- Scroll Progress -->
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- Custom Cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 w-full z-50 mix-blend-difference" id="nav">
+  <div class="max-w-7xl mx-auto px-6 md:px-10 py-5 flex items-center justify-between">
+    <a href="#" class="font-display font-800 text-lg text-white tracking-tight wobble-hover" data-hover>
+      RS<span class="text-[var(--accent)]">.</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#work" class="text-white text-sm font-medium tracking-wide hover:text-[var(--accent)] transition-colors" data-hover>Work</a>
+      <a href="#about" class="text-white text-sm font-medium tracking-wide hover:text-[var(--accent)] transition-colors" data-hover>About</a>
+      <a href="#process" class="text-white text-sm font-medium tracking-wide hover:text-[var(--accent)] transition-colors" data-hover>Process</a>
+      <a href="#contact" class="text-white text-sm font-medium tracking-wide hover:text-[var(--accent)] transition-colors" data-hover>Contact</a>
+    </div>
+    <button class="md:hidden text-white text-xl" data-hover id="menuToggle" aria-label="Toggle menu">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="fixed inset-0 bg-[var(--dark)] z-40 flex flex-col items-center justify-center gap-8 transition-transform duration-700 translate-x-full" id="mobileMenu">
+  <a href="#work" class="font-display text-white text-4xl font-700 menu-link">Work</a>
+  <a href="#about" class="font-display text-white text-4xl font-700 menu-link">About</a>
+  <a href="#process" class="font-display text-white text-4xl font-700 menu-link">Process</a>
+  <a href="#contact" class="font-display text-white text-4xl font-700 menu-link">Contact</a>
+</div>
+
+<!-- HERO -->
+<header class="min-h-screen flex flex-col justify-end relative overflow-hidden px-6 md:px-10 pb-12">
+  <!-- Background blob -->
+  <div class="absolute top-1/4 -right-32 w-[500px] h-[500px] bg-[var(--accent)] opacity-[0.06] blob"></div>
+  <div class="absolute bottom-1/3 -left-24 w-[300px] h-[300px] bg-[var(--green)] opacity-[0.06] blob" style="animation-delay: -4s;"></div>
+
+  <!-- Hand-drawn SVG doodle -->
+  <svg class="absolute top-[20%] right-[10%] w-32 h-32 opacity-20" viewBox="0 0 120 120" fill="none">
+    <path class="doodle-path" d="M10 60 C20 10, 50 10, 60 60 C70 110, 100 110, 110 60" stroke="var(--dark)" stroke-width="2" stroke-linecap="round"/>
+    <circle class="doodle-path" cx="60" cy="60" r="40" stroke="var(--dark)" stroke-width="1.5" stroke-dasharray="4 4"/>
+  </svg>
+
+  <div class="max-w-7xl mx-auto w-full relative z-10">
+    <div class="mb-6 reveal" style="transition-delay: 0.1s;">
+      <span class="inline-block px-4 py-1.5 bg-[var(--dark)] text-[var(--cream)] text-xs font-display font-700 tracking-widest uppercase">Design Studio — Est. 2019</span>
+    </div>
+    <h1 class="font-display font-800 leading-[0.9] tracking-tight hero-title" style="font-size: clamp(48px, 11vw, 160px);">
+      <span class="block reveal" style="transition-delay: 0.2s;">Not</span>
+      <span class="block reveal" style="transition-delay: 0.35s;">your<br>
+        <span class="strike-through">typical</span>
+      </span>
+      <span class="block text-[var(--accent)] reveal" style="transition-delay: 0.5s;">AI slop</span>
+    </h1>
+    <div class="mt-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <p class="text-[var(--muted)] max-w-md text-base leading-relaxed reveal" style="transition-delay: 0.65s;">
+        We build interfaces that feel like someone actually gave a damn. Imperfect on purpose, memorable by design.
+      </p>
+      <div class="reveal" style="transition-delay: 0.8s;">
+        <button class="magnetic-btn" data-hover data-magnetic id="heroBtn">
+          <div class="btn-bg"></div>
+          <span>See the work</span>
+          <span><i class="fa-solid fa-arrow-down-right"></i></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 reveal" style="transition-delay: 1s;">
+    <span class="text-[var(--muted)] text-[10px] tracking-[0.3em] uppercase font-display">Scroll</span>
+    <div class="w-px h-8 bg-[var(--muted)] opacity-40 relative overflow-hidden">
+      <div class="w-full bg-[var(--accent)] absolute top-0" style="height: 100%; animation: scrollPulse 2s ease-in-out infinite;">
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes scrollPulse {
+      0% { transform: translateY(-100%); }
+      50% { transform: translateY(0); }
+      100% { transform: translateY(100%); }
+    }
+  </style>
+</header>
+
+<!-- MARQUEE -->
+<section class="py-6 border-y border-[var(--border)] overflow-hidden">
+  <div class="marquee-track">
+    <span class="font-display font-800 text-2xl md:text-4xl tracking-tight whitespace-nowrap px-6">
+      Branding <span class="text-[var(--accent)]">*</span> Digital Products <span class="text-[var(--accent)]">*</span> Motion Design <span class="text-[var(--accent)]">*</span> Art Direction <span class="text-[var(--accent)]">*</span> Web Development <span class="text-[var(--accent)]">*</span> Identity Systems <span class="text-[var(--accent)]">*</span>
+    </span>
+    <span class="font-display font-800 text-2xl md:text-4xl tracking-tight whitespace-nowrap px-6">
+      Branding <span class="text-[var(--accent)]">*</span> Digital Products <span class="text-[var(--accent)]">*</span> Motion Design <span class="text-[var(--accent)]">*</span> Art Direction <span class="text-[var(--accent)]">*</span> Web Development <span class="text-[var(--accent)]">*</span> Identity Systems <span class="text-[var(--accent)]">*</span>
+    </span>
+  </div>
+</section>
+
+<!-- WORK SECTION -->
+<section id="work" class="py-24 md:py-36 px-6 md:px-10">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex items-baseline justify-between mb-16">
+      <h2 class="font-display font-800 text-5xl md:text-7xl tracking-tight reveal">
+        Selected<br>work<span class="text-[var(--accent)]">.</span>
+      </h2>
+      <span class="text-[var(--muted)] text-sm font-display tracking-wider uppercase hidden md:block reveal">04 Projects</span>
+    </div>
+
+    <!-- Project Grid — Asymmetric -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6">
+
+      <!-- Project 1 — Large -->
+      <div class="md:col-span-7 group reveal" style="transition-delay: 0.1s;">
+        <div class="fold-corner bg-[var(--card)] overflow-hidden relative" data-hover>
+          <div class="overflow-hidden">
+            <img src="https://picsum.photos/seed/notai1/800/550.jpg" alt="Noma brand identity project" class="w-full h-[280px] md:h-[400px] object-cover transition-transform duration-700 group-hover:scale-105 mask-reveal" loading="lazy">
+          </div>
+          <div class="p-6 md:p-8">
+            <div class="flex items-start justify-between mb-3">
+              <h3 class="font-display font-700 text-xl md:text-2xl">Noma Collective</h3>
+              <span class="text-[var(--accent)] text-xl group-hover:rotate-45 transition-transform duration-300"><i class="fa-solid fa-arrow-up-right"></i></span>
+            </div>
+            <p class="text-[var(--muted)] text-sm">Brand identity and digital platform for a Nordic art collective. Cold tones, warm feeling.</p>
+            <div class="flex gap-2 mt-4 flex-wrap">
+              <span class="px-3 py-1 bg-[var(--cream)] text-xs font-display font-600 tracking-wide">Identity</span>
+              <span class="px-3 py-1 bg-[var(--cream)] text-xs font-display font-600 tracking-wide">Web</span>
+              <span class="px-3 py-1 bg-[var(--cream)] text-xs font-display font-600 tracking-wide">Motion</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 2 — Small -->
+      <div class="md:col-span-5 group reveal" style="transition-delay: 0.2s;">
+        <div class="fold-corner bg-[var(--dark)] overflow-hidden relative h-full" data-hover>
+          <div class="overflow-hidden">
+            <img src="https://picsum.photos/seed/notai2/600/500.jpg" alt="Void audio app project" class="w-full h-[280px] md:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105 mask-reveal opacity-80" loading="lazy">
+          </div>
+          <div class="p-6 md:p-8">
+            <div class="flex items-start justify-between mb-3">
+              <h3 class="font-display font-700 text-xl md:text-2xl text-[var(--cream)]">Void Audio</h3>
+              <span class="text-[var(--accent)] text-xl group-hover:rotate-45 transition-transform duration-300"><i class="fa-solid fa-arrow-up-right"></i></span>
+            </div>
+            <p class="text-[var(--muted)] text-sm">Spatial audio experience app. Designed for the dark. Felt in the bones.</p>
+            <div class="flex gap-2 mt-4 flex-wrap">
+              <span class="px-3 py-1 bg-[rgba(255,255,255,0.08)] text-[var(--cream)] text-xs font-display font-600 tracking-wide">App</span>
+              <span class="px-3 py-1 bg-[rgba(255,255,255,0.08)] text-[var(--cream)] text-xs font-display font-600 tracking-wide">3D</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 3 — Small -->
+      <div class="md:col-span-5 group reveal" style="transition-delay: 0.15s;">
+        <div class="fold-corner bg-[var(--card)] overflow-hidden relative h-full" data-hover>
+          <div class="overflow-hidden">
+            <img src="https://picsum.photos/seed/notai3/600/500.jpg" alt="Terrafold architecture project" class="w-full h-[280px] md:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105 mask-reveal" loading="lazy">
+          </div>
+          <div class="p-6 md:p-8">
+            <div class="flex items-start justify-between mb-3">
+              <h3 class="font-display font-700 text-xl md:text-2xl">Terrafold</h3>
+              <span class="text-[var(--accent)] text-xl group-hover:rotate-45 transition-transform duration-300"><i class="fa-solid fa-arrow-up-right"></i></span>
+            </div>
+            <p class="text-[var(--muted)] text-sm">Architectural portfolio where the structure IS the story. Concrete and code.</p>
+            <div class="flex gap-2 mt-4 flex-wrap">
+              <span class="px-3 py-1 bg-[var(--cream)] text-xs font-display font-600 tracking-wide">Web</span>
+              <span class="px-3 py-1 bg-[var(--cream)] text-xs font-display font-600 tracking-wide">CMS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 4 — Large -->
+      <div class="md:col-span-7 group reveal" style="transition-delay: 0.25s;">
+        <div class="fold-corner bg-[var(--green)] overflow-hidden relative" data-hover>
+          <div class="overflow-hidden">
+            <img src="https://picsum.photos/seed/notai4/800/550.jpg" alt="Ritual skincare project" class="w-full h-[280px] md:h-[400px] object-cover transition-transform duration-700 group-hover:scale-105 mask-reveal opacity-70" loading="lazy">
+          </div>
+          <div class="p-6 md:p-8">
+            <div class="flex items-start justify-between mb-3">
+              <h3 class="font-display font-700 text-xl md:text-2xl text-[var(--cream)]">Ritual Skincare</h3>
+              <span class="text-[var(--accent)] text-xl group-hover:rotate-45 transition-transform duration-300"><i class="fa-solid fa-arrow-up-right"></i></span>
+            </div>
+            <p class="text-[rgba(255,255,255,0.6)] text-sm">E-commerce that feels like a morning routine. Slow, intentional, alive.</p>
+            <div class="flex gap-2 mt-4 flex-wrap">
+              <span class="px-3 py-1 bg-[rgba(255,255,255,0.1)] text-[var(--cream)] text-xs font-display font-600 tracking-wide">E-comm</span>
+              <span class="px-3 py-1 bg-[rgba(255,255,255,0.1)] text-[var(--cream)] text-xs font-display font-600 tracking-wide">Brand</span>
+              <span class="px-3 py-1 bg-[rgba(255,255,255,0.1)] text-[var(--cream)] text-xs font-display font-600 tracking-wide">Packaging</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT SECTION -->
+<section id="about" class="py-24 md:py-36 px-6 md:px-10 bg-[var(--dark)] relative overflow-hidden">
+  <!-- Decorative blob -->
+  <div class="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-[var(--accent)] opacity-[0.04] blob"></div>
+
+  <div class="max-w-7xl mx-auto relative z-10">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16">
+      <!-- Left -->
+      <div class="md:col-span-5">
+        <h2 class="font-display font-800 text-5xl md:text-7xl tracking-tight text-[var(--cream)] reveal-left">
+          Real<br>people<span class="text-[var(--accent)]">,</span><br>real<br>pixels<span class="text-[var(--accent)]">.</span>
+        </h2>
+      </div>
+      <!-- Right -->
+      <div class="md:col-span-7 flex flex-col justify-center gap-8">
+        <p class="text-[rgba(255,255,255,0.6)] text-lg leading-relaxed reveal-right" style="transition-delay: 0.15s;">
+          We're a 6-person studio in Copenhagen that got tired of every website looking like it was assembled from the same template landfill. So we started making things that <span class="text-[var(--cream)] font-medium">actually feel different</span>.
+        </p>
+        <p class="text-[rgba(255,255,255,0.6)] text-lg leading-relaxed reveal-right" style="transition-delay: 0.25s;">
+          Every decision is intentional — from the type scale to the micro-interactions to the way a page breathes when you scroll. No AI wrote this. No AI designed this. And honestly? <span class="hand-underline text-[var(--cream)] font-medium">You can tell.</span>
+        </p>
+
+        <!-- Sticky note -->
+        <div class="sticky-note max-w-sm reveal-right" style="transition-delay: 0.4s;">
+          "The best interfaces feel like they were made by someone who cared. Not generated by someone who prompted." — Us, just now.
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-3 gap-6 mt-4">
+          <div class="reveal-right" style="transition-delay: 0.5s;">
+            <div class="font-display font-800 text-4xl md:text-5xl text-[var(--cream)]">
+              <span class="ticker-num" data-target="47">0</span>+
+            </div>
+            <span class="text-[var(--muted)] text-xs tracking-wider uppercase font-display mt-1 block">Projects shipped</span>
+          </div>
+          <div class="reveal-right" style="transition-delay: 0.6s;">
+            <div class="font-display font-800 text-4xl md:text-5xl text-[var(--cream)]">
+              <span class="ticker-num" data-target="6">0</span>
+            </div>
+            <span class="text-[var(--muted)] text-xs tracking-wider uppercase font-display mt-1 block">Real humans</span>
+          </div>
+          <div class="reveal-right" style="transition-delay: 0.7s;">
+            <div class="font-display font-800 text-4xl md:text-5xl text-[var(--accent)]">
+              <span class="ticker-num" data-target="0">0</span>
+            </div>
+            <span class="text-[var(--muted)] text-xs tracking-wider uppercase font-display mt-1 block">AI generated</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS SECTION -->
+<section id="process" class="py-24 md:py-36 px-6 md:px-10 relative">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-20">
+      <h2 class="font-display font-800 text-5xl md:text-7xl tracking-tight reveal">
+        How we <span class="text-[var(--accent)]">work</span>
+      </h2>
+      <p class="text-[var(--muted)] mt-4 max-w-md mx-auto reveal" style="transition-delay: 0.15s;">
+        No wizards. No pipelines. Just humans making decisions and standing by them.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Step 1 -->
+      <div class="reveal" style="transition-delay: 0.1s;">
+        <div class="bg-[var(--card)] p-8 relative group hover:bg-[var(--dark)] transition-colors duration-500 h-full" data-hover>
+          <span class="font-display font-800 text-6xl text-[var(--border)] group-hover:text-[rgba(255,255,255,0.1)] transition-colors duration-500">01</span>
+          <h3 class="font-display font-700 text-xl mt-4 mb-3 group-hover:text-[var(--cream)] transition-colors duration-500">Listen</h3>
+          <p class="text-[var(--muted)] text-sm leading-relaxed group-hover:text-[rgba(255,255,255,0.5)] transition-colors duration-500">
+            We actually talk to you. Not a brief form. A conversation. What keeps you up at night, what you're pretending is fine.
+          </p>
+          <div class="absolute bottom-4 right-4 w-8 h-8 border border-[var(--border)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <i class="fa-solid fa-arrow-right text-[var(--accent)] text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="reveal" style="transition-delay: 0.2s;">
+        <div class="bg-[var(--card)] p-8 relative group hover:bg-[var(--dark)] transition-colors duration-500 h-full" data-hover>
+          <span class="font-display font-800 text-6xl text-[var(--border)] group-hover:text-[rgba(255,255,255,0.1)] transition-colors duration-500">02</span>
+          <h3 class="font-display font-700 text-xl mt-4 mb-3 group-hover:text-[var(--cream)] transition-colors duration-500">Sketch</h3>
+          <p class="text-[var(--muted)] text-sm leading-relaxed group-hover:text-[rgba(255,255,255,0.5)] transition-colors duration-500">
+            Pen and paper first. Ugly fast iterations. We throw away more ideas than most studios ever have.
+          </p>
+          <div class="absolute bottom-4 right-4 w-8 h-8 border border-[var(--border)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <i class="fa-solid fa-arrow-right text-[var(--accent)] text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="reveal" style="transition-delay: 0.3s;">
+        <div class="bg-[var(--card)] p-8 relative group hover:bg-[var(--dark)] transition-colors duration-500 h-full" data-hover>
+          <span class="font-display font-800 text-6xl text-[var(--border)] group-hover:text-[rgba(255,255,255,0.1)] transition-colors duration-500">03</span>
+          <h3 class="font-display font-700 text-xl mt-4 mb-3 group-hover:text-[var(--cream)] transition-colors duration-500">Build</h3>
+          <p class="text-[var(--muted)] text-sm leading-relaxed group-hover:text-[rgba(255,255,255,0.5)] transition-colors duration-500">
+            Design and code happen together. Not a handoff — a conversation. Every pixel is debated. Every animation is earned.
+          </p>
+          <div class="absolute bottom-4 right-4 w-8 h-8 border border-[var(--border)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <i class="fa-solid fa-arrow-right text-[var(--accent)] text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="reveal" style="transition-delay: 0.4s;">
+        <div class="bg-[var(--accent)] p-8 relative group hover:bg-[var(--dark)] transition-colors duration-500 h-full" data-hover>
+          <span class="font-display font-800 text-6xl text-[rgba(255,255,255,0.2)] group-hover:text-[rgba(255,255,255,0.1)] transition-colors duration-500">04</span>
+          <h3 class="font-display font-700 text-xl mt-4 mb-3 text-[var(--cream)]">Ship</h3>
+          <p class="text-[rgba(255,255,255,0.7)] text-sm leading-relaxed group-hover:text-[rgba(255,255,255,0.5)] transition-colors duration-500">
+            We don't call it done until it feels done. Not when the timeline says so. When the feeling says so.
+          </p>
+          <div class="absolute bottom-4 right-4 w-8 h-8 border border-[rgba(255,255,255,0.3)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <i class="fa-solid fa-arrow-right text-[var(--cream)] text-xs"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BIG STATEMENT -->
+<section class="py-20 md:py-28 px-6 md:px-10 overflow-hidden">
+  <div class="max-w-7xl mx-auto">
+    <p class="font-display font-800 tracking-tight leading-[0.95] big-text reveal" style="font-size: clamp(32px, 7vw, 110px);">
+      If your website<br>
+      could've been <span class="text-[var(--muted)]">generated</span><br>
+      by a <span class="hand-underline">prompt</span>,<br>
+      <span class="text-[var(--accent)]">why bother?</span>
+    </p>
+  </div>
+</section>
+
+<hr class="doodle-hr max-w-7xl mx-auto">
+
+<!-- CONTACT SECTION -->
+<section id="contact" class="py-24 md:py-36 px-6 md:px-10">
+  <div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16">
+      <div class="md:col-span-6">
+        <h2 class="font-display font-800 text-5xl md:text-7xl tracking-tight reveal-left">
+          Let's make<br>something<br><span class="text-[var(--accent)]">unmistakable</span><span class="text-[var(--accent)]">.</span>
+        </h2>
+        <p class="text-[var(--muted)] mt-6 max-w-sm leading-relaxed reveal-left" style="transition-delay: 0.15s;">
+          Drop us a line. We'll actually read it. A human will respond within 24 hours, not an auto-reply bot.
+        </p>
+        <div class="mt-8 flex flex-col gap-3 reveal-left" style="transition-delay: 0.25s;">
+          <a href="mailto:hello@roughstudio.dk" class="text-[var(--dark)] font-display font-600 text-lg hover:text-[var(--accent)] transition-colors inline-flex items-center gap-2" data-hover>
+            hello@roughstudio.dk <i class="fa-solid fa-arrow-right text-sm"></i>
+          </a>
+          <a href="#" class="text-[var(--muted)] text-sm hover:text-[var(--dark)] transition-colors inline-flex items-center gap-2" data-hover>
+            <i class="fa-brands fa-instagram"></i> @roughstudio
+          </a>
+          <a href="#" class="text-[var(--muted)] text-sm hover:text-[var(--dark)] transition-colors inline-flex items-center gap-2" data-hover>
+            <i class="fa-brands fa-twitter"></i> @roughstudio
+          </a>
+        </div>
+      </div>
+
+      <!-- Contact Form -->
+      <div class="md:col-span-6 reveal-right" style="transition-delay: 0.2s;">
+        <form id="contactForm" class="flex flex-col gap-5" novalidate>
+          <div>
+            <label class="block text-xs font-display font-600 tracking-wider uppercase text-[var(--muted)] mb-2" for="name">Name</label>
+            <input type="text" id="name" required class="w-full bg-transparent border-b-2 border-[var(--border)] py-3 text-base font-medium focus:outline-none focus:border-[var(--accent)] transition-colors" placeholder="Your actual name" data-hover>
+          </div>
+          <div>
+            <label class="block text-xs font-display font-600 tracking-wider uppercase text-[var(--muted)] mb-2" for="email">Email</label>
+            <input type="email" id="email" required class="w-full bg-transparent border-b-2 border-[var(--border)] py-3 text-base font-medium focus:outline-none focus:border-[var(--accent)] transition-colors" placeholder="you@company.com" data-hover>
+          </div>
+          <div>
+            <label class="block text-xs font-display font-600 tracking-wider uppercase text-[var(--muted)] mb-2" for="message">Tell us</label>
+            <textarea id="message" rows="4" required class="w-full bg-transparent border-b-2 border-[var(--border)] py-3 text-base font-medium focus:outline-none focus:border-[var(--accent)] transition-colors resize-none" placeholder="What are you building? What's the dream?" data-hover></textarea>
+          </div>
+          <div class="mt-2">
+            <button type="submit" class="magnetic-btn" data-hover data-magnetic>
+              <div class="btn-bg"></div>
+              <span>Send it</span>
+              <span><i class="fa-solid fa-paper-plane"></i></span>
+            </button>
+          </div>
+          <p class="text-[var(--muted)] text-xs mt-1" id="formMsg"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="bg-[var(--dark)] py-12 px-6 md:px-10">
+  <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div>
+      <span class="font-display font-800 text-2xl text-[var(--cream)]">RS<span class="text-[var(--accent)]">.</span></span>
+      <p class="text-[var(--muted)] text-xs mt-1">Copenhagen, Denmark</p>
+    </div>
+    <p class="text-[var(--muted)] text-xs text-right">
+      No AI was used in the making of this website.<br>
+      &copy; 2024 Rough Studio. All rights reserved.
+    </p>
+  </div>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // === CUSTOM CURSOR ===
+  const dot = document.getElementById('cursorDot');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX - 4 + 'px';
+    dot.style.top = mouseY - 4 + 'px';
+  });
+
+  function animateRing() {
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+    ring.style.left = ringX - 20 + 'px';
+    ring.style.top = ringY - 20 + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  // Hover effect on interactive elements
+  document.querySelectorAll('[data-hover]').forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+  });
+
+  // === MAGNETIC BUTTONS ===
+  document.querySelectorAll('[data-magnetic]').forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      btn.style.transform = `translate(${x * 0.25}px, ${y * 0.25}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translate(0, 0)';
+    });
+  });
+
+  // === SCROLL PROGRESS ===
+  const scrollBar = document.getElementById('scrollProgress');
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = docHeight > 0 ? scrollTop / docHeight : 0;
+    scrollBar.style.transform = `scaleX(${progress})`;
+  });
+
+  // === SCROLL REVEAL ===
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .strike-through, .doodle-path, .mask-reveal').forEach(el => {
+    revealObserver.observe(el);
+  });
+
+  // === TICKER NUMBERS ===
+  const tickerObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = parseInt(el.dataset.target);
+        let current = 0;
+        const duration = 1500;
+        const start = performance.now();
+
+        function update(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          current = Math.round(eased * target);
+          el.textContent = current;
+          if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+        tickerObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.ticker-num').forEach(el => tickerObserver.observe(el));
+
+  // === MOBILE MENU ===
+  const menuToggle = document.getElementById('menuToggle');
+  const mobileMenu = document.getElementById('mobileMenu');
+  let menuOpen = false;
+
+  menuToggle.addEventListener('click', () => {
+    menuOpen = !menuOpen;
+    if (menuOpen) {
+      mobileMenu.style.transform = 'translateX(0)';
+      menuToggle.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    } else {
+      mobileMenu.style.transform = 'translateX(100%)';
+      menuToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+    }
+  });
+
+  document.querySelectorAll('.menu-link').forEach(link => {
+    link.addEventListener('click', () => {
+      menuOpen = false;
+      mobileMenu.style.transform = 'translateX(100%)';
+      menuToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+    });
+  });
+
+  // === HERO BUTTON SCROLL ===
+  document.getElementById('heroBtn').addEventListener('click', () => {
+    document.getElementById('work').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // === TOAST ===
+  const toastEl = document.getElementById('toast');
+  let toastTimeout = null;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toastEl.classList.remove('show'), 3000);
+  }
+
+  // === CONTACT FORM ===
+  document.getElementById('contactForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const msgEl = document.getElementById('formMsg');
+
+    if (!name) {
+      msgEl.textContent = 'We need your name to make this personal.';
+      msgEl.style.color = 'var(--accent)';
+      return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      msgEl.textContent = 'That email doesn\'t look right.';
+      msgEl.style.color = 'var(--accent)';
+      return;
+    }
+    if (!message) {
+      msgEl.textContent = 'Say something. Anything. We\'re listening.';
+      msgEl.style.color = 'var(--accent)';
+      return;
+    }
+
+    msgEl.textContent = '';
+    showToast('Message sent! A real human will reply soon.');
+    e.target.reset();
+  });
+
+  // === NAV BACKGROUND ON SCROLL ===
+  const nav = document.getElementById('nav');
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    if (scrollY > 100) {
+      nav.style.backdropFilter = 'blur(12px)';
+    } else {
+      nav.style.backdropFilter = 'none';
+    }
+    lastScroll = scrollY;
+  });
+
+  // === PARALLAX BLOBS ON MOUSE ===
+  document.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    document.querySelectorAll('.blob').forEach((blob, i) => {
+      const factor = (i + 1) * 12;
+      blob.style.transform = `translate(${x * factor}px, ${y * factor}px)`;
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

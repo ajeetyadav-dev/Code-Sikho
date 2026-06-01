@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Smoothest Hover Effect On The Internet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                        body: ['"DM Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #0A0A0A;
+            --card: #131313;
+            --accent: #F0C040;
+            --accent-dim: rgba(240,192,64,0.08);
+            --accent-mid: rgba(240,192,64,0.2);
+            --fg: #E8E6E3;
+            --muted: #5A5754;
+            --border: rgba(255,255,255,0.06);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* Vignette */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 9998;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%);
+        }
+        /* Grain */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 9997;
+            pointer-events: none;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 200px 200px;
+        }
+
+        /* Custom cursor */
+        .cur-dot {
+            position: fixed; width: 6px; height: 6px;
+            background: var(--accent); border-radius: 50%;
+            pointer-events: none; z-index: 10001;
+            will-change: transform;
+            mix-blend-mode: difference;
+        }
+        .cur-ring {
+            position: fixed; width: 40px; height: 40px;
+            border: 1px solid rgba(240,192,64,0.35);
+            border-radius: 50%; pointer-events: none; z-index: 10000;
+            will-change: transform, width, height, border-color;
+            transition: width 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+                        height 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+                        border-color 0.35s,
+                        background 0.35s;
+        }
+        .cur-ring.hovering {
+            width: 64px; height: 64px;
+            border-color: rgba(240,192,64,0.15);
+            background: rgba(240,192,64,0.04);
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            position: fixed; top: 0; left: 0; height: 2px; z-index: 200;
+            background: var(--accent); transform-origin: left;
+            transform: scaleX(0); will-change: transform;
+        }
+
+        /* Nav */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(10,10,10,0.7);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Hero shimmer text */
+        .hero-shimmer {
+            background: linear-gradient(
+                120deg,
+                var(--fg) 0%, var(--fg) 35%,
+                var(--accent) 48%, var(--fg) 55%, var(--fg) 100%
+            );
+            background-size: 250% 250%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            will-change: background-position;
+        }
+
+        /* Magnetic button */
+        .mag-btn {
+            position: relative;
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 18px 44px;
+            background: var(--accent);
+            color: #0A0A0A;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600; font-size: 15px;
+            border: none; border-radius: 60px;
+            cursor: none;
+            will-change: transform;
+        }
+        .mag-btn::before {
+            content: '';
+            position: absolute; inset: -6px;
+            border-radius: inherit;
+            border: 1px solid var(--accent);
+            opacity: 0; transform: scale(0.92);
+            transition: opacity 0.5s, transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+            pointer-events: none;
+        }
+        .mag-btn.near::before { opacity: 0.4; transform: scale(1); }
+        .mag-btn:hover::before { opacity: 0.6; transform: scale(1.04); }
+
+        /* Effect cards */
+        .fx-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px;
+            min-height: 380px;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            transition: opacity 0.5s cubic-bezier(0.25,0.46,0.45,0.94),
+                        border-color 0.4s;
+            will-change: transform;
+        }
+        .fx-card.dimmed { opacity: 0.35; }
+        .fx-card:hover { border-color: rgba(255,255,255,0.1); }
+        .fx-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px; font-weight: 500;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--muted); margin-bottom: auto;
+        }
+        .fx-hint {
+            font-size: 11px; color: var(--muted); opacity: 0.4;
+            margin-top: auto; padding-top: 20px;
+        }
+
+        /* 3D Tilt */
+        .tilt-inner {
+            width: 100%; flex: 1;
+            border-radius: 12px; overflow: hidden;
+            position: relative;
+            will-change: transform;
+            transform-style: preserve-3d;
+        }
+        .tilt-inner img {
+            width: 100%; height: 100%; object-fit: cover;
+            display: block;
+        }
+        .tilt-glare {
+            position: absolute; inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s;
+            mix-blend-mode: overlay;
+        }
+
+        /* Elastic button */
+        .elastic-btn {
+            padding: 16px 40px;
+            background: transparent;
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500; font-size: 15px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            cursor: none;
+            will-change: transform;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .elastic-btn:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* Border trace */
+        @property --trace-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+        .border-trace-inner {
+            position: absolute; inset: -1px;
+            border-radius: 21px;
+            background: conic-gradient(
+                from var(--trace-angle),
+                transparent 0%,
+                transparent 55%,
+                var(--accent) 78%,
+                transparent 100%
+            );
+            z-index: -1; opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .fx-card.trace-active .border-trace-inner {
+            opacity: 1;
+            animation: traceSpin 2.5s linear infinite;
+        }
+        @keyframes traceSpin {
+            to { --trace-angle: 360deg; }
+        }
+        /* Fallback for no @property support */
+        @supports not (background: conic-gradient(from 0deg, red, blue)) {
+            .border-trace-inner { display: none; }
+        }
+
+        /* Text cascade */
+        .cascade-text {
+            display: flex; flex-wrap: wrap;
+            align-items: baseline; gap: 0;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+            font-weight: 600; line-height: 1.3;
+            letter-spacing: -0.02em;
+        }
+        .cascade-char {
+            display: inline-block;
+            transform: translateY(110%);
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94),
+                        opacity 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+        }
+        .cascade-text.revealed .cascade-char {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Spotlight reveal */
+        .spotlight-mask {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 36px;
+            -webkit-mask-image: radial-gradient(circle 100px at var(--sx, 50%) var(--sy, 50%), black 0%, transparent 100%);
+            mask-image: radial-gradient(circle 100px at var(--sx, 50%) var(--sy, 50%), black 0%, transparent 100%);
+            will-change: mask-image;
+            pointer-events: none;
+        }
+        .spotlight-poem {
+            font-family: 'Space Grotesk', sans-serif;
+            text-align: center; line-height: 1.6;
+            color: var(--accent);
+        }
+        .spotlight-poem .line1 { font-size: 1.6rem; font-weight: 300; }
+        .spotlight-poem .line2 { font-size: 1.1rem; font-weight: 400; margin-top: 8px; color: var(--fg); opacity: 0.7; }
+        .spotlight-poem .line3 { font-size: 0.85rem; font-weight: 300; margin-top: 12px; color: var(--muted); font-style: italic; }
+
+        /* Scroll reveal */
+        .sr { opacity: 0; transform: translateY(40px); transition: opacity 0.8s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94); }
+        .sr.vis { opacity: 1; transform: translateY(0); }
+        .sr-d1 { transition-delay: 0.06s; }
+        .sr-d2 { transition-delay: 0.14s; }
+        .sr-d3 { transition-delay: 0.24s; }
+        .sr-d4 { transition-delay: 0.36s; }
+        .sr-d5 { transition-delay: 0.50s; }
+        .sr-d6 { transition-delay: 0.66s; }
+
+        /* Scroll hint */
+        @keyframes scrollPulse {
+            0%, 100% { opacity: 0.25; transform: translateY(0); }
+            50% { opacity: 0.6; transform: translateY(5px); }
+        }
+        .scroll-hint { animation: scrollPulse 2.4s ease-in-out infinite; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 2px; }
+
+        /* Focus */
+        *:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .sr { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .cascade-char { transform: none !important; opacity: 1 !important; transition: none !important; }
+            .cur-dot, .cur-ring { display: none !important; }
+            body { cursor: auto; }
+            .scroll-hint { animation: none; }
+            .fx-card.trace-active .border-trace-inner { animation: none; }
+        }
+        @media (pointer: coarse) {
+            .cur-dot, .cur-ring { display: none !important; }
+            body, button, a { cursor: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Custom cursor -->
+    <div class="cur-dot" id="curDot" aria-hidden="true"></div>
+    <div class="cur-ring" id="curRing" aria-hidden="true"></div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar" id="progressBar" aria-hidden="true"></div>
+
+    <!-- Nav -->
+    <nav role="navigation" aria-label="Main navigation">
+        <div class="max-w-6xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
+            <a href="#" class="font-display font-bold text-sm tracking-tight" style="color: var(--fg);">
+                <i class="fa-solid fa-circle text-[5px] mr-2 align-middle" style="color: var(--accent);"></i>lumin
+            </a>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#collection" class="text-xs font-medium hover:text-white transition-colors" style="color: var(--muted); cursor: pointer;">Collection</a>
+                <a href="#philosophy" class="text-xs font-medium hover:text-white transition-colors" style="color: var(--muted); cursor: pointer;">Philosophy</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+
+        <!-- ═══ HERO ═══ -->
+        <section class="min-h-screen flex flex-col items-center justify-center px-6 text-center relative">
+            <div class="max-w-4xl mx-auto">
+                <p class="sr font-display text-xs tracking-[0.2em] uppercase mb-12" style="color: var(--accent);">
+                    Interaction Design
+                </p>
+                <h1 class="font-display font-bold tracking-tight leading-[0.92] mb-10" style="font-size: clamp(2.6rem, 8.5vw, 6.5rem);">
+                    <span class="sr sr-d1 hero-shimmer block" id="heroLine1">The Smoothest</span>
+                    <span class="sr sr-d2 hero-shimmer block">Hover Effect</span>
+                    <span class="sr sr-d3 block font-light" style="color: var(--muted);">On The Internet</span>
+                </h1>
+                <p class="sr sr-d4 text-sm max-w-sm mx-auto leading-relaxed mb-14" style="color: var(--muted);">
+                    Six techniques driven by spring physics — because CSS transitions can only take you so far.
+                </p>
+                <div class="sr sr-d5">
+                    <button class="mag-btn" id="heroMagBtn">
+                        Feel It <i class="fa-solid fa-arrow-down text-xs"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 scroll-hint" aria-hidden="true">
+                <span class="text-[10px] font-display tracking-[0.2em] uppercase" style="color: var(--muted);">Scroll</span>
+                <div style="width: 1px; height: 24px; background: linear-gradient(to bottom, var(--muted), transparent);"></div>
+            </div>
+        </section>
+
+        <!-- ═══ COLLECTION ═══ -->
+        <section id="collection" class="py-28 md:py-40 px-6">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16 md:mb-24">
+                    <p class="sr font-display text-xs tracking-[0.14em] uppercase mb-4" style="color: var(--accent);">The Collection</p>
+                    <h2 class="sr sr-d1 font-display font-bold tracking-tight" style="font-size: clamp(1.8rem, 4.5vw, 3rem); line-height: 1.1;">
+                        Six techniques. One philosophy.
+                    </h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5" id="fxGrid">
+
+                    <!-- 1: 3D Perspective Tilt -->
+                    <div class="fx-card sr sr-d1" data-fx="tilt">
+                        <span class="fx-label">01 — Perspective Tilt</span>
+                        <div class="tilt-inner" id="tiltCard">
+                            <img src="https://picsum.photos/seed/smooth-tilt/600/440.jpg" alt="Tilt demo" loading="lazy">
+                            <div class="tilt-glare" id="tiltGlare"></div>
+                        </div>
+                        <span class="fx-hint">Move cursor over the image</span>
+                    </div>
+
+                    <!-- 2: Magnetic Pull -->
+                    <div class="fx-card sr sr-d2" data-fx="magnetic">
+                        <span class="fx-label">02 — Magnetic Pull</span>
+                        <div class="flex-1 flex items-center justify-center">
+                            <button class="mag-btn" id="magCardBtn">
+                                Come Closer
+                            </button>
+                        </div>
+                        <span class="fx-hint">Approach the button slowly</span>
+                    </div>
+
+                    <!-- 3: Elastic Bounce -->
+                    <div class="fx-card sr sr-d3" data-fx="elastic">
+                        <span class="fx-label">03 — Elastic Bounce</span>
+                        <div class="flex-1 flex flex-col items-center justify-center gap-5">
+                            <button class="elastic-btn" id="elasticBtn">
+                                Hover Me
+                            </button>
+                            <p class="text-xs text-center" style="color: var(--muted); opacity: 0.5;">Watch the overshoot</p>
+                        </div>
+                        <span class="fx-hint">Spring physics, not CSS transition</span>
+                    </div>
+
+                    <!-- 4: Border Trace -->
+                    <div class="fx-card sr sr-d4" data-fx="trace">
+                        <div class="border-trace-inner"></div>
+                        <span class="fx-label">04 — Border Trace</span>
+                        <div class="flex-1 flex flex-col items-center justify-center text-center">
+                            <i class="fa-regular fa-gem text-4xl mb-5" style="color: var(--accent); opacity: 0.6;"></i>
+                            <p class="font-display font-medium text-lg mb-2">Light Traces the Edge</p>
+                            <p class="text-xs leading-relaxed max-w-[240px]" style="color: var(--muted);">
+                                A conic gradient rotates around the border, tracing a path of light. Powered by CSS @property.
+                            </p>
+                        </div>
+                        <span class="fx-hint">Hover to activate the trace</span>
+                    </div>
+
+                    <!-- 5: Text Cascade -->
+                    <div class="fx-card sr sr-d5" data-fx="cascade">
+                        <span class="fx-label">05 — Text Cascade</span>
+                        <div class="flex-1 flex items-center justify-center overflow-hidden">
+                            <div class="cascade-text" id="cascadeText">
+                                Every Letter Arrives on Time
+                            </div>
+                        </div>
+                        <span class="fx-hint">Hover to trigger the cascade</span>
+                    </div>
+
+                    <!-- 6: Spotlight Reveal -->
+                    <div class="fx-card sr sr-d6" data-fx="spotlight">
+                        <span class="fx-label" style="position: relative; z-index: 2;">06 — Spotlight Reveal</span>
+                        <div class="flex-1 relative">
+                            <div class="spotlight-mask" id="spotlightMask">
+                                <div class="spotlight-poem">
+                                    <p class="line1">every pixel<br>has somewhere to be</p>
+                                    <p class="line2">and time to get there</p>
+                                    <p class="line3">— motion with patience</p>
+                                </div>
+                            </div>
+                            <p class="absolute inset-0 flex items-center justify-center text-xs" style="color: var(--muted); opacity: 0.25;">
+                                <i class="fa-solid fa-flashlight mr-2" style="font-size: 10px;"></i>Search for hidden text
+                            </p>
+                        </div>
+                        <span class="fx-hint" style="position: relative; z-index: 2;">Move your cursor to reveal</span>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ PHILOSOPHY ═══ -->
+        <section id="philosophy" class="py-36 md:py-52 px-6">
+            <div class="max-w-3xl mx-auto">
+                <div class="sr text-center mb-28">
+                    <p class="font-display text-xs tracking-[0.14em] uppercase mb-4" style="color: var(--accent);">The Secret</p>
+                    <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(2rem, 5.5vw, 3.8rem); line-height: 1.1;">
+                        Why these feel different
+                    </h2>
+                </div>
+
+                <div class="space-y-20">
+                    <div class="sr sr-d1">
+                        <p class="font-display text-xs tracking-[0.1em] uppercase mb-4" style="color: var(--accent);">Not transitions</p>
+                        <p class="font-display font-light text-xl md:text-2xl leading-relaxed" style="color: var(--muted);">
+                            CSS transitions move between two states. Springs move toward a target — with velocity, momentum, and natural deceleration. The difference is the difference between a sliding door and a swinging one.
+                        </p>
+                    </div>
+                    <div class="sr sr-d2">
+                        <p class="font-display text-xs tracking-[0.1em] uppercase mb-4" style="color: var(--accent);">Not animation</p>
+                        <p class="font-display font-light text-xl md:text-2xl leading-relaxed" style="color: var(--muted);">
+                            Keyframe animations follow a timeline. Springs follow physics. If you interrupt a transition halfway, it jankily reverses. Interrupt a spring, and it simply redirects — because it was never following a path, it was chasing a target.
+                        </p>
+                    </div>
+                    <div class="sr sr-d3">
+                        <p class="font-display text-xs tracking-[0.1em] uppercase mb-4" style="color: var(--accent);">Not preset</p>
+                        <p class="font-display font-light text-xl md:text-2xl leading-relaxed" style="color: var(--muted);">
+                            Every cubic-bezier curve is a guess at what "smooth" means. A spring doesn't guess — it computes. Stiffness controls speed. Damping controls bounce. Two numbers that describe every motion you've ever felt in your hand.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ CLOSING ═══ -->
+        <section class="py-36 md:py-52 px-6" style="border-top: 1px solid var(--border);">
+            <div class="max-w-3xl mx-auto text-center">
+                <p class="sr font-display font-bold tracking-tight" style="font-size: clamp(2rem, 6vw, 4rem); line-height: 1.1;">
+                    Physics doesn't lie.
+                </p>
+            </div>
+        </section>
+        <section class="py-36 md:py-52 px-6" style="background: #f5f5f7; color: #1d1d1f;">
+            <div class="max-w-3xl mx-auto text-center">
+                <p class="sr font-display font-light tracking-tight" style="font-size: clamp(2rem, 6vw, 4rem); line-height: 1.1; color: #86868b;">
+                    Presets do.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-6 py-10" style="border-top: 1px solid var(--border);">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <p class="text-xs" style="color: var(--muted); opacity: 0.5;">
+                Spring physics: velocity += (target - current) × stiffness; velocity *= damping; current += velocity
+            </p>
+            <p class="text-xs" style="color: var(--muted); opacity: 0.3;">
+                That's the whole secret.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // ── Spring Physics Engine ──────────────────────────
+        class Spring {
+            constructor(stiffness = 0.15, damping = 0.8) {
+                this.stiffness = stiffness;
+                this.damping = damping;
+                this.value = 0;
+                this.target = 0;
+                this.velocity = 0;
+            }
+            update() {
+                const force = (this.target - this.value) * this.stiffness;
+                this.velocity = (this.velocity + force) * this.damping;
+                this.value += this.velocity;
+                // Stop tiny oscillations
+                if (Math.abs(this.velocity) < 0.0001 && Math.abs(this.target - this.value) < 0.0001) {
+                    this.value = this.target;
+                    this.velocity = 0;
+                }
+                return this.value;
+            }
+        }
+
+        // ── State ─────────────────────────────────────────
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let isHoveringInteractive = false;
+
+        // Cursor springs (dot: snappy, ring: smooth)
+        const dotX = new Spring(0.28, 0.82);
+        const dotY = new Spring(0.28, 0.82);
+        const ringX = new Spring(0.14, 0.78);
+        const ringY = new Spring(0.14, 0.78);
+
+        // Hero magnetic button springs
+        const heroMagX = new Spring(0.12, 0.75);
+        const heroMagY = new Spring(0.12, 0.75);
+
+        // Card magnetic button springs
+        const cardMagX = new Spring(0.12, 0.75);
+        const cardMagY = new Spring(0.12, 0.75);
+
+        // Tilt springs
+        const tiltRX = new Spring(0.14, 0.82);
+        const tiltRY = new Spring(0.14, 0.82);
+
+        // Elastic spring
+        const elasticS = new Spring(0.16, 0.62); // Low damping = bouncy
+
+        // ── DOM References ────────────────────────────────
+        const curDot = document.getElementById('curDot');
+        const curRing = document.getElementById('curRing');
+        const progressBar = document.getElementById('progressBar');
+        const heroLine1 = document.getElementById('heroLine1');
+        const heroMagBtn = document.getElementById('heroMagBtn');
+        const magCardBtn = document.getElementById('magCardBtn');
+        const tiltCard = document.getElementById('tiltCard');
+        const tiltGlare = document.getElementById('tiltGlare');
+        const elasticBtn = document.getElementById('elasticBtn');
+        const cascadeText = document.getElementById('cascadeText');
+        const spotlightMask = document.getElementById('spotlightMask');
+        const fxGrid = document.getElementById('fxGrid');
+        const fxCards = document.querySelectorAll('.fx-card');
+        const traceCard = document.querySelector('[data-fx="trace"]');
+
+        // ── Mouse / Touch Tracking ────────────────────────
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        document.addEventListener('touchmove', (e) => {
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchstart', (e) => {
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        }, { passive: true });
+
+        // Track hovering state for cursor ring
+        const interactiveEls = document.querySelectorAll('button, a, .fx-card');
+        interactiveEls.forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                isHoveringInteractive = true;
+                curRing.classList.add('hovering');
+            });
+            el.addEventListener('mouseleave', () => {
+                isHoveringInteractive = false;
+                curRing.classList.remove('hovering');
+            });
+        });
+
+        // ── Card Dimming ──────────────────────────────────
+        fxCards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                fxCards.forEach(c => { if (c !== card) c.classList.add('dimmed'); });
+            });
+            card.addEventListener('mouseleave', () => {
+                fxCards.forEach(c => c.classList.remove('dimmed'));
+            });
+        });
+
+        // ── Hero Shimmer ──────────────────────────────────
+        function updateHeroShimmer() {
+            const px = (mouseX / window.innerWidth) * 100;
+            const py = (mouseY / window.innerHeight) * 100;
+            const shimmerEls = document.querySelectorAll('.hero-shimmer');
+            shimmerEls.forEach(el => {
+                el.style.backgroundPosition = `${px}% ${py}%`;
+            });
+        }
+
+        // ── Magnetic: Hero Button ─────────────────────────
+        const MAG_RADIUS = 130;
+        const MAG_DISPLACE = 20;
+
+        function updateHeroMagnetic() {
+            const rect = heroMagBtn.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const dx = mouseX - cx;
+            const dy = mouseY - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < MAG_RADIUS && dist > 0) {
+                const strength = (1 - dist / MAG_RADIUS) * MAG_DISPLACE;
+                const angle = Math.atan2(dy, dx);
+                heroMagX.target = Math.cos(angle) * strength;
+                heroMagY.target = Math.sin(angle) * strength;
+                heroMagBtn.classList.add('near');
+            } else {
+                heroMagX.target = 0;
+                heroMagY.target = 0;
+                heroMagBtn.classList.remove('near');
+            }
+        }
+
+        // ── Magnetic: Card Button ─────────────────────────
+        function updateCardMagnetic() {
+            const rect = magCardBtn.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const dx = mouseX - cx;
+            const dy = mouseY - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < MAG_RADIUS && dist > 0) {
+                const strength = (1 - dist / MAG_RADIUS) * MAG_DISPLACE;
+                const angle = Math.atan2(dy, dx);
+                cardMagX.target = Math.cos(angle) * strength;
+                cardMagY.target = Math.sin(angle) * strength;
+                magCardBtn.classList.add('near');
+            } else {
+                cardMagX.target = 0;
+                cardMagY.target = 0;
+                magCardBtn.classList.remove('near');
+            }
+        }
+
+        // ── 3D Tilt ──────────────────────────────────────
+        const TILT_MAX = 8; // degrees
+        let tiltActive = false;
+        let tiltLocalX = 0.5;
+        let tiltLocalY = 0.5;
+
+        tiltCard.addEventListener('mouseenter', () => { tiltActive = true; });
+        tiltCard.addEventListener('mouseleave', () => {
+            tiltActive = false;
+            tiltRX.target = 0;
+            tiltRY.target = 0;
+            tiltGlare.style.opacity = '0';
+        });
+        tiltCard.addEventListener('mousemove', (e) => {
+            const rect = tiltCard.getBoundingClientRect();
+            tiltLocalX = (e.clientX - rect.left) / rect.width;
+            tiltLocalY = (e.clientY - rect.top) / rect.height;
+            tiltRX.target = (tiltLocalY - 0.5) * -TILT_MAX * 2;
+            tiltRY.target = (tiltLocalX - 0.5) * TILT_MAX * 2;
+            tiltGlare.style.opacity = '1';
+            tiltGlare.style.background = `radial-gradient(circle at ${tiltLocalX * 100}% ${tiltLocalY * 100}%, rgba(255,255,255,0.18), transparent 55%)`;
+        });
+
+        // ── Elastic Bounce ────────────────────────────────
+        elasticBtn.addEventListener('mouseenter', () => {
+            elasticS.target = 1.08;
+        });
+        elasticBtn.addEventListener('mouseleave', () => {
+            elasticS.target = 1.0;
+        });
+
+        // ── Border Trace ──────────────────────────────────
+        traceCard.addEventListener('mouseenter', () => {
+            traceCard.classList.add('trace-active');
+        });
+        traceCard.addEventListener('mouseleave', () => {
+            traceCard.classList.remove('trace-active');
+        });
+
+        // ── Text Cascade ──────────────────────────────────
+        // Split text into characters
+        function splitIntoChars(el) {
+            const text = el.textContent.trim();
+            el.textContent = '';
+            let charIndex = 0;
+            text.split('').forEach((char) => {
+                const span = document.createElement('span');
+                span.className = 'cascade-char';
+                span.textContent = char === ' ' ? '\u00A0' : char;
+                span.style.transitionDelay = `${charIndex * 0.028}s`;
+                el.appendChild(span);
+                charIndex++;
+            });
+        }
+        splitIntoChars(cascadeText);
+
+        // Toggle cascade on hover
+        const cascadeCard = cascadeText.closest('.fx-card');
+        cascadeCard.addEventListener('mouseenter', () => {
+            cascadeText.classList.add('revealed');
+        });
+        cascadeCard.addEventListener('mouseleave', () => {
+            cascadeText.classList.remove('revealed');
+        });
+
+        // ── Spotlight Reveal ──────────────────────────────
+        const spotlightCard = spotlightMask.closest('.fx-card');
+        spotlightCard.addEventListener('mousemove', (e) => {
+            const rect = spotlightCard.getBoundingClientRect();
+            const lx = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+            const ly = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+            spotlightMask.style.setProperty('--sx', lx + '%');
+            spotlightMask.style.setProperty('--sy', ly + '%');
+        });
+
+        // ── Scroll Reveal ─────────────────────────────────
+        const srElements = document.querySelectorAll('.sr');
+        const srObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('vis');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+        srElements.forEach(el => srObserver.observe(el));
+
+        // ── Progress Bar ──────────────────────────────────
+        function updateProgress() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            if (docHeight <= 0) return;
+            progressBar.style.transform = `scaleX(${scrollTop / docHeight})`;
+        }
+
+        // ── Smooth scroll for nav links ───────────────────
+        document.querySelectorAll('nav a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // ── Cursor visibility on window edges ─────────────
+        document.addEventListener('mouseleave', () => {
+            curDot.style.opacity = '0';
+            curRing.style.opacity = '0';
+        });
+        document.addEventListener('mouseenter', () => {
+            curDot.style.opacity = '1';
+            curRing.style.opacity = '1';
+        });
+
+        // ── Main Animation Loop ───────────────────────────
+        function animate() {
+            // Update cursor springs
+            dotX.target = mouseX;
+            dotY.target = mouseY;
+            ringX.target = mouseX;
+            ringY.target = mouseY;
+            dotX.update();
+            dotY.update();
+            ringX.update();
+            ringY.update();
+
+            // Apply cursor transforms (translate so center is at mouse)
+            curDot.style.transform = `translate3d(${dotX.value - 3}px, ${dotY.value - 3}px, 0)`;
+            const ringSize = isHoveringInteractive ? 64 : 40;
+            curRing.style.transform = `translate3d(${ringX.value - ringSize / 2}px, ${ringY.value - ringSize / 2}px, 0)`;
+
+            // Hero magnetic
+            updateHeroMagnetic();
+            heroMagX.update();
+            heroMagY.update();
+            heroMagBtn.style.transform = `translate3d(${heroMagX.value}px, ${heroMagY.value}px, 0)`;
+
+            // Card magnetic
+            updateCardMagnetic();
+            cardMagX.update();
+            cardMagY.update();
+            magCardBtn.style.transform = `translate3d(${cardMagX.value}px, ${cardMagY.value}px, 0)`;
+
+            // Tilt
+            tiltRX.update();
+            tiltRY.update();
+            tiltCard.style.transform = `perspective(800px) rotateX(${tiltRX.value}deg) rotateY(${tiltRY.value}deg) scale3d(1.02, 1.02, 1.02)`;
+
+            // Elastic
+            elasticS.update();
+            elasticBtn.style.transform = `scale(${elasticS.value})`;
+
+            // Hero shimmer
+            updateHeroShimmer();
+
+            requestAnimationFrame(animate);
+        }
+
+        // ── Scroll handler (separate from animation loop) ─
+        let scrollTicking = false;
+        window.addEventListener('scroll', () => {
+            if (!scrollTicking) {
+                requestAnimationFrame(() => {
+                    updateProgress();
+                    scrollTicking = false;
+                });
+                scrollTicking = true;
+            }
+        }, { passive: true });
+
+        // ── Init ──────────────────────────────────────────
+        updateProgress();
+        animate();
+    </script>
+</body>
+</html>

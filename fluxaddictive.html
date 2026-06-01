@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLUX — Addictive UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: #f0f0f0;
+            --muted: #5a5a5a;
+            --accent: #c8ff00;
+            --card: #0c0c0c;
+            --border: #1a1a1a;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            cursor: none;
+        }
+
+        /* ── Custom Cursor ── */
+        .cursor-dot {
+            position: fixed;
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10001;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            transition: width .15s, height .15s, background .15s;
+        }
+        .cursor-ring {
+            position: fixed;
+            width: 42px; height: 42px;
+            border: 1.5px solid rgba(200,255,0,.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: width .35s cubic-bezier(.22,1,.36,1),
+                        height .35s cubic-bezier(.22,1,.36,1),
+                        border-color .3s,
+                        background .3s;
+        }
+        .cursor-ring.hover {
+            width: 64px; height: 64px;
+            border-color: var(--fg);
+            background: rgba(200,255,0,.06);
+        }
+
+        /* ── Background Layers ── */
+        .grid-bg {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(ellipse 55% 45% at 50% 40%, black 10%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 55% 45% at 50% 40%, black 10%, transparent 70%);
+        }
+        .spotlight {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 1;
+            background: radial-gradient(circle 350px at var(--mx,50%) var(--my,50%),
+                rgba(200,255,0,.045), transparent 70%);
+            transition: background .05s;
+        }
+        .grain {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 9999;
+            opacity: .035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 128px;
+        }
+        #particlesCanvas {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ── Gradient Blob ── */
+        .blob {
+            position: fixed;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            pointer-events: none; z-index: 0;
+            filter: blur(140px);
+            opacity: .12;
+            background: var(--accent);
+            top: -200px; right: -200px;
+            animation: blobDrift 18s ease-in-out infinite alternate;
+        }
+        @keyframes blobDrift {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(-120px, 80px) scale(1.15); }
+            100% { transform: translate(60px, 160px) scale(.9); }
+        }
+
+        /* ── Nav ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 1.25rem 3rem;
+            display: flex; justify-content: space-between; align-items: center;
+            backdrop-filter: blur(16px) saturate(1.3);
+            background: rgba(5,5,5,.55);
+            border-bottom: 1px solid var(--border);
+        }
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800; font-size: 1.4rem;
+            color: var(--accent);
+            letter-spacing: -.02em;
+        }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            color: var(--muted); text-decoration: none;
+            font-size: .88rem; font-weight: 500;
+            position: relative; transition: color .3s;
+        }
+        .nav-links a:hover { color: var(--fg); }
+        .nav-links a::after {
+            content: ''; position: absolute;
+            bottom: -4px; left: 0; width: 0; height: 2px;
+            background: var(--accent);
+            transition: width .35s cubic-bezier(.22,1,.36,1);
+        }
+        .nav-links a:hover::after { width: 100%; }
+
+        /* ── Hero ── */
+        .hero {
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 8rem 2rem 4rem;
+            text-align: center; position: relative; z-index: 2;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: .55rem;
+            padding: .5rem 1.2rem;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: .78rem; color: var(--muted);
+            margin-bottom: 2.5rem;
+            background: rgba(12,12,12,.7);
+            backdrop-filter: blur(8px);
+        }
+        .hero-badge .dot {
+            width: 6px; height: 6px;
+            background: var(--accent); border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50% { opacity:.4; transform:scale(1.6); }
+        }
+        .hero h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(3.2rem,9.5vw,7.5rem);
+            font-weight: 800; line-height: .95;
+            letter-spacing: -.035em; margin-bottom: 1.5rem;
+        }
+        .hero h1 .line { display: block; overflow: hidden; }
+        .hero h1 .highlight { color: var(--accent); }
+        .hero-sub {
+            color: var(--muted); font-size: 1.1rem;
+            max-width: 480px; line-height: 1.75;
+            margin-bottom: 3rem;
+        }
+
+        /* ── Magnetic Button ── */
+        .mag-btn {
+            position: relative; display: inline-flex;
+            align-items: center; gap: .7rem;
+            padding: 1rem 2.4rem;
+            background: var(--accent); color: var(--bg);
+            border: none; border-radius: 100px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: .95rem; font-weight: 600;
+            text-decoration: none;
+            transition: box-shadow .3s;
+            will-change: transform;
+        }
+        .mag-btn:hover { box-shadow: 0 0 50px rgba(200,255,0,.3); }
+        .mag-btn i { transition: transform .3s; }
+        .mag-btn:hover i { transform: translateX(4px); }
+
+        /* ── Marquee ── */
+        .marquee-wrap {
+            padding: 3.5rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            overflow: hidden; position: relative; z-index: 2;
+        }
+        .marquee-track {
+            display: flex; gap: 0;
+            animation: marquee 28s linear infinite;
+            width: max-content;
+        }
+        .marquee-track span {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(1.8rem,4.5vw,3.5rem);
+            font-weight: 800; white-space: nowrap;
+            color: #1a1a1a;
+            padding: 0 1.2rem;
+        }
+        .marquee-track .sep { color: var(--accent); padding: 0 .8rem; }
+        @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+        /* ── Cards Section ── */
+        .cards-section {
+            padding: 7rem 2rem; max-width: 1200px;
+            margin: 0 auto; position: relative; z-index: 2;
+        }
+        .section-label {
+            font-size: .72rem; text-transform: uppercase;
+            letter-spacing: .2em; color: var(--accent);
+            font-weight: 600; margin-bottom: .75rem;
+        }
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2rem,4vw,3.2rem);
+            font-weight: 700; letter-spacing: -.02em;
+            margin-bottom: 3.5rem; line-height: 1.15;
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(310px,1fr));
+            gap: 1.25rem;
+        }
+        .tilt-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem 2.2rem;
+            overflow: hidden;
+            transition: border-color .35s;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+        .tilt-card:hover { border-color: rgba(200,255,0,.18); }
+        .tilt-card .shine {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle 280px at var(--cx,50%) var(--cy,50%),
+                rgba(200,255,0,.09), transparent 60%);
+            pointer-events: none;
+            opacity: 0; transition: opacity .35s;
+        }
+        .tilt-card:hover .shine { opacity: 1; }
+        .tilt-card .edge-glow {
+            position: absolute; inset: 0;
+            border-radius: 20px;
+            background: radial-gradient(circle 200px at var(--cx,50%) var(--cy,50%),
+                rgba(200,255,0,.06), transparent 50%);
+            pointer-events: none;
+            opacity: 0; transition: opacity .35s;
+            filter: blur(20px);
+        }
+        .tilt-card:hover .edge-glow { opacity: 1; }
+        .card-num {
+            position: absolute; top: 1.2rem; right: 1.8rem;
+            font-family: 'Syne', sans-serif;
+            font-size: 3.8rem; font-weight: 800;
+            color: rgba(255,255,255,.025); line-height: 1;
+        }
+        .card-icon {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            background: rgba(200,255,0,.07);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.4rem; font-size: 1.3rem;
+            color: var(--accent);
+            transition: transform .35s cubic-bezier(.22,1,.36,1), background .3s;
+            transform: translateZ(30px);
+        }
+        .tilt-card:hover .card-icon {
+            background: rgba(200,255,0,.14);
+            transform: translateZ(45px) scale(1.08);
+        }
+        .tilt-card h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.3rem; font-weight: 700;
+            margin-bottom: .65rem;
+            transform: translateZ(20px);
+            min-height: 2em;
+        }
+        .tilt-card p {
+            color: var(--muted); font-size: .92rem;
+            line-height: 1.7; transform: translateZ(12px);
+        }
+
+        /* ── Interactive Text ── */
+        .text-section {
+            padding: 8rem 2rem; max-width: 880px;
+            margin: 0 auto; text-align: center;
+            position: relative; z-index: 2;
+        }
+        .big-text {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(1.6rem,4.5vw,3.2rem);
+            font-weight: 700; line-height: 1.3;
+            letter-spacing: -.02em;
+        }
+        .big-text .word {
+            display: inline-block;
+            margin: 0 .15em;
+            transition: color .2s, transform .25s cubic-bezier(.22,1,.36,1);
+            transform-origin: bottom center;
+        }
+        .big-text .word.near {
+            color: var(--accent);
+            transform: translateY(-6px) scale(1.04);
+        }
+
+        /* ── CTA Section ── */
+        .cta-section {
+            padding: 6rem 2rem 8rem;
+            display: flex; justify-content: center;
+            position: relative; z-index: 2;
+        }
+        .cta-card {
+            background: linear-gradient(135deg, rgba(200,255,0,.06), rgba(200,255,0,.01));
+            border: 1px solid rgba(200,255,0,.12);
+            border-radius: 28px;
+            padding: 4rem 5rem;
+            text-align: center;
+            max-width: 680px; width: 100%;
+            position: relative; overflow: hidden;
+        }
+        .cta-card::before {
+            content: ''; position: absolute;
+            width: 300px; height: 300px;
+            background: var(--accent);
+            border-radius: 50%;
+            filter: blur(120px); opacity: .08;
+            top: -100px; left: 50%; transform: translateX(-50%);
+        }
+        .cta-card h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(1.8rem,3.5vw,2.8rem);
+            font-weight: 800; letter-spacing: -.02em;
+            margin-bottom: 1rem; position: relative;
+        }
+        .cta-card p {
+            color: var(--muted); font-size: 1rem;
+            margin-bottom: 2.5rem; position: relative;
+        }
+
+        /* ── Footer ── */
+        footer {
+            padding: 2.5rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--muted); font-size: .82rem;
+            position: relative; z-index: 2;
+        }
+
+        /* ── Scroll Reveal ── */
+        .reveal {
+            opacity: 0; transform: translateY(36px);
+            transition: opacity .7s cubic-bezier(.22,1,.36,1),
+                        transform .7s cubic-bezier(.22,1,.36,1);
+        }
+        .reveal.vis { opacity: 1; transform: translateY(0); }
+        .reveal-d1 { transition-delay: .1s; }
+        .reveal-d2 { transition-delay: .2s; }
+        .reveal-d3 { transition-delay: .3s; }
+        .reveal-d4 { transition-delay: .4s; }
+        .reveal-d5 { transition-delay: .5s; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            nav { padding: 1rem 1.5rem; }
+            .nav-links { display: none; }
+            .hero { padding: 7rem 1.5rem 3rem; }
+            .cards-section { padding: 4rem 1.5rem; }
+            .cards-grid { grid-template-columns: 1fr; }
+            .text-section { padding: 5rem 1.5rem; }
+            .cta-card { padding: 3rem 2rem; }
+            body { cursor: auto; }
+            .cursor-dot, .cursor-ring { display: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .marquee-track { animation: none; }
+            .blob { animation: none; }
+            .reveal { opacity:1; transform:none; transition:none; }
+            *, *::before, *::after {
+                transition-duration: .01ms !important;
+                animation-duration: .01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cursor -->
+    <div class="cursor-dot" id="cDot"></div>
+    <div class="cursor-ring" id="cRing"></div>
+
+    <!-- Background layers -->
+    <div class="grid-bg" aria-hidden="true"></div>
+    <div class="blob" aria-hidden="true"></div>
+    <div class="spotlight" id="spotlight" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+    <canvas id="particlesCanvas" aria-hidden="true"></canvas>
+
+    <!-- Nav -->
+    <nav role="navigation" aria-label="Main navigation">
+        <div class="logo">FLUX</div>
+        <ul class="nav-links">
+            <li><a href="#cards" data-hover>Work</a></li>
+            <li><a href="#words" data-hover>About</a></li>
+            <li><a href="#cta" data-hover>Lab</a></li>
+            <li><a href="#" data-hover>Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <header class="hero">
+        <div class="hero-badge"><span class="dot"></span>Now interactive — move your cursor</div>
+        <h1>
+            <span class="line">Design That</span>
+            <span class="line"><span class="highlight">Responds</span> To You</span>
+        </h1>
+        <p class="hero-sub">Every pixel reacts. Every element breathes. This isn't just a page — it's a conversation between you and the interface.</p>
+        <a href="#cards" class="mag-btn" data-magnetic data-hover>
+            <span>Explore Effects</span>
+            <i class="fa-solid fa-arrow-down"></i>
+        </a>
+    </header>
+
+    <!-- Marquee -->
+    <section class="marquee-wrap" aria-hidden="true">
+        <div class="marquee-track" id="marquee">
+            <span>Cursor Tracking<span class="sep">/</span></span>
+            <span>3D Tilt<span class="sep">/</span></span>
+            <span>Magnetic Fields<span class="sep">/</span></span>
+            <span>Spotlight Glow<span class="sep">/</span></span>
+            <span>Text Decode<span class="sep">/</span></span>
+            <span>Particle Flow<span class="sep">/</span></span>
+            <span>Cursor Tracking<span class="sep">/</span></span>
+            <span>3D Tilt<span class="sep">/</span></span>
+            <span>Magnetic Fields<span class="sep">/</span></span>
+            <span>Spotlight Glow<span class="sep">/</span></span>
+            <span>Text Decode<span class="sep">/</span></span>
+            <span>Particle Flow<span class="sep">/</span></span>
+        </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="cards-section" id="cards">
+        <div class="reveal">
+            <div class="section-label">Interactive Cards</div>
+            <div class="section-title">Hover to feel the depth</div>
+        </div>
+        <div class="cards-grid">
+            <div class="tilt-card reveal reveal-d1" data-tilt>
+                <div class="shine"></div><div class="edge-glow"></div>
+                <span class="card-num">01</span>
+                <div class="card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <h3 data-scramble>Magnetic Pull</h3>
+                <p>Elements gravitate toward your cursor, creating an invisible force field that makes every interaction feel alive.</p>
+            </div>
+            <div class="tilt-card reveal reveal-d2" data-tilt>
+                <div class="shine"></div><div class="edge-glow"></div>
+                <span class="card-num">02</span>
+                <div class="card-icon"><i class="fa-solid fa-cube"></i></div>
+                <h3 data-scramble>3D Perspective</h3>
+                <p>Cards tilt and rotate in real 3D space, responding to the exact angle of your cursor with smooth, natural motion.</p>
+            </div>
+            <div class="tilt-card reveal reveal-d3" data-tilt>
+                <div class="shine"></div><div class="edge-glow"></div>
+                <span class="card-num">03</span>
+                <div class="card-icon"><i class="fa-solid fa-sun"></i></div>
+                <h3 data-scramble>Spotlight Shine</h3>
+                <p>A dynamic light source follows your cursor, casting soft glows and reflections that reveal hidden depth in the surface.</p>
+            </div>
+            <div class="tilt-card reveal reveal-d4" data-tilt>
+                <div class="shine"></div><div class="edge-glow"></div>
+                <span class="card-num">04</span>
+                <div class="card-icon"><i class="fa-solid fa-code"></i></div>
+                <h3 data-scramble>Text Decode</h3>
+                <p>Headlines scramble and decode on hover, mimicking the visual language of hacking interfaces and data streams.</p>
+            </div>
+            <div class="tilt-card reveal reveal-d5" data-tilt>
+                <div class="shine"></div><div class="edge-glow"></div>
+                <span class="card-num">05</span>
+                <div class="card-icon"><i class="fa-solid fa-atom"></i></div>
+                <h3 data-scramble>Particle Flow</h3>
+                <p>Background particles drift and react to your presence, creating an ambient living atmosphere across the entire viewport.</p>
+            </div>
+            <div class="tilt-card reveal reveal-d5" data-tilt>
+                <div class="shine"></div><div class="edge-glow"></div>
+                <span class="card-num">06</span>
+                <div class="card-icon"><i class="fa-solid fa-hand-pointer"></i></div>
+                <h3 data-scramble>Cursor Morphing</h3>
+                <p>The cursor itself transforms — growing, shrinking, and changing as it moves between different interactive zones.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive text -->
+    <section class="text-section" id="words">
+        <div class="reveal">
+            <div class="section-label">Proximity Reactivity</div>
+            <div class="big-text" id="bigText">
+                The best interfaces don't just display information — they create a feeling, a moment, a connection that lingers long after you leave.
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section" id="cta">
+        <div class="cta-card reveal">
+            <h2>Want this on your site?</h2>
+            <p>Every effect on this page runs in a single HTML file. No frameworks, no build tools — just pure craft.</p>
+            <a href="#" class="mag-btn" data-magnetic data-hover>
+                <span>Get the Code</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <p>Move your cursor everywhere. Every pixel is listening.</p>
+    </footer>
+
+    <script>
+    (function() {
+        'use strict';
+
+        /* ── Mouse State ── */
+        const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        const smooth = { x: mouse.x, y: mouse.y };
+
+        document.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        /* ── Custom Cursor ── */
+        const dot = document.getElementById('cDot');
+        const ring = document.getElementById('cRing');
+
+        function updateCursor() {
+            dot.style.left = mouse.x + 'px';
+            dot.style.top = mouse.y + 'px';
+
+            smooth.x += (mouse.x - smooth.x) * 0.15;
+            smooth.y += (mouse.y - smooth.y) * 0.15;
+            ring.style.left = smooth.x + 'px';
+            ring.style.top = smooth.y + 'px';
+
+            requestAnimationFrame(updateCursor);
+        }
+        updateCursor();
+
+        // Hover state for cursor
+        document.querySelectorAll('[data-hover]').forEach(el => {
+            el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+            el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+        });
+
+        /* ── Spotlight ── */
+        const spotlight = document.getElementById('spotlight');
+        function updateSpotlight() {
+            spotlight.style.setProperty('--mx', mouse.x + 'px');
+            spotlight.style.setProperty('--my', mouse.y + 'px');
+            requestAnimationFrame(updateSpotlight);
+        }
+        updateSpotlight();
+
+        /* ── Magnetic Buttons ── */
+        document.querySelectorAll('[data-magnetic]').forEach(btn => {
+            const strength = 0.35;
+            btn.addEventListener('mousemove', e => {
+                const rect = btn.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = (e.clientX - cx) * strength;
+                const dy = (e.clientY - cy) * strength;
+                btn.style.transform = `translate(${dx}px, ${dy}px)`;
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'translate(0, 0)';
+                btn.style.transition = 'transform .5s cubic-bezier(.22,1,.36,1)';
+                setTimeout(() => btn.style.transition = '', 500);
+            });
+        });
+
+        /* ── 3D Tilt Cards ── */
+        document.querySelectorAll('[data-tilt]').forEach(card => {
+            const maxTilt = 14;
+
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;  // 0-1
+                const y = (e.clientY - rect.top) / rect.height;  // 0-1
+                const rotateY = (x - 0.5) * maxTilt * 2;
+                const rotateX = (0.5 - y) * maxTilt * 2;
+
+                card.style.transform =
+                    `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03,1.03,1.03)`;
+
+                // Update shine position
+                const px = (x * 100).toFixed(1);
+                const py = (y * 100).toFixed(1);
+                card.style.setProperty('--cx', px + '%');
+                card.style.setProperty('--cy', py + '%');
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transition = 'transform .6s cubic-bezier(.22,1,.36,1), border-color .35s';
+                card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+                setTimeout(() => card.style.transition = '', 600);
+            });
+        });
+
+        /* ── Text Scramble Effect ── */
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&';
+
+        document.querySelectorAll('[data-scramble]').forEach(el => {
+            const original = el.textContent;
+            let frame = 0;
+            let raf = null;
+            let isScrambling = false;
+
+            function scramble() {
+                let result = '';
+                const progress = frame / 18; // 18 frames total
+                const revealCount = Math.floor(progress * original.length);
+
+                for (let i = 0; i < original.length; i++) {
+                    if (i < revealCount) {
+                        result += original[i];
+                    } else if (original[i] === ' ') {
+                        result += ' ';
+                    } else {
+                        result += chars[Math.floor(Math.random() * chars.length)];
+                    }
+                }
+                el.textContent = result;
+                frame++;
+
+                if (frame <= 18) {
+                    raf = requestAnimationFrame(scramble);
+                } else {
+                    el.textContent = original;
+                    isScrambling = false;
+                }
+            }
+
+            el.parentElement.addEventListener('mouseenter', () => {
+                if (isScrambling) return;
+                isScrambling = true;
+                frame = 0;
+                if (raf) cancelAnimationFrame(raf);
+                scramble();
+            });
+        });
+
+        /* ── Proximity Text Reactivity ── */
+        const bigText = document.getElementById('bigText');
+        if (bigText) {
+            // Split into words
+            const text = bigText.textContent.trim();
+            bigText.innerHTML = text.split(/\s+/).map(w =>
+                `<span class="word">${w}</span>`
+            ).join(' ');
+            const words = bigText.querySelectorAll('.word');
+
+            function updateWords() {
+                const rect = bigText.getBoundingClientRect();
+                words.forEach(word => {
+                    const wr = word.getBoundingClientRect();
+                    const wcx = wr.left + wr.width / 2;
+                    const wcy = wr.top + wr.height / 2;
+                    const dist = Math.hypot(mouse.x - wcx, mouse.y - wcy);
+                    const threshold = 140;
+                    word.classList.toggle('near', dist < threshold);
+                });
+                requestAnimationFrame(updateWords);
+            }
+            updateWords();
+        }
+
+        /* ── Particle System ── */
+        const canvas = document.getElementById('particlesCanvas');
+        const ctx = canvas.getContext('2d');
+        let W, H;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Create particles
+        const PARTICLE_COUNT = 80;
+        const particles = [];
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.3;
+                this.speedY = (Math.random() - 0.5) * 0.3;
+                this.opacity = Math.random() * 0.4 + 0.1;
+            }
+            update() {
+                // Cursor repulsion
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const dist = Math.max(1, Math.hypot(dx, dy));
+                if (dist < 180) {
+                    const force = (180 - dist) / 180 * 0.8;
+                    this.x += (dx / dist) * force;
+                    this.y += (dy / dist) * force;
+                }
+
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Wrap around
+                if (this.x < -10) this.x = W + 10;
+                if (this.x > W + 10) this.x = -10;
+                if (this.y < -10) this.y = H + 10;
+                if (this.y > H + 10) this.y = -10;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(200, 255, 0, ${this.opacity})`;
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push(new Particle());
+        }
+
+        function drawLines() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 120) {
+                        const alpha = (1 - dist / 120) * 0.08;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(200, 255, 0, ${alpha})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, W, H);
+            particles.forEach(p => { p.update(); p.draw(); });
+            drawLines();
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* ── Scroll Reveal ── */
+        const revealEls = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('vis');
+                }
+            });
+        }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+        revealEls.forEach(el => observer.observe(el));
+
+        /* ── Marquee hover slowdown ── */
+        const marquee = document.getElementById('marquee');
+        const marqueeWrap = marquee.parentElement;
+        marqueeWrap.addEventListener('mouseenter', () => {
+            marquee.style.animationPlayState = 'paused';
+        });
+        marqueeWrap.addEventListener('mouseleave', () => {
+            marquee.style.animationPlayState = 'running';
+        });
+
+    })();
+    </script>
+</body>
+</html>
