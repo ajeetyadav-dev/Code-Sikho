@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BREACH://SYSTEM</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{--bg:#080c08;--fg:#00ff41;--fg-dim:#00882a;--fg-bright:#44ff77;--cyan:#00e5ff;--red:#ff003c;--amber:#ffab00;--panel:rgba(5,14,8,0.9);--border:rgba(0,255,65,0.12);--glow:0 0 8px rgba(0,255,65,0.15)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Fira Code',monospace;color:var(--fg)}
+
+/* Matrix Rain Canvas */
+#matrix{position:fixed;inset:0;z-index:0;opacity:.35}
+
+/* CRT Overlay */
+.crt{position:fixed;inset:0;z-index:50;pointer-events:none}
+.crt::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px)}
+.crt::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 50%,transparent 50%,rgba(0,0,0,.55) 100%)}
+.screen-flicker{position:fixed;inset:0;z-index:49;pointer-events:none;animation:flicker 8s infinite}
+@keyframes flicker{0%,100%{opacity:1}92%{opacity:1}92.5%{opacity:.88}93%{opacity:1}96.5%{opacity:.92}97%{opacity:1}}
+
+/* Boot Screen */
+#boot{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;justify-content:center;padding:8% 12%;transition:opacity .6s,transform .6s}
+#boot.hidden{opacity:0;transform:scale(1.05);pointer-events:none}
+#boot-lines{font-size:clamp(.75rem,1.2vw,.95rem);line-height:2;color:var(--fg-dim);white-space:pre}
+#boot-lines .ok{color:var(--fg)}
+#boot-lines .active{color:var(--amber)}
+#boot-skip{position:absolute;bottom:2.5rem;right:2.5rem;background:none;border:1px solid var(--fg-dim);color:var(--fg-dim);font-family:inherit;font-size:.7rem;padding:.4rem 1rem;cursor:pointer;letter-spacing:.1em;transition:color .2s,border-color .2s}
+#boot-skip:hover{color:var(--fg);border-color:var(--fg)}
+
+/* Dashboard */
+#dashboard{position:fixed;inset:0;z-index:10;display:grid;grid-template-rows:auto 1fr 150px auto;grid-template-columns:210px 1fr 230px;gap:1px;background:var(--border);opacity:0;transition:opacity .8s .1s}
+#dashboard.visible{opacity:1}
+
+/* Top Bar */
+.topbar{grid-column:1/-1;background:var(--panel);padding:.7rem 1.2rem;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:1rem}
+.topbar-logo{font-weight:700;font-size:.85rem;color:var(--fg);letter-spacing:.05em}
+.topbar-logo .dot{display:inline-block;width:8px;height:8px;background:var(--fg);border-radius:50%;margin-right:.5rem;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 4px var(--fg)}50%{opacity:.4;box-shadow:none}}
+.topbar-status{display:flex;align-items:center;gap:.5rem;color:var(--fg-dim)}
+.topbar-status .indicator{width:6px;height:6px;border-radius:50%;background:var(--fg);animation:pulse-dot 1.5s infinite}
+.topbar-right{display:flex;align-items:center;gap:1.5rem;color:var(--fg-dim)}
+.topbar-right .ip{color:var(--cyan);font-size:.7rem}
+#clock{color:var(--fg-dim)}
+
+/* Panels */
+.panel{background:var(--panel);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:.6rem .8rem;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--fg-dim);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:.5rem}
+.panel-header i{font-size:.6rem;color:var(--fg);opacity:.5}
+.panel-body{flex:1;overflow-y:auto;padding:.6rem 0;scrollbar-width:thin;scrollbar-color:var(--fg-dim) transparent}
+.panel-body::-webkit-scrollbar{width:3px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--fg-dim);border-radius:3px}
+
+/* File Tree */
+.file-item{padding:.25rem .8rem;font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:.5rem;transition:background .15s,color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-item:hover{background:rgba(0,255,65,.06);color:var(--fg-bright)}
+.file-item.active{background:rgba(0,255,65,.1);color:var(--fg-bright)}
+.file-item .icon{width:14px;text-align:center;flex-shrink:0;font-size:.65rem}
+.file-item .icon.dir{color:var(--cyan)}
+.file-item .icon.file{color:var(--fg-dim)}
+.file-item .size{margin-left:auto;color:var(--fg-dim);font-size:.6rem;opacity:.6;flex-shrink:0}
+
+/* Terminal */
+.terminal-body{padding:.8rem;font-size:.75rem;line-height:1.8;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--fg-dim) transparent}
+.terminal-body::-webkit-scrollbar{width:3px}
+.terminal-body::-webkit-scrollbar-thumb{background:var(--fg-dim);border-radius:3px}
+.term-line{white-space:pre-wrap;word-break:break-all}
+.term-input{color:var(--fg-bright)}
+.term-output{color:var(--fg-dim)}
+.term-output .success{color:var(--fg)}
+.term-output .warn{color:var(--amber)}
+.term-output .error{color:var(--red)}
+.term-prompt{color:var(--cyan)}
+.cursor-blink{display:inline-block;width:8px;height:14px;background:var(--fg);animation:blink 1s step-end infinite;vertical-align:text-bottom;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Diagnostics */
+.diag-row{padding:.35rem .8rem;font-size:.7rem;display:flex;align-items:center;gap:.6rem}
+.diag-label{width:36px;color:var(--fg-dim);flex-shrink:0}
+.diag-bar-wrap{flex:1;height:6px;background:rgba(0,255,65,.06);border-radius:3px;overflow:hidden}
+.diag-bar{height:100%;border-radius:3px;transition:width .8s ease;background:var(--fg)}
+.diag-bar.warn{background:var(--amber)}
+.diag-bar.crit{background:var(--red)}
+.diag-val{width:38px;text-align:right;color:var(--fg-dim);font-size:.65rem;flex-shrink:0}
+.diag-divider{height:1px;background:var(--border);margin:.5rem .8rem}
+.hex-section{padding:.5rem .8rem;font-size:.6rem;line-height:1.6;color:var(--fg-dim);opacity:.7;overflow:hidden;max-height:200px}
+.hex-section .addr{color:var(--cyan)}
+
+/* Network Canvas */
+.network-panel{grid-column:1/-1;background:var(--panel);position:relative}
+#netCanvas{width:100%;height:100%;display:block}
+
+/* Progress Section */
+.progress-section{grid-column:1/-1;background:var(--panel);padding:.8rem 1.2rem;display:flex;align-items:center;gap:1rem;border-top:1px solid var(--border)}
+.progress-label{font-size:.7rem;color:var(--fg-dim);white-space:nowrap;min-width:140px}
+.progress-label .status-text{color:var(--amber);font-weight:600}
+.progress-bar-wrap{flex:1;height:10px;background:rgba(0,255,65,.06);border-radius:5px;overflow:hidden;position:relative}
+.progress-bar-fill{height:100%;width:0%;border-radius:5px;background:linear-gradient(90deg,var(--fg-dim),var(--fg));transition:width .3s;position:relative}
+.progress-bar-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15));animation:progress-shine 1.5s infinite}
+@keyframes progress-shine{0%,100%{opacity:0}50%{opacity:1}}
+.progress-pct{font-size:.75rem;color:var(--fg);font-weight:600;min-width:40px;text-align:right}
+.progress-section.complete .progress-bar-fill{background:var(--fg)}
+.progress-section.complete .status-text{color:var(--fg)}
+
+/* Alert Popups */
+#alerts{position:fixed;top:4rem;right:1rem;z-index:60;display:flex;flex-direction:column;gap:.5rem;pointer-events:none}
+.alert{padding:.6rem 1rem;font-size:.68rem;background:rgba(5,14,8,.95);border:1px solid var(--border);border-left:3px solid var(--fg-dim);border-radius:2px;min-width:260px;transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .3s;pointer-events:auto;backdrop-filter:blur(8px)}
+.alert.show{transform:translateX(0)}
+.alert.hide{opacity:0;transform:translateX(120%)}
+.alert.warning{border-left-color:var(--amber)}
+.alert.warning .alert-type{color:var(--amber)}
+.alert.critical{border-left-color:var(--red)}
+.alert.critical .alert-type{color:var(--red)}
+.alert.success{border-left-color:var(--fg)}
+.alert.success .alert-type{color:var(--fg)}
+.alert-type{font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:.6rem;margin-bottom:.2rem}
+.alert-msg{color:var(--fg-dim)}
+
+/* ACCESS GRANTED Overlay */
+#accessOverlay{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,10,5,.92);opacity:0;pointer-events:none;transition:opacity .3s}
+#accessOverlay.show{opacity:1;pointer-events:auto}
+#accessOverlay .glitch-big{font-size:clamp(2rem,6vw,5rem);font-weight:700;color:var(--fg);position:relative;letter-spacing:.15em}
+#accessOverlay .glitch-big::before,#accessOverlay .glitch-big::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%}
+#accessOverlay .glitch-big::before{color:var(--red);animation:g-clip1 .15s infinite linear alternate-reverse;clip-path:inset(20% 0 40% 0);transform:translate(-4px,-2px)}
+#accessOverlay .glitch-big::after{color:var(--cyan);animation:g-clip2 .15s infinite linear alternate-reverse;clip-path:inset(60% 0 10% 0);transform:translate(4px,2px)}
+@keyframes g-clip1{0%{clip-path:inset(15% 0 55% 0)}33%{clip-path:inset(60% 0 10% 0)}66%{clip-path:inset(30% 0 40% 0)}100%{clip-path:inset(5% 0 70% 0)}}
+@keyframes g-clip2{0%{clip-path:inset(65% 0 5% 0)}33%{clip-path:inset(10% 0 60% 0)}66%{clip-path:inset(45% 0 25% 0)}100%{clip-path:inset(75% 0 0% 0)}}
+#accessOverlay .sub{font-size:.85rem;color:var(--fg-dim);margin-top:1rem;letter-spacing:.2em}
+
+/* Flash */
+#flash{position:fixed;inset:0;z-index:190;background:var(--fg);opacity:0;pointer-events:none;transition:opacity .05s}
+#flash.show{opacity:.15}
+
+/* Glitch for title */
+.glitch{position:relative}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.glitch::before{color:var(--red);animation:g-clip1 3s infinite linear alternate-reverse;clip-path:inset(40% 0 30% 0);transform:translate(-2px,-1px);opacity:.7}
+.glitch::after{color:var(--cyan);animation:g-clip2 3s infinite linear alternate-reverse;clip-path:inset(60% 0 15% 0);transform:translate(2px,1px);opacity:.7}
+
+/* Responsive */
+@media(max-width:900px){
+  #dashboard{grid-template-columns:1fr;grid-template-rows:auto 1fr auto auto auto}
+  .panel:first-child{display:none}
+  .panel:last-child{display:none}
+  .network-panel{min-height:120px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<div class="crt"></div>
+<div class="screen-flicker"></div>
+<div id="flash"></div>
+
+<!-- Boot Screen -->
+<div id="boot">
+  <div id="boot-lines"></div>
+  <button id="boot-skip">SKIP [ESC]</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo"><span class="dot"></span>BREACH://NODE-7</span>
+      <div class="topbar-status"><span class="indicator"></span><span id="statusText">ACTIVE</span></div>
+    </div>
+    <div class="topbar-right">
+      <span class="ip" id="ipAddr">192.168.1.47</span>
+      <span id="clock">00:00:00</span>
+    </div>
+  </div>
+
+  <!-- File Tree -->
+  <div class="panel">
+    <div class="panel-header"><i class="fa-solid fa-folder-tree"></i> File System</div>
+    <div class="panel-body" id="fileTree"></div>
+  </div>
+
+  <!-- Terminal -->
+  <div class="panel">
+    <div class="panel-header"><i class="fa-solid fa-terminal"></i> Terminal</div>
+    <div class="terminal-body" id="terminal"></div>
+  </div>
+
+  <!-- Diagnostics -->
+  <div class="panel">
+    <div class="panel-header"><i class="fa-solid fa-microchip"></i> Diagnostics</div>
+    <div class="panel-body" id="diagBody"></div>
+    <div class="diag-divider"></div>
+    <div class="panel-header"><i class="fa-solid fa-memory"></i> Hex Dump</div>
+    <div class="hex-section" id="hexDump"></div>
+  </div>
+
+  <!-- Network Map -->
+  <div class="panel network-panel">
+    <div class="panel-header"><i class="fa-solid fa-network-wired"></i> Network Topology</div>
+    <canvas id="netCanvas"></canvas>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section" id="progressSection">
+    <div class="progress-label"><span class="status-text" id="progressLabel">BREACH IN PROGRESS</span></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-pct" id="progressPct">0%</div>
+  </div>
+</div>
+
+<!-- Alerts -->
+<div id="alerts"></div>
+
+<!-- Access Granted -->
+<div id="accessOverlay">
+  <div class="glitch-big" data-text="ACCESS GRANTED">ACCESS GRANTED</div>
+  <div class="sub">FULL SYSTEM CONTROL OBTAINED</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── Matrix Rain ── */
+const mCanvas = document.getElementById('matrix');
+const mCtx = mCanvas.getContext('2d');
+let mCols, mDrops;
+const mFontSize = 14;
+const mChars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF<>{}[]=/\\';
+
+function initMatrix(){
+  mCanvas.width = window.innerWidth;
+  mCanvas.height = window.innerHeight;
+  mCols = Math.floor(mCanvas.width / mFontSize);
+  mDrops = [];
+  for(let i = 0; i < mCols; i++) mDrops.push(Math.random() * -50);
+}
+initMatrix();
+window.addEventListener('resize', initMatrix);
+
+function drawMatrix(){
+  mCtx.fillStyle = 'rgba(8,12,8,0.06)';
+  mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+  mCtx.font = mFontSize + 'px Fira Code';
+
+  for(let i = 0; i < mCols; i++){
+    const ch = mChars[Math.floor(Math.random() * mChars.length)];
+    const x = i * mFontSize;
+    const y = mDrops[i] * mFontSize;
+
+    // Lead character is bright
+    mCtx.fillStyle = '#44ff77';
+    mCtx.fillText(ch, x, y);
+
+    // Previous char slightly dimmer (draw one above)
+    if(mDrops[i] > 1){
+      mCtx.fillStyle = '#00ff41';
+      mCtx.fillText(mChars[Math.floor(Math.random() * mChars.length)], x, y - mFontSize);
+    }
+
+    if(y > mCanvas.height && Math.random() > 0.975) mDrops[i] = 0;
+    mDrops[i] += 0.6 + Math.random() * 0.3;
+  }
+}
+
+/* ── Boot Sequence ── */
+const bootEl = document.getElementById('boot-lines');
+const bootLines = [
+  { text: '> BIOS POST.................. ', suffix: 'OK', cls: 'ok' },
+  { text: '> KERNEL 5.15.0-ghost........ ', suffix: 'OK', cls: 'ok' },
+  { text: '> MOUNT /encfs............... ', suffix: 'OK', cls: 'ok' },
+  { text: '> NETWORK STACK.............. ', suffix: 'OK', cls: 'ok' },
+  { text: '> BREACH PROTOCOL............ ', suffix: 'ACTIVE', cls: 'active' },
+];
+
+let bootDone = false;
+function runBoot(){
+  let lineIdx = 0, charIdx = 0;
+  let currentDiv = null;
+
+  function tick(){
+    if(bootDone) return;
+    if(lineIdx >= bootLines.length){
+      setTimeout(finishBoot, 400);
+      return;
+    }
+    const line = bootLines[lineIdx];
+    if(charIdx === 0) {
+      currentDiv = document.createElement('div');
+      bootEl.appendChild(currentDiv);
+    }
+    if(charIdx < line.text.length){
+      currentDiv.textContent = line.text.substring(0, charIdx + 1);
+      charIdx++;
+      setTimeout(tick, 18);
+    } else {
+      const span = document.createElement('span');
+      span.className = line.cls;
+      span.textContent = line.suffix;
+      currentDiv.appendChild(span);
+      lineIdx++; charIdx = 0;
+      setTimeout(tick, 120);
+    }
+  }
+  tick();
+}
+
+function finishBoot(){
+  if(bootDone) return;
+  bootDone = true;
+  document.getElementById('boot').classList.add('hidden');
+  document.getElementById('dashboard').classList.add('visible');
+  startDashboard();
+}
+
+document.getElementById('boot-skip').addEventListener('click', finishBoot);
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && !bootDone) finishBoot(); });
+
+runBoot();
+
+/* ── Dashboard Start ── */
+function startDashboard(){
+  initFileTree();
+  initDiagnostics();
+  initHexDump();
+  initNetwork();
+  startTerminal();
+  startProgress();
+  startAlerts();
+  startClock();
+  startIPCycle();
+}
+
+/* ── Clock ── */
+function startClock(){
+  const el = document.getElementById('clock');
+  function update(){
+    const d = new Date();
+    el.textContent = [d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+  }
+  update(); setInterval(update, 1000);
+}
+
+/* ── IP Cycle ── */
+function startIPCycle(){
+  const el = document.getElementById('ipAddr');
+  function gen(){ return [192,168,Math.floor(Math.random()*255),Math.floor(Math.random()*254)+1].join('.'); }
+  setInterval(()=>{ el.textContent = gen(); }, 3000);
+}
+
+/* ── File Tree ── */
+const files = [
+  {name:'/',indent:0,type:'dir'},{name:'root',indent:1,type:'dir'},
+  {name:'bin',indent:2,type:'dir'},{name:'nmap',indent:3,type:'file',size:'2.4M'},
+  {name:'exploit',indent:3,type:'file',size:'890K'},{name:'decrypt',indent:3,type:'file',size:'1.2M'},
+  {name:'etc',indent:2,type:'dir'},{name:'shadow',indent:3,type:'file',size:'4.2K'},
+  {name:'passwd',indent:3,type:'file',size:'1.8K'},{name:'hosts',indent:3,type:'file',size:'512B'},
+  {name:'var',indent:2,type:'dir'},{name:'log',indent:3,type:'dir'},
+  {name:'breach.log',indent:4,type:'file',size:'24M'},{name:'access.log',indent:4,type:'file',size:'156M'},
+  {name:'tmp',indent:2,type:'dir'},{name:'payload.bin',indent:3,type:'file',size:'4.7M'},
+  {name:'key.pem',indent:3,type:'file',size:'2.1K'},
+  {name:'proc',indent:1,type:'dir'},{name:'cpuinfo',indent:2,type:'file',size:'0B'},
+  {name:'meminfo',indent:2,type:'file',size:'0B'},
+];
+
+function initFileTree(){
+  const container = document.getElementById('fileTree');
+  files.forEach((f,i) => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    const pad = f.indent * 14;
+    div.style.paddingLeft = (12 + pad) + 'px';
+    const iconCls = f.type === 'dir' ? 'dir' : 'file';
+    const iconChar = f.type === 'dir' ? 'fa-folder' : 'fa-file-lines';
+    div.innerHTML = `<span class="icon ${iconCls}"><i class="fa-solid ${iconChar}"></i></span><span>${f.name}</span>${f.size ? `<span class="size">${f.size}</span>` : ''}`;
+    if(f.type === 'file'){
+      div.addEventListener('click', () => {
+        container.querySelectorAll('.file-item').forEach(x=>x.classList.remove('active'));
+        div.classList.add('active');
+        showFileInTerminal(f);
+      });
+    }
+    container.appendChild(div);
+  });
+}
+
+function showFileInTerminal(f){
+  const term = document.getElementById('terminal');
+  const fakeContents = {
+    'nmap': 'Binary executable: nmap v7.94\nUsage: nmap [options] target\n  -sS  Stealth SYN scan\n  -sV  Version detection\n  -O   OS detection\n  -A   Aggressive scan',
+    'exploit': 'Binary executable: exploit v3.1\nPayloads:\n  reverse_shell_tcp\n  bind_shell_tcp\n  meterpreter_staged\n  web_delivery',
+    'decrypt': 'Binary executable: decrypt v2.7\nMethods:\n  rainbow    - Rainbow table lookup\n  brute      - Brute force\n  dictionary - Dictionary attack\n  hybrid     - Hybrid mode',
+    'shadow': 'root:$6$rounds=5000$Xk9mPq2r$Ez7hNkL3mWpQsRtYuIoPAx1cBdFgHjKlMnOpQrStUvWxYz\nadmin:$6$rounds=5000$Ab3dEf5g$HiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRs\nwww-data:!:19342:0:99999:7:::',
+    'passwd': 'root:x:0:0:root:/root:/bin/bash\nadmin:x:1000:1000:Admin:/home/admin:/bin/bash\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nmysql:x:27:27:MySQL:/var/lib/mysql:/bin/false',
+    'hosts': '127.0.0.1   localhost\n192.168.1.1 gateway\n192.168.1.47 target\n10.0.0.1    internal-dns\n10.0.0.5    db-primary',
+    'breach.log': '[2024-11-15 03:14:22] BREACH INITIATED\n[2024-11-15 03:14:25] Port scan complete\n[2024-11-15 03:14:31] Exploit delivered\n[2024-11-15 03:14:38] Shell obtained\n[2024-11-15 03:14:45] Privilege escalation\n[2024-11-15 03:15:01] ACCESS GRANTED',
+    'access.log': '192.168.1.47 - - [15/Nov/2024:03:14:22] "GET /" 200\n192.168.1.47 - - [15/Nov/2024:03:14:23] "POST /api/auth" 401\n192.168.1.47 - - [15/Nov/2024:03:14:24] "POST /api/auth" 200\n10.0.0.1 - - [15/Nov/2024:03:14:30] "GET /admin" 302',
+    'payload.bin': '[Binary data - 4,924,416 bytes]\nMagic: 7f45 4c46 (ELF executable)\nArch: x86-64\nEntry: 0x401000\nSections: .text .data .bss .rodata',
+    'key.pem': '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7\nVZ2e5K8xR9dH3pLfNqGjMwWkP9sTR5uB2cX8vY1jKkLmNoPqRsTuVw\nXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwX\n-----END PRIVATE KEY-----',
+    'cpuinfo': 'processor\t: 0\nmodel name\t: Ghost CPU @ 3.80GHz\ncache size\t: 16384 KB\ncpu cores\t: 8',
+    'meminfo': 'MemTotal:       16777216 kB\nMemFree:         524288 kB\nMemAvailable:   4194304 kB\nBuffers:          262144 kB\nCached:          1048576 kB',
+  };
+  addTermLine('');
+  addTermLine(`cat ${f.name}`, 'input');
+  addTermLine(fakeContents[f.name] || `[Permission denied: ${f.name}]`, 'output');
+  addTermLine('');
+}
+
+/* ── Terminal ── */
+const termCmds = [
+  {type:'input', text:'init --stealth --protocol ghost'},
+  {type:'output', text:'[+] Stealth mode enabled', cls:'success'},
+  {type:'output', text:'[+] Protocol GHOST active', cls:'success'},
+  {type:'blank'},
+  {type:'input', text:'scan 192.168.1.0/24 --deep'},
+  {type:'output', text:'Scanning subnet... 256 hosts'},
+  {type:'output', text:'[\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588] 100%', cls:'success'},
+  {type:'output', text:'Found 12 active hosts'},
+  {type:'output', text:'Target identified: 192.168.1.47', cls:'warn'},
+  {type:'blank'},
+  {type:'input', text:'exploit --target 192.168.1.47 --payload reverse_shell'},
+  {type:'output', text:'[*] Loading payload: reverse_shell_tcp'},
+  {type:'output', text:'[*] Target OS: Linux 5.15.0-ghost'},
+  {type:'output', text:'[*] Vulnerability: CVE-2024-7291'},
+  {type:'output', text:'[*] Sending exploit...'},
+  {type:'output', text:'[+] Shell obtained on port 4444', cls:'success'},
+  {type:'blank'},
+  {type:'input', text:'decrypt /etc/shadow --method rainbow'},
+  {type:'output', text:'[*] Cracking: $6$rounds=5000$Xk9m...'},
+  {type:'output', text:'[\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591] 78%'},
+  {type:'output', text:'[+] Root password: ********', cls:'success'},
+  {type:'blank'},
+  {type:'input', text:'pivot --through 192.168.1.47 --to 10.0.0.0/8'},
+  {type:'output', text:'[*] Establishing pivot tunnel...'},
+  {type:'output', text:'[+] Pivot active: 10.0.0.0/8 reachable', cls:'success'},
+  {type:'blank'},
+  {type:'input', text:'exfiltrate /var/data/secret.db --encrypt aes256'},
+  {type:'output', text:'[*] Encrypting: secret.db (2.4GB)'},
+  {type:'output', text:'[\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588] 100%', cls:'success'},
+  {type:'output', text:'[+] Exfiltration complete', cls:'success'},
+];
+
+let termCmdIdx = 0, termCharIdx = 0, termTyping = false, termCurrentDiv = null;
+
+function addTermLine(text, type){
+  const term = document.getElementById('terminal');
+  const div = document.createElement('div');
+  div.className = 'term-line' + (type === 'input' ? ' term-input' : ' term-output');
+  if(type === 'input') div.innerHTML = '<span class="term-prompt">root@node-7:~# </span>' + escapeHtml(text);
+  else if(text) div.innerHTML = '<span class="' + (termCmds[termCmdIdx-1]?.cls || '') + '">' + escapeHtml(text) + '</span>';
+  term.appendChild(div);
+  term.scrollTop = term.scrollHeight;
+}
+
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function startTerminal(){
+  typeNextCmd();
+}
+
+function typeNextCmd(){
+  if(termCmdIdx >= termCmds.length){
+    // Show blinking cursor
+    const term = document.getElementById('terminal');
+    const div = document.createElement('div');
+    div.className = 'term-line term-input';
+    div.innerHTML = '<span class="term-prompt">root@node-7:~# </span><span class="cursor-blink"></span>';
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+    return;
+  }
+
+  const cmd = termCmds[termCmdIdx];
+  if(cmd.type === 'blank'){
+    addTermLine('', '');
+    termCmdIdx++;
+    setTimeout(typeNextCmd, 200);
+    return;
+  }
+
+  if(cmd.type === 'output'){
+    addTermLine(cmd.text, 'output');
+    termCmdIdx++;
+    setTimeout(typeNextCmd, 150 + Math.random() * 250);
+    return;
+  }
+
+  // Type input character by character
+  const term = document.getElementById('terminal');
+  termCurrentDiv = document.createElement('div');
+  termCurrentDiv.className = 'term-line term-input';
+  termCurrentDiv.innerHTML = '<span class="term-prompt">root@node-7:~# </span><span class="cursor-blink"></span>';
+  term.appendChild(termCurrentDiv);
+  termCharIdx = 0;
+  termTyping = true;
+  typeChar();
+}
+
+function typeChar(){
+  if(!termTyping) return;
+  const cmd = termCmds[termCmdIdx];
+  if(termCharIdx >= cmd.text.length){
+    termTyping = false;
+    // Remove cursor
+    const cursor = termCurrentDiv.querySelector('.cursor-blink');
+    if(cursor) cursor.remove();
+    termCmdIdx++;
+    setTimeout(typeNextCmd, 300 + Math.random() * 400);
+    return;
+  }
+  const cursor = termCurrentDiv.querySelector('.cursor-blink');
+  const textNode = document.createTextNode(cmd.text[termCharIdx]);
+  termCurrentDiv.insertBefore(textNode, cursor);
+  termCharIdx++;
+  const term = document.getElementById('terminal');
+  term.scrollTop = term.scrollHeight;
+  setTimeout(typeChar, 22 + Math.random() * 35);
+}
+
+/* ── Diagnostics ── */
+const diagItems = [
+  {label:'CPU', base:82, range:13},
+  {label:'MEM', base:64, range:10},
+  {label:'NET', base:88, range:10},
+  {label:'DSK', base:45, range:8},
+];
+
+function initDiagnostics(){
+  const body = document.getElementById('diagBody');
+  diagItems.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'diag-row';
+    row.innerHTML = `<span class="diag-label">${d.label}</span><div class="diag-bar-wrap"><div class="diag-bar" id="bar-${d.label}"></div></div><span class="diag-val" id="val-${d.label}">0%</span>`;
+    body.appendChild(row);
+  });
+  updateDiag();
+  setInterval(updateDiag, 1500);
+}
+
+function updateDiag(){
+  diagItems.forEach(d => {
+    const val = d.base + Math.floor(Math.random() * d.range);
+    const bar = document.getElementById('bar-' + d.label);
+    const valEl = document.getElementById('val-' + d.label);
+    if(!bar) return;
+    bar.style.width = val + '%';
+    bar.className = 'diag-bar' + (val > 90 ? ' crit' : val > 75 ? ' warn' : '');
+    valEl.textContent = val + '%';
+  });
+}
+
+/* ── Hex Dump ── */
+function initHexDump(){
+  const el = document.getElementById('hexDump');
+  let addr = 0x7FFE0000;
+  function genLine(){
+    let line = '<span class="addr">0x' + addr.toString(16).toUpperCase() + '</span>  ';
+    let ascii = '';
+    for(let i = 0; i < 16; i++){
+      const b = Math.floor(Math.random() * 256);
+      line += b.toString(16).toUpperCase().padStart(2,'0') + ' ';
+      ascii += (b >= 32 && b < 127) ? String.fromCharCode(b) : '.';
+    }
+    return line + ' |' + ascii + '|';
+  }
+  // Initial fill
+  let html = '';
+  for(let i = 0; i < 20; i++){
+    html += genLine() + '\n';
+    addr += 16;
+  }
+  el.innerHTML = html;
+
+  // Auto-scroll
+  setInterval(() => {
+    html = el.innerHTML;
+    const lines = html.split('\n');
+    lines.shift();
+    lines.push(genLine());
+    addr += 16;
+    el.innerHTML = lines.join('\n');
+  }, 300);
+}
+
+/* ── Network Visualization ── */
+const netNodes = [
+  {x:.07,y:.45,label:'YOU',type:'source'},
+  {x:.22,y:.2,label:'PROXY-1',type:'node'},
+  {x:.22,y:.7,label:'PROXY-2',type:'node'},
+  {x:.38,y:.45,label:'FIREWALL',type:'node'},
+  {x:.53,y:.2,label:'WEB-SRV',type:'node'},
+  {x:.53,y:.7,label:'DB-SRV',type:'node'},
+  {x:.68,y:.45,label:'ROUTER',type:'node'},
+  {x:.82,y:.22,label:'APP-SRV',type:'node'},
+  {x:.93,y:.55,label:'TARGET',type:'target'},
+];
+const netEdges = [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,6],[5,6],[6,7],[7,8],[6,8],[3,8]];
+let netPackets = [];
+let netBreached = false;
+
+function initNetwork(){
+  const canvas = document.getElementById('netCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height - 30; // minus header
+  drawNetwork();
+  setInterval(spawnNetPacket, 600);
+  requestAnimationFrame(animateNetwork);
+}
+
+function spawnNetPacket(){
+  if(Math.random() > 0.7) return;
+  const ei = Math.floor(Math.random() * netEdges.length);
+  netPackets.push({edge:ei, t:0, speed:0.006 + Math.random()*0.008, dir: Math.random() > 0.5 ? 1 : -1});
+}
+
+function animateNetwork(){
+  drawNetwork();
+  requestAnimationFrame(animateNetwork);
+}
+
+function drawNetwork(){
+  const canvas = document.getElementById('netCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw edges
+  netEdges.forEach(([a,b]) => {
+    const na = netNodes[a], nb = netNodes[b];
+    ctx.strokeStyle = 'rgba(0,255,65,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(na.x * w, na.y * h);
+    ctx.lineTo(nb.x * w, nb.y * h);
+    ctx.stroke();
+  });
+
+  // Draw packets
+  for(let i = netPackets.length - 1; i >= 0; i--){
+    const p = netPackets[i];
+    p.t += p.speed;
+    if(p.t > 1){ netPackets.splice(i, 1); continue; }
+    const [a,b] = netEdges[p.edge];
+    const na = netNodes[a], nb = netNodes[b];
+    const from = p.dir > 0 ? na : nb;
+    const to = p.dir > 0 ? nb : na;
+    const px = (from.x + (to.x - from.x) * p.t) * w;
+    const py = (from.y + (to.y - from.y) * p.t) * h;
+
+    const g = ctx.createRadialGradient(px, py, 0, px, py, Math.max(1, 6));
+    g.addColorStop(0, 'rgba(0,255,65,0.8)');
+    g.addColorStop(1, 'rgba(0,255,65,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, Math.max(0.5, 6), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#00ff41';
+    ctx.beginPath();
+    ctx.arc(px, py, Math.max(0.3, 2), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw nodes
+  netNodes.forEach(n => {
+    const nx = n.x * w, ny = n.y * h;
+    let color = '#00ff41';
+    let glowColor = 'rgba(0,255,65,0.2)';
+    if(n.type === 'target'){
+      color = netBreached ? '#00ff41' : '#ff003c';
+      glowColor = netBreached ? 'rgba(0,255,65,0.3)' : 'rgba(255,0,60,0.25)';
+    } else if(n.type === 'source'){
+      color = '#00e5ff';
+      glowColor = 'rgba(0,229,255,0.2)';
+    }
+
+    // Glow
+    const g = ctx.createRadialGradient(nx, ny, 0, nx, ny, Math.max(1, 18));
+    g.addColorStop(0, glowColor);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(nx, ny, Math.max(1, 18), 0, Math.PI * 2);
+    ctx.fill();
+
+    // Node
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(nx, ny, Math.max(0.5, 5), 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '9px Fira Code';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, nx, ny + 18);
+  });
+}
+
+/* ── Progress Bar ── */
+let progressVal = 0;
+let progressDone = false;
+
+function startProgress(){
+  updateProgress();
+}
+
+function updateProgress(){
+  if(progressDone) return;
+
+  // Non-linear progress: fast start, slow middle, pause at 92, burst at end
+  let speed;
+  if(progressVal < 35) speed = 0.8;
+  else if(progressVal < 55) speed = 0.5;
+  else if(progressVal < 75) speed = 0.35;
+  else if(progressVal < 88) speed = 0.2;
+  else if(progressVal < 93) speed = 0.04; // Almost pause
+  else if(progressVal < 96) speed = 0.02; // Dramatic pause
+  else speed = 1.5; // Burst
+
+  progressVal = Math.min(100, progressVal + speed);
+
+  const fill = document.getElementById('progressFill');
+  const pct = document.getElementById('progressPct');
+  fill.style.width = progressVal + '%';
+  pct.textContent = Math.floor(progressVal) + '%';
+
+  if(progressVal >= 100){
+    progressDone = true;
+    triggerAccessGranted();
+    return;
+  }
+
+  const delay = progressVal > 88 && progressVal < 96 ? 200 : 50;
+  setTimeout(updateProgress, delay);
+}
+
+function triggerAccessGranted(){
+  // Flash
+  const flash = document.getElementById('flash');
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 150);
+  setTimeout(() => {
+    flash.classList.add('show');
+    setTimeout(() => flash.classList.remove('show'), 80);
+  }, 250);
+
+  // Update progress section
+  const section = document.getElementById('progressSection');
+  section.classList.add('complete');
+  document.getElementById('progressLabel').textContent = 'BREACH COMPLETE';
+
+  // Show overlay
+  setTimeout(() => {
+    document.getElementById('accessOverlay').classList.add('show');
+  }, 500);
+
+  // Hide overlay and update state
+  setTimeout(() => {
+    document.getElementById('accessOverlay').classList.remove('show');
+    netBreached = true;
+
+    // Update status
+    document.getElementById('statusText').textContent = 'BREACHED';
+    document.querySelector('.topbar-status .indicator').style.background = '#ff003c';
+
+    // Update terminal prompt
+    const term = document.getElementById('terminal');
+    const lines = term.querySelectorAll('.term-prompt');
+    lines.forEach(p => p.textContent = 'root@target:~# ');
+
+    // Add final terminal line
+    const div = document.createElement('div');
+    div.className = 'term-line term-output';
+    div.innerHTML = '<span class="success">[+] Full system access obtained. All data exfiltrated.</span>';
+    term.appendChild(div);
+    const cursorDiv = document.createElement('div');
+    cursorDiv.className = 'term-line term-input';
+    cursorDiv.innerHTML = '<span class="term-prompt">root@target:~# </span><span class="cursor-blink"></span>';
+    term.appendChild(cursorDiv);
+    term.scrollTop = term.scrollHeight;
+  }, 3500);
+
+  // Final alert
+  setTimeout(() => {
+    showAlert('critical', 'FULL SYSTEM ACCESS OBTAINED', 'All countermeasures bypassed. Session persistent.');
+  }, 4000);
+}
+
+/* ── Alert System ── */
+const alertMessages = [
+  {type:'warning', title:'PORT SCAN DETECTED', msg:'Incoming scan on ports 80, 443, 8080 from 10.0.0.33'},
+  {type:'info', title:'TUNNEL ESTABLISHED', msg:'Encrypted tunnel active via PROXY-2 -> FIREWALL'},
+  {type:'warning', title:'COUNTERMEASURE', msg:'IDS signature match: CVE-2024-7291 exploit pattern'},
+  {type:'success', title:'FIREWALL BYPASSED', msg:'Rule #47 modified. Outbound traffic permitted.'},
+  {type:'critical', title:'ENCRYPTION CRACKED', msg:'AES-256 key recovered via side-channel attack'},
+  {type:'warning', title:'LOG INJECTION', msg:'Access.log entries sanitized. Trail covered.'},
+  {type:'info', title:'PIVOT SUCCESSFUL', msg:'Internal network 10.0.0.0/8 now accessible'},
+  {type:'success', title:'PRIVILEGE ESCALATION', msg:'Local root obtained via kernel exploit'},
+];
+
+let alertIdx = 0;
+function startAlerts(){
+  // First alert after 3 seconds, then every 4-6 seconds
+  setTimeout(showNextAlert, 3000);
+}
+
+function showNextAlert(){
+  if(progressDone && alertIdx > 2) return; // Stop extra alerts after breach
+  const a = alertMessages[alertIdx % alertMessages.length];
+  showAlert(a.type, a.title, a.msg);
+  alertIdx++;
+  const next = 4000 + Math.random() * 3000;
+  setTimeout(showNextAlert, next);
+}
+
+function showAlert(type, title, msg){
+  const container = document.getElementById('alerts');
+  const div = document.createElement('div');
+  div.className = 'alert ' + type;
+  div.innerHTML = `<div class="alert-type">${title}</div><div class="alert-msg">${msg}</div>`;
+  container.appendChild(div);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => div.classList.add('show'));
+  });
+
+  setTimeout(() => {
+    div.classList.add('hide');
+    setTimeout(() => div.remove(), 400);
+  }, 4000);
+}
+
+/* ── Main Render Loop ── */
+function mainLoop(){
+  drawMatrix();
+  requestAnimationFrame(mainLoop);
+}
+mainLoop();
+
+/* ── Resize handler for network canvas ── */
+window.addEventListener('resize', () => {
+  const canvas = document.getElementById('netCanvas');
+  if(canvas && canvas.parentElement){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height - 30;
+  }
+});
+
+})();
+</script>
+</body>
+</html>

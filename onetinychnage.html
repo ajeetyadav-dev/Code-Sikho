@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Tiny Animation Changed Everything</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                        body: ['"DM Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #08080f;
+            --fg: #f0ece6;
+            --muted: #6b6777;
+            --accent: #FF6347;
+            --card: #111119;
+            --border: #1e1e2e;
+            --accent-glow: rgba(255, 99, 71, 0.12);
+            --success: #2DD4A8;
+            --danger: #FF4757;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ── Ambient background ── */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(130px);
+            pointer-events: none;
+            z-index: 0;
+            transition: transform 0.4s ease-out;
+        }
+        .blob-1 { width: 520px; height: 520px; background: var(--accent); top: -220px; right: -120px; opacity: 0.07; }
+        .blob-2 { width: 420px; height: 420px; background: var(--success); bottom: -120px; left: -120px; opacity: 0.055; }
+        .blob-3 { width: 300px; height: 300px; background: #FFA502; top: 50%; left: 40%; opacity: 0.03; }
+
+        .grid-pattern {
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+            background-size: 64px 64px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ── Hero text reveal ── */
+        .hero-word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(44px) rotateX(-15deg);
+            transition: opacity 0.7s cubic-bezier(.16,1,.3,1), transform 0.7s cubic-bezier(.16,1,.3,1);
+        }
+        .hero-word.visible { opacity: 1; transform: translateY(0) rotateX(0deg); }
+
+        .tiny-dot {
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            animation: tinyBounce 0.55s ease-in-out infinite alternate;
+            box-shadow: 0 0 12px var(--accent);
+        }
+        @keyframes tinyBounce {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-14px) scale(0.85); }
+        }
+
+        .accent-line {
+            height: 3px; width: 64px;
+            background: var(--accent);
+            border-radius: 2px;
+            position: relative; overflow: hidden;
+        }
+        .accent-line::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+            animation: shimmer 2.2s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-110%); }
+            100% { transform: translateX(110%); }
+        }
+
+        /* ── Demo cards ── */
+        .demo-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            position: relative;
+            transition: border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+        .demo-card:hover {
+            border-color: rgba(255, 99, 71, 0.25);
+            box-shadow: 0 0 60px rgba(255, 99, 71, 0.04);
+        }
+        .demo-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 72px; font-weight: 700;
+            color: rgba(255,255,255,0.025);
+            position: absolute; top: -8px; right: 20px;
+            line-height: 1; user-select: none; pointer-events: none;
+        }
+
+        .split-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 10px; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            padding: 5px 12px; border-radius: 6px; display: inline-block;
+        }
+        .label-before { background: rgba(255,255,255,0.04); color: var(--muted); }
+        .label-after { background: var(--accent-glow); color: var(--accent); }
+
+        /* ── Demo 1: Button ── */
+        .demo-btn {
+            padding: 12px 36px; border: none; border-radius: 10px;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
+            cursor: pointer; position: relative; overflow: hidden;
+            background: var(--accent); color: #fff; outline: none;
+        }
+        .demo-btn:focus-visible { box-shadow: 0 0 0 3px rgba(255,99,71,0.45); }
+        .btn-no-anim.active { background: #b84430; }
+        .btn-with-anim { transition: transform 0.18s cubic-bezier(.16,1,.3,1), box-shadow 0.35s ease, background 0.2s ease; }
+        .btn-with-anim.active { background: #b84430; }
+
+        .ripple {
+            position: absolute; border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+            transform: scale(0);
+            animation: rippleAnim 0.55s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+        /* ── Demo 2: Toggle ── */
+        .toggle-track {
+            width: 54px; height: 30px; border-radius: 15px;
+            background: #252535; cursor: pointer; position: relative;
+        }
+        .toggle-track.on { background: var(--accent); }
+        .toggle-thumb {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: #fff; position: absolute; top: 3px; left: 3px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        }
+        .toggle-track.on .toggle-thumb { left: 27px; }
+        /* No anim: instant snap */
+        .toggle-no-anim .toggle-thumb { transition: none; }
+        /* With anim: spring overshoot */
+        .toggle-spring .toggle-thumb { transition: left 0.45s cubic-bezier(0.68, -0.6, 0.32, 1.6); }
+        .toggle-spring { transition: background 0.3s ease; }
+
+        /* ── Demo 3: Heart ── */
+        .heart-btn {
+            width: 58px; height: 58px; border: 2px solid var(--border);
+            border-radius: 50%; background: transparent; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: var(--muted); outline: none; position: relative;
+        }
+        .heart-btn:focus-visible { box-shadow: 0 0 0 3px rgba(255,71,87,0.4); }
+        .heart-btn.liked { color: var(--danger); border-color: var(--danger); background: rgba(255,71,87,0.08); }
+        .heart-spring.liked { animation: heartPop 0.45s cubic-bezier(.17,.89,.32,1.28); }
+        @keyframes heartPop {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.35); }
+            55% { transform: scale(0.88); }
+            100% { transform: scale(1); }
+        }
+        .heart-particle {
+            position: absolute; width: 5px; height: 5px;
+            border-radius: 50%; pointer-events: none;
+            animation: pBurst 0.55s ease-out forwards;
+        }
+        @keyframes pBurst {
+            0% { opacity: 1; transform: translate(0,0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.2); }
+        }
+
+        /* ── Demo 4: Checkbox ── */
+        .custom-cb {
+            width: 26px; height: 26px; border: 2px solid var(--border);
+            border-radius: 7px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+            background: transparent; outline: none;
+        }
+        .custom-cb:focus-visible { box-shadow: 0 0 0 3px rgba(45,212,168,0.4); }
+        .custom-cb.on { border-color: var(--success); background: var(--success); }
+        .custom-cb svg { width: 14px; height: 14px; }
+        .chk-path {
+            stroke: #fff; stroke-width: 3; stroke-linecap: round;
+            stroke-linejoin: round; fill: none;
+            stroke-dasharray: 22; stroke-dashoffset: 22;
+        }
+        .cb-no-anim.on .chk-path { stroke-dashoffset: 0; transition: none; }
+        .cb-draw .chk-path { transition: stroke-dashoffset 0.32s ease 0.08s; }
+        .cb-draw.on .chk-path { stroke-dashoffset: 0; }
+
+        /* ── Demo 5: Card tilt ── */
+        .tilt-card {
+            border-radius: 14px; padding: 18px;
+            background: linear-gradient(145deg, #151522, #1a1a30);
+            border: 1px solid var(--border); cursor: default;
+            min-height: 130px; display: flex; flex-direction: column; justify-content: flex-end;
+        }
+        .tilt-card-3d {
+            transition: transform 0.12s ease-out, box-shadow 0.3s ease;
+            transform-style: preserve-3d;
+        }
+        .tilt-card-3d:hover {
+            box-shadow: 0 24px 48px rgba(0,0,0,0.35), 0 0 50px rgba(255,99,71,0.06);
+        }
+
+        /* ── Grand toggle ── */
+        .grand-track {
+            width: 76px; height: 38px; border-radius: 19px;
+            background: #252535; cursor: pointer; position: relative;
+            transition: background 0.4s ease;
+        }
+        .grand-track.on { background: var(--accent); }
+        .grand-thumb {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: #fff; position: absolute; top: 3px; left: 3px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        .grand-track.on .grand-thumb { left: 41px; }
+
+        /* ── Scroll reveal ── */
+        .reveal {
+            opacity: 0; transform: translateY(32px);
+            transition: opacity 0.75s cubic-bezier(.16,1,.3,1), transform 0.75s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ── ANIMATIONS OFF ── */
+        .anim-off .hero-word { transition: none !important; opacity: 1 !important; transform: none !important; }
+        .anim-off .tiny-dot { animation: none !important; }
+        .anim-off .accent-line::after { animation: none !important; }
+        .anim-off .btn-with-anim { transition: none !important; }
+        .anim-off .ripple { display: none !important; }
+        .anim-off .toggle-spring .toggle-thumb { transition: left 0.01s !important; }
+        .anim-off .toggle-spring { transition: none !important; }
+        .anim-off .heart-spring.liked { animation: none !important; }
+        .anim-off .heart-particle { display: none !important; }
+        .anim-off .cb-draw .chk-path { transition: none !important; }
+        .anim-off .tilt-card-3d { transition: none !important; }
+        .anim-off .grand-thumb { transition: left 0.01s !important; }
+        .anim-off .grand-track { transition: none !important; }
+        .anim-off .demo-card { transition: none !important; }
+        .anim-off .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .anim-off .bg-blob { transition: none !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Ambient layers -->
+    <div class="bg-blob blob-1" aria-hidden="true"></div>
+    <div class="bg-blob blob-2" aria-hidden="true"></div>
+    <div class="bg-blob blob-3" aria-hidden="true"></div>
+    <div class="grid-pattern" aria-hidden="true"></div>
+
+    <main class="relative z-10">
+
+        <!-- ════ HERO ════ -->
+        <header class="min-h-screen flex flex-col items-center justify-center px-6 text-center">
+            <div class="mb-5 flex items-center gap-3">
+                <span class="tiny-dot" aria-hidden="true"></span>
+                <span class="font-body text-sm" style="color:var(--muted)">This little thing right here</span>
+            </div>
+
+            <h1 class="font-display font-bold leading-tight max-w-4xl" style="font-size:clamp(2.4rem,7vw,5.2rem)">
+                <span class="hero-word">One</span>
+                <span class="hero-word">Tiny</span>
+                <span class="hero-word">Animation</span>
+                <br>
+                <span class="hero-word" style="color:var(--accent)">Changed</span>
+                <span class="hero-word">Everything</span>
+            </h1>
+
+            <div class="accent-line mt-8 mb-8" aria-hidden="true"></div>
+
+            <p class="font-body text-lg max-w-xl leading-relaxed" style="color:var(--muted)">
+                The gap between "it works" and "it feels right" is often just a few milliseconds of carefully crafted motion. See for yourself.
+            </p>
+
+            <a href="#demos" class="mt-14 inline-flex items-center gap-2 px-7 py-3 rounded-full font-display font-medium text-sm border transition-colors duration-300 hover:bg-white/5" style="border-color:var(--border);color:var(--muted)">
+                Explore the demos
+                <i class="fas fa-arrow-down text-xs"></i>
+            </a>
+
+            <!-- Scroll hint -->
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
+                <div class="w-5 h-8 rounded-full border border-white/30 flex justify-center pt-1.5">
+                    <div class="w-1 h-2 rounded-full bg-white/50" style="animation:scrollDot 1.6s ease-in-out infinite"></div>
+                </div>
+            </div>
+            <style>
+                @keyframes scrollDot {
+                    0%,100% { transform:translateY(0); opacity:1; }
+                    50% { transform:translateY(8px); opacity:0.3; }
+                }
+                .anim-off div[style*="scrollDot"] { animation:none !important; }
+            </style>
+        </header>
+
+        <!-- ════ DEMOS ════ -->
+        <section id="demos" class="max-w-5xl mx-auto px-6 pb-32">
+
+            <div class="text-center mb-16 reveal">
+                <p class="font-display text-xs font-bold tracking-widest uppercase mb-4" style="color:var(--accent)">Interactive Comparison</p>
+                <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Click both sides. Feel the difference.</h2>
+                <p class="font-body mx-auto" style="color:var(--muted);max-width:520px">Each pair shows the exact same element — one flat, one alive. Interact with both to understand why those extra milliseconds matter.</p>
+            </div>
+
+            <div class="grid gap-7">
+
+                <!-- 01 — Button Click -->
+                <article class="demo-card p-7 sm:p-9 reveal">
+                    <span class="demo-number" aria-hidden="true">01</span>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:var(--accent-glow);color:var(--accent)"><i class="fas fa-hand-pointer"></i></div>
+                        <h3 class="font-display font-semibold text-lg">Button Click</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <span class="split-label label-before mb-4 inline-block">Without</span>
+                            <div class="flex items-center justify-center mt-4 h-24">
+                                <button class="demo-btn btn-no-anim" data-demo="btn-no" aria-label="Button without animation">Click Me</button>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="split-label label-after mb-4 inline-block">With Animation</span>
+                            <div class="flex items-center justify-center mt-4 h-24">
+                                <button class="demo-btn btn-with-anim" data-demo="btn-yes" aria-label="Button with animation">Click Me</button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 02 — Toggle Switch -->
+                <article class="demo-card p-7 sm:p-9 reveal">
+                    <span class="demo-number" aria-hidden="true">02</span>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:var(--accent-glow);color:var(--accent)"><i class="fas fa-toggle-on"></i></div>
+                        <h3 class="font-display font-semibold text-lg">Toggle Switch</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <span class="split-label label-before mb-4 inline-block">Without</span>
+                            <div class="flex items-center justify-center mt-4 h-24">
+                                <div class="toggle-track toggle-no-anim" data-demo="toggle-no" role="switch" aria-checked="false" aria-label="Toggle without animation" tabindex="0"><div class="toggle-thumb"></div></div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="split-label label-after mb-4 inline-block">With Animation</span>
+                            <div class="flex items-center justify-center mt-4 h-24">
+                                <div class="toggle-track toggle-spring" data-demo="toggle-yes" role="switch" aria-checked="false" aria-label="Toggle with animation" tabindex="0"><div class="toggle-thumb"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 03 — Heart Like -->
+                <article class="demo-card p-7 sm:p-9 reveal">
+                    <span class="demo-number" aria-hidden="true">03</span>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:var(--accent-glow);color:var(--accent)"><i class="fas fa-heart"></i></div>
+                        <h3 class="font-display font-semibold text-lg">Like Button</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <span class="split-label label-before mb-4 inline-block">Without</span>
+                            <div class="flex items-center justify-center mt-4 h-24">
+                                <button class="heart-btn" data-demo="heart-no" aria-label="Like without animation"><i class="far fa-heart"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="split-label label-after mb-4 inline-block">With Animation</span>
+                            <div class="flex items-center justify-center mt-4 h-24">
+                                <button class="heart-btn heart-spring" data-demo="heart-yes" aria-label="Like with animation"><i class="far fa-heart"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 04 — Checkbox -->
+                <article class="demo-card p-7 sm:p-9 reveal">
+                    <span class="demo-number" aria-hidden="true">04</span>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:var(--accent-glow);color:var(--accent)"><i class="fas fa-check-square"></i></div>
+                        <h3 class="font-display font-semibold text-lg">Checkbox</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <span class="split-label label-before mb-4 inline-block">Without</span>
+                            <div class="flex items-center gap-3 mt-4 h-24">
+                                <div class="custom-cb cb-no-anim" data-demo="cb-no" role="checkbox" aria-checked="false" aria-label="Checkbox without animation" tabindex="0">
+                                    <svg viewBox="0 0 14 14"><path class="chk-path" d="M2 7l3.5 3.5L12 4"/></svg>
+                                </div>
+                                <span class="font-body text-sm" style="color:var(--muted)">Enable notifications</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="split-label label-after mb-4 inline-block">With Animation</span>
+                            <div class="flex items-center gap-3 mt-4 h-24">
+                                <div class="custom-cb cb-draw" data-demo="cb-yes" role="checkbox" aria-checked="false" aria-label="Checkbox with animation" tabindex="0">
+                                    <svg viewBox="0 0 14 14"><path class="chk-path" d="M2 7l3.5 3.5L12 4"/></svg>
+                                </div>
+                                <span class="font-body text-sm" style="color:var(--muted)">Enable notifications</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 05 — Card Hover -->
+                <article class="demo-card p-7 sm:p-9 reveal">
+                    <span class="demo-number" aria-hidden="true">05</span>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:var(--accent-glow);color:var(--accent)"><i class="fas fa-layer-group"></i></div>
+                        <h3 class="font-display font-semibold text-lg">Card Hover</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <span class="split-label label-before mb-4 inline-block">Without</span>
+                            <div class="mt-4">
+                                <div class="tilt-card">
+                                    <div class="flex items-center gap-2.5 mb-2">
+                                        <div class="w-9 h-9 rounded-full flex-shrink-0" style="background:linear-gradient(135deg,#FF6347,#FF8C69)"></div>
+                                        <div>
+                                            <p class="font-display text-sm font-semibold">Sarah Chen</p>
+                                            <p class="text-xs" style="color:var(--muted)">Product Designer</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs" style="color:var(--muted)">Hover over this card</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="split-label label-after mb-4 inline-block">With Animation</span>
+                            <div class="mt-4">
+                                <div class="tilt-card tilt-card-3d" data-demo="tilt" aria-label="Card with 3D tilt on hover">
+                                    <div class="flex items-center gap-2.5 mb-2">
+                                        <div class="w-9 h-9 rounded-full flex-shrink-0" style="background:linear-gradient(135deg,#FF6347,#FF8C69)"></div>
+                                        <div>
+                                            <p class="font-display text-sm font-semibold">Sarah Chen</p>
+                                            <p class="text-xs" style="color:var(--muted)">Product Designer</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs" style="color:var(--muted)">Hover over this card</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- ════ GRAND TOGGLE ════ -->
+            <div class="mt-24 text-center reveal">
+                <div class="demo-card p-10 md:p-14 max-w-2xl mx-auto" style="border-color:rgba(255,99,71,0.15)">
+                    <p class="font-display text-xs font-bold tracking-widest uppercase mb-3" style="color:var(--accent)">The Grand Experiment</p>
+                    <h2 class="font-display font-bold text-2xl md:text-3xl mb-3">Turn off ALL animations</h2>
+                    <p class="font-body mb-8" style="color:var(--muted)">Flip this switch and watch the entire page go flat. Same content, same functionality — but something essential vanishes.</p>
+                    <div class="flex items-center justify-center gap-5">
+                        <span class="font-display text-sm font-semibold" style="color:var(--muted)">Dead</span>
+                        <div class="grand-track on" id="grandToggle" role="switch" aria-checked="true" aria-label="Toggle all page animations" tabindex="0">
+                            <div class="grand-thumb"></div>
+                        </div>
+                        <span class="font-display text-sm font-semibold" style="color:var(--success)">Alive</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center py-12 px-6" style="border-top:1px solid var(--border)">
+            <p class="font-body text-sm" style="color:var(--muted)">Motion is not decoration. It is communication.</p>
+        </footer>
+    </main>
+
+    <script>
+        /* ════════════════════════════════════════
+           State
+        ════════════════════════════════════════ */
+        let animOn = true;
+
+        /* ════════════════════════════════════════
+           Hero word stagger
+        ════════════════════════════════════════ */
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.hero-word').forEach((w, i) => {
+                setTimeout(() => w.classList.add('visible'), 250 + i * 160);
+            });
+
+            /* Scroll reveal */
+            const obs = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+            }, { threshold: 0.12 });
+            document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+        });
+
+        /* ════════════════════════════════════════
+           Demo 1 — Button
+        ════════════════════════════════════════ */
+        document.querySelector('[data-demo="btn-no"]').addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
+
+        document.querySelector('[data-demo="btn-yes"]').addEventListener('click', function(e) {
+            this.classList.toggle('active');
+            /* Scale press */
+            this.style.transform = 'scale(0.93)';
+            this.style.boxShadow = '0 0 36px rgba(255,99,71,0.45)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+                this.style.boxShadow = 'none';
+            }, 160);
+            /* Ripple */
+            const r = this.getBoundingClientRect();
+            const rip = document.createElement('span');
+            rip.classList.add('ripple');
+            const sz = Math.max(r.width, r.height);
+            Object.assign(rip.style, {
+                width: sz + 'px', height: sz + 'px',
+                left: (e.clientX - r.left - sz / 2) + 'px',
+                top: (e.clientY - r.top - sz / 2) + 'px'
+            });
+            this.appendChild(rip);
+            setTimeout(() => rip.remove(), 560);
+        });
+
+        /* ════════════════════════════════════════
+           Demo 2 — Toggle
+        ════════════════════════════════════════ */
+        function initToggle(el) {
+            el.addEventListener('click', () => {
+                el.classList.toggle('on');
+                el.setAttribute('aria-checked', el.classList.contains('on'));
+            });
+            el.addEventListener('keydown', e => {
+                if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); el.click(); }
+            });
+        }
+        initToggle(document.querySelector('[data-demo="toggle-no"]'));
+        initToggle(document.querySelector('[data-demo="toggle-yes"]'));
+
+        /* ════════════════════════════════════════
+           Demo 3 — Heart
+        ════════════════════════════════════════ */
+        const heartNo = document.querySelector('[data-demo="heart-no"]');
+        heartNo.addEventListener('click', function() {
+            this.classList.toggle('liked');
+            const i = this.querySelector('i');
+            i.className = this.classList.contains('liked') ? 'fas fa-heart' : 'far fa-heart';
+        });
+
+        const heartYes = document.querySelector('[data-demo="heart-yes"]');
+        heartYes.addEventListener('click', function(e) {
+            const wasLiked = this.classList.contains('liked');
+            this.classList.toggle('liked');
+            const i = this.querySelector('i');
+            i.className = this.classList.contains('liked') ? 'fas fa-heart' : 'far fa-heart';
+
+            if (!wasLiked && animOn) {
+                /* Re-trigger burst animation */
+                this.classList.remove('heart-spring');
+                void this.offsetWidth; // force reflow
+                this.classList.add('heart-spring');
+
+                /* Particles */
+                const colors = ['#FF4757','#FF6B81','#FFA502','#FF6348','#EE5A24','#FF7979','#FFBE76','#E15F41'];
+                for (let k = 0; k < 10; k++) {
+                    const p = document.createElement('span');
+                    p.classList.add('heart-particle');
+                    const angle = (Math.PI * 2 / 10) * k + (Math.random() - 0.5) * 0.4;
+                    const dist = 22 + Math.random() * 18;
+                    p.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+                    p.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+                    p.style.background = colors[k % colors.length];
+                    p.style.left = '50%'; p.style.top = '50%';
+                    p.style.marginLeft = '-2.5px'; p.style.marginTop = '-2.5px';
+                    this.appendChild(p);
+                    setTimeout(() => p.remove(), 560);
+                }
+            }
+        });
+
+        /* ════════════════════════════════════════
+           Demo 4 — Checkbox
+        ════════════════════════════════════════ */
+        function initCb(el) {
+            el.addEventListener('click', () => {
+                el.classList.toggle('on');
+                el.setAttribute('aria-checked', el.classList.contains('on'));
+            });
+            el.addEventListener('keydown', e => {
+                if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); el.click(); }
+            });
+        }
+        initCb(document.querySelector('[data-demo="cb-no"]'));
+        initCb(document.querySelector('[data-demo="cb-yes"]'));
+
+        /* ════════════════════════════════════════
+           Demo 5 — Card tilt
+        ════════════════════════════════════════ */
+        const tiltCard = document.querySelector('[data-demo="tilt"]');
+        tiltCard.addEventListener('mousemove', function(e) {
+            if (!animOn) return;
+            const r = this.getBoundingClientRect();
+            const x = e.clientX - r.left, y = e.clientY - r.top;
+            const cx = r.width / 2, cy = r.height / 2;
+            const rx = ((y - cy) / cy) * -10;
+            const ry = ((x - cx) / cx) * 10;
+            this.style.transform = `perspective(600px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.03)`;
+        });
+        tiltCard.addEventListener('mouseleave', function() {
+            this.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
+        });
+
+        /* ════════════════════════════════════════
+           Grand toggle
+        ════════════════════════════════════════ */
+        const grandEl = document.getElementById('grandToggle');
+        grandEl.addEventListener('click', () => {
+            animOn = !animOn;
+            grandEl.classList.toggle('on', animOn);
+            grandEl.setAttribute('aria-checked', animOn);
+            document.body.classList.toggle('anim-off', !animOn);
+            /* Reset tilt card when turning off */
+            if (!animOn) tiltCard.style.transform = 'none';
+        });
+        grandEl.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); grandEl.click(); }
+        });
+
+        /* ════════════════════════════════════════
+           Ambient parallax on blobs
+        ════════════════════════════════════════ */
+        const blobs = document.querySelectorAll('.bg-blob');
+        document.addEventListener('mousemove', e => {
+            if (!animOn) return;
+            const nx = (e.clientX / window.innerWidth - 0.5);
+            const ny = (e.clientY / window.innerHeight - 0.5);
+            blobs[0].style.transform = `translate(${nx * 35}px, ${ny * 35}px)`;
+            blobs[1].style.transform = `translate(${nx * -25}px, ${ny * -25}px)`;
+            blobs[2].style.transform = `translate(${nx * 18}px, ${ny * 18}px)`;
+        });
+    </script>
+</body>
+</html>

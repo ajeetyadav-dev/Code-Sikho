@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightscape</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{width:100%;height:100%;overflow:hidden;background:#050810}
+
+        canvas#scene{position:fixed;top:0;left:0;width:100%;height:100%;display:block}
+
+        .vignette{
+            position:fixed;inset:0;pointer-events:none;z-index:5;
+            background:radial-gradient(ellipse 65% 55% at 50% 45%,transparent 20%,rgba(0,0,0,0.55) 100%);
+        }
+
+        .label{
+            position:fixed;top:2rem;left:2.5rem;z-index:10;
+            font-family:'Space Grotesk',sans-serif;font-size:.68rem;
+            letter-spacing:.28em;text-transform:uppercase;
+            color:rgba(255,255,255,.2);
+            opacity:0;animation:fadeIn 2s ease 2.5s forwards;
+        }
+
+        .overlay{
+            position:fixed;inset:0;pointer-events:none;z-index:10;
+            display:flex;flex-direction:column;justify-content:center;align-items:center;
+        }
+
+        .center-text{text-align:center;max-width:720px;padding:0 2rem}
+
+        .center-text h1{
+            font-family:'Cormorant Garamond',serif;font-weight:300;
+            font-size:clamp(2rem,5.8vw,4.8rem);
+            color:rgba(255,255,255,.82);line-height:1.12;letter-spacing:-.01em;
+            margin-bottom:1.6rem;
+            opacity:0;transform:translateY(34px);
+            animation:fadeUp 2s cubic-bezier(.22,1,.36,1) .6s forwards;
+        }
+
+        .shimmer{
+            font-style:italic;
+            background:linear-gradient(90deg,
+                rgba(0,255,200,.45) 0%,rgba(255,255,255,.75) 15%,
+                rgba(0,255,200,.45) 30%,rgba(255,255,255,.75) 50%,
+                rgba(0,255,200,.45) 65%,rgba(255,255,255,.75) 80%,
+                rgba(0,255,200,.45) 100%);
+            background-size:250% 100%;
+            -webkit-background-clip:text;background-clip:text;
+            -webkit-text-fill-color:transparent;
+            animation:shimmerMove 5s linear infinite;
+        }
+        @keyframes shimmerMove{
+            0%{background-position:250% 0}
+            100%{background-position:-250% 0}
+        }
+
+        .clock{
+            font-family:'Space Grotesk',sans-serif;font-weight:300;
+            font-size:.95rem;color:rgba(255,255,255,.16);
+            letter-spacing:.18em;
+            opacity:0;transform:translateY(22px);
+            animation:fadeUp 1.8s cubic-bezier(.22,1,.36,1) 1.4s forwards;
+        }
+        .clock .colon{animation:blink 2s step-end infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+        .hint{
+            position:fixed;bottom:2rem;left:0;right:0;text-align:center;z-index:10;
+            font-family:'Space Grotesk',sans-serif;font-size:.72rem;
+            color:rgba(255,255,255,.12);letter-spacing:.1em;
+            opacity:0;transform:translateY(18px);
+            animation:fadeUp 1.6s cubic-bezier(.22,1,.36,1) 2.2s forwards;
+        }
+
+        @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{to{opacity:1}}
+
+        @media(max-width:640px){
+            .label{top:1.2rem;left:1.5rem;font-size:.6rem}
+            .center-text{padding:0 1.5rem}
+            .hint{bottom:1.2rem;font-size:.62rem}
+        }
+
+        @media(prefers-reduced-motion:reduce){
+            *,*::before,*::after{
+                animation-duration:.01ms!important;
+                transition-duration:.01ms!important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div class="vignette"></div>
+
+<div class="label">Nightscape</div>
+
+<div class="overlay">
+    <div class="center-text">
+        <h1>This Animation Hits Different <span class="shimmer">At Night</span></h1>
+        <div class="clock" id="clock"></div>
+    </div>
+</div>
+
+<div class="hint">Move your cursor to explore the night &mdash; click the water</div>
+
+<script>
+(function(){
+    'use strict';
+
+    /* ── Canvas Setup ── */
+    const canvas = document.getElementById('scene');
+    const ctx = canvas.getContext('2d');
+    let W, H, waterY;
+
+    function resize(){
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+        waterY = H * 0.66;
+        generateTerrain();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    /* ── Mouse ── */
+    const mouse = { x: 0.5, y: 0.5, cx: 0, cy: 0 };
+
+    document.addEventListener('mousemove', e => {
+        mouse.x = e.clientX / W;
+        mouse.y = e.clientY / H;
+        mouse.cx = e.clientX;
+        mouse.cy = e.clientY;
+    });
+    document.addEventListener('touchmove', e => {
+        mouse.x = e.touches[0].clientX / W;
+        mouse.y = e.touches[0].clientY / H;
+        mouse.cx = e.touches[0].clientX;
+        mouse.cy = e.touches[0].clientY;
+    }, { passive: true });
+
+    /* ── Click Ripples ── */
+    const ripples = [];
+    document.addEventListener('click', e => {
+        if(e.clientY > waterY){
+            ripples.push({ x:e.clientX, y:e.clientY, r:0, maxR:80+Math.random()*60, a:0.35 });
+        }
+    });
+    document.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        if(t.clientY > waterY){
+            ripples.push({ x:t.clientX, y:t.clientY, r:0, maxR:80+Math.random()*60, a:0.35 });
+        }
+    });
+
+    /* ── Seeded Random ── */
+    function seededRandom(seed){
+        let s = seed;
+        return function(){
+            s = (s * 16807) % 2147483647;
+            return (s - 1) / 2147483646;
+        };
+    }
+
+    /* ── Stars ── */
+    const STAR_COUNT = 500;
+    const stars = [];
+    const starColors = ['#ffffff','#ffe4b5','#b8d0ff','#ffd4a0','#c8e0ff'];
+    for(let i = 0; i < STAR_COUNT; i++){
+        stars.push({
+            x: Math.random(),
+            y: Math.random() * 0.65,
+            size: Math.random() * 1.8 + 0.3,
+            speed: Math.random() * 2.5 + 0.8,
+            offset: Math.random() * Math.PI * 2,
+            depth: Math.random() * 3 + 1,
+            color: starColors[Math.floor(Math.random() * starColors.length)]
+        });
+    }
+
+    /* ── Shooting Stars ── */
+    const shooters = [];
+    function spawnShooter(){
+        const angle = Math.PI * 0.15 + Math.random() * Math.PI * 0.2;
+        const speed = 6 + Math.random() * 6;
+        shooters.push({
+            x: Math.random() * W * 0.8,
+            y: Math.random() * H * 0.25,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            decay: 0.012 + Math.random() * 0.008,
+            len: 50 + Math.random() * 70
+        });
+    }
+
+    /* ── Fireflies ── */
+    const FIREFLY_COUNT = 35;
+    const fireflies = [];
+    for(let i = 0; i < FIREFLY_COUNT; i++){
+        fireflies.push({
+            x: Math.random() * 2000,
+            y: 0,
+            vx: 0, vy: 0,
+            phase: Math.random() * Math.PI * 2,
+            glowSpeed: Math.random() * 1.2 + 0.6,
+            size: Math.random() * 2 + 1.5,
+            angle: Math.random() * Math.PI * 2
+        });
+    }
+    // Position fireflies after first resize
+    function positionFireflies(){
+        fireflies.forEach(ff => {
+            ff.x = Math.random() * W;
+            ff.y = waterY - 30 + Math.random() * (H * 0.22);
+        });
+    }
+
+    /* ── Terrain (cached) ── */
+    let mtBack = [], mtFront = [], treeData = [];
+
+    function generateTerrain(){
+        const rng = seededRandom(777);
+
+        // Back mountains
+        mtBack = [];
+        const n1 = 120;
+        for(let i = 0; i <= n1; i++){
+            const x = (i / n1) * W;
+            let y = H * 0.57;
+            y -= Math.sin(i * 0.07 + 1.5) * H * 0.06;
+            y -= Math.sin(i * 0.14 + 3.0) * H * 0.03;
+            y -= Math.sin(i * 0.28 + 0.5) * H * 0.015;
+            y -= Math.abs(Math.sin(i * 0.045 + 2.0)) * H * 0.04;
+            mtBack.push({ x, y });
+        }
+
+        // Front mountains
+        mtFront = [];
+        const n2 = 100;
+        for(let i = 0; i <= n2; i++){
+            const x = (i / n2) * W;
+            let y = H * 0.635;
+            y -= Math.sin(i * 0.09 + 5.0) * H * 0.04;
+            y -= Math.sin(i * 0.18 + 1.0) * H * 0.02;
+            y -= Math.sin(i * 0.36 + 3.5) * H * 0.01;
+            y -= Math.abs(Math.sin(i * 0.06 + 4.0)) * H * 0.025;
+            mtFront.push({ x, y });
+        }
+
+        // Trees along front mountain base
+        treeData = [];
+        const tc = Math.max(30, Math.floor(W / 11));
+        for(let i = 0; i < tc; i++){
+            const tx = rng() * W;
+            const si = (tx / W) * (mtFront.length - 1);
+            const lo = Math.floor(si);
+            const hi = Math.min(lo + 1, mtFront.length - 1);
+            const frac = si - lo;
+            const my = mtFront[lo].y * (1 - frac) + mtFront[hi].y * frac;
+            treeData.push({
+                x: tx,
+                y: my + rng() * 4 - 1,
+                h: 18 + rng() * 58,
+                w: 10 + rng() * 22
+            });
+        }
+        treeData.sort((a, b) => a.y - b.y);
+
+        positionFireflies();
+    }
+
+    /* ── Time ── */
+    let time = 0;
+    const clockEl = document.getElementById('clock');
+    function updateClock(){
+        const now = new Date();
+        let h = now.getHours();
+        const m = String(now.getMinutes()).padStart(2,'0');
+        const s = String(now.getSeconds()).padStart(2,'0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        clockEl.innerHTML = `${h}<span class="colon">:</span>${m}<span class="colon">:</span>${s} ${ampm}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    /* ══════════════════════════
+       DRAWING FUNCTIONS
+    ══════════════════════════ */
+
+    function drawSky(){
+        const g = ctx.createLinearGradient(0, 0, 0, waterY);
+        g.addColorStop(0, '#040710');
+        g.addColorStop(0.25, '#081020');
+        g.addColorStop(0.55, '#0c1830');
+        g.addColorStop(0.85, '#101e38');
+        g.addColorStop(1, '#141f35');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, waterY);
+    }
+
+    function drawWater(){
+        const g = ctx.createLinearGradient(0, waterY, 0, H);
+        g.addColorStop(0, '#0c1628');
+        g.addColorStop(0.4, '#091220');
+        g.addColorStop(1, '#040710');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, waterY, W, H - waterY);
+
+        // Ripple lines
+        ctx.lineWidth = 0.8;
+        for(let i = 0; i < 18; i++){
+            const y = waterY + 8 + (i / 18) * (H - waterY - 16);
+            const a = 0.018 - i * 0.0008;
+            if(a <= 0) continue;
+            ctx.strokeStyle = `rgba(180,210,255,${a})`;
+            ctx.beginPath();
+            for(let x = 0; x < W; x += 5){
+                const w1 = Math.sin(x * 0.008 + time * 0.6 + i * 0.7) * 2.5;
+                const w2 = Math.sin(x * 0.015 - time * 0.35 + i * 1.1) * 1.2;
+                const yy = y + w1 + w2;
+                x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+            }
+            ctx.stroke();
+        }
+    }
+
+    function drawStars(){
+        const px = (mouse.x - 0.5) * 25;
+        const py = (mouse.y - 0.5) * 12;
+
+        for(let i = 0; i < stars.length; i++){
+            const s = stars[i];
+            const sx = s.x * W + px / s.depth;
+            const sy = s.y * H + py / s.depth;
+
+            if(sy > waterY - 5) continue; // Don't draw below waterline
+
+            const twinkle = Math.sin(time * s.speed + s.offset) * 0.5 + 0.5;
+            const alpha = 0.25 + twinkle * 0.75;
+            const r = Math.max(0.2, s.size * (0.65 + twinkle * 0.35));
+
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = s.color;
+            ctx.beginPath();
+            ctx.arc(sx, sy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Glow for larger stars
+            if(s.size > 1.3 && twinkle > 0.6){
+                ctx.globalAlpha = alpha * 0.06;
+                ctx.beginPath();
+                ctx.arc(sx, sy, Math.max(0.5, r * 4), 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cross spike for brightest
+                if(s.size > 1.6 && twinkle > 0.8){
+                    ctx.globalAlpha = alpha * 0.15;
+                    ctx.strokeStyle = s.color;
+                    ctx.lineWidth = 0.5;
+                    const sp = r * 6;
+                    ctx.beginPath();
+                    ctx.moveTo(sx - sp, sy); ctx.lineTo(sx + sp, sy);
+                    ctx.moveTo(sx, sy - sp); ctx.lineTo(sx, sy + sp);
+                    ctx.stroke();
+                }
+            }
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function drawAurora(){
+        const mx = (mouse.x - 0.5) * 40;
+        const baseY = H * 0.12;
+
+        // Soft base glow
+        const bg = ctx.createRadialGradient(W * 0.45 + mx * 0.3, baseY + 60, 10, W * 0.45, baseY + 60, Math.max(1, W * 0.5));
+        bg.addColorStop(0, 'rgba(0,255,200,0.025)');
+        bg.addColorStop(0.5, 'rgba(0,180,255,0.01)');
+        bg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, waterY);
+
+        // Curtain bands
+        const bands = [
+            { yOff: 0, color1: 'rgba(0,255,200,', color2: 'rgba(0,255,200,', amp: 1.0 },
+            { yOff: 35, color1: 'rgba(0,160,255,', color2: 'rgba(0,160,255,', amp: 0.8 },
+            { yOff: 65, color1: 'rgba(80,255,150,', color2: 'rgba(80,255,150,', amp: 0.6 },
+        ];
+
+        bands.forEach((band, bi) => {
+            ctx.beginPath();
+            const by = baseY + band.yOff;
+
+            // Top edge
+            for(let x = -10; x <= W + 10; x += 4){
+                const nx = x / W;
+                const w1 = Math.sin(nx * 4.5 + time * 0.28 + bi * 1.3) * 28 * band.amp;
+                const w2 = Math.sin(nx * 8 - time * 0.18 + bi * 0.9) * 14 * band.amp;
+                const w3 = Math.sin(nx * 1.8 + time * 0.12) * 45 * band.amp;
+                const mw = Math.sin((nx - mouse.x) * 3.5) * mx * (1 - Math.min(1, Math.abs(nx - mouse.x) * 2)) * band.amp;
+                const y = by + w1 + w2 + w3 + mw;
+                x === -10 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+
+            // Bottom edge (wider spread)
+            for(let x = W + 10; x >= -10; x -= 4){
+                const nx = x / W;
+                const w1 = Math.sin(nx * 4.5 + time * 0.28 + bi * 1.3 + 0.6) * 28 * band.amp;
+                const w2 = Math.sin(nx * 8 - time * 0.18 + bi * 0.9 + 0.6) * 14 * band.amp;
+                const w3 = Math.sin(nx * 1.8 + time * 0.12 + 0.6) * 45 * band.amp;
+                const mw = Math.sin((nx - mouse.x) * 3.5) * mx * (1 - Math.min(1, Math.abs(nx - mouse.x) * 2)) * band.amp;
+                const y = by + 70 + w1 + w2 + w3 + mw;
+                ctx.lineTo(x, y);
+            }
+
+            ctx.closePath();
+            const grad = ctx.createLinearGradient(0, by - 40, 0, by + 110);
+            grad.addColorStop(0, band.color1 + '0.05)');
+            grad.addColorStop(0.5, band.color1 + '0.03)');
+            grad.addColorStop(1, band.color2 + '0.005)');
+            ctx.fillStyle = grad;
+            ctx.fill();
+        });
+
+        // Vertical ray streaks
+        for(let i = 0; i < 40; i++){
+            const rx = (i / 40) * W + Math.sin(time * 0.3 + i * 0.7) * 20;
+            const rayH = 40 + Math.sin(time * 0.5 + i * 1.1) * 25 + Math.sin(time * 0.2 + i * 0.4) * 15;
+            const ry = baseY + 10 + Math.sin(rx / W * 5 + time * 0.3) * 25;
+            const a = 0.025 + Math.sin(time * 0.6 + i * 0.8) * 0.015;
+            if(a <= 0) continue;
+
+            const rg = ctx.createLinearGradient(rx, ry, rx, ry + rayH);
+            rg.addColorStop(0, `rgba(0,255,200,0)`);
+            rg.addColorStop(0.3, `rgba(0,255,200,${a})`);
+            rg.addColorStop(0.7, `rgba(0,255,200,${a * 0.5})`);
+            rg.addColorStop(1, `rgba(0,255,200,0)`);
+            ctx.strokeStyle = rg;
+            ctx.lineWidth = 1.2 + Math.sin(time + i) * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(rx + Math.sin(time * 0.4 + i) * 3, ry + rayH);
+            ctx.stroke();
+        }
+
+        // Bright bottom-edge highlights
+        for(let b = 0; b < 3; b++){
+            ctx.beginPath();
+            const by = baseY + b * 35 + 65;
+            for(let x = 0; x <= W; x += 3){
+                const nx = x / W;
+                const w = Math.sin(nx * 5 + time * 0.35 + b * 1.6) * 22
+                        + Math.sin(nx * 9 - time * 0.22 + b) * 11
+                        + Math.sin((nx - mouse.x) * 4) * mx * 0.4 * (1 - Math.min(1, Math.abs(nx - mouse.x) * 2));
+                const y = by + w;
+                x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            const al = 0.055 + Math.sin(time * 0.45 + b) * 0.025;
+            ctx.strokeStyle = `rgba(0,255,200,${Math.max(0, al)})`;
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+        }
+    }
+
+    function drawMoon(){
+        const mx = W * 0.8 + (mouse.x - 0.5) * -18;
+        const my = H * 0.16 + (mouse.y - 0.5) * -10;
+        const mr = Math.max(4, Math.min(W, H) * 0.038);
+
+        // Atmospheric halo layers
+        for(let i = 5; i >= 0; i--){
+            const r = Math.max(1, mr + i * mr * 0.9);
+            const a = 0.022 - i * 0.003;
+            if(a <= 0) continue;
+            const g = ctx.createRadialGradient(mx, my, 0, mx, my, r);
+            g.addColorStop(0, `rgba(255,238,195,${a})`);
+            g.addColorStop(1, 'rgba(255,238,195,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(mx, my, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Moon disc
+        const mg = ctx.createRadialGradient(mx - mr * 0.25, my - mr * 0.25, 0, mx, my, Math.max(1, mr));
+        mg.addColorStop(0, '#fffaee');
+        mg.addColorStop(0.6, '#ffeec5');
+        mg.addColorStop(1, '#e5d5a0');
+        ctx.fillStyle = mg;
+        ctx.beginPath();
+        ctx.arc(mx, my, Math.max(1, mr), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle craters
+        ctx.globalAlpha = 0.09;
+        ctx.fillStyle = '#c0a870';
+        [[0.22,-0.18,0.16],[-0.28,0.22,0.13],[0.08,0.32,0.09],[-0.12,-0.32,0.07],[0.3,0.1,0.06]].forEach(([ox,oy,cr])=>{
+            ctx.beginPath();
+            ctx.arc(mx + ox * mr, my + oy * mr, Math.max(0.5, cr * mr), 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+
+        // Water reflection
+        const refBaseY = waterY + (waterY - my);
+        if(refBaseY < H + 20){
+            for(let i = 0; i < 25; i++){
+                const ry = refBaseY + i * 3.5;
+                if(ry > H) break;
+                const wave = Math.sin(ry * 0.06 + time * 0.9) * (2.5 + i * 0.6)
+                           + Math.sin(ry * 0.12 - time * 0.5) * 1.5;
+                const a = 0.06 - i * 0.0022;
+                if(a <= 0) break;
+                ctx.beginPath();
+                ctx.ellipse(mx + wave, ry, Math.max(1, mr * (0.35 + i * 0.04)), Math.max(0.5, 1.2), 0, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,238,195,${a})`;
+                ctx.fill();
+            }
+        }
+    }
+
+    function drawShootingStars(){
+        if(Math.random() < 0.0025) spawnShooter();
+
+        for(let i = shooters.length - 1; i >= 0; i--){
+            const s = shooters[i];
+            s.x += s.vx;
+            s.y += s.vy;
+            s.life -= s.decay;
+            if(s.life <= 0){ shooters.splice(i, 1); continue; }
+
+            const speed = Math.hypot(s.vx, s.vy);
+            const tx = s.x - (s.vx / speed) * s.len;
+            const ty = s.y - (s.vy / speed) * s.len;
+
+            const g = ctx.createLinearGradient(tx, ty, s.x, s.y);
+            g.addColorStop(0, 'rgba(255,255,255,0)');
+            g.addColorStop(0.7, `rgba(200,230,255,${s.life * 0.3})`);
+            g.addColorStop(1, `rgba(255,255,255,${s.life * 0.9})`);
+            ctx.strokeStyle = g;
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(s.x, s.y);
+            ctx.stroke();
+
+            // Head
+            ctx.fillStyle = `rgba(255,255,255,${s.life})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, Math.max(0.3, 2.2 * s.life), 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawHorizonGlow(){
+        // Subtle atmospheric glow at the horizon
+        const g = ctx.createLinearGradient(0, waterY - 60, 0, waterY + 10);
+        g.addColorStop(0, 'rgba(20,50,90,0)');
+        g.addColorStop(0.5, 'rgba(25,55,95,0.06)');
+        g.addColorStop(1, 'rgba(15,35,65,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, waterY - 60, W, 70);
+    }
+
+    function drawMountains(){
+        // Back range
+        ctx.beginPath();
+        ctx.moveTo(-5, H);
+        mtBack.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(W + 5, H);
+        ctx.closePath();
+        ctx.fillStyle = '#0b1322';
+        ctx.fill();
+
+        // Front range
+        ctx.beginPath();
+        ctx.moveTo(-5, H);
+        mtFront.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(W + 5, H);
+        ctx.closePath();
+        ctx.fillStyle = '#070d18';
+        ctx.fill();
+    }
+
+    function drawTrees(){
+        treeData.forEach(t => {
+            const layers = 5;
+            for(let i = 0; i < layers; i++){
+                const ly = t.y - t.h * (i / layers);
+                const lw = t.w * (1 - i * 0.14);
+                const lh = t.h / layers * 1.1;
+                ctx.beginPath();
+                ctx.moveTo(t.x, ly - lh);
+                ctx.lineTo(t.x - lw * 0.5, ly);
+                ctx.lineTo(t.x + lw * 0.5, ly);
+                ctx.closePath();
+                ctx.fillStyle = `rgba(3,6,12,${0.92 + i * 0.016})`;
+                ctx.fill();
+            }
+            // Trunk
+            ctx.fillStyle = 'rgba(3,6,12,0.95)';
+            ctx.fillRect(t.x - 1.5, t.y - 3, 3, 6);
+        });
+    }
+
+    function drawMist(){
+        // Layered mist near waterline
+        for(let i = 0; i < 6; i++){
+            const y = waterY - 15 + i * 6;
+            const a = 0.012 + Math.sin(time * 0.15 + i * 0.8) * 0.006;
+            if(a <= 0) continue;
+            ctx.fillStyle = `rgba(100,140,190,${a})`;
+            ctx.fillRect(0, y, W, 3);
+        }
+        // Softer patches
+        for(let i = 0; i < 8; i++){
+            const cx = W * (0.1 + i * 0.11) + Math.sin(time * 0.1 + i * 2) * 40;
+            const cy = waterY - 10 + Math.sin(time * 0.08 + i) * 5;
+            const rw = 80 + Math.sin(i * 3.7) * 30;
+            const rh = 8;
+            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, rw));
+            g.addColorStop(0, 'rgba(100,140,190,0.02)');
+            g.addColorStop(1, 'rgba(100,140,190,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, Math.max(1, rw), Math.max(1, rh), 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawAuroraReflection(){
+        ctx.save();
+        ctx.globalAlpha = 0.012;
+        const colors = ['rgba(0,255,200,1)', 'rgba(0,160,255,1)', 'rgba(80,255,150,1)'];
+        for(let b = 0; b < 3; b++){
+            for(let i = 0; i < 12; i++){
+                const y = waterY + 15 + i * 14 + b * 12;
+                if(y > H) break;
+                const wave = Math.sin(y * 0.04 + time * 0.5 + b * 1.2) * 25
+                           + Math.sin(y * 0.08 - time * 0.3) * 10;
+                ctx.beginPath();
+                ctx.ellipse(W * 0.5 + wave, y, Math.max(1, W * 0.28), Math.max(1, 2), 0, 0, Math.PI * 2);
+                ctx.fillStyle = colors[b];
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
+
+    function drawFireflies(){
+        fireflies.forEach(ff => {
+            // Organic wandering
+            ff.angle += (Math.random() - 0.5) * 0.25;
+            ff.vx += Math.cos(ff.angle) * 0.04;
+            ff.vy += Math.sin(ff.angle) * 0.04;
+            ff.vx *= 0.955;
+            ff.vy *= 0.955;
+
+            // Mouse interaction — scatter then gently return
+            const dx = ff.x - mouse.cx;
+            const dy = ff.y - mouse.cy;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+            if(dist < 140){
+                const force = (140 - dist) / 140 * 0.6;
+                ff.vx += (dx / dist) * force;
+                ff.vy += (dy / dist) * force;
+            }
+
+            ff.x += ff.vx;
+            ff.y += ff.vy;
+
+            // Soft bounds
+            if(ff.x < -20) ff.x = W + 20;
+            if(ff.x > W + 20) ff.x = -20;
+            if(ff.y < waterY - 50) ff.vy += 0.015;
+            if(ff.y > H * 0.88) ff.vy -= 0.015;
+
+            const glow = Math.sin(time * ff.glowSpeed + ff.phase) * 0.5 + 0.5;
+            const alpha = 0.15 + glow * 0.85;
+            const sz = Math.max(0.3, ff.size * (0.55 + glow * 0.45));
+
+            // Outer glow
+            const gr = ctx.createRadialGradient(ff.x, ff.y, 0, ff.x, ff.y, Math.max(0.5, sz * 10));
+            gr.addColorStop(0, `rgba(255,195,50,${alpha * 0.12})`);
+            gr.addColorStop(1, 'rgba(255,195,50,0)');
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            ctx.arc(ff.x, ff.y, Math.max(0.5, sz * 10), 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mid glow
+            const mg = ctx.createRadialGradient(ff.x, ff.y, 0, ff.x, ff.y, Math.max(0.3, sz * 4));
+            mg.addColorStop(0, `rgba(255,210,80,${alpha * 0.25})`);
+            mg.addColorStop(1, 'rgba(255,210,80,0)');
+            ctx.fillStyle = mg;
+            ctx.beginPath();
+            ctx.arc(ff.x, ff.y, Math.max(0.3, sz * 4), 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core
+            ctx.fillStyle = `rgba(255,225,110,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(ff.x, ff.y, sz, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function drawRipples(){
+        for(let i = ripples.length - 1; i >= 0; i--){
+            const rp = ripples[i];
+            rp.r += 1.2;
+            rp.a -= 0.003;
+            if(rp.a <= 0 || rp.r > rp.maxR){ ripples.splice(i, 1); continue; }
+
+            ctx.strokeStyle = `rgba(180,220,255,${rp.a})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(rp.x, rp.y, Math.max(0.5, rp.r), 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Second ring
+            if(rp.r > 15){
+                ctx.strokeStyle = `rgba(180,220,255,${rp.a * 0.4})`;
+                ctx.beginPath();
+                ctx.arc(rp.x, rp.y, Math.max(0.5, rp.r * 0.6), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+    }
+
+    /* ── Star Reflections in Water ── */
+    function drawStarReflections(){
+        // Only reflect the brightest stars
+        for(let i = 0; i < stars.length; i += 5){
+            const s = stars[i];
+            if(s.size < 1.2) continue;
+            const sx = s.x * W;
+            const sy = s.y * H;
+            if(sy > waterY - 30) continue;
+
+            const refY = waterY + (waterY - sy) * 0.3;
+            if(refY > H) continue;
+
+            const twinkle = Math.sin(time * s.speed + s.offset) * 0.5 + 0.5;
+            const wave = Math.sin(refY * 0.08 + time * 0.7) * 2;
+            const a = twinkle * 0.06;
+
+            ctx.fillStyle = `rgba(200,220,255,${a})`;
+            ctx.beginPath();
+            ctx.ellipse(sx + wave, refY, Math.max(0.3, 1.5), Math.max(0.2, 0.8), 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /* ══════════════════════════
+       MAIN LOOP
+    ══════════════════════════ */
+
+    function frame(){
+        time += 0.016;
+        ctx.clearRect(0, 0, W, H);
+
+        drawSky();
+        drawStars();
+        drawAurora();
+        drawMoon();
+        drawShootingStars();
+        drawHorizonGlow();
+        drawMountains();
+        drawTrees();
+        drawMist();
+        drawWater();
+        drawStarReflections();
+        drawAuroraReflection();
+        drawRipples();
+        drawFireflies();
+
+        requestAnimationFrame(frame);
+    }
+
+    frame();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stop Using Normal Websites</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--fg:#e0e0e0;--muted:#2a2a2a;--green:#00ff41;--red:#ff003c;--cyan:#00d4ff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'Space Mono',monospace;overflow-x:hidden;cursor:none;min-height:100vh}
+
+/* Custom cursor */
+#cursor{position:fixed;width:18px;height:18px;border:2px solid var(--green);border-radius:50%;pointer-events:none;z-index:10001;transform:translate(-50%,-50%);transition:width .12s,height .12s,border-color .12s,background .12s;mix-blend-mode:difference}
+#cursor.active{width:50px;height:50px;border-color:var(--red);background:rgba(255,0,60,.15)}
+
+/* Scanlines */
+#scanlines{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:9996;opacity:0;transition:opacity .6s}
+body:not(.loading) #scanlines{opacity:1}
+
+/* Noise canvas */
+#noiseCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9995;opacity:0;transition:opacity .6s;image-rendering:pixelated}
+body:not(.loading) #noiseCanvas{opacity:.04}
+
+/* Effect canvas */
+#effectCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9997;opacity:0;transition:opacity .4s}
+body:not(.loading) #effectCanvas{opacity:1}
+
+/* Background blobs */
+.bg-blob{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;opacity:0;transition:opacity 1.5s}
+body:not(.loading) .bg-blob{opacity:.12}
+.blob-1{width:600px;height:600px;background:var(--green);top:-200px;left:-150px;animation:drift1 22s ease-in-out infinite}
+.blob-2{width:500px;height:500px;background:var(--red);bottom:-200px;right:-100px;animation:drift2 28s ease-in-out infinite}
+.blob-3{width:350px;height:350px;background:var(--cyan);top:40%;left:55%;animation:drift3 18s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(120px,80px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-100px,-60px)}}
+@keyframes drift3{0%,100%{transform:translate(0,0)}33%{transform:translate(-80px,50px)}66%{transform:translate(60px,-40px)}}
+
+/* Hidden message */
+#hiddenMessage{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Syne',sans-serif;font-size:clamp(1.4rem,4vw,3.2rem);font-weight:800;text-align:center;z-index:9998;pointer-events:none;opacity:0;color:var(--green);text-shadow:0 0 60px rgba(0,255,65,.4),0 0 120px rgba(0,255,65,.15);transition:opacity .4s;line-height:1.3;max-width:90vw}
+#hiddenMessage.visible{opacity:1}
+
+/* Normal website layer */
+#normalSite{position:relative;z-index:1}
+
+/* Nav */
+.nav{display:flex;justify-content:space-between;align-items:center;padding:18px 40px;border-bottom:1px solid var(--muted);background:rgba(10,10,10,.8);backdrop-filter:blur(10px);position:sticky;top:0;z-index:10}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:3px;text-transform:uppercase}
+.nav-links{display:flex;gap:28px;list-style:none;font-size:.78rem;letter-spacing:1px;text-transform:uppercase}
+.nav-links a{color:var(--fg);text-decoration:none;transition:color .2s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:var(--fg);transition:width .2s}
+.nav-links a:hover::after{width:100%}
+.nav-btn{padding:8px 22px;background:transparent;border:1px solid var(--fg);color:var(--fg);font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:1px;text-transform:uppercase;cursor:none;transition:all .2s}
+.nav-btn:hover{background:var(--fg);color:var(--bg)}
+
+/* Hero */
+.hero{padding:110px 40px 80px;text-align:center}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(2.2rem,5.5vw,4.2rem);font-weight:800;line-height:1.1;margin-bottom:24px;letter-spacing:-1px}
+.hero p{font-size:.88rem;color:#777;max-width:560px;margin:0 auto 40px;line-height:1.7}
+.hero-cta{display:inline-block;padding:14px 44px;background:var(--fg);color:var(--bg);text-decoration:none;font-family:'Space Mono',monospace;font-size:.82rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.hero-cta:hover{transform:translate(-3px,-3px);box-shadow:3px 3px 0 var(--red)}
+
+/* Cards */
+.cards-section{padding:20px 40px 100px;max-width:1100px;margin:0 auto}
+.cards-section h2{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;text-align:center;margin-bottom:50px;letter-spacing:-.5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.card{border:1px solid var(--muted);padding:36px 28px;transition:border-color .2s,transform .2s}
+.card:hover{border-color:var(--green);transform:translateY(-4px)}
+.card-num{font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;color:var(--muted);margin-bottom:16px;display:block;transition:color .2s}
+.card:hover .card-num{color:var(--green)}
+.card h3{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:10px}
+.card p{font-size:.78rem;color:#555;line-height:1.7}
+
+/* Footer */
+.footer{border-top:1px solid var(--muted);padding:30px 40px;text-align:center;font-size:.7rem;color:#333;letter-spacing:.5px}
+
+/* Glitch text */
+.glitch{position:relative;display:inline-block}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;opacity:0;transition:opacity .5s}
+body:not(.loading) .glitch::before,body:not(.loading) .glitch::after{opacity:1}
+.glitch::before{color:var(--red);z-index:-1;animation:g1 2.8s infinite linear alternate-reverse}
+.glitch::after{color:var(--cyan);z-index:-1;animation:g2 3.2s infinite linear alternate-reverse}
+@keyframes g1{
+0%{clip-path:inset(40% 0 61% 0);transform:translate(-3px,-1px)}
+10%{clip-path:inset(92% 0 1% 0);transform:translate(2px,1px)}
+20%{clip-path:inset(43% 0 1% 0);transform:translate(-1px,2px)}
+30%{clip-path:inset(25% 0 58% 0);transform:translate(3px,-1px)}
+40%{clip-path:inset(54% 0 7% 0);transform:translate(-2px,2px)}
+50%{clip-path:inset(58% 0 43% 0);transform:translate(1px,-2px)}
+60%{clip-path:inset(70% 0 7% 0);transform:translate(-3px,1px)}
+70%{clip-path:inset(15% 0 62% 0);transform:translate(2px,-2px)}
+80%{clip-path:inset(80% 0 5% 0);transform:translate(-1px,2px)}
+90%{clip-path:inset(35% 0 32% 0);transform:translate(3px,-1px)}
+100%{clip-path:inset(5% 0 78% 0);transform:translate(-2px,1px)}
+}
+@keyframes g2{
+0%{clip-path:inset(65% 0 13% 0);transform:translate(3px,2px)}
+10%{clip-path:inset(15% 0 62% 0);transform:translate(-2px,-1px)}
+20%{clip-path:inset(72% 0 1% 0);transform:translate(1px,-2px)}
+30%{clip-path:inset(5% 0 78% 0);transform:translate(-3px,1px)}
+40%{clip-path:inset(42% 0 33% 0);transform:translate(2px,2px)}
+50%{clip-path:inset(85% 0 2% 0);transform:translate(-1px,-2px)}
+60%{clip-path:inset(22% 0 55% 0);transform:translate(3px,1px)}
+70%{clip-path:inset(50% 0 30% 0);transform:translate(-2px,-3px)}
+80%{clip-path:inset(10% 0 70% 0);transform:translate(1px,2px)}
+90%{clip-path:inset(60% 0 20% 0);transform:translate(-3px,-1px)}
+100%{clip-path:inset(30% 0 48% 0);transform:translate(2px,3px)}
+}
+
+/* Intense hover glitch */
+.destroyable{transition:transform .08s}
+body:not(.loading) .destroyable:hover{animation:intense .08s infinite}
+@keyframes intense{
+0%{transform:translate(0,0) skewX(0)}
+25%{transform:translate(-4px,2px) skewX(-2deg)}
+50%{transform:translate(3px,-2px) skewX(1deg)}
+75%{transform:translate(-2px,1px) skewX(-1deg)}
+100%{transform:translate(3px,-1px) skewX(2deg)}
+}
+
+/* Screen shake */
+.shake{animation:shake .15s ease-in-out}
+@keyframes shake{
+0%,100%{transform:translate(0,0)}
+25%{transform:translate(-8px,4px)}
+50%{transform:translate(6px,-6px)}
+75%{transform:translate(-4px,2px)}
+}
+
+/* Flash overlay */
+#flash{position:fixed;inset:0;background:#fff;pointer-events:none;z-index:10000;opacity:0;transition:opacity .05s}
+#flash.on{opacity:.15}
+
+/* Counter */
+#counter{position:fixed;bottom:16px;right:20px;font-size:.6rem;color:#333;z-index:9999;pointer-events:none;letter-spacing:2px;font-family:'Space Mono',monospace;opacity:0;transition:opacity .6s}
+body:not(.loading) #counter{opacity:1}
+
+@media(prefers-reduced-motion:reduce){
+.glitch::before,.glitch::after,.destroyable:hover{animation:none!important}
+.bg-blob{animation:none!important}
+}
+@media(max-width:768px){
+.nav{padding:14px 18px;flex-wrap:wrap;gap:10px}
+.nav-links{display:none}
+.hero{padding:70px 18px 50px}
+.cards-section{padding:10px 18px 70px}
+.card{padding:28px 20px}
+}
+</style>
+</head>
+<body class="loading">
+
+<div id="cursor"></div>
+<div id="scanlines"></div>
+<canvas id="noiseCanvas" aria-hidden="true"></canvas>
+<canvas id="effectCanvas" aria-hidden="true"></canvas>
+<div id="flash"></div>
+<div id="counter">INTERACTIONS: 0000</div>
+
+<div class="bg-blob blob-1" aria-hidden="true"></div>
+<div class="bg-blob blob-2" aria-hidden="true"></div>
+<div class="bg-blob blob-3" aria-hidden="true"></div>
+
+<div id="hiddenMessage" aria-hidden="true"></div>
+
+<main id="normalSite">
+  <nav class="nav">
+    <div class="nav-logo scramble-text">SYNTHWAVE</div>
+    <ul class="nav-links">
+      <li><a href="#" class="scramble-text" onclick="return false">Home</a></li>
+      <li><a href="#" class="scramble-text" onclick="return false">About</a></li>
+      <li><a href="#" class="scramble-text" onclick="return false">Services</a></li>
+      <li><a href="#" class="scramble-text" onclick="return false">Contact</a></li>
+    </ul>
+    <button class="nav-btn scramble-text destroyable">GET STARTED</button>
+  </nav>
+
+  <section class="hero">
+    <h1 class="glitch scramble-text" data-text="Innovative Digital Solutions for Forward-Thinking Enterprises">Innovative Digital Solutions for Forward-Thinking Enterprises</h1>
+    <p class="scramble-text">Leverage our cutting-edge platform to drive transformation and unlock exponential growth across your entire organization.</p>
+    <a href="#" class="hero-cta destroyable scramble-text" onclick="return false">START FREE TRIAL</a>
+  </section>
+
+  <section class="cards-section">
+    <h2 class="scramble-text">What We Offer</h2>
+    <div class="cards">
+      <article class="card destroyable">
+        <span class="card-num">01</span>
+        <h3 class="scramble-text">Analytics</h3>
+        <p class="scramble-text">Real-time insights powered by machine learning algorithms that transform raw data into actionable intelligence for your team.</p>
+      </article>
+      <article class="card destroyable">
+        <span class="card-num">02</span>
+        <h3 class="scramble-text">Automation</h3>
+        <p class="scramble-text">Streamline your workflows with intelligent automation that reduces manual effort and eliminates operational bottlenecks.</p>
+      </article>
+      <article class="card destroyable">
+        <span class="card-num">03</span>
+        <h3 class="scramble-text">Integration</h3>
+        <p class="scramble-text">Seamlessly connect your existing tools and platforms through our robust API ecosystem and pre-built connectors.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span class="scramble-text">&copy; 2024 Synthwave Inc. All rights reserved. &nbsp;|&nbsp; Privacy Policy &nbsp;|&nbsp; Terms of Service</span>
+  </footer>
+</main>
+
+<script>
+/* ── State ── */
+let mx = 0, my = 0, pmx = 0, pmy = 0;
+let particles = [], gRects = [], trail = [];
+let interactions = 0, msgIdx = 0, active = false;
+
+const MSGS = [
+  "MOVE YOUR CURSOR",
+  "KEEP GOING",
+  "THE WEB SHOULD BE ALIVE",
+  "YOU DESERVE BETTER",
+  "STOP USING NORMAL WEBSITES"
+];
+const THRESHOLDS = [40, 180, 450, 900, 1800];
+const GCHARS = '!<>-_\\/[]{}\u2014=+*^?#_\u2591\u2592\u2593\u2588';
+const COLORS = ['#00ff41','#ff003c','#00d4ff','#ffffff'];
+
+/* ── Canvas setup ── */
+const fxCanvas = document.getElementById('effectCanvas');
+const fxCtx = fxCanvas.getContext('2d');
+const noiseCanvas = document.getElementById('noiseCanvas');
+const noiseCtx = noiseCanvas.getContext('2d');
+
+function resize() {
+  fxCanvas.width = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+/* ── Noise texture (static, rendered once) ── */
+noiseCanvas.width = 200;
+noiseCanvas.height = 200;
+(function renderNoise() {
+  const d = noiseCtx.createImageData(200, 200);
+  for (let i = 0; i < d.data.length; i += 4) {
+    const v = Math.random() * 255;
+    d.data[i] = d.data[i+1] = d.data[i+2] = v;
+    d.data[i+3] = 255;
+  }
+  noiseCtx.putImageData(d, 0, 0);
+})();
+
+/* ── Cursor ── */
+const cursorEl = document.getElementById('cursor');
+const flashEl = document.getElementById('flash');
+const counterEl = document.getElementById('counter');
+const msgEl = document.getElementById('hiddenMessage');
+
+/* ── Particle ── */
+class Particle {
+  constructor(x, y, burst) {
+    this.x = x; this.y = y;
+    const sp = burst ? 12 : 5;
+    this.vx = (Math.random() - .5) * sp;
+    this.vy = (Math.random() - .5) * sp;
+    this.life = 1;
+    this.decay = Math.random() * .025 + .008;
+    this.size = Math.random() * (burst ? 5 : 3) + 1;
+    this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    this.vy += .06; this.vx *= .98;
+    this.life -= this.decay;
+  }
+  draw(c) {
+    if (this.life <= 0) return;
+    c.globalAlpha = this.life;
+    c.fillStyle = this.color;
+    c.fillRect(this.x, this.y, this.size, this.size);
+  }
+}
+
+/* ── GlitchRect ── */
+class GRect {
+  constructor(x, y, full) {
+    this.x = full ? 0 : x + (Math.random() - .5) * 300;
+    this.y = full ? y : y + (Math.random() - .5) * 300;
+    this.w = full ? window.innerWidth : Math.random() * 160 + 20;
+    this.h = Math.random() * 4 + 1;
+    this.life = 1;
+    this.decay = Math.random() * .08 + .04;
+    this.ox = (Math.random() - .5) * 20;
+    this.color = COLORS[Math.floor(Math.random() * 3)];
+  }
+  update() { this.life -= this.decay; }
+  draw(c) {
+    if (this.life <= 0) return;
+    c.globalAlpha = this.life * .35;
+    c.fillStyle = this.color;
+    c.fillRect(this.x + this.ox, this.y, this.w, this.h);
+  }
+}
+
+/* ── Mouse / Touch ── */
+function handleMove(x, y) {
+  mx = x; my = y;
+  cursorEl.style.left = mx + 'px';
+  cursorEl.style.top = my + 'px';
+  if (!active) return;
+  const dx = mx - pmx, dy = my - pmy;
+  const speed = Math.sqrt(dx*dx + dy*dy);
+  const cnt = Math.min(Math.floor(speed / 4), 6);
+  for (let i = 0; i < cnt; i++) particles.push(new Particle(mx, my, false));
+  if (Math.random() < .08) gRects.push(new GRect(mx, my, false));
+  trail.push({ x: mx, y: my, life: 1 });
+  if (trail.length > 35) trail.shift();
+  interactions++;
+  pmx = mx; pmy = my;
+}
+
+document.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+document.addEventListener('touchmove', e => {
+  e.preventDefault();
+  handleMove(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+function handleDown(x, y) {
+  mx = x; my = y;
+  cursorEl.classList.add('active');
+  flashEl.classList.add('on');
+  setTimeout(() => flashEl.classList.remove('on'), 60);
+  if (active) burst();
+}
+
+function handleUp() { cursorEl.classList.remove('active'); }
+
+document.addEventListener('mousedown', e => handleDown(e.clientX, e.clientY));
+document.addEventListener('mouseup', handleUp);
+document.addEventListener('touchstart', e => handleDown(e.touches[0].clientX, e.touches[0].clientY));
+document.addEventListener('touchend', handleUp);
+
+/* ── Glitch burst (click) ── */
+function burst() {
+  for (let i = 0; i < 70; i++) particles.push(new Particle(mx, my, true));
+  for (let i = 0; i < 18; i++) gRects.push(new GRect(mx + (Math.random()-.5)*500, my + (Math.random()-.5)*500, false));
+  // Full-width scan lines
+  for (let i = 0; i < 5; i++) gRects.push(new GRect(0, Math.random()*window.innerHeight, true));
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 150);
+  document.querySelectorAll('.scramble-text').forEach(scramble);
+  interactions += 60;
+}
+
+/* ── Text scramble ── */
+function initScramble() {
+  document.querySelectorAll('.scramble-text').forEach(el => {
+    el.dataset.original = el.textContent;
+  });
+}
+
+function scramble(el) {
+  const o = el.dataset.original;
+  if (!o) return;
+  let r = '';
+  for (let i = 0; i < o.length; i++) {
+    r += Math.random() < .18 ? GCHARS[Math.floor(Math.random()*GCHARS.length)] : o[i];
+  }
+  el.textContent = r;
+}
+
+function restore(el) {
+  if (el.dataset.original) el.textContent = el.dataset.original;
+}
+
+/* ── Hover destruction on cards/buttons ── */
+document.querySelectorAll('.destroyable').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    if (!active) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    for (let i = 0; i < 25; i++) particles.push(new Particle(cx + (Math.random()-.5)*r.width, cy + (Math.random()-.5)*r.height, false));
+    interactions += 15;
+  });
+});
+
+/* ── Hidden message system ── */
+let msgTimeout = null;
+function checkMsg() {
+  for (let i = THRESHOLDS.length - 1; i >= 0; i--) {
+    if (interactions >= THRESHOLDS[i] && msgIdx <= i) {
+      msgIdx = i + 1;
+      msgEl.textContent = MSGS[i];
+      msgEl.classList.add('visible');
+      clearTimeout(msgTimeout);
+      msgTimeout = setTimeout(() => msgEl.classList.remove('visible'), 2800);
+      break;
+    }
+  }
+}
+
+/* ── Periodic events ── */
+setInterval(() => {
+  if (!active) return;
+  // Scramble some text
+  document.querySelectorAll('.scramble-text').forEach(el => {
+    if (Math.random() < .35) scramble(el);
+  });
+}, 90);
+
+setInterval(() => {
+  if (!active) return;
+  // Restore some text
+  document.querySelectorAll('.scramble-text').forEach(el => {
+    if (Math.random() < .25) restore(el);
+  });
+}, 180);
+
+setInterval(() => {
+  if (!active) return;
+  // Random element jitter
+  const els = document.querySelectorAll('.destroyable');
+  const el = els[Math.floor(Math.random()*els.length)];
+  if (el) {
+    const ox = (Math.random()-.5)*8, oy = (Math.random()-.5)*4;
+    el.style.transform = `translate(${ox}px,${oy}px)`;
+    setTimeout(() => el.style.transform = '', 80);
+  }
+  // Random full-width glitch line
+  gRects.push(new GRect(0, Math.random()*window.innerHeight, true));
+}, 700);
+
+/* ── Counter display ── */
+function updateCounter() {
+  counterEl.textContent = 'INTERACTIONS: ' + String(Math.min(interactions, 9999)).padStart(4, '0');
+}
+
+/* ── Animation loop ── */
+function animate() {
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+
+  // Trail
+  if (trail.length > 1 && active) {
+    for (let i = 1; i < trail.length; i++) {
+      trail[i].life -= .035;
+      fxCtx.beginPath();
+      fxCtx.moveTo(trail[i-1].x, trail[i-1].y);
+      fxCtx.lineTo(trail[i].x, trail[i].y);
+      fxCtx.strokeStyle = `rgba(0,255,65,${trail[i].life * .25})`;
+      fxCtx.lineWidth = trail[i].life * 2.5;
+      fxCtx.stroke();
+    }
+    trail = trail.filter(t => t.life > 0);
+  }
+
+  // Glitch rects
+  for (let i = gRects.length - 1; i >= 0; i--) {
+    gRects[i].update();
+    gRects[i].draw(fxCtx);
+    if (gRects[i].life <= 0) gRects.splice(i, 1);
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw(fxCtx);
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  }
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
+
+  fxCtx.globalAlpha = 1;
+
+  // Vignette
+  const vg = fxCtx.createRadialGradient(
+    fxCanvas.width/2, fxCanvas.height/2, fxCanvas.height * .25,
+    fxCanvas.width/2, fxCanvas.height/2, fxCanvas.height * .85
+  );
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.5)');
+  fxCtx.fillStyle = vg;
+  fxCtx.fillRect(0, 0, fxCanvas.width, fxCanvas.height);
+
+  // Cursor glow
+  if (active) {
+    const cg = fxCtx.createRadialGradient(mx, my, 0, mx, my, 80);
+    cg.addColorStop(0, 'rgba(0,255,65,0.06)');
+    cg.addColorStop(1, 'rgba(0,255,65,0)');
+    fxCtx.fillStyle = cg;
+    fxCtx.fillRect(mx-80, my-80, 160, 160);
+  }
+
+  checkMsg();
+  updateCounter();
+  requestAnimationFrame(animate);
+}
+
+/* ── Init ── */
+initScramble();
+animate();
+
+// Loading transition — the "normal" moment before chaos
+setTimeout(() => {
+  document.body.classList.remove('loading');
+  active = true;
+  // First dramatic burst
+  setTimeout(() => {
+    mx = window.innerWidth / 2;
+    my = window.innerHeight / 2;
+    burst();
+  }, 300);
+}, 1500);
+
+// Ambient re-noise every 200ms to keep it flickering
+setInterval(() => {
+  const d = noiseCtx.createImageData(200, 200);
+  for (let i = 0; i < d.data.length; i += 4) {
+    const v = Math.random() * 255;
+    d.data[i] = d.data[i+1] = d.data[i+2] = v;
+    d.data[i+3] = 255;
+  }
+  noiseCtx.putImageData(d, 0, 0);
+}, 200);
+</script>
+</body>
+</html>
