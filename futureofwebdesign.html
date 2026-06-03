@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Future Of Web Design Is HERE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    base: '#050505',
+                    surface: '#0e0e0e',
+                    card: '#141414',
+                    border: '#1c1c1c',
+                    muted: '#666',
+                    accent: '#FF4D00',
+                    fg: '#EDEDEC'
+                },
+                fontFamily: {
+                    display: ['"Space Grotesk"', 'sans-serif'],
+                    body: ['"DM Sans"', 'sans-serif']
+                }
+            }
+        }
+    }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { cursor: none; }
+        body { background: #050505; color: #EDEDEC; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+
+        /* Custom cursor */
+        .cursor-dot { position: fixed; width: 6px; height: 6px; background: #FF4D00; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); transition: width .2s, height .2s, background .2s; mix-blend-mode: difference; }
+        .cursor-ring { position: fixed; width: 36px; height: 36px; border: 1.5px solid rgba(255,77,0,0.35); border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); transition: width .35s cubic-bezier(.16,1,.3,1), height .35s cubic-bezier(.16,1,.3,1), border-color .3s; }
+        .cursor-dot.hover { width: 14px; height: 14px; background: #fff; }
+        .cursor-ring.hover { width: 54px; height: 54px; border-color: rgba(255,255,255,0.2); }
+        @media (pointer: coarse) { html, a, button { cursor: auto; } .cursor-dot, .cursor-ring { display: none; } }
+
+        /* Overlays */
+        .vignette { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.65) 100%); pointer-events: none; z-index: 1; }
+        .grain { position: fixed; inset: 0; opacity: 0.028; pointer-events: none; z-index: 9998; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+        #mesh-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .content { position: relative; z-index: 2; }
+
+        /* Nav */
+        .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 1.25rem 2rem; transition: background .4s, backdrop-filter .4s, border-color .4s; border-bottom: 1px solid transparent; }
+        .nav.scrolled { background: rgba(5,5,5,0.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom-color: #1c1c1c; }
+
+        /* Hero entrance */
+        @keyframes slideUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scrollBounce { 0%,100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(6px); opacity: .25; } }
+        .hero-l1 { animation: slideUp .9s cubic-bezier(.16,1,.3,1) .15s both; }
+        .hero-l2 { animation: slideUp .9s cubic-bezier(.16,1,.3,1) .4s both; }
+        .hero-l3 { animation: slideUp .9s cubic-bezier(.16,1,.3,1) .6s both; }
+        .hero-sub { animation: slideUp .9s cubic-bezier(.16,1,.3,1) .8s both; }
+        .hero-ctas { animation: slideUp .9s cubic-bezier(.16,1,.3,1) 1s both; }
+        .hero-scroll { animation: slideUp .9s cubic-bezier(.16,1,.3,1) 1.35s both; }
+
+        .accent-glow { text-shadow: 0 0 50px rgba(255,77,0,0.25), 0 0 100px rgba(255,77,0,0.08); }
+
+        /* Magnetic button */
+        .mag { transition: transform .3s cubic-bezier(.16,1,.3,1); }
+
+        /* Bento */
+        .bento { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+        .bcard { background: rgba(20,20,20,0.65); border: 1px solid #1c1c1c; border-radius: 1rem; padding: 2rem; transition: transform .12s ease-out, border-color .3s, box-shadow .3s; transform-style: preserve-3d; will-change: transform; }
+        .bcard:hover { border-color: rgba(255,77,0,0.25); box-shadow: 0 0 50px rgba(255,77,0,0.04); }
+        .bcard.s2 { grid-column: span 2; }
+        @media (max-width: 768px) { .bento { grid-template-columns: 1fr; } .bcard.s2 { grid-column: span 1; } }
+
+        /* Gradient border */
+        .gborder { position: relative; }
+        .gborder::before { content: ''; position: absolute; inset: 0; border-radius: 1rem; padding: 1px; background: linear-gradient(135deg,#FF4D00,#FF8C00,#FF4D00,transparent,transparent); background-size: 300% 300%; animation: gshift 4s ease infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        @keyframes gshift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+        /* Scroll reveal */
+        .rv { opacity: 0; transform: translateY(32px); transition: opacity .85s cubic-bezier(.16,1,.3,1), transform .85s cubic-bezier(.16,1,.3,1); }
+        .rv.vis { opacity: 1; transform: translateY(0); }
+        .rvd1 { transition-delay: .1s; } .rvd2 { transition-delay: .2s; } .rvd3 { transition-delay: .3s; } .rvd4 { transition-delay: .4s; } .rvd5 { transition-delay: .5s; }
+
+        /* Timeline */
+        .tl-item { position: relative; padding-left: 3rem; padding-bottom: 2.5rem; }
+        .tl-item::before { content: ''; position: absolute; left: 0; top: .5rem; width: 10px; height: 10px; border-radius: 50%; background: #1c1c1c; border: 2px solid #333; transition: all .4s; }
+        .tl-item::after { content: ''; position: absolute; left: 4px; top: 1.5rem; width: 2px; height: calc(100% - .5rem); background: #1c1c1c; }
+        .tl-item:last-child::after { display: none; }
+        .tl-item:last-child { padding-bottom: 0; }
+        .tl-item.on::before { background: #FF4D00; border-color: #FF4D00; box-shadow: 0 0 20px rgba(255,77,0,0.5), 0 0 40px rgba(255,77,0,0.15); animation: pulse 2s ease-in-out infinite; }
+        .tl-item.on .tl-yr { color: #FF4D00; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 20px rgba(255,77,0,0.5), 0 0 40px rgba(255,77,0,0.15); } 50% { box-shadow: 0 0 30px rgba(255,77,0,0.7), 0 0 60px rgba(255,77,0,0.25); } }
+
+        /* Stat */
+        .stat-num { font-family: 'Space Grotesk',sans-serif; font-weight: 700; font-size: 3.5rem; line-height: 1; color: #FF4D00; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #050505; } ::-webkit-scrollbar-thumb { background: #1c1c1c; border-radius: 3px; } ::-webkit-scrollbar-thumb:hover { background: #333; }
+
+        @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } .rv { opacity: 1; transform: none; } #mesh-canvas { display: none; } }
+
+        a, button { cursor: none; }
+        @media (pointer: coarse) { a, button { cursor: pointer; } }
+    </style>
+</head>
+<body>
+    <!-- Cursor -->
+    <div class="cursor-dot" id="cDot"></div>
+    <div class="cursor-ring" id="cRing"></div>
+
+    <!-- Overlays -->
+    <div class="vignette"></div>
+    <div class="grain"></div>
+
+    <!-- Mesh Canvas -->
+    <canvas id="mesh-canvas"></canvas>
+
+    <div class="content">
+        <!-- Nav -->
+        <nav class="nav" id="nav" role="navigation" aria-label="Main navigation">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <a href="#" class="font-display font-bold text-xl tracking-tight text-fg" aria-label="Home">FUTURE<span class="text-accent">.</span></a>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-sm text-muted hover:text-fg transition-colors font-body">Features</a>
+                    <a href="#evolution" class="text-sm text-muted hover:text-fg transition-colors font-body">Evolution</a>
+                    <a href="#metrics" class="text-sm text-muted hover:text-fg transition-colors font-body">Metrics</a>
+                    <a href="#cta" class="mag inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-base font-display font-semibold text-sm rounded-full hover:bg-white hover:text-base transition-colors" data-mag>Get Started <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                </div>
+                <!-- Mobile menu button -->
+                <button class="md:hidden text-fg text-xl" id="menuBtn" aria-label="Toggle menu"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <!-- Mobile menu -->
+            <div class="md:hidden hidden mt-4 pb-4 border-t border-border pt-4 flex flex-col gap-4" id="mobileMenu">
+                <a href="#features" class="text-sm text-muted hover:text-fg transition-colors font-body">Features</a>
+                <a href="#evolution" class="text-sm text-muted hover:text-fg transition-colors font-body">Evolution</a>
+                <a href="#metrics" class="text-sm text-muted hover:text-fg transition-colors font-body">Metrics</a>
+                <a href="#cta" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-accent text-base font-display font-semibold text-sm rounded-full">Get Started <i class="fa-solid fa-arrow-right text-xs"></i></a>
+            </div>
+        </nav>
+
+        <!-- Hero -->
+        <section class="hero min-h-screen flex flex-col items-center justify-center text-center px-6 relative" aria-label="Hero">
+            <div class="max-w-5xl">
+                <p class="hero-l1 font-display text-sm md:text-base tracking-[0.35em] text-muted uppercase mb-6">The Future Of</p>
+                <h1 class="font-display font-bold leading-[0.9] mb-2">
+                    <span class="hero-l2 block text-6xl sm:text-8xl md:text-9xl lg:text-[10rem]">
+                        <span class="text-accent accent-glow">WEB</span><span class="text-fg"> DESIGN</span>
+                    </span>
+                    <span class="hero-l3 block text-5xl sm:text-7xl md:text-8xl lg:text-[8rem] text-fg">IS HERE</span>
+                </h1>
+                <p class="hero-sub font-body text-muted text-lg md:text-xl max-w-2xl mx-auto mt-8 leading-relaxed">
+                    Interfaces that think. Layouts that breathe. Experiences that adapt before you realize you need them to. This isn't a prediction — it's already happening.
+                </p>
+                <div class="hero-ctas flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
+                    <a href="#features" class="mag px-8 py-4 bg-accent text-base font-display font-semibold rounded-full hover:bg-white hover:text-base transition-colors text-sm tracking-wide" data-mag>EXPLORE THE FUTURE</a>
+                    <a href="#evolution" class="mag px-8 py-4 border border-border text-muted font-display font-medium rounded-full hover:border-fg hover:text-fg transition-colors text-sm tracking-wide" data-mag>SEE THE TIMELINE</a>
+                </div>
+            </div>
+            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 hero-scroll">
+                <div class="w-5 h-8 border border-muted/50 rounded-full flex items-start justify-center p-1.5">
+                    <div class="w-1 h-2 bg-accent rounded-full" style="animation:scrollBounce 2s ease-in-out infinite;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bento Features -->
+        <section id="features" class="py-28 md:py-36 px-6" aria-label="Features">
+            <div class="max-w-6xl mx-auto">
+                <div class="rv mb-14">
+                    <p class="font-display text-sm tracking-[0.3em] text-accent uppercase mb-4">Capabilities</p>
+                    <h2 class="font-display font-bold text-3xl md:text-5xl text-fg leading-tight">What Makes It Different</h2>
+                </div>
+                <div class="bento">
+                    <div class="bcard s2 gborder rv rvd1" data-tilt>
+                        <div class="flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-brain text-accent text-lg"></i></div>
+                            <div><h3 class="font-display font-semibold text-xl text-fg mb-2">AI-Powered Layouts</h3><p class="font-body text-muted leading-relaxed">Algorithms that understand content hierarchy, user intent, and spatial relationships — generating optimal arrangements in real-time. No templates. No grids to fill. Just the right layout, every time.</p></div>
+                        </div>
+                    </div>
+                    <div class="bcard rv rvd2" data-tilt>
+                        <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4"><i class="fa-solid fa-cube text-accent text-lg"></i></div>
+                        <h3 class="font-display font-semibold text-xl text-fg mb-2">Immersive 3D</h3>
+                        <p class="font-body text-muted leading-relaxed text-sm">WebGL becomes as natural as flexbox. 3D elements live alongside 2D content without friction or performance cost.</p>
+                    </div>
+                    <div class="bcard rv rvd3" data-tilt>
+                        <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4"><i class="fa-solid fa-wind text-accent text-lg"></i></div>
+                        <h3 class="font-display font-semibold text-xl text-fg mb-2">Adaptive Motion</h3>
+                        <p class="font-body text-muted leading-relaxed text-sm">Animations that sense device capability, user preference, and ambient context — then adjust fluidly without a single media query.</p>
+                    </div>
+                    <div class="bcard s2 rv rvd4" data-tilt>
+                        <div class="flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-network-wired text-accent text-lg"></i></div>
+                            <div><h3 class="font-display font-semibold text-xl text-fg mb-2">Neural Styling</h3><p class="font-body text-muted leading-relaxed">Style systems that learn from every interaction. Colors shift to match mood. Typography adapts to reading speed. Spacing responds to attention patterns. The interface becomes a living reflection of its user.</p></div>
+                        </div>
+                    </div>
+                    <div class="bcard s2 rv rvd3" data-tilt>
+                        <div class="flex items-start gap-5">
+                            <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-vr-cardboard text-accent text-lg"></i></div>
+                            <div><h3 class="font-display font-semibold text-xl text-fg mb-2">Spatial Computing</h3><p class="font-body text-muted leading-relaxed">Design that extends beyond flat screens into mixed reality. Depth, presence, and spatial awareness become first-class citizens of the web platform.</p></div>
+                        </div>
+                    </div>
+                    <div class="bcard rv rvd4" data-tilt>
+                        <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4"><i class="fa-solid fa-wand-magic-sparkles text-accent text-lg"></i></div>
+                        <h3 class="font-display font-semibold text-xl text-fg mb-2">Generative UI</h3>
+                        <p class="font-body text-muted leading-relaxed text-sm">Components assembled on-the-fly from intent. Describe what you need; the system builds it, tests it, and ships it.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Evolution Timeline -->
+        <section id="evolution" class="py-28 md:py-36 px-6" aria-label="Evolution timeline">
+            <div class="max-w-3xl mx-auto">
+                <div class="rv mb-14">
+                    <p class="font-display text-sm tracking-[0.3em] text-accent uppercase mb-4">Evolution</p>
+                    <h2 class="font-display font-bold text-3xl md:text-5xl text-fg leading-tight">How We Got Here</h2>
+                </div>
+                <div class="rv rvd2" id="timeline">
+                    <div class="tl-item" data-tl>
+                        <span class="tl-yr font-display font-bold text-lg text-muted transition-colors">1991</span>
+                        <h3 class="font-display font-semibold text-fg text-lg mt-1">Static Pages</h3>
+                        <p class="font-body text-muted text-sm mt-1 leading-relaxed">HTML tables, basic formatting, blue links on gray backgrounds. The web was a digital library — functional, but lifeless.</p>
+                    </div>
+                    <div class="tl-item" data-tl>
+                        <span class="tl-yr font-display font-bold text-lg text-muted transition-colors">2005</span>
+                        <h3 class="font-display font-semibold text-fg text-lg mt-1">Web 2.0</h3>
+                        <p class="font-body text-muted text-sm mt-1 leading-relaxed">AJAX brought dynamism. Rounded corners, gradients, and glossy buttons defined an era of optimism. The web became participatory.</p>
+                    </div>
+                    <div class="tl-item" data-tl>
+                        <span class="tl-yr font-display font-bold text-lg text-muted transition-colors">2012</span>
+                        <h3 class="font-display font-semibold text-fg text-lg mt-1">Responsive Revolution</h3>
+                        <p class="font-body text-muted text-sm mt-1 leading-relaxed">Mobile-first thinking shattered the fixed-width paradigm. Flexible grids, media queries, and fluid images became non-negotiable.</p>
+                    </div>
+                    <div class="tl-item" data-tl>
+                        <span class="tl-yr font-display font-bold text-lg text-muted transition-colors">2018</span>
+                        <h3 class="font-display font-semibold text-fg text-lg mt-1">Component Era</h3>
+                        <p class="font-body text-muted text-sm mt-1 leading-relaxed">React, Vue, design systems. UI became composable, reusable, and scalable — but also more abstract and complex.</p>
+                    </div>
+                    <div class="tl-item" data-tl>
+                        <span class="tl-yr font-display font-bold text-lg text-muted transition-colors">2023</span>
+                        <h3 class="font-display font-semibold text-fg text-lg mt-1">AI-Assisted Design</h3>
+                        <p class="font-body text-muted text-sm mt-1 leading-relaxed">Generative tools entered the workflow. Code completion, image generation, and layout suggestions accelerated output — but human taste still steered.</p>
+                    </div>
+                    <div class="tl-item on" data-tl>
+                        <span class="tl-yr font-display font-bold text-lg text-accent transition-colors">2025</span>
+                        <h3 class="font-display font-semibold text-fg text-lg mt-1">Neural Interfaces</h3>
+                        <p class="font-body text-muted text-sm mt-1 leading-relaxed">Thought-driven design, adaptive experiences, living interfaces. The boundary between designer and system dissolves. Design is no longer something you do — it's something that happens.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Metrics -->
+        <section id="metrics" class="py-28 md:py-36 px-6 border-t border-border" aria-label="Metrics">
+            <div class="max-w-6xl mx-auto">
+                <div class="rv mb-14 text-center">
+                    <p class="font-display text-sm tracking-[0.3em] text-accent uppercase mb-4">By The Numbers</p>
+                    <h2 class="font-display font-bold text-3xl md:text-5xl text-fg leading-tight">The New Standard</h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+                    <div class="rv rvd1 text-center">
+                        <div class="stat-num" data-count="100" data-suffix="%">&nbsp;</div>
+                        <p class="font-display text-sm text-fg font-medium mt-3">Adaptive</p>
+                        <p class="font-body text-xs text-muted mt-1">Every screen, every ability, every preference — natively supported.</p>
+                    </div>
+                    <div class="rv rvd2 text-center">
+                        <div class="stat-num">&lt; 1s</div>
+                        <p class="font-display text-sm text-fg font-medium mt-3">Load Time</p>
+                        <p class="font-body text-xs text-muted mt-1">Users never wait. Interfaces stream into existence.</p>
+                    </div>
+                    <div class="rv rvd3 text-center">
+                        <div class="stat-num">&infin;</div>
+                        <p class="font-display text-sm text-fg font-medium mt-3">Layouts</p>
+                        <p class="font-body text-xs text-muted mt-1">AI generates optimal arrangements for any content, any context.</p>
+                    </div>
+                    <div class="rv rvd4 text-center">
+                        <div class="stat-num" data-count="0" data-prefix="" data-suffix="">0</div>
+                        <p class="font-display text-sm text-fg font-medium mt-3">Compromises</p>
+                        <p class="font-body text-xs text-muted mt-1">No trade-offs between beauty, performance, and accessibility.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section id="cta" class="py-28 md:py-40 px-6" aria-label="Call to action">
+            <div class="max-w-3xl mx-auto text-center rv">
+                <p class="font-display text-sm tracking-[0.3em] text-accent uppercase mb-6">Join The Shift</p>
+                <h2 class="font-display font-bold text-3xl md:text-5xl lg:text-6xl text-fg leading-tight mb-6">
+                    The next era of design<br>doesn't announce itself.
+                </h2>
+                <p class="font-body text-muted text-lg max-w-xl mx-auto leading-relaxed mb-10">
+                    It's already here — in the interfaces that feel just right. In the layouts that appear to read your mind. In the experiences that make you forget you're looking at a screen.
+                </p>
+                <a href="#" class="mag inline-flex items-center gap-3 px-10 py-5 bg-accent text-base font-display font-bold rounded-full hover:bg-white hover:text-base transition-colors text-sm tracking-wide" data-mag>
+                    START BUILDING THE FUTURE
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-border py-10 px-6" role="contentinfo">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="font-display font-bold text-fg">FUTURE<span class="text-accent">.</span></p>
+                <p class="font-body text-xs text-muted">Designed to prove a point. Built with nothing but HTML, CSS, and JavaScript.</p>
+                <div class="flex items-center gap-5">
+                    <a href="#" class="text-muted hover:text-accent transition-colors text-sm" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+                    <a href="#" class="text-muted hover:text-accent transition-colors text-sm" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+                    <a href="#" class="text-muted hover:text-accent transition-colors text-sm" aria-label="Dribbble"><i class="fa-brands fa-dribbble"></i></a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        /* ── Custom Cursor ── */
+        const dot = document.getElementById('cDot');
+        const ring = document.getElementById('cRing');
+        let mx = -100, my = -100, rx = -100, ry = -100;
+        const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+
+        if (!isCoarse) {
+            document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+            // Hover detection on interactive elements
+            document.addEventListener('mouseover', e => {
+                if (e.target.closest('a, button, [data-tilt], [data-mag]')) {
+                    dot.classList.add('hover');
+                    ring.classList.add('hover');
+                }
+            });
+            document.addEventListener('mouseout', e => {
+                if (e.target.closest('a, button, [data-tilt], [data-mag]')) {
+                    dot.classList.remove('hover');
+                    ring.classList.remove('hover');
+                }
+            });
+            (function cursorLoop() {
+                dot.style.left = mx + 'px';
+                dot.style.top = my + 'px';
+                rx += (mx - rx) * 0.15;
+                ry += (my - ry) * 0.15;
+                ring.style.left = rx + 'px';
+                ring.style.top = ry + 'px';
+                requestAnimationFrame(cursorLoop);
+            })();
+        }
+
+        /* ── Mobile Menu ── */
+        const menuBtn = document.getElementById('menuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            const icon = menuBtn.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-xmark');
+        });
+        // Close on link click
+        mobileMenu.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+                const icon = menuBtn.querySelector('i');
+                icon.classList.add('fa-bars');
+                icon.classList.remove('fa-xmark');
+            });
+        });
+
+        /* ── Nav Scroll Effect ── */
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 60);
+        }, { passive: true });
+
+        /* ── Canvas Mesh ── */
+        const canvas = document.getElementById('mesh-canvas');
+        const ctx = canvas.getContext('2d');
+        let cW, cH, cols, rows, spX, spY;
+        let time = 0;
+        let canvasMouseX = -9999, canvasMouseY = -9999;
+        let canvasVisible = true;
+        let particles = [];
+
+        function resizeCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            cW = window.innerWidth;
+            cH = window.innerHeight;
+            canvas.width = cW * dpr;
+            canvas.height = cH * dpr;
+            canvas.style.width = cW + 'px';
+            canvas.style.height = cH + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const minSpacing = 35;
+            cols = Math.max(5, Math.floor(cW / minSpacing));
+            rows = Math.max(4, Math.floor(cH / minSpacing));
+            spX = cW / (cols - 1);
+            spY = cH / (rows - 1);
+
+            // Recreate particles
+            particles = Array.from({ length: 40 }, () => ({
+                x: Math.random() * cW,
+                y: Math.random() * cH,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.4,
+                s: Math.random() * 1.8 + 0.5,
+                a: Math.random() * 0.4 + 0.15
+            }));
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Track mouse for canvas (use page coords since canvas is fixed)
+        document.addEventListener('mousemove', e => {
+            canvasMouseX = e.clientX;
+            canvasMouseY = e.clientY;
+        });
+
+        // Fade canvas on scroll
+        const heroEl = document.querySelector('.hero');
+        window.addEventListener('scroll', () => {
+            if (!heroEl) return;
+            const hH = heroEl.offsetHeight;
+            const op = Math.max(0, 1 - window.scrollY / (hH * 0.8));
+            canvas.style.opacity = op;
+            canvasVisible = op > 0.01;
+        }, { passive: true });
+
+        // IntersectionObserver to pause when off-screen
+        const canvasObs = new IntersectionObserver(entries => {
+            canvasVisible = entries[0].isIntersecting;
+        }, { threshold: 0 });
+        canvasObs.observe(canvas);
+
+        const BUCKETS = 10;
+
+        function drawMesh() {
+            if (!canvasVisible) { requestAnimationFrame(drawMesh); return; }
+            time += 0.012;
+            ctx.clearRect(0, 0, cW, cH);
+
+            const mouseRadius = 180;
+            const mouseStrength = 55;
+            const waveAmp = 12;
+            const waveFreq = 0.25;
+
+            // Compute Z values and screen positions
+            const zArr = [];
+            const sArr = [];
+            for (let r = 0; r < rows; r++) {
+                zArr[r] = [];
+                sArr[r] = [];
+                for (let c = 0; c < cols; c++) {
+                    const bx = c * spX;
+                    const by = r * spY;
+                    let z = Math.sin(c * waveFreq + time * 1.2) * Math.cos(r * waveFreq + time * 0.9) * waveAmp;
+                    z += Math.sin(c * waveFreq * 0.5 + r * waveFreq * 0.3 + time * 0.7) * waveAmp * 0.5;
+
+                    // Mouse influence
+                    const dx = bx - canvasMouseX;
+                    const dy = by - canvasMouseY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < mouseRadius) {
+                        const influence = Math.pow(1 - dist / mouseRadius, 2);
+                        z += influence * mouseStrength;
+                    }
+                    zArr[r][c] = z;
+                    sArr[r][c] = { x: bx, y: by - z * 0.8 };
+                }
+            }
+
+            // Bucket lines by Z for batched drawing
+            const buckets = Array.from({ length: BUCKETS }, () => []);
+
+            const maxZ = waveAmp * 1.5 + mouseStrength;
+            // Horizontal lines
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols - 1; c++) {
+                    const avgZ = (zArr[r][c] + zArr[r][c + 1]) * 0.5;
+                    const t = Math.min(1, Math.max(0, (avgZ + maxZ) / (maxZ * 2)));
+                    const bi = Math.min(BUCKETS - 1, Math.floor(t * BUCKETS));
+                    buckets[bi].push(sArr[r][c], sArr[r][c + 1]);
+                }
+            }
+            // Vertical lines
+            for (let r = 0; r < rows - 1; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const avgZ = (zArr[r][c] + zArr[r + 1][c]) * 0.5;
+                    const t = Math.min(1, Math.max(0, (avgZ + maxZ) / (maxZ * 2)));
+                    const bi = Math.min(BUCKETS - 1, Math.floor(t * BUCKETS));
+                    buckets[bi].push(sArr[r][c], sArr[r + 1][c]);
+                }
+            }
+
+            // Draw each bucket
+            for (let b = 0; b < BUCKETS; b++) {
+                const lines = buckets[b];
+                if (lines.length === 0) continue;
+                const t = b / (BUCKETS - 1);
+                const alpha = 0.03 + t * 0.45;
+                // Transition from dim white to accent orange
+                const r = Math.floor(40 + t * 215);
+                const g = Math.floor(40 + t * 37);
+                const bv = Math.floor(40 - t * 40);
+                ctx.strokeStyle = 'rgba(' + r + ',' + g + ',' + Math.max(0, bv) + ',' + alpha + ')';
+                ctx.lineWidth = 0.4 + t * 1.4;
+                ctx.beginPath();
+                for (let i = 0; i < lines.length; i += 2) {
+                    ctx.moveTo(lines[i].x, lines[i].y);
+                    ctx.lineTo(lines[i + 1].x, lines[i + 1].y);
+                }
+                ctx.stroke();
+            }
+
+            // Draw intersection dots at high-Z points
+            ctx.fillStyle = 'rgba(255,77,0,0.6)';
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const t = Math.min(1, Math.max(0, (zArr[r][c] + maxZ) / (maxZ * 2)));
+                    if (t > 0.65) {
+                        const p = sArr[r][c];
+                        const dotAlpha = (t - 0.65) / 0.35 * 0.7;
+                        ctx.globalAlpha = dotAlpha;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 1.2 + t * 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+            ctx.globalAlpha = 1;
+
+            // Floating particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < -10) p.x = cW + 10;
+                if (p.x > cW + 10) p.x = -10;
+                if (p.y < -10) p.y = cH + 10;
+                if (p.y > cH + 10) p.y = -10;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,77,0,' + p.a + ')';
+                ctx.fill();
+            }
+
+            requestAnimationFrame(drawMesh);
+        }
+        requestAnimationFrame(drawMesh);
+
+        /* ── 3D Tilt Cards ── */
+        if (!isCoarse) {
+            document.querySelectorAll('[data-tilt]').forEach(card => {
+                card.addEventListener('mousemove', e => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const cx = rect.width / 2;
+                    const cy = rect.height / 2;
+                    const rotX = ((y - cy) / cy) * -8;
+                    const rotY = ((x - cx) / cx) * 8;
+                    card.style.transform = 'perspective(800px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) scale3d(1.02,1.02,1.02)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+                });
+            });
+        }
+
+        /* ── Magnetic Buttons ── */
+        if (!isCoarse) {
+            document.querySelectorAll('[data-mag]').forEach(btn => {
+                btn.addEventListener('mousemove', e => {
+                    const rect = btn.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    btn.style.transform = 'translate(' + (x * 0.25) + 'px,' + (y * 0.25) + 'px)';
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.style.transform = 'translate(0,0)';
+                });
+            });
+        }
+
+        /* ── Scroll Reveal ── */
+        const revealObs = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('vis');
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.rv').forEach(el => revealObs.observe(el));
+
+        /* ── Timeline Scroll Activation ── */
+        const tlItems = document.querySelectorAll('[data-tl]');
+        const tlObs = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('on');
+                }
+            });
+        }, { threshold: 0.5 });
+        tlItems.forEach(el => tlObs.observe(el));
+
+        /* ── Stat Counter ── */
+        const counterObs = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                if (el.dataset.counted) return;
+                el.dataset.counted = '1';
+                const target = parseInt(el.dataset.count);
+                if (isNaN(target)) return;
+                const suffix = el.dataset.suffix || '';
+                const duration = 1800;
+                const start = performance.now();
+                function tick(now) {
+                    const p = Math.min((now - start) / duration, 1);
+                    const ease = 1 - Math.pow(1 - p, 3);
+                    const val = Math.round(target * ease);
+                    el.textContent = val + suffix;
+                    if (p < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            });
+        }, { threshold: 0.5 });
+        document.querySelectorAll('[data-count]').forEach(el => counterObs.observe(el));
+
+        /* ── Smooth scroll for anchor links ── */
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                const id = a.getAttribute('href');
+                if (id === '#') return;
+                const target = document.querySelector(id);
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+    })();
+    </script>
+</body>
+</html>

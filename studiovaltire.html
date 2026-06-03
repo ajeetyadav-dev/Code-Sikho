@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio Voltaire — Design & Direction</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-elevated: #111110;
+    --fg: #e8e4de;
+    --fg-muted: #7a756e;
+    --accent: #c9a96e;
+    --accent-dim: rgba(201,169,110,0.15);
+    --border: rgba(255,255,255,0.06);
+    --card: #141413;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) var(--bg);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .font-display {
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  /* Custom cursor */
+  .cursor-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    transition: transform 0.1s ease;
+    mix-blend-mode: difference;
+  }
+
+  .cursor-ring {
+    width: 40px; height: 40px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    transition: width 0.4s cubic-bezier(0.19,1,0.22,1),
+                height 0.4s cubic-bezier(0.19,1,0.22,1),
+                border-color 0.3s ease,
+                background 0.3s ease;
+    transform: translate(-50%, -50%);
+  }
+
+  .cursor-ring.hovering {
+    width: 64px; height: 64px;
+    background: var(--accent-dim);
+    border-color: var(--accent);
+  }
+
+  /* Noise overlay */
+  .noise {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+  }
+
+  /* Scroll reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.9s cubic-bezier(0.19,1,0.22,1),
+                transform 0.9s cubic-bezier(0.19,1,0.22,1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+
+  /* Hero line animation */
+  .hero-line {
+    display: block;
+    overflow: hidden;
+  }
+  .hero-line span {
+    display: inline-block;
+    transform: translateY(110%);
+    animation: slideUp 1s cubic-bezier(0.19,1,0.22,1) forwards;
+  }
+  .hero-line:nth-child(2) span { animation-delay: 0.15s; }
+  .hero-line:nth-child(3) span { animation-delay: 0.3s; }
+
+  @keyframes slideUp {
+    to { transform: translateY(0); }
+  }
+
+  /* Horizontal rule */
+  .gold-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.3;
+  }
+
+  /* Project cards */
+  .project-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    transition: border-color 0.4s ease, transform 0.6s cubic-bezier(0.19,1,0.22,1);
+  }
+  .project-card:hover {
+    border-color: rgba(201,169,110,0.25);
+    transform: translateY(-4px);
+  }
+  .project-card .card-img {
+    overflow: hidden;
+    position: relative;
+  }
+  .project-card .card-img img {
+    transition: transform 0.8s cubic-bezier(0.19,1,0.22,1), filter 0.8s ease;
+    filter: saturate(0.7) brightness(0.85);
+  }
+  .project-card:hover .card-img img {
+    transform: scale(1.06);
+    filter: saturate(1) brightness(1);
+  }
+  .project-card .card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(10,10,10,0.9) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    display: flex;
+    align-items: flex-end;
+    padding: 1.5rem;
+  }
+  .project-card:hover .card-overlay {
+    opacity: 1;
+  }
+
+  /* Stat counter */
+  .stat-number {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Floating orbs */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: orbFloat 12s ease-in-out infinite;
+  }
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.05); }
+    66% { transform: translate(-20px, 15px) scale(0.95); }
+  }
+
+  /* Skill bars */
+  .skill-fill {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), rgba(201,169,110,0.3));
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 1.2s cubic-bezier(0.19,1,0.22,1);
+  }
+  .skill-fill.animate {
+    transform: scaleX(1);
+  }
+
+  /* Magnetic button */
+  .mag-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 36px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 60px;
+    transition: background 0.4s ease, color 0.4s ease, transform 0.3s ease;
+    overflow: hidden;
+  }
+  .mag-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s cubic-bezier(0.19,1,0.22,1);
+    border-radius: inherit;
+    z-index: -1;
+  }
+  .mag-btn:hover::before {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  .mag-btn:hover {
+    color: var(--bg);
+  }
+  .mag-btn i {
+    transition: transform 0.3s ease;
+  }
+  .mag-btn:hover i {
+    transform: translateX(4px);
+  }
+
+  /* Marquee */
+  .marquee-track {
+    display: flex;
+    animation: marquee 30s linear infinite;
+    width: max-content;
+  }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Secret panel */
+  .secret-panel {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9998;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    pointer-events: none;
+    transition: all 0.5s cubic-bezier(0.19,1,0.22,1);
+  }
+  .secret-panel.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card);
+    border: 1px solid var(--accent);
+    color: var(--fg);
+    padding: 14px 28px;
+    border-radius: 60px;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    z-index: 10001;
+    transition: transform 0.5s cubic-bezier(0.19,1,0.22,1), opacity 0.5s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Text scramble placeholder */
+  .scramble { display: inline-block; min-width: 1ch; }
+
+  /* Nav link hover */
+  .nav-link {
+    position: relative;
+    color: var(--fg-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.3s ease;
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--accent);
+    transition: width 0.4s cubic-bezier(0.19,1,0.22,1);
+  }
+  .nav-link:hover { color: var(--fg); }
+  .nav-link:hover::after { width: 100%; }
+
+  /* Scroll indicator */
+  .scroll-indicator {
+    animation: scrollBounce 2s ease-in-out infinite;
+  }
+  @keyframes scrollBounce {
+    0%, 100% { transform: translateY(0); opacity: 0.6; }
+    50% { transform: translateY(8px); opacity: 1; }
+  }
+
+  /* Testimonial */
+  .testimonial-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    position: relative;
+    transition: border-color 0.4s ease;
+  }
+  .testimonial-card:hover {
+    border-color: rgba(201,169,110,0.2);
+  }
+  .testimonial-card .quote-mark {
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    font-size: 4rem;
+    color: var(--accent);
+    opacity: 0.2;
+    font-family: 'Cormorant Garamond', serif;
+    line-height: 1;
+  }
+
+  /* Logo grid hover */
+  .logo-item {
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    opacity: 0.35;
+  }
+  .logo-item:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+
+  /* Responsive: hide custom cursor on touch */
+  @media (pointer: coarse) {
+    .cursor-dot, .cursor-ring { display: none; }
+    * { cursor: auto; }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title { font-size: 3rem !important; }
+    .project-grid { grid-template-columns: 1fr !important; }
+  }
+
+  /* Focus visible for accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .reveal { opacity: 1; transform: none; }
+    .hero-line span { transform: none; }
+    .marquee-track { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Noise overlay -->
+<div class="noise" aria-hidden="true"></div>
+
+<!-- Custom cursor -->
+<div class="cursor-dot" aria-hidden="true"></div>
+<div class="cursor-ring" aria-hidden="true"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<!-- Navigation -->
+<header class="fixed top-0 left-0 w-full z-[1000] mix-blend-difference" style="backdrop-filter: blur(2px);">
+  <nav class="max-w-7xl mx-auto px-6 md:px-12 py-6 flex items-center justify-between">
+    <a href="#" class="font-display text-xl tracking-widest text-white no-underline" style="font-weight:300;" data-hover>
+      VOLTAIRE
+    </a>
+    <div class="hidden md:flex items-center gap-10">
+      <a href="#work" class="nav-link" data-hover>Work</a>
+      <a href="#about" class="nav-link" data-hover>About</a>
+      <a href="#testimonials" class="nav-link" data-hover>Praise</a>
+      <a href="#contact" class="nav-link" data-hover>Contact</a>
+    </div>
+    <button id="menuBtn" class="md:hidden text-white text-xl" aria-label="Open menu" data-hover>
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </nav>
+</header>
+
+<!-- Mobile menu -->
+<div id="mobileMenu" class="fixed inset-0 z-[999] bg-[#0a0a0a] flex flex-col items-center justify-center gap-8 transition-all duration-500 opacity-0 pointer-events-none">
+  <a href="#work" class="font-display text-3xl text-[var(--fg)] no-underline mobile-link" data-hover>Work</a>
+  <a href="#about" class="font-display text-3xl text-[var(--fg)] no-underline mobile-link" data-hover>About</a>
+  <a href="#testimonials" class="font-display text-3xl text-[var(--fg)] no-underline mobile-link" data-hover>Praise</a>
+  <a href="#contact" class="font-display text-3xl text-[var(--fg)] no-underline mobile-link" data-hover>Contact</a>
+  <button id="menuClose" class="absolute top-6 right-6 text-2xl text-[var(--fg)]" aria-label="Close menu" data-hover>
+    <i class="fa-solid fa-xmark"></i>
+  </button>
+</div>
+
+<main>
+
+  <!-- Hero -->
+  <section class="min-h-screen flex flex-col justify-center relative px-6 md:px-12 max-w-7xl mx-auto" id="hero">
+    <!-- Floating orbs -->
+    <div class="orb" style="width:400px;height:400px;background:rgba(201,169,110,0.06);top:10%;right:-5%;animation-delay:-3s;" aria-hidden="true"></div>
+    <div class="orb" style="width:250px;height:250px;background:rgba(201,169,110,0.04);bottom:20%;left:-3%;animation-delay:-7s;" aria-hidden="true"></div>
+
+    <div class="pt-32 md:pt-0">
+      <p class="text-[var(--fg-muted)] text-xs tracking-[0.25em] uppercase mb-8 reveal" style="font-weight:400;">
+        Design &mdash; Direction &mdash; Experience
+      </p>
+      <h1 class="font-display hero-title" style="font-size:clamp(3rem,8vw,7rem);font-weight:300;line-height:0.95;letter-spacing:-0.02em;">
+        <span class="hero-line"><span>We craft</span></span>
+        <span class="hero-line"><span>digital</span></span>
+        <span class="hero-line"><span style="color:var(--accent);font-style:italic;">legacies.</span></span>
+      </h1>
+      <div class="mt-12 flex flex-wrap items-center gap-8 reveal reveal-delay-3">
+        <a href="#work" class="mag-btn" data-hover data-magnetic>
+          View Selected Work
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </a>
+        <span class="text-[var(--fg-muted)] text-sm" style="font-weight:300;">
+          Based in Paris. Working globally.
+        </span>
+      </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 scroll-indicator">
+      <span class="text-[var(--fg-muted)] text-[0.65rem] tracking-[0.2em] uppercase">Scroll</span>
+      <div class="w-px h-8 bg-gradient-to-b from-[var(--accent)] to-transparent"></div>
+    </div>
+  </section>
+
+  <!-- Marquee -->
+  <div class="py-8 overflow-hidden border-y" style="border-color:var(--border);" aria-hidden="true">
+    <div class="marquee-track">
+      <span class="flex items-center gap-12 px-6 text-[var(--fg-muted)] text-sm tracking-[0.15em] uppercase whitespace-nowrap" style="font-weight:400;">
+        <span>Brand Identity</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Web Design</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Motion Design</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Art Direction</span><span style="color:var(--accent);">&#9670;</span>
+        <span>User Experience</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Visual Systems</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Digital Strategy</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Interactive Design</span><span style="color:var(--accent);">&#9670;</span>
+      </span>
+      <span class="flex items-center gap-12 px-6 text-[var(--fg-muted)] text-sm tracking-[0.15em] uppercase whitespace-nowrap" style="font-weight:400;">
+        <span>Brand Identity</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Web Design</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Motion Design</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Art Direction</span><span style="color:var(--accent);">&#9670;</span>
+        <span>User Experience</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Visual Systems</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Digital Strategy</span><span style="color:var(--accent);">&#9670;</span>
+        <span>Interactive Design</span><span style="color:var(--accent);">&#9670;</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Selected Work -->
+  <section id="work" class="py-32 px-6 md:px-12 max-w-7xl mx-auto">
+    <div class="flex items-end justify-between mb-16 reveal">
+      <div>
+        <p class="text-[var(--accent)] text-xs tracking-[0.25em] uppercase mb-3" style="font-weight:500;">Portfolio</p>
+        <h2 class="font-display text-4xl md:text-6xl" style="font-weight:300;letter-spacing:-0.01em;">Selected Work</h2>
+      </div>
+      <span class="hidden md:block text-[var(--fg-muted)] text-sm">2021 — Present</span>
+    </div>
+
+    <div class="project-grid grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Project 1 -->
+      <article class="project-card reveal reveal-delay-1" data-hover>
+        <div class="card-img" style="aspect-ratio:4/3;">
+          <img src="https://picsum.photos/seed/voltaire1/800/600.jpg" alt="Maison Lumiere brand identity project" class="w-full h-full object-cover">
+          <div class="card-overlay">
+            <div>
+              <p class="text-[var(--accent)] text-xs tracking-[0.15em] uppercase mb-1">Brand Identity</p>
+              <p class="text-lg font-display" style="font-weight:400;">Maison Lumiere</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 flex items-center justify-between">
+          <div>
+            <h3 class="font-display text-xl" style="font-weight:400;">Maison Lumiere</h3>
+            <p class="text-[var(--fg-muted)] text-sm mt-1">Luxury fragrance house — Complete rebrand</p>
+          </div>
+          <i class="fa-solid fa-arrow-up-right text-[var(--fg-muted)] text-sm"></i>
+        </div>
+      </article>
+
+      <!-- Project 2 -->
+      <article class="project-card reveal reveal-delay-2" data-hover>
+        <div class="card-img" style="aspect-ratio:4/3;">
+          <img src="https://picsum.photos/seed/voltaire2/800/600.jpg" alt="Atelier Noir web experience project" class="w-full h-full object-cover">
+          <div class="card-overlay">
+            <div>
+              <p class="text-[var(--accent)] text-xs tracking-[0.15em] uppercase mb-1">Web Experience</p>
+              <p class="text-lg font-display" style="font-weight:400;">Atelier Noir</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 flex items-center justify-between">
+          <div>
+            <h3 class="font-display text-xl" style="font-weight:400;">Atelier Noir</h3>
+            <p class="text-[var(--fg-muted)] text-sm mt-1">Haute couture — Immersive digital showroom</p>
+          </div>
+          <i class="fa-solid fa-arrow-up-right text-[var(--fg-muted)] text-sm"></i>
+        </div>
+      </article>
+
+      <!-- Project 3 -->
+      <article class="project-card reveal reveal-delay-1" data-hover>
+        <div class="card-img" style="aspect-ratio:4/3;">
+          <img src="https://picsum.photos/seed/voltaire3/800/600.jpg" alt="Terrace Hotels visual system project" class="w-full h-full object-cover">
+          <div class="card-overlay">
+            <div>
+              <p class="text-[var(--accent)] text-xs tracking-[0.15em] uppercase mb-1">Visual System</p>
+              <p class="text-lg font-display" style="font-weight:400;">Terrace Hotels</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 flex items-center justify-between">
+          <div>
+            <h3 class="font-display text-xl" style="font-weight:400;">Terrace Hotels</h3>
+            <p class="text-[var(--fg-muted)] text-sm mt-1">Boutique hospitality — Design language & website</p>
+          </div>
+          <i class="fa-solid fa-arrow-up-right text-[var(--fg-muted)] text-sm"></i>
+        </div>
+      </article>
+
+      <!-- Project 4 -->
+      <article class="project-card reveal reveal-delay-2" data-hover>
+        <div class="card-img" style="aspect-ratio:4/3;">
+          <img src="https://picsum.photos/seed/voltaire4/800/600.jpg" alt="Oenophile wine platform project" class="w-full h-full object-cover">
+          <div class="card-overlay">
+            <div>
+              <p class="text-[var(--accent)] text-xs tracking-[0.15em] uppercase mb-1">Product Design</p>
+              <p class="text-lg font-display" style="font-weight:400;">Oenophile</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 flex items-center justify-between">
+          <div>
+            <h3 class="font-display text-xl" style="font-weight:400;">Oenophile</h3>
+            <p class="text-[var(--fg-muted)] text-sm mt-1">Fine wine platform — End-to-end product design</p>
+          </div>
+          <i class="fa-solid fa-arrow-up-right text-[var(--fg-muted)] text-sm"></i>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <div class="gold-line max-w-7xl mx-auto" aria-hidden="true"></div>
+
+  <!-- About / Stats -->
+  <section id="about" class="py-32 px-6 md:px-12 max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-start">
+      <div class="reveal">
+        <p class="text-[var(--accent)] text-xs tracking-[0.25em] uppercase mb-3" style="font-weight:500;">About</p>
+        <h2 class="font-display text-4xl md:text-5xl mb-8" style="font-weight:300;letter-spacing:-0.01em;line-height:1.15;">
+          Quiet confidence<br>in every pixel
+        </h2>
+        <p class="text-[var(--fg-muted)] leading-relaxed mb-6" style="font-size:1.05rem;">
+          We're a design studio that believes the best work doesn't announce itself — it simply makes everything else feel dated. For eight years, we've partnered with brands that understand restraint is a form of power.
+        </p>
+        <p class="text-[var(--fg-muted)] leading-relaxed mb-10" style="font-size:1.05rem;">
+          Every project begins with understanding, not assumptions. We don't do templates. We don't do trends. We build digital experiences that age like architecture, not fashion.
+        </p>
+
+        <!-- Skills -->
+        <div class="space-y-5">
+          <div>
+            <div class="flex justify-between mb-2">
+              <span class="text-sm tracking-wider" style="font-weight:400;">Brand & Identity</span>
+              <span class="text-xs text-[var(--fg-muted)]">98%</span>
+            </div>
+            <div class="w-full h-px bg-[var(--border)] rounded"><div class="skill-fill" style="width:98%;"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-2">
+              <span class="text-sm tracking-wider" style="font-weight:400;">Web & Interactive</span>
+              <span class="text-xs text-[var(--fg-muted)]">95%</span>
+            </div>
+            <div class="w-full h-px bg-[var(--border)] rounded"><div class="skill-fill" style="width:95%;"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-2">
+              <span class="text-sm tracking-wider" style="font-weight:400;">Motion & Film</span>
+              <span class="text-xs text-[var(--fg-muted)]">91%</span>
+            </div>
+            <div class="w-full h-px bg-[var(--border)] rounded"><div class="skill-fill" style="width:91%;"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-2">
+              <span class="text-sm tracking-wider" style="font-weight:400;">Art Direction</span>
+              <span class="text-xs text-[var(--fg-muted)]">96%</span>
+            </div>
+            <div class="w-full h-px bg-[var(--border)] rounded"><div class="skill-fill" style="width:96%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="grid grid-cols-2 gap-6 reveal reveal-delay-2">
+        <div class="p-8 rounded-2xl" style="background:var(--card);border:1px solid var(--border);">
+          <span class="font-display text-5xl md:text-6xl stat-number" style="font-weight:300;color:var(--accent);" data-count="147">0</span>
+          <p class="text-[var(--fg-muted)] text-sm mt-3 tracking-wide">Projects Delivered</p>
+        </div>
+        <div class="p-8 rounded-2xl" style="background:var(--card);border:1px solid var(--border);">
+          <span class="font-display text-5xl md:text-6xl stat-number" style="font-weight:300;color:var(--accent);" data-count="8">0</span>
+          <p class="text-[var(--fg-muted)] text-sm mt-3 tracking-wide">Years of Craft</p>
+        </div>
+        <div class="p-8 rounded-2xl" style="background:var(--card);border:1px solid var(--border);">
+          <span class="font-display text-5xl md:text-6xl stat-number" style="font-weight:300;color:var(--accent);" data-count="23">0</span>
+          <p class="text-[var(--fg-muted)] text-sm mt-3 tracking-wide">Design Awards</p>
+        </div>
+        <div class="p-8 rounded-2xl" style="background:var(--card);border:1px solid var(--border);">
+          <span class="font-display text-5xl md:text-6xl stat-number" style="font-weight:300;color:var(--accent);" data-count="100">0</span><span class="font-display text-2xl" style="font-weight:300;color:var(--accent);">%</span>
+          <p class="text-[var(--fg-muted)] text-sm mt-3 tracking-wide">Client Retention</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trusted By -->
+  <section class="py-16 px-6 md:px-12 max-w-7xl mx-auto reveal">
+    <p class="text-center text-[var(--fg-muted)] text-xs tracking-[0.25em] uppercase mb-10" style="font-weight:400;">Trusted by discerning brands</p>
+    <div class="flex flex-wrap items-center justify-center gap-x-14 gap-y-6">
+      <span class="logo-item font-display text-2xl tracking-wider" style="font-weight:300;" data-hover>Lumiere</span>
+      <span class="logo-item font-display text-2xl tracking-wider" style="font-weight:300;" data-hover>Atelier</span>
+      <span class="logo-item font-display text-2xl tracking-wider" style="font-weight:300;" data-hover>Terrace</span>
+      <span class="logo-item font-display text-2xl tracking-wider" style="font-weight:300;" data-hover>Oenophile</span>
+      <span class="logo-item font-display text-2xl tracking-wider" style="font-weight:300;" data-hover>Maison</span>
+      <span class="logo-item font-display text-2xl tracking-wider" style="font-weight:300;" data-hover>Veridian</span>
+    </div>
+  </section>
+
+  <div class="gold-line max-w-7xl mx-auto" aria-hidden="true"></div>
+
+  <!-- Testimonials -->
+  <section id="testimonials" class="py-32 px-6 md:px-12 max-w-7xl mx-auto">
+    <div class="text-center mb-16 reveal">
+      <p class="text-[var(--accent)] text-xs tracking-[0.25em] uppercase mb-3" style="font-weight:500;">Praise</p>
+      <h2 class="font-display text-4xl md:text-5xl" style="font-weight:300;letter-spacing:-0.01em;">Words from those who know</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="testimonial-card reveal reveal-delay-1" data-hover>
+        <span class="quote-mark" aria-hidden="true">"</span>
+        <p class="text-[var(--fg-muted)] leading-relaxed mb-8" style="font-size:0.95rem;">
+          They didn't just redesign our brand — they redefined how we see ourselves. The subtlety is what hits you months later.
+        </p>
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/face1/80/80.jpg" alt="Claire Dufresne" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <p class="text-sm" style="font-weight:400;">Claire Dufresne</p>
+            <p class="text-xs text-[var(--fg-muted)]">CEO, Maison Lumiere</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card reveal reveal-delay-2" data-hover>
+        <span class="quote-mark" aria-hidden="true">"</span>
+        <p class="text-[var(--fg-muted)] leading-relaxed mb-8" style="font-size:0.95rem;">
+          I've worked with agencies on three continents. Voltaire is the only one where I stopped micromanaging. They just know.
+        </p>
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/face2/80/80.jpg" alt="Marcus Hale" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <p class="text-sm" style="font-weight:400;">Marcus Hale</p>
+            <p class="text-xs text-[var(--fg-muted)]">Founder, Terrace Hotels</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card reveal reveal-delay-3" data-hover>
+        <span class="quote-mark" aria-hidden="true">"</span>
+        <p class="text-[var(--fg-muted)] leading-relaxed mb-8" style="font-size:0.95rem;">
+          Our conversion rate increased 340% after launch. But honestly, I just love opening our website. That's the real metric.
+        </p>
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/face3/80/80.jpg" alt="Ines Moreau" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <p class="text-sm" style="font-weight:400;">Ines Moreau</p>
+            <p class="text-xs text-[var(--fg-muted)]">CPO, Oenophile</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="gold-line max-w-7xl mx-auto" aria-hidden="true"></div>
+
+  <!-- Contact -->
+  <section id="contact" class="py-32 px-6 md:px-12 max-w-7xl mx-auto relative">
+    <div class="orb" style="width:300px;height:300px;background:rgba(201,169,110,0.05);top:0;left:20%;animation-delay:-5s;" aria-hidden="true"></div>
+
+    <div class="max-w-3xl mx-auto text-center reveal">
+      <p class="text-[var(--accent)] text-xs tracking-[0.25em] uppercase mb-3" style="font-weight:500;">Contact</p>
+      <h2 class="font-display text-4xl md:text-6xl mb-6" style="font-weight:300;letter-spacing:-0.01em;line-height:1.1;">
+        Let's build something<br>
+        <span style="color:var(--accent);font-style:italic;">unforgettable</span>
+      </h2>
+      <p class="text-[var(--fg-muted)] mb-12" style="font-size:1.05rem;">
+        We take on four new projects per quarter. If there's a fit, we'll make it happen.
+      </p>
+
+      <form id="contactForm" class="text-left space-y-6 reveal reveal-delay-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="text-xs tracking-[0.15em] uppercase text-[var(--fg-muted)] block mb-2" for="name">Name</label>
+            <input id="name" type="text" required
+              class="w-full bg-transparent border-b border-[var(--border)] py-3 text-[var(--fg)] outline-none transition-colors duration-300 focus:border-[var(--accent)]"
+              style="font-weight:300;" placeholder="Your name" data-hover>
+          </div>
+          <div>
+            <label class="text-xs tracking-[0.15em] uppercase text-[var(--fg-muted)] block mb-2" for="email">Email</label>
+            <input id="email" type="email" required
+              class="w-full bg-transparent border-b border-[var(--border)] py-3 text-[var(--fg)] outline-none transition-colors duration-300 focus:border-[var(--accent)]"
+              style="font-weight:300;" placeholder="your@email.com" data-hover>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs tracking-[0.15em] uppercase text-[var(--fg-muted)] block mb-2" for="project">Project Type</label>
+          <select id="project" required
+            class="w-full bg-transparent border-b border-[var(--border)] py-3 text-[var(--fg)] outline-none transition-colors duration-300 focus:border-[var(--accent)] appearance-none"
+            style="font-weight:300;" data-hover>
+            <option value="" disabled selected style="background:var(--bg);">Select a category</option>
+            <option value="brand" style="background:var(--bg);">Brand Identity</option>
+            <option value="web" style="background:var(--bg);">Web Design & Development</option>
+            <option value="motion" style="background:var(--bg);">Motion Design</option>
+            <option value="art" style="background:var(--bg);">Art Direction</option>
+            <option value="other" style="background:var(--bg);">Something Else</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs tracking-[0.15em] uppercase text-[var(--fg-muted)] block mb-2" for="message">Tell us more</label>
+          <textarea id="message" rows="4" required
+            class="w-full bg-transparent border-b border-[var(--border)] py-3 text-[var(--fg)] outline-none transition-colors duration-300 focus:border-[var(--accent)] resize-none"
+            style="font-weight:300;" placeholder="Brief description of your vision..." data-hover></textarea>
+        </div>
+        <div class="text-center pt-4">
+          <button type="submit" class="mag-btn" data-hover data-magnetic>
+            Send Inquiry
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="border-t px-6 md:px-12 py-12 max-w-7xl mx-auto" style="border-color:var(--border);">
+  <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-6">
+      <span class="font-display text-lg tracking-widest" style="font-weight:300;">VOLTAIRE</span>
+      <span class="text-[var(--fg-muted)] text-xs">Paris, FR</span>
+    </div>
+    <div class="flex items-center gap-6">
+      <a href="#" class="text-[var(--fg-muted)] hover:text-[var(--accent)] transition-colors duration-300 text-sm" aria-label="Instagram" data-hover>
+        <i class="fa-brands fa-instagram"></i>
+      </a>
+      <a href="#" class="text-[var(--fg-muted)] hover:text-[var(--accent)] transition-colors duration-300 text-sm" aria-label="Dribbble" data-hover>
+        <i class="fa-brands fa-dribbble"></i>
+      </a>
+      <a href="#" class="text-[var(--fg-muted)] hover:text-[var(--accent)] transition-colors duration-300 text-sm" aria-label="Behance" data-hover>
+        <i class="fa-brands fa-behance"></i>
+      </a>
+      <a href="#" class="text-[var(--fg-muted)] hover:text-[var(--accent)] transition-colors duration-300 text-sm" aria-label="LinkedIn" data-hover>
+        <i class="fa-brands fa-linkedin-in"></i>
+      </a>
+    </div>
+    <p class="text-[var(--fg-muted)] text-xs tracking-wider">
+      &copy; 2025 Studio Voltaire. All rights reserved.
+    </p>
+  </div>
+  <!-- Hidden secret: click count on the copyright -->
+  <p class="text-center text-xs mt-8 transition-opacity duration-500 opacity-0" id="secretMsg" style="color:var(--accent);">
+    You found the secret. We knew you would.
+  </p>
+</footer>
+
+<!-- Secret floating panel (appears after scrolling 80%) -->
+<div class="secret-panel" id="secretPanel">
+  <div class="p-5 rounded-2xl" style="background:var(--card);border:1px solid rgba(201,169,110,0.2);backdrop-filter:blur(20px);">
+    <p class="text-xs tracking-[0.15em] uppercase text-[var(--accent)] mb-1" style="font-weight:500;">You've seen it all</p>
+    <p class="text-[var(--fg-muted)] text-sm">Impressive attention span. Let's talk.</p>
+    <a href="#contact" class="inline-block mt-3 text-[var(--accent)] text-xs tracking-wider hover:underline" data-hover>
+      Get in touch <i class="fa-solid fa-arrow-right ml-1"></i>
+    </a>
+  </div>
+</div>
+
+<script>
+  // === Custom Cursor ===
+  const dot = document.querySelector('.cursor-dot');
+  const ring = document.querySelector('.cursor-ring');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX + 'px';
+    dot.style.top = mouseY + 'px';
+    dot.style.transform = 'translate(-50%, -50%)';
+  });
+
+  // Smooth ring follow
+  function animateCursor() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top = ringY + 'px';
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // Hover effect on interactive elements
+  document.querySelectorAll('[data-hover]').forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('hovering'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('hovering'));
+  });
+
+  // === Magnetic Button Effect ===
+  document.querySelectorAll('[data-magnetic]').forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translate(0, 0)';
+    });
+  });
+
+  // === Scroll Reveal (IntersectionObserver) ===
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+
+        // Animate skill bars inside
+        entry.target.querySelectorAll('.skill-fill').forEach(bar => {
+          bar.classList.add('animate');
+        });
+
+        // Animate stat counters
+        entry.target.querySelectorAll('.stat-number[data-count]').forEach(el => {
+          animateCounter(el);
+        });
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+  // === Counter Animation ===
+  function animateCounter(el) {
+    if (el.dataset.animated) return;
+    el.dataset.animated = 'true';
+    const target = parseInt(el.dataset.count);
+    const duration = 2000;
+    const start = performance.now();
+
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * ease);
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  // === Mobile Menu ===
+  const menuBtn = document.getElementById('menuBtn');
+  const menuClose = document.getElementById('menuClose');
+  const mobileMenu = document.getElementById('mobileMenu');
+
+  menuBtn.addEventListener('click', () => {
+    mobileMenu.style.opacity = '1';
+    mobileMenu.style.pointerEvents = 'auto';
+  });
+  menuClose.addEventListener('click', () => {
+    mobileMenu.style.opacity = '0';
+    mobileMenu.style.pointerEvents = 'none';
+  });
+  document.querySelectorAll('.mobile-link').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu.style.opacity = '0';
+      mobileMenu.style.pointerEvents = 'none';
+    });
+  });
+
+  // === Contact Form ===
+  const contactForm = document.getElementById('contactForm');
+  contactForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    if (name) {
+      showToast(`Merci, ${name}. We'll be in touch within 24 hours.`);
+      contactForm.reset();
+    }
+  });
+
+  // === Toast ===
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+
+  // === Secret Panel (appears after scrolling 80%) ===
+  const secretPanel = document.getElementById('secretPanel');
+  let secretShown = false;
+  window.addEventListener('scroll', () => {
+    if (secretShown) return;
+    const scrollPercent = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+    if (scrollPercent > 0.8) {
+      secretShown = true;
+      setTimeout(() => secretPanel.classList.add('show'), 500);
+    }
+  });
+
+  // === Secret copyright click ===
+  let clickCount = 0;
+  const secretMsg = document.getElementById('secretMsg');
+  document.querySelector('footer').addEventListener('click', () => {
+    clickCount++;
+    if (clickCount >= 5) {
+      secretMsg.style.opacity = '1';
+    }
+  });
+
+  // === Parallax orbs on mouse move ===
+  document.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    document.querySelectorAll('.orb').forEach((orb, i) => {
+      const factor = (i + 1) * 12;
+      orb.style.transform = `translate(${x * factor}px, ${y * factor}px)`;
+    });
+  });
+
+  // === Text scramble on nav links hover ===
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  document.querySelectorAll('.nav-link').forEach(link => {
+    const original = link.textContent;
+    link.addEventListener('mouseenter', () => {
+      let iteration = 0;
+      const interval = setInterval(() => {
+        link.textContent = original.split('').map((char, i) => {
+          if (i < iteration) return original[i];
+          return chars[Math.floor(Math.random() * chars.length)];
+        }).join('');
+        iteration += 1/2;
+        if (iteration >= original.length) {
+          clearInterval(interval);
+          link.textContent = original;
+        }
+      }, 30);
+    });
+  });
+
+  // === Hide scroll indicator on scroll ===
+  const scrollInd = document.querySelector('.scroll-indicator');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 100) {
+      scrollInd.style.opacity = '0';
+      scrollInd.style.transition = 'opacity 0.5s ease';
+    }
+  }, { passive: true });
+</script>
+
+</body>
+</html>

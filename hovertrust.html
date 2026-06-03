@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hover Here… Trust Me 😳</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0b;
+            --card-bg: rgba(255,255,255,0.04);
+            --card-border: rgba(255,255,255,0.08);
+            --text: #e8e8e8;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --glow: rgba(245,158,11,0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: radial-gradient(ellipse at 50% 40%, #111113 0%, var(--bg) 70%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: background 0.6s ease;
+        }
+
+        /* Particle canvas */
+        canvas#particles {
+            position: fixed;
+            inset: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Subtle scanline overlay */
+        #scanlines {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg, transparent, transparent 2px,
+                rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px
+            );
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+
+        /* Vignette for tension */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            background: radial-gradient(circle at center, transparent 25%, rgba(0,0,0,0.85) 100%);
+        }
+        .vignette.active { opacity: 1; }
+
+        /* Main card */
+        #card {
+            position: relative;
+            z-index: 10;
+            padding: 52px 76px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            cursor: pointer;
+            transition: background 0.4s, border-color 0.4s, box-shadow 0.4s, font-size 0.3s;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 0 60px var(--glow), 0 24px 64px rgba(0,0,0,0.5);
+            user-select: none;
+            will-change: transform;
+            animation: card-breathe 3.5s ease-in-out infinite;
+            text-align: center;
+        }
+
+        #card:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 6px;
+        }
+
+        @keyframes card-breathe {
+            0%, 100% { box-shadow: 0 0 60px var(--glow), 0 24px 64px rgba(0,0,0,0.5); }
+            50% { box-shadow: 0 0 100px rgba(245,158,11,0.22), 0 24px 64px rgba(0,0,0,0.5); }
+        }
+
+        /* Card text */
+        #card-text {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 30px;
+            letter-spacing: -0.5px;
+            position: relative;
+            display: inline-block;
+            line-height: 1.3;
+            transition: font-size 0.3s ease;
+        }
+
+        /* Subtitle */
+        .subtitle {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 300;
+            font-size: 14px;
+            color: rgba(255,255,255,0.28);
+            margin-top: 18px;
+            transition: color 0.4s, opacity 0.4s;
+        }
+
+        /* Post-chaos message */
+        .post-chaos {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 300;
+            font-size: 14px;
+            color: rgba(255,255,255,0.35);
+            margin-top: 14px;
+            opacity: 0;
+            transition: opacity 0.8s ease 0.3s;
+            max-height: 0;
+            overflow: hidden;
+        }
+        .post-chaos.visible {
+            opacity: 1;
+            max-height: 60px;
+        }
+
+        /* === GLITCH EFFECT === */
+        .glitch #card-text {
+            animation: glitch-jitter 0.25s infinite;
+            position: relative;
+        }
+        .glitch #card-text::before,
+        .glitch #card-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        .glitch #card-text::before {
+            color: #ff0040;
+            animation: glitch-clip-1 0.25s infinite steps(2);
+            transform: translateX(-3px);
+        }
+        .glitch #card-text::after {
+            color: #00ffc8;
+            animation: glitch-clip-2 0.25s infinite steps(2);
+            transform: translateX(3px);
+        }
+
+        @keyframes glitch-jitter {
+            0%   { transform: translate(0); }
+            20%  { transform: translate(-2px, 1px); }
+            40%  { transform: translate(2px, -1px); }
+            60%  { transform: translate(-1px, -2px); }
+            80%  { transform: translate(1px, 2px); }
+            100% { transform: translate(0); }
+        }
+        @keyframes glitch-clip-1 {
+            0%   { clip-path: inset(15% 0 65% 0); }
+            25%  { clip-path: inset(55% 0 15% 0); }
+            50%  { clip-path: inset(5% 0 75% 0); }
+            75%  { clip-path: inset(70% 0 8% 0); }
+            100% { clip-path: inset(15% 0 65% 0); }
+        }
+        @keyframes glitch-clip-2 {
+            0%   { clip-path: inset(65% 0 15% 0); }
+            25%  { clip-path: inset(15% 0 55% 0); }
+            50%  { clip-path: inset(75% 0 5% 0); }
+            75%  { clip-path: inset(8% 0 70% 0); }
+            100% { clip-path: inset(65% 0 15% 0); }
+        }
+
+        /* === SHAKE === */
+        .shake { animation: shake 0.12s infinite; }
+        .shake-hard { animation: shake-hard 0.06s infinite; }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0,0) rotate(0); }
+            25%  { transform: translate(-3px,2px) rotate(-0.5deg); }
+            50%  { transform: translate(3px,-2px) rotate(0.5deg); }
+            75%  { transform: translate(-2px,-3px) rotate(-0.3deg); }
+        }
+        @keyframes shake-hard {
+            0%, 100% { transform: translate(0,0) rotate(0); }
+            25%  { transform: translate(-6px,5px) rotate(-1.5deg); }
+            50%  { transform: translate(6px,-5px) rotate(1.5deg); }
+            75%  { transform: translate(-5px,-6px) rotate(-1deg); }
+        }
+
+        /* === PULSE GLOW === */
+        .pulse-glow { animation: pulse-glow 0.4s ease-in-out infinite alternate; }
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 60px rgba(239,68,68,0.2), 0 24px 64px rgba(0,0,0,0.5); }
+            to   { box-shadow: 0 0 140px rgba(239,68,68,0.55), 0 24px 64px rgba(0,0,0,0.5); }
+        }
+
+        /* === CHAOS SPIN === */
+        .chaos-spin { animation: chaos-spin 0.4s linear infinite; }
+        @keyframes chaos-spin {
+            0%   { transform: rotate(0deg) scale(1); }
+            25%  { transform: rotate(90deg) scale(1.15); }
+            50%  { transform: rotate(180deg) scale(0.85); }
+            75%  { transform: rotate(270deg) scale(1.15); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* === SCREEN SHAKE === */
+        .screen-shake { animation: screen-shake 0.08s infinite; }
+        @keyframes screen-shake {
+            0%, 100% { transform: translate(0,0); }
+            25%  { transform: translate(-6px,4px); }
+            50%  { transform: translate(6px,-4px); }
+            75%  { transform: translate(-4px,-6px); }
+        }
+
+        /* === TOAST NOTIFICATIONS === */
+        .toast {
+            position: fixed;
+            z-index: 200;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            pointer-events: none;
+            max-width: 340px;
+            animation: toast-in 0.35s cubic-bezier(0.22,1,0.36,1), toast-out 0.35s ease-in 2.65s forwards;
+            font-family: 'Space Grotesk', monospace;
+        }
+        .toast-warn {
+            background: rgba(245,158,11,0.12);
+            border: 1px solid rgba(245,158,11,0.25);
+            color: #fbbf24;
+        }
+        .toast-danger {
+            background: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.25);
+            color: #f87171;
+        }
+        .toast-critical {
+            background: rgba(168,85,247,0.12);
+            border: 1px solid rgba(168,85,247,0.25);
+            color: #c084fc;
+        }
+        @keyframes toast-in {
+            from { transform: translateX(120%); opacity: 0; }
+            to   { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes toast-out {
+            from { opacity: 1; }
+            to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+        }
+
+        /* === EMOJI RAIN === */
+        .emoji-drop {
+            position: fixed;
+            z-index: 50;
+            font-size: 28px;
+            pointer-events: none;
+            animation: emoji-fall linear forwards;
+        }
+        @keyframes emoji-fall {
+            0%   { transform: translateY(-60px) rotate(0deg); opacity: 1; }
+            80%  { opacity: 0.8; }
+            100% { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+        }
+
+        /* === REDUCED MOTION === */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 600px) {
+            #card { padding: 36px 40px; border-radius: 20px; }
+            #card-text { font-size: 22px; }
+            .toast { max-width: 260px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particles" aria-hidden="true"></canvas>
+    <div id="scanlines" aria-hidden="true"></div>
+    <div class="vignette" id="vignette" aria-hidden="true"></div>
+
+    <main>
+        <div id="card" tabindex="0" role="button" aria-label="Hover here for a surprise">
+            <span id="card-text" data-text="Hover Here… Trust Me 😳">Hover Here… Trust Me 😳</span>
+            <div class="subtitle" id="subtitle">go ahead, nothing will happen</div>
+            <div class="post-chaos" id="post-chaos"></div>
+        </div>
+    </main>
+
+    <script>
+    (() => {
+        /* ========== DOM REFS ========== */
+        const canvas   = document.getElementById('particles');
+        const ctx      = canvas.getContext('2d');
+        const card     = document.getElementById('card');
+        const cardText = document.getElementById('card-text');
+        const subtitle = document.getElementById('subtitle');
+        const postChaos= document.getElementById('post-chaos');
+        const vignette = document.getElementById('vignette');
+        const scanlines= document.getElementById('scanlines');
+
+        /* ========== STATE ========== */
+        let stage = 0;           // 0-4 active, -1 = post-chaos
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let dodgeX = 0, dodgeY = 0;
+        let dodgeTargetX = 0, dodgeTargetY = 0;
+        let chaosTimer = null;
+        let toastSlot = 0;       // Vertical stacking index for toasts
+        let isChaos = false;     // Lock during chaos animation
+        let hoverCount = 0;
+
+        /* ========== CANVAS RESIZE ========== */
+        function resize() {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        /* ========== PARTICLE SYSTEM ========== */
+        class Mote {
+            constructor() { this.spawn(); }
+            spawn() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.r = Math.random() * 1.8 + 0.4;
+                this.vx = (Math.random() - 0.5) * 0.25;
+                this.vy = (Math.random() - 0.5) * 0.25;
+                this.a  = Math.random() * 0.25 + 0.08;
+                this.cr = 255; this.cg = 255; this.cb = 255;
+            }
+            update(lvl) {
+                const speed = 1 + lvl * 0.6;
+                this.x += this.vx * speed;
+                this.y += this.vy * speed;
+
+                // Color shifts per stage
+                if (lvl >= 2) {
+                    this.cr = 255;
+                    this.cg = 40 + Math.random() * 80 | 0;
+                    this.cb = 40;
+                    this.vx += (Math.random() - 0.5) * 0.08;
+                    this.vy += (Math.random() - 0.5) * 0.08;
+                }
+                if (lvl >= 4) {
+                    this.cr = Math.random() * 255 | 0;
+                    this.cg = Math.random() * 255 | 0;
+                    this.cb = Math.random() * 255 | 0;
+                    this.vx += (Math.random() - 0.5) * 0.4;
+                    this.vy += (Math.random() - 0.5) * 0.4;
+                }
+
+                // Wrap
+                if (this.x < -10) this.x = canvas.width + 10;
+                if (this.x > canvas.width + 10) this.x = -10;
+                if (this.y < -10) this.y = canvas.height + 10;
+                if (this.y > canvas.height + 10) this.y = -10;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.r), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.cr},${this.cg},${this.cb},${this.a})`;
+                ctx.fill();
+            }
+        }
+
+        const motes = Array.from({ length: 90 }, () => new Mote());
+
+        /* Explosion sparks (temporary) */
+        let sparks = [];
+        class Spark {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 10 + 3;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.r  = Math.random() * 3.5 + 0.8;
+                this.life = 1;
+                this.decay = Math.random() * 0.018 + 0.006;
+                this.cr = Math.random() * 255 | 0;
+                this.cg = Math.random() * 255 | 0;
+                this.cb = Math.random() * 255 | 0;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.97;
+                this.vy *= 0.97;
+                this.life -= this.decay;
+            }
+            draw() {
+                if (this.life <= 0) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.r * this.life), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.cr},${this.cg},${this.cb},${this.life.toFixed(2)})`;
+                ctx.fill();
+            }
+        }
+
+        function burst(cx, cy, count) {
+            for (let i = 0; i < count; i++) sparks.push(new Spark(cx, cy));
+        }
+
+        /* ========== RENDER LOOP ========== */
+        function loop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const lvl = stage === -1 ? 0 : stage;
+            motes.forEach(m => { m.update(lvl); m.draw(); });
+
+            sparks = sparks.filter(s => s.life > 0);
+            sparks.forEach(s => { s.update(); s.draw(); });
+
+            // Dodge physics (stage 3 only)
+            if (stage === 3 && !isChaos) {
+                const rect = card.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = mouseX - cx;
+                const dy = mouseY - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const threshold = 280;
+
+                if (dist < threshold && dist > 0) {
+                    const angle = Math.atan2(dy, dx);
+                    const force = (threshold - dist) / threshold;
+                    dodgeTargetX = -Math.cos(angle) * force * 420;
+                    dodgeTargetY = -Math.sin(angle) * force * 420;
+                } else {
+                    dodgeTargetX = 0;
+                    dodgeTargetY = 0;
+                }
+
+                // Clamp so card stays on screen
+                const maxX = (window.innerWidth / 2) - rect.width / 2 - 30;
+                const maxY = (window.innerHeight / 2) - rect.height / 2 - 30;
+                dodgeTargetX = Math.max(-maxX, Math.min(maxX, dodgeTargetX));
+                dodgeTargetY = Math.max(-maxY, Math.min(maxY, dodgeTargetY));
+            } else if (stage !== 3) {
+                dodgeTargetX = 0;
+                dodgeTargetY = 0;
+            }
+
+            dodgeX += (dodgeTargetX - dodgeX) * 0.09;
+            dodgeY += (dodgeTargetY - dodgeY) * 0.09;
+
+            // Apply dodge transform only in stage 3 (other stages use CSS animations)
+            if (stage === 3) {
+                card.style.transform = `translate(${dodgeX.toFixed(1)}px, ${dodgeY.toFixed(1)}px)`;
+            }
+
+            requestAnimationFrame(loop);
+        }
+        loop();
+
+        /* ========== MOUSE TRACKING ========== */
+        document.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        /* ========== TOAST SYSTEM ========== */
+        function toast(msg, type = 'warn') {
+            const el = document.createElement('div');
+            el.className = `toast toast-${type}`;
+            el.textContent = msg;
+            const side = toastSlot % 2 === 0 ? 'left: 20px' : 'right: 20px';
+            el.style.cssText = `${side}; top: ${24 + (toastSlot * 56)}px;`;
+            document.body.appendChild(el);
+            toastSlot++;
+            setTimeout(() => { el.remove(); toastSlot = Math.max(0, toastSlot - 1); }, 3100);
+        }
+
+        /* ========== EMOJI RAIN ========== */
+        const rainEmojis = ['😳','🔥','💥','😱','🚨','⚠️','💀','🙃','✨','👻','🫠','🤡'];
+        function startRain() {
+            return setInterval(() => {
+                const el = document.createElement('div');
+                el.className = 'emoji-drop';
+                el.textContent = rainEmojis[Math.random() * rainEmojis.length | 0];
+                el.style.left = Math.random() * 100 + 'vw';
+                el.style.animationDuration = (1.2 + Math.random() * 2) + 's';
+                el.style.fontSize = (20 + Math.random() * 24) + 'px';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 4500);
+            }, 80);
+        }
+
+        /* ========== STAGE CONFIG ========== */
+        const configs = [
+            { // Stage 0 — Calm
+                text: 'Hover Here… Trust Me 😳',
+                sub: 'go ahead, nothing will happen',
+                bg: 'radial-gradient(ellipse at 50% 40%, #111113 0%, #0a0a0b 70%)',
+                cardBg: 'rgba(255,255,255,0.04)',
+                border: 'rgba(255,255,255,0.08)',
+                glow: 'rgba(245,158,11,0.12)',
+                fontSize: '30px',
+                classes: [],
+                breathe: true,
+                onEnter() {}
+            },
+            { // Stage 1 — Glitch
+                text: 'Wait… you actually did it',
+                sub: 'this was a mistake',
+                bg: 'radial-gradient(ellipse at 50% 40%, #130d0d 0%, #0f0a0a 70%)',
+                cardBg: 'rgba(239,68,68,0.04)',
+                border: 'rgba(239,68,68,0.14)',
+                glow: 'rgba(239,68,68,0.18)',
+                fontSize: '28px',
+                classes: ['glitch'],
+                breathe: false,
+                onEnter() { toast('⚠ Hover event detected. Reconsider your choices.', 'warn'); }
+            },
+            { // Stage 2 — Shake + pulse
+                text: 'I WARNED YOU',
+                sub: 'system integrity: 23%',
+                bg: 'radial-gradient(ellipse at 50% 40%, #160909 0%, #120808 70%)',
+                cardBg: 'rgba(239,68,68,0.07)',
+                border: 'rgba(239,68,68,0.22)',
+                glow: 'rgba(239,68,68,0.28)',
+                fontSize: '32px',
+                classes: ['glitch', 'shake', 'pulse-glow'],
+                breathe: false,
+                onEnter() {
+                    toast('CRITICAL: Trust violation detected', 'danger');
+                    setTimeout(() => toast('Hover count exceeds safe limits', 'danger'), 600);
+                    vignette.classList.add('active');
+                }
+            },
+            { // Stage 3 — Dodge
+                text: "NO STOP DON'T",
+                sub: "PLEASE I'M BEGGING YOU",
+                bg: 'radial-gradient(ellipse at 50% 40%, #1a0606 0%, #150505 70%)',
+                cardBg: 'rgba(239,68,68,0.09)',
+                border: 'rgba(239,68,68,0.28)',
+                glow: 'rgba(239,68,68,0.35)',
+                fontSize: '30px',
+                classes: ['glitch', 'pulse-glow'],
+                breathe: false,
+                onEnter() {
+                    toast('ERROR: Cannot escape hover protocol', 'critical');
+                    setTimeout(() => toast('SYSTEM FAILURE IMMINENT', 'critical'), 350);
+                    setTimeout(() => toast('Last warning: DO NOT HOVER AGAIN', 'critical'), 800);
+                }
+            },
+            { // Stage 4 — CHAOS
+                text: '💀',
+                sub: '',
+                bg: '#000000',
+                cardBg: 'rgba(255,0,0,0.12)',
+                border: 'rgba(255,0,0,0.45)',
+                glow: 'rgba(255,0,0,0.5)',
+                fontSize: '80px',
+                classes: ['chaos-spin'],
+                breathe: false,
+                onEnter() { launchChaos(); }
+            }
+        ];
+
+        /* ========== APPLY STAGE ========== */
+        function applyStage(s) {
+            const c = configs[s];
+
+            // Remove all animation classes
+            configs.forEach(cfg => cfg.classes.forEach(cl => card.classList.remove(cl)));
+
+            // Set content
+            cardText.textContent = c.text;
+            cardText.setAttribute('data-text', c.text);
+            subtitle.textContent = c.sub;
+            cardText.style.fontSize = c.fontSize;
+
+            // Set visual styles
+            document.body.style.background = c.bg;
+            card.style.background = c.cardBg;
+            card.style.borderColor = c.border;
+            card.style.boxShadow = `0 0 60px ${c.glow}, 0 24px 64px rgba(0,0,0,0.5)`;
+
+            // Breathe animation
+            card.style.animation = c.breathe ? 'card-breathe 3.5s ease-in-out infinite' : 'none';
+
+            // Reset dodge transform if not stage 3
+            if (s !== 3) {
+                dodgeX = 0; dodgeY = 0;
+                dodgeTargetX = 0; dodgeTargetY = 0;
+                if (s !== 4) card.style.transform = '';
+            }
+
+            // Add stage classes
+            c.classes.forEach(cl => card.classList.add(cl));
+
+            // Fire stage-specific logic
+            c.onEnter();
+        }
+
+        /* ========== CHAOS LAUNCHER ========== */
+        function launchChaos() {
+            isChaos = true;
+            document.body.classList.add('screen-shake');
+            scanlines.style.opacity = '3';
+            vignette.classList.add('active');
+
+            const rainId = startRain();
+
+            // Rapid background color cycling
+            let hue = 0;
+            const colorId = setInterval(() => {
+                hue = (hue + 12) % 360;
+                document.body.style.background = `hsl(${hue}, 75%, 4%)`;
+                card.style.boxShadow = `0 0 140px hsla(${hue},80%,50%,0.55), 0 24px 64px rgba(0,0,0,0.5)`;
+                card.style.borderColor = `hsla(${hue},80%,50%,0.4)`;
+            }, 45);
+
+            // Explosions
+            const burstId = setInterval(() => {
+                burst(
+                    canvas.width / 2 + (Math.random() - 0.5) * 300,
+                    canvas.height / 2 + (Math.random() - 0.5) * 200,
+                    40
+                );
+            }, 180);
+
+            // End after 4.5 seconds
+            chaosTimer = setTimeout(() => {
+                clearInterval(rainId);
+                clearInterval(colorId);
+                clearInterval(burstId);
+
+                document.body.classList.remove('screen-shake');
+                scanlines.style.opacity = '1';
+
+                // Clean up emoji rain elements
+                document.querySelectorAll('.emoji-drop').forEach(e => e.remove());
+
+                enterPostChaos();
+                isChaos = false;
+                chaosTimer = null;
+            }, 4500);
+        }
+
+        /* ========== POST-CHAOS ========== */
+        function enterPostChaos() {
+            stage = -1;
+
+            // Remove all animation classes
+            configs.forEach(cfg => cfg.classes.forEach(cl => card.classList.remove(cl)));
+
+            // Calm visuals
+            document.body.style.background = 'radial-gradient(ellipse at 50% 40%, #111113 0%, #0a0a0b 70%)';
+            card.style.background = 'rgba(255,255,255,0.04)';
+            card.style.borderColor = 'rgba(255,255,255,0.08)';
+            card.style.boxShadow = '0 0 60px rgba(245,158,11,0.08), 0 24px 64px rgba(0,0,0,0.5)';
+            card.style.transform = '';
+            card.style.animation = 'card-breathe 3.5s ease-in-out infinite';
+            cardText.style.fontSize = '26px';
+            vignette.classList.remove('active');
+
+            cardText.textContent = '...was it worth it?';
+            cardText.setAttribute('data-text', '...was it worth it?');
+            subtitle.textContent = '';
+            postChaos.textContent = `You hovered ${hoverCount} time${hoverCount !== 1 ? 's' : ''}.`;
+            postChaos.classList.add('visible');
+
+            // Clean toasts
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            toastSlot = 0;
+        }
+
+        /* ========== HOVER / INTERACTION HANDLER ========== */
+        function triggerNext() {
+            if (isChaos) return;
+
+            if (stage === -1) {
+                // Post-chaos → reset to stage 0 with a cheeky subtitle
+                postChaos.classList.remove('visible');
+                stage = 0;
+                applyStage(0);
+                subtitle.textContent = hoverCount > 4
+                    ? `you've done this ${hoverCount} times now…`
+                    : 'you really want to do this again?';
+                return;
+            }
+
+            if (stage < 4) {
+                hoverCount++;
+                stage++;
+                applyStage(stage);
+            }
+        }
+
+        card.addEventListener('mouseenter', triggerNext);
+
+        // Touch support (skip dodge stage on mobile)
+        card.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (stage === 3) {
+                hoverCount++;
+                stage = 4;
+                applyStage(4);
+            } else {
+                triggerNext();
+            }
+        }, { passive: false });
+
+        // Keyboard support
+        card.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerNext();
+            }
+        });
+
+    })();
+    </script>
+</body>
+</html>

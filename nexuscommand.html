@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS — Command Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #08080c;
+            --fg: #f0f0f5;
+            --muted: #5a5a6a;
+            --accent: #e8ff47;
+            --accent-dim: rgba(232,255,71,0.12);
+            --card: rgba(255,255,255,0.03);
+            --border: rgba(255,255,255,0.07);
+            --danger: #ff4757;
+            --success: #00ffa3;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--fg);overflow:hidden;height:100vh;width:100vw;}
+        h1,h2,h3,h4,h5,h6{font-family:'Space Grotesk',sans-serif;}
+
+        /* Cursor glow */
+        .cursor-glow{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(232,255,71,0.06) 0%,transparent 70%);pointer-events:none;z-index:0;transform:translate(-50%,-50%);transition:opacity .3s;}
+
+        /* Background grid */
+        .bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 60% at 50% 50%,black 30%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 50%,black 30%,transparent 100%);z-index:0;}
+
+        /* Glass card */
+        .glass-card{background:var(--card);border:1px solid var(--border);border-radius:16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:all .3s cubic-bezier(.4,0,.2,1);}
+        .glass-card:hover{border-color:rgba(232,255,71,0.15);background:rgba(255,255,255,0.05);transform:translateY(-2px);box-shadow:0 8px 32px rgba(232,255,71,0.05);}
+
+        /* Live pulse */
+        .live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);position:relative;}
+        .live-dot::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:var(--success);opacity:.4;animation:pulse-ring 2s ease-out infinite;}
+        @keyframes pulse-ring{0%{transform:scale(1);opacity:.4;}100%{transform:scale(2.5);opacity:0;}}
+
+        /* Nav icon */
+        .nav-icon{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;color:var(--muted);transition:all .25s ease;cursor:pointer;position:relative;border:none;background:transparent;}
+        .nav-icon:hover,.nav-icon.active{color:var(--accent);background:var(--accent-dim);}
+        .nav-icon.active::before{content:'';position:absolute;left:-12px;width:3px;height:20px;background:var(--accent);border-radius:0 3px 3px 0;}
+
+        /* Metric value */
+        .metric-value{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.75rem;line-height:1;letter-spacing:-0.02em;}
+        .sparkline-container{height:40px;margin-top:12px;}
+
+        /* Activity item */
+        .activity-item{padding:10px 14px;border-radius:10px;transition:background .2s;cursor:pointer;}
+        .activity-item:hover{background:rgba(255,255,255,0.04);}
+
+        /* Toast */
+        .toast{position:fixed;top:76px;right:24px;padding:14px 20px;border-radius:12px;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.2);backdrop-filter:blur(20px);color:var(--accent);font-size:.875rem;transform:translateX(calc(100% + 40px));transition:transform .5s cubic-bezier(.4,0,.2,1);z-index:1000;display:flex;align-items:center;gap:10px;}
+        .toast.show{transform:translateX(0);}
+
+        /* Custom scroll */
+        .custom-scroll::-webkit-scrollbar{width:4px;}
+        .custom-scroll::-webkit-scrollbar-track{background:transparent;}
+        .custom-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px;}
+
+        /* 3D container */
+        #three-container{position:absolute;inset:0;z-index:0;}
+        #three-container canvas{display:block;}
+        #three-container::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(232,255,71,0.04) 0%,transparent 70%);pointer-events:none;z-index:-1;}
+
+        /* Float tag */
+        .float-tag{position:absolute;padding:6px 12px;border-radius:8px;background:rgba(8,8,12,0.75);border:1px solid var(--border);backdrop-filter:blur(10px);font-size:.75rem;color:var(--muted);white-space:nowrap;pointer-events:none;}
+
+        /* Command palette */
+        .cmd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);z-index:900;opacity:0;pointer-events:none;transition:opacity .25s;}
+        .cmd-backdrop.open{opacity:1;pointer-events:auto;}
+        .cmd-content{position:fixed;top:20%;left:50%;transform:translateX(-50%) translateY(-20px);width:90%;max-width:480px;border-radius:16px;background:rgba(16,16,22,0.95);border:1px solid var(--border);backdrop-filter:blur(30px);z-index:910;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+        .cmd-content.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+        .cmd-input{width:100%;padding:16px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--fg);font-size:1rem;font-family:'DM Sans',sans-serif;outline:none;}
+        .cmd-input::placeholder{color:var(--muted);}
+        .cmd-item{padding:12px 20px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s;color:var(--fg);font-size:.875rem;}
+        .cmd-item:hover,.cmd-item.focused{background:var(--accent-dim);color:var(--accent);}
+        .cmd-item i{width:20px;text-align:center;color:var(--muted);font-size:.8rem;}
+        .cmd-item:hover i,.cmd-item.focused i{color:var(--accent);}
+
+        /* Fade in */
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+        .fade-in-up{animation:fadeInUp .6s ease forwards;opacity:0;}
+
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+        @media(max-width:1024px){
+            .sidebar-nav{display:none!important;}
+            .right-panel{position:fixed;right:0;top:56px;bottom:80px;width:300px;z-index:50;transform:translateX(100%);transition:transform .3s ease;background:var(--bg);border-left:1px solid var(--border);}
+            .right-panel.open{transform:translateX(0);}
+        }
+        @media(max-width:640px){.metric-value{font-size:1.25rem;}.float-tag{display:none;}}
+    </style>
+</head>
+<body>
+    <!-- Ambient layers -->
+    <div class="cursor-glow" id="cursorGlow"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"><i class="fas fa-bolt"></i><span>Neural mesh synchronized — 2,847 nodes active</span></div>
+
+    <!-- Command palette -->
+    <div class="cmd-backdrop" id="cmdBackdrop"></div>
+    <div class="cmd-content" id="cmdContent">
+        <input type="text" class="cmd-input" id="cmdInput" placeholder="Type a command..." aria-label="Command palette search">
+        <div id="cmdResults"></div>
+    </div>
+
+    <!-- Main layout -->
+    <div class="relative z-10 h-screen flex flex-col">
+
+        <!-- Header -->
+        <header class="flex items-center justify-between px-5 h-14 border-b flex-shrink-0" style="border-color:var(--border);">
+            <div class="flex items-center gap-3">
+                <button class="nav-icon lg:hidden" id="menuToggle" aria-label="Toggle panel"><i class="fas fa-bars text-sm"></i></button>
+                <h1 class="text-lg font-bold tracking-tight" style="font-family:'Space Grotesk',sans-serif;"><span style="color:var(--accent);">N</span>EXUS</h1>
+                <div class="hidden sm:flex items-center gap-2 ml-3 px-3 py-1 rounded-full" style="background:rgba(0,255,163,0.08);border:1px solid rgba(0,255,163,0.15);">
+                    <div class="live-dot"></div>
+                    <span class="text-xs font-medium" style="color:var(--success);">LIVE</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer" style="background:var(--card);border:1px solid var(--border);" id="searchBtn" aria-label="Open command palette">
+                    <i class="fas fa-search text-xs" style="color:var(--muted);"></i>
+                    <span class="text-xs" style="color:var(--muted);">Search...</span>
+                    <kbd class="text-xs px-1.5 py-0.5 rounded" style="background:rgba(255,255,255,0.06);color:var(--muted);font-size:10px;">⌘K</kbd>
+                </button>
+                <button class="nav-icon" aria-label="Notifications" id="notifBtn"><i class="fas fa-bell text-sm"></i><span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style="background:var(--danger);"></span></button>
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style="background:linear-gradient(135deg,var(--accent),#a0c400);color:var(--bg);">NX</div>
+            </div>
+        </header>
+
+        <!-- Body -->
+        <div class="flex-1 flex overflow-hidden">
+
+            <!-- Left nav -->
+            <nav class="sidebar-nav w-16 flex flex-col items-center py-4 gap-2 border-r flex-shrink-0" style="border-color:var(--border);" aria-label="Main navigation">
+                <div class="nav-icon active" aria-label="Dashboard" tabindex="0"><i class="fas fa-th-large text-sm"></i></div>
+                <div class="nav-icon" aria-label="Analytics" tabindex="0"><i class="fas fa-chart-line text-sm"></i></div>
+                <div class="nav-icon" aria-label="Network" tabindex="0"><i class="fas fa-project-diagram text-sm"></i></div>
+                <div class="nav-icon" aria-label="Models" tabindex="0"><i class="fas fa-cube text-sm"></i></div>
+                <div class="nav-icon" aria-label="Security" tabindex="0"><i class="fas fa-shield-alt text-sm"></i></div>
+                <div class="flex-1"></div>
+                <div class="nav-icon" aria-label="Settings" tabindex="0"><i class="fas fa-cog text-sm"></i></div>
+            </nav>
+
+            <!-- Center: 3D scene -->
+            <main class="flex-1 relative">
+                <div id="three-container"></div>
+                <div class="float-tag fade-in-up" style="top:20%;left:8%;animation-delay:.3s;"><i class="fas fa-circle mr-1" style="color:var(--success);font-size:6px;"></i>Cluster Alpha — Online</div>
+                <div class="float-tag fade-in-up" style="top:32%;right:8%;animation-delay:.5s;"><i class="fas fa-circle mr-1" style="color:var(--success);font-size:6px;"></i>Cluster Beta — Online</div>
+                <div class="float-tag fade-in-up" style="bottom:28%;left:12%;animation-delay:.7s;"><i class="fas fa-circle mr-1" style="color:#ffa502;font-size:6px;"></i>Cluster Gamma — Degraded</div>
+                <div class="absolute bottom-6 left-1/2 -translate-x-1/2 text-center fade-in-up" style="animation-delay:1s;">
+                    <p class="text-xs tracking-widest uppercase mb-1" style="color:var(--muted);">Neural Topology</p>
+                    <p class="text-sm font-medium" style="color:rgba(240,240,245,0.6);">2,847 nodes · 12,493 edges · 3 clusters</p>
+                </div>
+            </main>
+
+            <!-- Right panel -->
+            <aside class="right-panel w-80 border-l flex flex-col flex-shrink-0" style="border-color:var(--border);">
+                <div class="p-4 space-y-3 overflow-y-auto custom-scroll">
+                    <h2 class="text-xs font-semibold tracking-widest uppercase" style="color:var(--muted);">System Metrics</h2>
+                    <div class="glass-card p-4 fade-in-up" style="animation-delay:.2s;">
+                        <div class="flex items-center justify-between mb-2"><span class="text-xs" style="color:var(--muted);">Neural Processes</span><span class="text-xs" style="color:var(--success);"><i class="fas fa-arrow-up text-xs"></i> 12.4%</span></div>
+                        <div class="metric-value" data-target="2847392" data-format="number">0</div>
+                        <div class="sparkline-container"><canvas class="sparkline" data-values="40,55,48,62,58,72,65,78,82,75,88,92,85,95,90"></canvas></div>
+                    </div>
+                    <div class="glass-card p-4 fade-in-up" style="animation-delay:.3s;">
+                        <div class="flex items-center justify-between mb-2"><span class="text-xs" style="color:var(--muted);">Latency</span><span class="text-xs" style="color:var(--success);"><i class="fas fa-arrow-down text-xs"></i> 8.1%</span></div>
+                        <div class="metric-value" data-target="0.3" data-format="decimal">0</div>
+                        <div class="sparkline-container"><canvas class="sparkline" data-values="1.2,0.9,1.1,0.8,0.7,0.6,0.5,0.4,0.5,0.3,0.4,0.3,0.35,0.3,0.28"></canvas></div>
+                    </div>
+                    <div class="glass-card p-4 fade-in-up" style="animation-delay:.4s;">
+                        <div class="flex items-center justify-between mb-2"><span class="text-xs" style="color:var(--muted);">Uptime</span><span class="text-xs" style="color:var(--success);"><i class="fas fa-check text-xs"></i> Stable</span></div>
+                        <div class="metric-value" data-target="99.97" data-format="percent">0</div>
+                        <div class="sparkline-container"><canvas class="sparkline" data-values="99.9,99.91,99.92,99.93,99.94,99.93,99.95,99.94,99.96,99.95,99.96,99.97,99.97,99.97,99.97"></canvas></div>
+                    </div>
+                    <div class="glass-card p-4 fade-in-up" style="animation-delay:.5s;">
+                        <div class="flex items-center justify-between mb-2"><span class="text-xs" style="color:var(--muted);">Throughput</span><span class="text-xs" style="color:var(--success);"><i class="fas fa-arrow-up text-xs"></i> 5.7%</span></div>
+                        <div class="metric-value" data-target="1.2" data-format="throughput">0</div>
+                        <div class="sparkline-container"><canvas class="sparkline" data-values="0.8,0.85,0.9,0.88,0.95,1.0,0.98,1.05,1.1,1.08,1.12,1.15,1.18,1.2,1.22"></canvas></div>
+                    </div>
+                </div>
+                <div class="flex-1 border-t px-4 py-3 flex flex-col min-h-0" style="border-color:var(--border);">
+                    <h2 class="text-xs font-semibold tracking-widest uppercase mb-3" style="color:var(--muted);">Activity Feed</h2>
+                    <div class="flex-1 overflow-y-auto custom-scroll space-y-1" id="activityFeed"></div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Bottom waveform -->
+        <div class="h-20 border-t relative flex-shrink-0" style="border-color:var(--border);">
+            <canvas id="waveformCanvas" style="width:100%;height:100%;display:block;"></canvas>
+            <div class="absolute left-6 top-1/2 -translate-y-1/2"><span class="text-xs font-medium" style="color:var(--muted);">SIGNAL INTEGRITY</span></div>
+            <div class="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2"><span class="text-xs" style="color:var(--success);">Optimal</span><div class="w-2 h-2 rounded-full" style="background:var(--success);"></div></div>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ===== STATE =====
+        const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+        const container = document.getElementById('three-container');
+        const cursorGlow = document.getElementById('cursorGlow');
+
+        document.addEventListener('mousemove', e => {
+            mouse.tx = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.ty = -(e.clientY / window.innerHeight) * 2 + 1;
+            cursorGlow.style.left = e.clientX + 'px';
+            cursorGlow.style.top = e.clientY + 'px';
+        });
+
+        // ===== THREE.JS =====
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+        container.appendChild(renderer.domElement);
+
+        // --- Main particle sphere (Fibonacci distribution) ---
+        const PCOUNT = 2000;
+        const positions = new Float32Array(PCOUNT * 3);
+        const pSizes = new Float32Array(PCOUNT);
+        const origPos = new Float32Array(PCOUNT * 3);
+        const golden = (1 + Math.sqrt(5)) / 2;
+        const RADIUS = 1.8;
+
+        for (let i = 0; i < PCOUNT; i++) {
+            const theta = 2 * Math.PI * i / golden;
+            const phi = Math.acos(1 - 2 * (i + 0.5) / PCOUNT);
+            const x = RADIUS * Math.sin(phi) * Math.cos(theta);
+            const y = RADIUS * Math.sin(phi) * Math.sin(theta);
+            const z = RADIUS * Math.cos(phi);
+            positions[i*3]=x; positions[i*3+1]=y; positions[i*3+2]=z;
+            origPos[i*3]=x; origPos[i*3+1]=y; origPos[i*3+2]=z;
+            pSizes[i] = Math.random() * 4 + 1.5;
+        }
+
+        const pGeo = new THREE.BufferGeometry();
+        pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        pGeo.setAttribute('aSize', new THREE.BufferAttribute(pSizes, 1));
+
+        const pMat = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uMouse: { value: new THREE.Vector2() },
+                uCol: { value: new THREE.Color('#e8ff47') },
+                uColDim: { value: new THREE.Color('#6b7320') },
+            },
+            vertexShader: `
+                attribute float aSize;
+                uniform float uTime;
+                uniform vec2 uMouse;
+                varying float vAlpha;
+                void main(){
+                    vec3 p = position;
+                    vec3 dir = normalize(p);
+                    float d = length(p);
+                    float wave = sin(uTime*1.5 + d*4.0)*0.06;
+                    p += dir * wave;
+                    float mi = smoothstep(2.0, 0.0, length(p.xy - uMouse*2.0));
+                    p += dir * mi * 0.15;
+                    vAlpha = 0.4 + mi*0.6 + wave*2.0;
+                    vec4 mv = modelViewMatrix * vec4(p,1.0);
+                    gl_PointSize = aSize * (250.0 / max(-mv.z, 0.001));
+                    gl_Position = projectionMatrix * mv;
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 uCol;
+                uniform vec3 uColDim;
+                varying float vAlpha;
+                void main(){
+                    float d = length(gl_PointCoord - vec2(0.5));
+                    if(d > 0.5) discard;
+                    float a = 1.0 - smoothstep(0.0, 0.5, d);
+                    a *= clamp(vAlpha, 0.1, 1.0);
+                    vec3 c = mix(uColDim, uCol, a);
+                    gl_FragColor = vec4(c, a*0.85);
+                }
+            `,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        const particles = new THREE.Points(pGeo, pMat);
+        scene.add(particles);
+
+        // --- Outer dust ---
+        const DCOUNT = 500;
+        const dPos = new Float32Array(DCOUNT*3);
+        const dSizes = new Float32Array(DCOUNT);
+        for (let i = 0; i < DCOUNT; i++) {
+            const th = Math.random()*Math.PI*2;
+            const ph = Math.acos(2*Math.random()-1);
+            const r = 2.5 + Math.random()*2;
+            dPos[i*3]=r*Math.sin(ph)*Math.cos(th);
+            dPos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+            dPos[i*3+2]=r*Math.cos(ph);
+            dSizes[i] = Math.random()*2+0.5;
+        }
+        const dGeo = new THREE.BufferGeometry();
+        dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+        dGeo.setAttribute('aSize', new THREE.BufferAttribute(dSizes, 1));
+        const dMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 } },
+            vertexShader: `
+                attribute float aSize;
+                uniform float uTime;
+                varying float vA;
+                void main(){
+                    vec3 p = position;
+                    p.x += sin(uTime*0.3+p.y*2.0)*0.1;
+                    p.y += cos(uTime*0.2+p.z*2.0)*0.1;
+                    vA = 0.15 + sin(uTime+p.x*3.0)*0.1;
+                    vec4 mv = modelViewMatrix * vec4(p,1.0);
+                    gl_PointSize = aSize*(200.0/max(-mv.z,0.001));
+                    gl_Position = projectionMatrix * mv;
+                }
+            `,
+            fragmentShader: `
+                varying float vA;
+                void main(){
+                    float d = length(gl_PointCoord-vec2(0.5));
+                    if(d>0.5) discard;
+                    float a = 1.0-smoothstep(0.1,0.5,d);
+                    gl_FragColor = vec4(0.91,1.0,0.28, a*vA);
+                }
+            `,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        scene.add(new THREE.Points(dGeo, dMat));
+
+        // --- Orbit rings ---
+        function makeRing(r, rot, col, op) {
+            const segs = 128;
+            const rp = new Float32Array(segs*3);
+            const safeR = Math.max(0.001, r);
+            for (let i=0;i<segs;i++){
+                const a=(i/segs)*Math.PI*2;
+                rp[i*3]=safeR*Math.cos(a); rp[i*3+1]=0; rp[i*3+2]=safeR*Math.sin(a);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.BufferAttribute(rp,3));
+            const m = new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op});
+            const l = new THREE.Line(g,m);
+            l.rotation.set(rot.x,rot.y,rot.z);
+            return l;
+        }
+        const ring1=makeRing(2.3,{x:0.3,y:0,z:0.1},0xe8ff47,0.08);
+        const ring2=makeRing(2.6,{x:-0.5,y:0.8,z:0.3},0xe8ff47,0.05);
+        const ring3=makeRing(2.0,{x:1.2,y:-0.3,z:-0.5},0x00ffa3,0.06);
+        scene.add(ring1,ring2,ring3);
+
+        // --- Connection lines (pre-computed pairs) ---
+        const LINE_COUNT = 80;
+        const connections = [];
+        for (let i=0; i<LINE_COUNT; i++){
+            const a = Math.floor(Math.random()*PCOUNT);
+            let bestB=-1, bestD=Infinity;
+            for(let t=0;t<20;t++){
+                const b=Math.floor(Math.random()*PCOUNT);
+                if(b===a) continue;
+                const dx=origPos[b*3]-origPos[a*3];
+                const dy=origPos[b*3+1]-origPos[a*3+1];
+                const dz=origPos[b*3+2]-origPos[a*3+2];
+                const d2=dx*dx+dy*dy+dz*dz;
+                if(d2<bestD && d2>0.3 && d2<3.0){ bestD=d2; bestB=b; }
+            }
+            if(bestB>=0) connections.push({a,b:bestB});
+        }
+        const lPos = new Float32Array(connections.length*6);
+        const lGeo = new THREE.BufferGeometry();
+        lGeo.setAttribute('position', new THREE.BufferAttribute(lPos,3));
+        const lMat = new THREE.LineBasicMaterial({color:0xe8ff47,transparent:true,opacity:0.07});
+        const lines = new THREE.LineSegments(lGeo, lMat);
+        scene.add(lines);
+
+        function updateLines(){
+            const p = pGeo.attributes.position.array;
+            for(let i=0;i<connections.length;i++){
+                const {a,b}=connections[i];
+                lPos[i*6]=p[a*3]; lPos[i*6+1]=p[a*3+1]; lPos[i*6+2]=p[a*3+2];
+                lPos[i*6+3]=p[b*3]; lPos[i*6+4]=p[b*3+1]; lPos[i*6+5]=p[b*3+2];
+            }
+            lGeo.attributes.position.needsUpdate=true;
+        }
+
+        // --- Resize ---
+        function resize(){
+            const w=container.clientWidth, h=Math.max(container.clientHeight,1);
+            camera.aspect=w/h; camera.updateProjectionMatrix();
+            renderer.setSize(w,h);
+        }
+        resize(); window.addEventListener('resize', resize);
+
+        // --- Animation loop ---
+        const clock = new THREE.Clock();
+        (function animate(){
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+            mouse.x += (mouse.tx-mouse.x)*0.05;
+            mouse.y += (mouse.ty-mouse.y)*0.05;
+
+            pMat.uniforms.uTime.value = t;
+            pMat.uniforms.uMouse.value.set(mouse.x, mouse.y);
+            dMat.uniforms.uTime.value = t;
+
+            particles.rotation.y = t*0.1 + mouse.x*0.3;
+            particles.rotation.x = mouse.y*0.2;
+            ring1.rotation.z = t*0.08;
+            ring2.rotation.z = -t*0.06;
+            ring3.rotation.y = t*0.04;
+
+            updateLines();
+            renderer.render(scene, camera);
+        })();
+
+        // ===== WAVEFORM =====
+        const wCvs = document.getElementById('waveformCanvas');
+        const wCtx = wCvs.getContext('2d');
+        function resizeWave(){
+            const p=wCvs.parentElement;
+            const dpr=window.devicePixelRatio;
+            wCvs.width=p.clientWidth*dpr; wCvs.height=p.clientHeight*dpr;
+            wCvs.style.width=p.clientWidth+'px'; wCvs.style.height=p.clientHeight+'px';
+        }
+        resizeWave(); window.addEventListener('resize', resizeWave);
+
+        const waves = [
+            {amp:15,freq:0.015,spd:1.2,col:'rgba(232,255,71,0.3)',fill:'rgba(232,255,71,0.03)'},
+            {amp:10,freq:0.02,spd:-0.8,col:'rgba(0,255,163,0.2)',fill:'rgba(0,255,163,0.02)'},
+            {amp:8,freq:0.025,spd:1.5,col:'rgba(232,255,71,0.15)',fill:'rgba(232,255,71,0.01)'},
+        ];
+        (function drawWave(){
+            requestAnimationFrame(drawWave);
+            const dpr=window.devicePixelRatio;
+            const w=wCvs.clientWidth, h=wCvs.clientHeight;
+            wCtx.setTransform(dpr,0,0,dpr,0,0);
+            wCtx.clearRect(0,0,w,h);
+            const t=clock.getElapsedTime();
+            waves.forEach(wv=>{
+                wCtx.beginPath(); wCtx.moveTo(0,h/2);
+                for(let x=0;x<=w;x+=2){
+                    const y=h/2+Math.sin(x*wv.freq+t*wv.spd)*wv.amp+Math.sin(x*wv.freq*2.5+t*wv.spd*0.7)*wv.amp*0.3;
+                    wCtx.lineTo(x,y);
+                }
+                wCtx.strokeStyle=wv.col; wCtx.lineWidth=1.5; wCtx.stroke();
+                wCtx.lineTo(w,h); wCtx.lineTo(0,h); wCtx.closePath();
+                wCtx.fillStyle=wv.fill; wCtx.fill();
+            });
+        })();
+
+        // ===== SPARKLINES =====
+        document.querySelectorAll('.sparkline').forEach(cvs=>{
+            const vals=cvs.dataset.values.split(',').map(Number);
+            const par=cvs.parentElement;
+            const dpr=window.devicePixelRatio;
+            cvs.width=par.clientWidth*dpr; cvs.height=par.clientHeight*dpr;
+            cvs.style.width=par.clientWidth+'px'; cvs.style.height=par.clientHeight+'px';
+            const ctx=cvs.getContext('2d');
+            ctx.setTransform(dpr,0,0,dpr,0,0);
+            const w=par.clientWidth, h=par.clientHeight;
+            const mn=Math.min(...vals), mx=Math.max(...vals);
+            const rng=Math.max(mx-mn,0.001);
+            const step=w/(vals.length-1);
+
+            ctx.beginPath(); ctx.moveTo(0,h);
+            vals.forEach((v,i)=>{
+                const x=i*step, y=h-((v-mn)/rng)*(h-4)-2;
+                i===0?ctx.lineTo(x,y):ctx.lineTo(x,y);
+            });
+            ctx.lineTo(w,h); ctx.closePath();
+            const gr=ctx.createLinearGradient(0,0,0,h);
+            gr.addColorStop(0,'rgba(232,255,71,0.15)'); gr.addColorStop(1,'rgba(232,255,71,0.0)');
+            ctx.fillStyle=gr; ctx.fill();
+
+            ctx.beginPath();
+            vals.forEach((v,i)=>{
+                const x=i*step, y=h-((v-mn)/rng)*(h-4)-2;
+                i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+            });
+            ctx.strokeStyle='#e8ff47'; ctx.lineWidth=1.5; ctx.stroke();
+
+            const lx=(vals.length-1)*step, ly=h-((vals[vals.length-1]-mn)/rng)*(h-4)-2;
+            ctx.beginPath(); ctx.arc(lx,ly,3,0,Math.PI*2);
+            ctx.fillStyle='#e8ff47'; ctx.fill();
+        });
+
+        // ===== ANIMATED COUNTERS =====
+        function animateCounter(el){
+            const target=parseFloat(el.dataset.target);
+            const fmt=el.dataset.format;
+            const dur=2000, start=performance.now();
+            (function tick(now){
+                const p=Math.min((now-start)/dur,1);
+                const e=1-Math.pow(1-p,3);
+                const v=target*e;
+                if(fmt==='number') el.textContent=Math.floor(v).toLocaleString();
+                else if(fmt==='decimal') el.textContent=v.toFixed(1)+'ms';
+                else if(fmt==='percent') el.textContent=v.toFixed(2)+'%';
+                else if(fmt==='throughput') el.textContent=v.toFixed(1)+' TB/s';
+                if(p<1) requestAnimationFrame(tick);
+            })(start);
+        }
+        const mObs = new IntersectionObserver(entries=>{
+            entries.forEach(en=>{
+                if(en.isIntersecting){
+                    const c=en.target.querySelector('.metric-value');
+                    if(c) animateCounter(c);
+                    mObs.unobserve(en.target);
+                }
+            });
+        },{threshold:0.5});
+        document.querySelectorAll('.glass-card').forEach(c=>{
+            if(c.querySelector('.metric-value')) mObs.observe(c);
+        });
+
+        // ===== ACTIVITY FEED =====
+        const activities=[
+            {icon:'fa-rocket',color:'var(--accent)',text:'Model v4.7 deployed to production',time:'2m ago'},
+            {icon:'fa-exclamation-triangle',color:'#ffa502',text:'Anomaly detected in sector 7-G',time:'8m ago'},
+            {icon:'fa-expand-arrows-alt',color:'var(--success)',text:'Auto-scaling triggered: +12 nodes',time:'15m ago'},
+            {icon:'fa-shield-alt',color:'#e8ff47',text:'Security patch applied to cluster Alpha',time:'23m ago'},
+            {icon:'fa-database',color:'var(--muted)',text:'Backup completed: 847 GB synced',time:'31m ago'},
+            {icon:'fa-code-branch',color:'var(--accent)',text:'Pipeline #4892 passed all checks',time:'45m ago'},
+            {icon:'fa-microchip',color:'var(--success)',text:'GPU allocation optimized: -18% waste',time:'1h ago'},
+            {icon:'fa-network-wired',color:'var(--muted)',text:'Network throughput stabilized at 1.2 TB/s',time:'1h ago'},
+        ];
+        const feed=document.getElementById('activityFeed');
+        activities.forEach((a,i)=>{
+            const d=document.createElement('div');
+            d.className='activity-item flex items-start gap-3 fade-in-up';
+            d.style.animationDelay=(0.6+i*0.1)+'s';
+            d.innerHTML=`<div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style="background:${a.color}15;"><i class="fas ${a.icon} text-xs" style="color:${a.color};"></i></div><div class="flex-1 min-w-0"><p class="text-xs leading-relaxed" style="color:var(--fg);opacity:0.8;">${a.text}</p><p class="text-xs mt-0.5" style="color:var(--muted);">${a.time}</p></div>`;
+            d.addEventListener('click',()=>{
+                showToast(`<i class="fas fa-info-circle"></i> ${a.text}`);
+            });
+            feed.appendChild(d);
+        });
+
+        // ===== TOAST HELPER =====
+        const toastEl=document.getElementById('toast');
+        let toastTimer=null;
+        function showToast(html){
+            clearTimeout(toastTimer);
+            toastEl.innerHTML=html;
+            toastEl.classList.add('show');
+            toastTimer=setTimeout(()=>toastEl.classList.remove('show'),3500);
+        }
+
+        // ===== NAV =====
+        document.querySelectorAll('.sidebar-nav .nav-icon').forEach(icon=>{
+            icon.addEventListener('click',()=>{
+                document.querySelectorAll('.sidebar-nav .nav-icon').forEach(i=>i.classList.remove('active'));
+                icon.classList.add('active');
+            });
+            icon.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();icon.click();}});
+        });
+
+        // ===== COMMAND PALETTE =====
+        const cmdItems=[
+            {icon:'fa-chart-line',label:'View Analytics',desc:'Open real-time analytics dashboard'},
+            {icon:'fa-cube',label:'Manage Models',desc:'View and deploy neural models'},
+            {icon:'fa-shield-alt',label:'Security Settings',desc:'Configure security policies'},
+            {icon:'fa-cog',label:'Configuration',desc:'System configuration panel'},
+            {icon:'fa-project-diagram',label:'Network Topology',desc:'Visualize node connections'},
+            {icon:'fa-database',label:'Data Pipeline',desc:'Monitor data flow and backups'},
+            {icon:'fa-user-cog',label:'Account Settings',desc:'Manage your profile and keys'},
+            {icon:'fa-plug',label:'Integrations',desc:'Connect external services'},
+        ];
+        const cmdBackdrop=document.getElementById('cmdBackdrop');
+        const cmdContent=document.getElementById('cmdContent');
+        const cmdInput=document.getElementById('cmdInput');
+        const cmdResults=document.getElementById('cmdResults');
+        let focusedIdx=0;
+
+        function renderCmdResults(filter=''){
+            const f=filter.toLowerCase();
+            const filtered=cmdItems.filter(it=>it.label.toLowerCase().includes(f)||it.desc.toLowerCase().includes(f));
+            focusedIdx=0;
+            cmdResults.innerHTML='';
+            filtered.forEach((it,i)=>{
+                const d=document.createElement('div');
+                d.className='cmd-item'+(i===0?' focused':'');
+                d.innerHTML=`<i class="fas ${it.icon}"></i><div><div>${it.label}</div><div style="font-size:0.7rem;color:var(--muted);margin-top:1px;">${it.desc}</div></div>`;
+                d.addEventListener('click',()=>{
+                    closeCmd();
+                    showToast(`<i class="fas ${it.icon}"></i> Navigating to ${it.label}...`);
+                });
+                d.addEventListener('mouseenter',()=>{
+                    cmdResults.querySelectorAll('.cmd-item').forEach(el=>el.classList.remove('focused'));
+                    d.classList.add('focused');
+                    focusedIdx=i;
+                });
+                cmdResults.appendChild(d);
+            });
+        }
+
+        function openCmd(){
+            cmdBackdrop.classList.add('open');
+            cmdContent.classList.add('open');
+            cmdInput.value='';
+            renderCmdResults();
+            setTimeout(()=>cmdInput.focus(),100);
+        }
+        function closeCmd(){
+            cmdBackdrop.classList.remove('open');
+            cmdContent.classList.remove('open');
+        }
+
+        cmdBackdrop.addEventListener('click',closeCmd);
+        cmdInput.addEventListener('input',e=>renderCmdResults(e.target.value));
+        cmdInput.addEventListener('keydown',e=>{
+            const items=cmdResults.querySelectorAll('.cmd-item');
+            if(e.key==='ArrowDown'){e.preventDefault();focusedIdx=Math.min(focusedIdx+1,items.length-1);}
+            else if(e.key==='ArrowUp'){e.preventDefault();focusedIdx=Math.max(focusedIdx-1,0);}
+            else if(e.key==='Enter'&&items[focusedIdx]){items[focusedIdx].click();return;}
+            else if(e.key==='Escape'){closeCmd();return;}
+            else return;
+            items.forEach((el,i)=>el.classList.toggle('focused',i===focusedIdx));
+        });
+
+        document.getElementById('searchBtn').addEventListener('click',openCmd);
+        document.addEventListener('keydown',e=>{
+            if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openCmd();}
+        });
+
+        // ===== NOTIFICATION BTN =====
+        document.getElementById('notifBtn').addEventListener('click',()=>{
+            showToast('<i class="fas fa-bell"></i> 3 new alerts pending review');
+        });
+
+        // ===== MOBILE MENU =====
+        const menuToggle=document.getElementById('menuToggle');
+        const rightPanel=document.querySelector('.right-panel');
+        if(menuToggle) menuToggle.addEventListener('click',()=>rightPanel.classList.toggle('open'));
+
+        // ===== INITIAL TOAST =====
+        setTimeout(()=>showToast('<i class="fas fa-bolt"></i> Neural mesh synchronized — 2,847 nodes active'),2000);
+    </script>
+</body>
+</html>
