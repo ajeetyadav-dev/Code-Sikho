@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>This Animation Shouldn't Be Free</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --fg: #f0ebe3;
+    --muted: #6b6560;
+    --accent: #d4a053;
+    --accent2: #e8c17a;
+    --card: rgba(255,255,255,0.03);
+    --border: rgba(212,160,83,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) var(--bg);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* Custom cursor */
+  .cursor-dot {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s ease;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.15s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+    transform: translate(-50%, -50%);
+  }
+  .cursor-ring.hovering {
+    width: 60px;
+    height: 60px;
+    border-color: var(--accent2);
+  }
+
+  /* Canvas background */
+  #particleCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  /* Ambient glow blobs */
+  .glow-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-blob.one {
+    width: 600px; height: 600px;
+    background: var(--accent);
+    top: -200px; left: -100px;
+    animation: blobDrift1 20s ease-in-out infinite;
+  }
+  .glow-blob.two {
+    width: 500px; height: 500px;
+    background: #8b5e3c;
+    bottom: -150px; right: -100px;
+    animation: blobDrift2 25s ease-in-out infinite;
+  }
+  .glow-blob.three {
+    width: 400px; height: 400px;
+    background: var(--accent2);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: blobDrift3 18s ease-in-out infinite;
+    opacity: 0.06;
+  }
+
+  @keyframes blobDrift1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(100px, 80px) scale(1.1); }
+    66% { transform: translate(-50px, 120px) scale(0.9); }
+  }
+  @keyframes blobDrift2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-80px, -60px) scale(1.15); }
+    66% { transform: translate(60px, -100px) scale(0.85); }
+  }
+  @keyframes blobDrift3 {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-40%, -60%) scale(1.3); }
+  }
+
+  /* Noise overlay */
+  .noise {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
+
+  /* Content wrapper */
+  .content {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Hero section */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-size: 0.75rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeSlideUp 1s ease 0.5s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(3rem, 10vw, 8rem);
+    line-height: 0.95;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .hero-title .line {
+    display: block;
+    overflow: hidden;
+  }
+  .hero-title .line span {
+    display: inline-block;
+    transform: translateY(120%);
+    animation: titleReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .hero-title .line:nth-child(1) span { animation-delay: 0.7s; }
+  .hero-title .line:nth-child(2) span { animation-delay: 0.9s; }
+  .hero-title .line:nth-child(3) span { animation-delay: 1.1s; }
+
+  .hero-title .accent-word {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--accent);
+    transition: color 0.4s ease, -webkit-text-stroke 0.4s ease;
+  }
+  .hero-title .accent-word:hover {
+    color: var(--accent);
+    -webkit-text-stroke: 0px transparent;
+  }
+
+  @keyframes titleReveal {
+    to { transform: translateY(0); }
+  }
+
+  .hero-sub {
+    font-size: clamp(0.9rem, 2vw, 1.15rem);
+    color: var(--muted);
+    max-width: 500px;
+    line-height: 1.7;
+    opacity: 0;
+    animation: fadeSlideUp 1s ease 1.5s forwards;
+  }
+
+  .scroll-indicator {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    opacity: 0;
+    animation: fadeSlideUp 1s ease 2s forwards;
+  }
+  .scroll-indicator span {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .scroll-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.6); transform-origin: top; }
+    50% { opacity: 1; transform: scaleY(1); }
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Divider */
+  .section-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 0 auto;
+  }
+
+  /* Showcase sections */
+  .showcase {
+    padding: 8rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .section-heading {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.15;
+    margin-bottom: 2rem;
+    max-width: 600px;
+  }
+
+  /* Morphing blob section */
+  .morph-section {
+    padding: 6rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    position: relative;
+  }
+
+  .morph-container {
+    position: relative;
+    width: clamp(300px, 50vw, 550px);
+    height: clamp(300px, 50vw, 550px);
+  }
+
+  .morph-blob {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), #8b5e3c, var(--accent2));
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    animation: morphing 12s ease-in-out infinite, morphRotate 20s linear infinite;
+    opacity: 0.8;
+    filter: blur(0px);
+    transition: filter 0.5s ease;
+  }
+
+  .morph-blob::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: var(--bg);
+    border-radius: inherit;
+    opacity: 0.6;
+  }
+
+  .morph-blob.glow {
+    filter: blur(20px);
+  }
+
+  .morph-blob:nth-child(2) {
+    animation-delay: -4s;
+    animation-duration: 15s, 25s;
+    opacity: 0.4;
+    inset: 30px;
+  }
+  .morph-blob:nth-child(2)::after { opacity: 0.7; }
+
+  .morph-blob:nth-child(3) {
+    animation-delay: -8s;
+    animation-duration: 10s, 15s;
+    opacity: 0.2;
+    inset: 60px;
+  }
+  .morph-blob:nth-child(3)::after { opacity: 0.8; }
+
+  .morph-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .morph-text h2 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 0.5rem;
+  }
+  .morph-text p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 250px;
+  }
+
+  @keyframes morphing {
+    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+    50% { border-radius: 50% 60% 30% 60% / 30% 40% 70% 60%; }
+    75% { border-radius: 40% 30% 60% 50% / 60% 70% 40% 30%; }
+  }
+  @keyframes morphRotate {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Text reveal cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .reveal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transform: translateY(60px);
+    opacity: 0;
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.8s ease, border-color 0.4s ease;
+  }
+  .reveal-card.visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .reveal-card:hover {
+    border-color: var(--accent);
+  }
+  .reveal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(212,160,83,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .reveal-card:hover::before { opacity: 1; }
+
+  .card-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--accent);
+    opacity: 0.2;
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-weight: 600;
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+  }
+  .card-desc {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* Horizontal scroll text */
+  .marquee-section {
+    padding: 4rem 0;
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .marquee-track {
+    display: flex;
+    animation: marqueeScroll 30s linear infinite;
+    width: max-content;
+  }
+  .marquee-item {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 900;
+    white-space: nowrap;
+    padding: 0 2rem;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--muted);
+    transition: color 0.3s ease, -webkit-text-stroke 0.3s ease;
+  }
+  .marquee-item:hover {
+    color: var(--accent);
+    -webkit-text-stroke: 1px var(--accent);
+  }
+  .marquee-sep {
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
+  .marquee-sep::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  @keyframes marqueeScroll {
+    to { transform: translateX(-50%); }
+  }
+
+  /* Interactive text split section */
+  .split-section {
+    padding: 8rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+  @media (max-width: 768px) {
+    .split-section { grid-template-columns: 1fr; gap: 2rem; }
+  }
+
+  .split-text .section-heading {
+    max-width: none;
+  }
+
+  .split-text p {
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .btn-premium {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-radius: 50px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: color 0.4s ease;
+  }
+  .btn-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: -1;
+    border-radius: inherit;
+  }
+  .btn-premium:hover::before { transform: scaleX(1); }
+  .btn-premium:hover { color: var(--bg); }
+  .btn-premium .arrow {
+    transition: transform 0.3s ease;
+  }
+  .btn-premium:hover .arrow { transform: translateX(4px); }
+
+  /* Orbital animation */
+  .orbital-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 450px;
+    margin: 0 auto;
+  }
+
+  .orbital-ring {
+    position: absolute;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .orbital-ring.r1 { width: 100%; height: 100%; animation: orbSpin 25s linear infinite; }
+  .orbital-ring.r2 { width: 70%; height: 70%; animation: orbSpin 18s linear infinite reverse; }
+  .orbital-ring.r3 { width: 40%; height: 40%; animation: orbSpin 12s linear infinite; }
+
+  .orbital-dot {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    top: -5px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 20px var(--accent), 0 0 40px rgba(212,160,83,0.3);
+  }
+  .orbital-ring.r2 .orbital-dot { width: 7px; height: 7px; top: -3.5px; background: var(--accent2); box-shadow: 0 0 15px var(--accent2); }
+  .orbital-ring.r3 .orbital-dot { width: 5px; height: 5px; top: -2.5px; background: #f0ebe3; box-shadow: 0 0 10px #f0ebe3; }
+
+  .orbital-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, var(--accent), #8b5e3c);
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(212,160,83,0.4), 0 0 120px rgba(212,160,83,0.15);
+    animation: centerPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes orbSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  @keyframes centerPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 60px rgba(212,160,83,0.4), 0 0 120px rgba(212,160,83,0.15); }
+    50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 80px rgba(212,160,83,0.5), 0 0 160px rgba(212,160,83,0.2); }
+  }
+
+  /* Counter section */
+  .counter-section {
+    padding: 6rem 2rem;
+    text-align: center;
+  }
+  .counter-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4rem;
+    margin-top: 3rem;
+  }
+  .counter-item {
+    text-align: center;
+  }
+  .counter-num {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .counter-label {
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Footer */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    position: relative;
+    z-index: 2;
+  }
+  footer p {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  footer .footer-accent {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Reveal animations */
+  .reveal-up {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Magnetic hover for images/elements */
+  .magnetic {
+    transition: transform 0.3s ease;
+  }
+
+  /* Loading screen */
+  .loader {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.5rem;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+  }
+  .loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .loader-bar {
+    width: 200px;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .loader-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.1s linear;
+  }
+  .loader-text {
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .marquee-track { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div class="loader" id="loader">
+  <div class="loader-text">Crafting experience</div>
+  <div class="loader-bar">
+    <div class="loader-fill" id="loaderFill"></div>
+  </div>
+</div>
+
+<!-- Custom cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Background layers -->
+<canvas id="particleCanvas"></canvas>
+<div class="glow-blob one"></div>
+<div class="glow-blob two"></div>
+<div class="glow-blob three"></div>
+<div class="noise"></div>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-tag">Handcrafted with obsessive attention</div>
+    <h1 class="hero-title">
+      <span class="line"><span>This Animation</span></span>
+      <span class="line"><span>Shouldn't Be</span></span>
+      <span class="line"><span class="accent-word">Free</span></span>
+    </h1>
+    <p class="hero-sub">Every pixel, every frame, every micro-interaction — designed to make you feel something. Scroll down to see why.</p>
+    <div class="scroll-indicator">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- Morphing blob -->
+  <section class="morph-section">
+    <div class="morph-container" id="morphContainer">
+      <div class="morph-blob"></div>
+      <div class="morph-blob"></div>
+      <div class="morph-blob"></div>
+      <div class="morph-text">
+        <h2>Organic<br>Motion</h2>
+        <p>Fluid shapes that breathe and evolve, never repeating</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- Marquee -->
+  <section class="marquee-section">
+    <div class="marquee-track">
+      <span class="marquee-item">Motion Design</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Particle Systems</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Micro Interactions</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Fluid Dynamics</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">3D Transforms</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Generative Art</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Motion Design</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Particle Systems</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Micro Interactions</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Fluid Dynamics</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">3D Transforms</span>
+      <span class="marquee-sep"></span>
+      <span class="marquee-item">Generative Art</span>
+      <span class="marquee-sep"></span>
+    </div>
+  </section>
+
+  <!-- Feature cards -->
+  <section class="showcase">
+    <div class="reveal-up">
+      <div class="section-label">What makes it premium</div>
+      <h2 class="section-heading">Details that separate good from unforgettable</h2>
+    </div>
+    <div class="card-grid">
+      <div class="reveal-card">
+        <div class="card-number">01</div>
+        <h3 class="card-title">Reactive Particles</h3>
+        <p class="card-desc">Hundreds of particles flowing through the background, responding to your cursor in real-time with physics-based repulsion and attraction.</p>
+      </div>
+      <div class="reveal-card">
+        <div class="card-number">02</div>
+        <h3 class="card-title">Cinematic Typography</h3>
+        <p class="card-desc">Staggered reveals with custom cubic-bezier curves. Each letter, each word — choreographed like a film title sequence.</p>
+      </div>
+      <div class="reveal-card">
+        <div class="card-number">03</div>
+        <h3 class="card-title">Ambient Atmosphere</h3>
+        <p class="card-desc">Layered glow blobs, noise textures, and gradient shifts create depth that makes the page feel alive, even when you're not scrolling.</p>
+      </div>
+      <div class="reveal-card">
+        <div class="card-number">04</div>
+        <h3 class="card-title">Cursor Psychology</h3>
+        <p class="card-desc">A custom cursor system with dot and ring separation, magnetic hover effects, and mix-blend-mode that makes every interaction feel tactile.</p>
+      </div>
+      <div class="reveal-card">
+        <div class="card-number">05</div>
+        <h3 class="card-title">Scroll Choreography</h3>
+        <p class="card-desc">Elements don't just appear — they ascend, fade, and settle with staggered timing that guides the eye naturally through the narrative.</p>
+      </div>
+      <div class="reveal-card">
+        <div class="card-number">06</div>
+        <h3 class="card-title">Zero Dependencies</h3>
+        <p class="card-desc">No frameworks, no libraries, no build tools. Pure HTML, CSS, and JavaScript — every line written by hand, every effect crafted from scratch.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- Split section with orbital -->
+  <section class="split-section">
+    <div class="split-text">
+      <div class="section-label reveal-up">Orbital System</div>
+      <h2 class="section-heading reveal-up">Precision in every revolution</h2>
+      <p class="reveal-up">Three orbital rings spinning at different speeds and directions, each carrying a glowing node. The center pulses with energy, casting warm light into the void. It's not just decoration — it's a statement about craftsmanship.</p>
+      <p class="reveal-up">Every timing, every shadow, every glow radius was adjusted by hand until it felt right. That's the difference between a tutorial and art.</p>
+      <button class="btn-premium reveal-up" onclick="triggerBurst()">
+        Trigger Particle Burst <span class="arrow">&rarr;</span>
+      </button>
+    </div>
+    <div class="orbital-container reveal-up">
+      <div class="orbital-ring r1"><div class="orbital-dot"></div></div>
+      <div class="orbital-ring r2"><div class="orbital-dot"></div></div>
+      <div class="orbital-ring r3"><div class="orbital-dot"></div></div>
+      <div class="orbital-center"></div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- Counters -->
+  <section class="counter-section">
+    <div class="section-label reveal-up">By the numbers</div>
+    <div class="counter-grid">
+      <div class="counter-item reveal-up">
+        <div class="counter-num" data-target="847">0</div>
+        <div class="counter-label">Lines of CSS</div>
+      </div>
+      <div class="counter-item reveal-up">
+        <div class="counter-num" data-target="312">0</div>
+        <div class="counter-label">Lines of JavaScript</div>
+      </div>
+      <div class="counter-item reveal-up">
+        <div class="counter-num" data-target="0">0</div>
+        <div class="counter-label">External Dependencies</div>
+      </div>
+      <div class="counter-item reveal-up">
+        <div class="counter-num" data-target="100">0</div>
+        <div class="counter-label">Percent Handcrafted</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Made with unreasonable attention to detail by <span class="footer-accent">someone who cares too much</span></p>
+  </footer>
+
+</div>
+
+<script>
+  // ==========================================
+  // Loading screen
+  // ==========================================
+  const loaderFill = document.getElementById('loaderFill');
+  const loader = document.getElementById('loader');
+  let loadProgress = 0;
+
+  const loadInterval = setInterval(() => {
+    loadProgress += Math.random() * 15 + 5;
+    if (loadProgress >= 100) {
+      loadProgress = 100;
+      loaderFill.style.width = '100%';
+      clearInterval(loadInterval);
+      setTimeout(() => loader.classList.add('hidden'), 400);
+    } else {
+      loaderFill.style.width = loadProgress + '%';
+    }
+  }, 120);
+
+  // ==========================================
+  // Custom cursor
+  // ==========================================
+  const cursorDot = document.getElementById('cursorDot');
+  const cursorRing = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    cursorDot.style.left = mouseX - 4 + 'px';
+    cursorDot.style.top = mouseY - 4 + 'px';
+  });
+
+  // Smooth ring follow
+  function animateCursor() {
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+    cursorRing.style.left = ringX + 'px';
+    cursorRing.style.top = ringY + 'px';
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // Hover effect on interactive elements
+  const hoverTargets = document.querySelectorAll('a, button, .marquee-item, .accent-word, .reveal-card');
+  hoverTargets.forEach(el => {
+    el.addEventListener('mouseenter', () => cursorRing.classList.add('hovering'));
+    el.addEventListener('mouseleave', () => cursorRing.classList.remove('hovering'));
+  });
+
+  // Hide cursor on touch devices
+  if ('ontouchstart' in window) {
+    cursorDot.style.display = 'none';
+    cursorRing.style.display = 'none';
+  }
+
+  // ==========================================
+  // Particle system
+  // ==========================================
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let canvasW, canvasH;
+
+  function resizeCanvas() {
+    canvasW = canvas.width = window.innerWidth;
+    canvasH = canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor(burst = false) {
+      if (burst) {
+        this.x = canvasW / 2;
+        this.y = canvasH / 2;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 6 + 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.life = 1;
+        this.decay = Math.random() * 0.015 + 0.008;
+        this.isBurst = true;
+      } else {
+        this.x = Math.random() * canvasW;
+        this.y = Math.random() * canvasH;
+        this.vx = (Math.random() - 0.5) * 0.4;
+        this.vy = (Math.random() - 0.5) * 0.4;
+        this.life = 1;
+        this.decay = 0;
+        this.isBurst = false;
+      }
+      this.baseSize = Math.random() * 2 + 0.5;
+      this.size = this.baseSize;
+      // Warm gold/amber palette
+      const colors = [
+        [212, 160, 83],
+        [232, 193, 122],
+        [139, 94, 60],
+        [240, 235, 227],
+      ];
+      this.color = colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    update() {
+      // Mouse repulsion
+      const dx = this.x - mouseX;
+      const dy = this.y - mouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const repelRadius = 150;
+
+      if (dist < repelRadius && dist > 0) {
+        const force = (repelRadius - dist) / repelRadius;
+        this.vx += (dx / dist) * force * 0.3;
+        this.vy += (dy / dist) * force * 0.3;
+      }
+
+      if (this.isBurst) {
+        this.life -= this.decay;
+        this.vx *= 0.98;
+        this.vy *= 0.98;
+        this.vy += 0.02; // slight gravity
+      } else {
+        // Gentle drift
+        this.vx += (Math.random() - 0.5) * 0.02;
+        this.vy += (Math.random() - 0.5) * 0.02;
+        this.vx *= 0.99;
+        this.vy *= 0.99;
+      }
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Wrap around for non-burst
+      if (!this.isBurst) {
+        if (this.x < -10) this.x = canvasW + 10;
+        if (this.x > canvasW + 10) this.x = -10;
+        if (this.y < -10) this.y = canvasH + 10;
+        if (this.y > canvasH + 10) this.y = -10;
+      }
+
+      // Proximity size pulse
+      if (dist < repelRadius) {
+        this.size = this.baseSize + (1 - dist / repelRadius) * 2;
+      } else {
+        this.size += (this.baseSize - this.size) * 0.1;
+      }
+    }
+
+    draw() {
+      const alpha = this.isBurst ? this.life : 0.6;
+      if (alpha <= 0) return;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${this.color[0]},${this.color[1]},${this.color[2]},${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  // Initialize particles
+  const PARTICLE_COUNT = Math.min(200, Math.floor(window.innerWidth * 0.12));
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  // Draw connections between nearby particles
+  function drawConnections() {
+    const maxDist = 120;
+    for (let i = 0; i < particles.length; i++) {
+      if (particles[i].isBurst) continue;
+      for (let j = i + 1; j < particles.length; j++) {
+        if (particles[j].isBurst) continue;
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < maxDist) {
+          const alpha = (1 - dist / maxDist) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(212,160,83,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // Burst effect
+  function triggerBurst() {
+    for (let i = 0; i < 80; i++) {
+      particles.push(new Particle(true));
+    }
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvasW, canvasH);
+
+    drawConnections();
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      particles[i].update();
+      particles[i].draw();
+      if (particles[i].isBurst && particles[i].life <= 0) {
+        particles.splice(i, 1);
+      }
+    }
+
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ==========================================
+  // Scroll reveal with IntersectionObserver
+  // ==========================================
+  const revealElements = document.querySelectorAll('.reveal-up, .reveal-card');
+
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        // Stagger siblings
+        const parent = entry.target.parentElement;
+        const siblings = parent.querySelectorAll('.reveal-up, .reveal-card');
+        let index = 0;
+        siblings.forEach((sib, si) => {
+          if (sib === entry.target) index = si;
+        });
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 100);
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+  revealElements.forEach(el => revealObserver.observe(el));
+
+  // ==========================================
+  // Card spotlight effect
+  // ==========================================
+  document.querySelectorAll('.reveal-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      card.style.setProperty('--mx', x + '%');
+      card.style.setProperty('--my', y + '%');
+    });
+  });
+
+  // ==========================================
+  // Morph blob hover glow
+  // ==========================================
+  const morphContainer = document.getElementById('morphContainer');
+  const morphBlobs = morphContainer.querySelectorAll('.morph-blob');
+  morphContainer.addEventListener('mouseenter', () => {
+    morphBlobs.forEach(b => b.classList.add('glow'));
+  });
+  morphContainer.addEventListener('mouseleave', () => {
+    morphBlobs.forEach(b => b.classList.remove('glow'));
+  });
+
+  // ==========================================
+  // Counter animation
+  // ==========================================
+  const counterNums = document.querySelectorAll('.counter-num');
+  let countersAnimated = false;
+
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !countersAnimated) {
+        countersAnimated = true;
+        counterNums.forEach(num => {
+          const target = parseInt(num.dataset.target);
+          const duration = 2000;
+          const start = performance.now();
+
+          function updateCounter(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            num.textContent = Math.round(target * eased);
+            if (progress < 1) requestAnimationFrame(updateCounter);
+          }
+          requestAnimationFrame(updateCounter);
+        });
+      }
+    });
+  }, { threshold: 0.5 });
+
+  counterNums.forEach(num => counterObserver.observe(num));
+
+  // ==========================================
+  // Parallax on scroll for glow blobs
+  // ==========================================
+  let scrollY = 0;
+  window.addEventListener('scroll', () => {
+    scrollY = window.pageYOffset;
+    const blobs = document.querySelectorAll('.glow-blob');
+    blobs[0].style.transform = `translate(${Math.sin(scrollY * 0.002) * 30}px, ${scrollY * 0.05}px)`;
+    blobs[1].style.transform = `translate(${Math.cos(scrollY * 0.002) * 20}px, ${-scrollY * 0.03}px)`;
+  }, { passive: true });
+</script>
+</body>
+</html>

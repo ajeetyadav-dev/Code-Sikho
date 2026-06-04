@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Satisfying UI Effects</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+    --bg: #08080C;
+    --fg: #F0ECE5;
+    --muted: #6B6B80;
+    --accent: #FF3C6F;
+    --accent2: #FF8A00;
+    --accent3: #FFD000;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'Space Grotesk',sans-serif;overflow-x:hidden;cursor:none}
+.font-display{font-family:'Syne',sans-serif}
+
+/* Cursor dot */
+.cursor-dot{position:fixed;width:8px;height:8px;background:var(--fg);border-radius:50%;pointer-events:none;z-index:10000;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s}
+.cursor-dot.hover{width:20px;height:20px;background:var(--accent);mix-blend-mode:difference}
+
+/* Canvas */
+#blobCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+
+.content{position:relative;z-index:2}
+
+/* Magnetic button */
+.mag-btn{position:relative;padding:16px 44px;border:1px solid var(--border);border-radius:60px;background:transparent;color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:500;overflow:hidden;cursor:none;transition:border-color .3s,color .3s,transform .5s cubic-bezier(.34,1.56,.64,1)}
+.mag-btn .fill{position:absolute;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));width:0;height:0;transform:translate(-50%,-50%);transition:width .55s cubic-bezier(.19,1,.22,1),height .55s cubic-bezier(.19,1,.22,1);pointer-events:none}
+.mag-btn:hover .fill,.mag-btn:active .fill{width:350px;height:350px}
+.mag-btn:hover{border-color:transparent;color:#fff}
+.mag-btn span{position:relative;z-index:1}
+
+/* 3D Tilt Card */
+.tilt-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px;transform-style:preserve-3d;transition:transform .08s ease-out,box-shadow .3s;will-change:transform;cursor:none;position:relative;overflow:hidden}
+.tilt-card .shine{position:absolute;inset:0;border-radius:20px;background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.1) 0%,transparent 60%);pointer-events:none;opacity:0;transition:opacity .3s}
+.tilt-card:hover .shine{opacity:1}
+
+/* Toggle */
+.sat-toggle{width:64px;height:34px;border-radius:17px;background:rgba(255,255,255,.1);border:none;cursor:none;position:relative;transition:background .4s cubic-bezier(.19,1,.22,1);flex-shrink:0}
+.sat-toggle.on{background:var(--accent)}
+.sat-toggle .knob{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:transform .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.sat-toggle.on .knob{transform:translateX(30px)}
+
+/* Range */
+.sat-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:rgba(255,255,255,.1);outline:none;cursor:none}
+.sat-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);box-shadow:0 0 24px rgba(255,60,111,.5);cursor:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s}
+.sat-range::-webkit-slider-thumb:hover{transform:scale(1.35);box-shadow:0 0 36px rgba(255,60,111,.7)}
+.sat-range::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accent);box-shadow:0 0 24px rgba(255,60,111,.5);border:none;cursor:none}
+
+/* Checkbox */
+.sat-check{width:30px;height:30px;border-radius:8px;border:2px solid var(--border);background:transparent;cursor:none;display:flex;align-items:center;justify-content:center;transition:background .3s,border-color .3s,transform .25s cubic-bezier(.34,1.56,.64,1);flex-shrink:0}
+.sat-check.on{background:var(--accent);border-color:var(--accent);transform:scale(1.12)}
+.sat-check .ico{opacity:0;transform:scale(0) rotate(-90deg);transition:all .3s cubic-bezier(.34,1.56,.64,1);color:#fff;font-size:13px}
+.sat-check.on .ico{opacity:1;transform:scale(1) rotate(0)}
+
+/* Progress */
+.sat-progress{width:100%;height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.sat-progress .bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));background-size:200% 100%;animation:shimmer 1.8s linear infinite;transition:width .15s ease-out}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Stagger */
+.stag{opacity:0;transform:translateY(30px) scale(.97);transition:opacity .6s cubic-bezier(.19,1,.22,1),transform .6s cubic-bezier(.19,1,.22,1)}
+.stag.vis{opacity:1;transform:translateY(0) scale(1)}
+
+/* Click ripple */
+.click-rip{position:fixed;border-radius:50%;border:2px solid var(--accent);pointer-events:none;z-index:9999;animation:ripOut .7s cubic-bezier(.19,1,.22,1) forwards}
+@keyframes ripOut{0%{width:0;height:0;opacity:.8;transform:translate(-50%,-50%)}100%{width:220px;height:220px;opacity:0;transform:translate(-50%,-50%)}}
+
+/* Label */
+.slabel{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--accent)}
+
+/* Scroll bounce */
+.sbounce{animation:sb 2.2s ease-in-out infinite}
+@keyframes sb{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(12px);opacity:1}}
+
+/* Float particles */
+.fp{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+@keyframes fpf{0%{transform:translate(0,0)}25%{transform:translate(18px,-35px)}50%{transform:translate(-12px,-15px)}75%{transform:translate(25px,-50px)}100%{transform:translate(0,0)}}
+
+/* Subtle bg gradient */
+.bg-grad{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(255,60,111,.04) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(255,138,0,.03) 0%,transparent 60%)}
+
+/* Replay btn */
+.replay-btn{padding:10px 24px;border-radius:40px;background:var(--card);border:1px solid var(--border);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500;cursor:none;transition:border-color .3s,background .3s}
+.replay-btn:hover{border-color:var(--accent);background:rgba(255,60,111,.08)}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(max-width:768px){body{cursor:auto}.cursor-dot{display:none}.mag-btn,.tilt-card,.sat-toggle,.sat-check,.sat-range,.replay-btn{cursor:pointer}}
+</style>
+</head>
+<body>
+
+<div class="bg-grad"></div>
+<div class="cursor-dot" id="cDot"></div>
+<canvas id="blobCanvas"></canvas>
+
+<div class="content">
+
+  <!-- Hero -->
+  <header class="min-h-screen flex flex-col items-center justify-center px-6 text-center relative">
+    <p class="slabel mb-6">Interactive Experience</p>
+    <h1 class="font-display text-5xl md:text-7xl lg:text-[5.5rem] font-800 leading-[1.05] mb-6 tracking-tight">
+      <span class="scramble" data-text="Satisfying">Satisfying</span><br>
+      <span class="scramble" data-text="UI Effects">UI Effects</span>
+    </h1>
+    <p class="text-lg md:text-xl max-w-lg mx-auto mb-14" style="color:var(--muted);line-height:1.7">
+      Move your cursor around. Click everywhere. Feel the response.
+    </p>
+    <div class="sbounce" style="color:var(--muted)"><i class="fa-solid fa-chevron-down text-lg"></i></div>
+  </header>
+
+  <!-- Magnetic Buttons -->
+  <section class="py-28 md:py-36 px-6">
+    <div class="max-w-4xl mx-auto">
+      <p class="slabel mb-4">01 — Magnetic Pull</p>
+      <h2 class="font-display text-3xl md:text-5xl font-700 mb-14 leading-tight">Buttons that<br>reach for you</h2>
+      <div class="flex flex-wrap gap-5">
+        <button class="mag-btn" data-mag><div class="fill"></div><span>Explore</span></button>
+        <button class="mag-btn" data-mag><div class="fill"></div><span>Discover</span></button>
+        <button class="mag-btn" data-mag><div class="fill"></div><span>Interact</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3D Tilt Cards -->
+  <section class="py-28 md:py-36 px-6">
+    <div class="max-w-6xl mx-auto">
+      <p class="slabel mb-4">02 — Depth & Light</p>
+      <h2 class="font-display text-3xl md:text-5xl font-700 mb-14 leading-tight">Cards that follow<br>your gaze</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="tilt-card" data-tilt>
+          <div class="shine"></div>
+          <div class="text-4xl mb-5" style="color:var(--accent)"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <h3 class="font-display text-xl font-600 mb-3">Spring Physics</h3>
+          <p style="color:var(--muted);line-height:1.7">Elements follow your cursor with elastic spring dynamics, creating a natural organic feel that feels alive.</p>
+        </div>
+        <div class="tilt-card" data-tilt>
+          <div class="shine"></div>
+          <div class="text-4xl mb-5" style="color:var(--accent2)"><i class="fa-solid fa-droplet"></i></div>
+          <h3 class="font-display text-xl font-600 mb-3">Liquid Motion</h3>
+          <p style="color:var(--muted);line-height:1.7">Smooth fluid transitions that feel like liquid rather than rigid digital movement with cubic bezier curves.</p>
+        </div>
+        <div class="tilt-card" data-tilt>
+          <div class="shine"></div>
+          <div class="text-4xl mb-5" style="color:var(--accent3)"><i class="fa-solid fa-hand-pointer"></i></div>
+          <h3 class="font-display text-xl font-600 mb-3">Haptic Feedback</h3>
+          <p style="color:var(--muted);line-height:1.7">Visual micro-interactions that simulate the feeling of physical touch, resistance, and mechanical response.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Micro Interactions -->
+  <section class="py-28 md:py-36 px-6" id="microSection">
+    <div class="max-w-4xl mx-auto">
+      <p class="slabel mb-4">03 — Micro Interactions</p>
+      <h2 class="font-display text-3xl md:text-5xl font-700 mb-14 leading-tight">Small details,<br>big impact</h2>
+      <div class="space-y-5">
+        <!-- Toggle -->
+        <div class="flex items-center justify-between p-6 rounded-2xl" style="background:var(--card);border:1px solid var(--border)">
+          <div><p class="font-500 text-lg">Spring Toggle</p><p style="color:var(--muted);font-size:14px">Bouncy overshoot easing</p></div>
+          <button class="sat-toggle on" data-tog aria-label="Toggle"><div class="knob"></div></button>
+        </div>
+        <!-- Slider -->
+        <div class="p-6 rounded-2xl" style="background:var(--card);border:1px solid var(--border)">
+          <div class="flex items-center justify-between mb-5">
+            <div><p class="font-500 text-lg">Glow Slider</p><p style="color:var(--muted);font-size:14px">Thumb scales and glows on drag</p></div>
+            <span class="font-display font-700 text-2xl" id="sVal" style="color:var(--accent)">72</span>
+          </div>
+          <input type="range" class="sat-range" min="0" max="100" value="72" id="sRange">
+        </div>
+        <!-- Checkbox -->
+        <div class="flex items-center justify-between p-6 rounded-2xl" style="background:var(--card);border:1px solid var(--border)">
+          <div><p class="font-500 text-lg">Bouncy Checkbox</p><p style="color:var(--muted);font-size:14px">Scale pop with rotation</p></div>
+          <button class="sat-check on" data-chk aria-label="Checkbox"><i class="fa-solid fa-check ico"></i></button>
+        </div>
+        <!-- Progress -->
+        <div class="p-6 rounded-2xl" style="background:var(--card);border:1px solid var(--border)">
+          <div class="flex items-center justify-between mb-5">
+            <div><p class="font-500 text-lg">Shimmer Progress</p><p style="color:var(--muted);font-size:14px">Gradient sweep with staggered fill</p></div>
+            <span class="font-display font-700 text-2xl" id="pVal" style="color:var(--accent)">0%</span>
+          </div>
+          <div class="sat-progress"><div class="bar" id="pBar" style="width:0%"></div></div>
+          <button class="replay-btn mt-5" id="replayBtn">Replay Animation</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stagger List -->
+  <section class="py-28 md:py-36 px-6">
+    <div class="max-w-4xl mx-auto">
+      <p class="slabel mb-4">04 — Cascading Motion</p>
+      <h2 class="font-display text-3xl md:text-5xl font-700 mb-14 leading-tight">Elements that<br>fall into place</h2>
+      <div class="space-y-4" id="stagList">
+        <div class="stag p-5 rounded-xl flex items-center gap-4" style="background:var(--card);border:1px solid var(--border);transition-delay:0ms">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-700 flex-shrink-0" style="background:var(--accent);color:#fff">01</div>
+          <p>Timing creates rhythm and anticipation in the user's mind</p>
+        </div>
+        <div class="stag p-5 rounded-xl flex items-center gap-4" style="background:var(--card);border:1px solid var(--border);transition-delay:80ms">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-700 flex-shrink-0" style="background:var(--accent2);color:#fff">02</div>
+          <p>Staggered delays guide attention naturally through content</p>
+        </div>
+        <div class="stag p-5 rounded-xl flex items-center gap-4" style="background:var(--card);border:1px solid var(--border);transition-delay:160ms">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-700 flex-shrink-0" style="background:var(--accent3);color:#000">03</div>
+          <p>Easing curves make movement feel organic and intentional</p>
+        </div>
+        <div class="stag p-5 rounded-xl flex items-center gap-4" style="background:var(--card);border:1px solid var(--border);transition-delay:240ms">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-700 flex-shrink-0" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff">04</div>
+          <p>Combined together, they create a sense of craft and care</p>
+        </div>
+        <div class="stag p-5 rounded-xl flex items-center gap-4" style="background:var(--card);border:1px solid var(--border);transition-delay:320ms">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-700 flex-shrink-0" style="background:linear-gradient(135deg,var(--accent2),var(--accent3));color:#000">05</div>
+          <p>The result: interfaces that feel alive and responsive</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="py-16 px-6 text-center" style="color:var(--muted)">
+    <p class="text-sm mb-2">Click anywhere for a satisfying ripple burst</p>
+    <p class="text-xs opacity-50">Built with spring physics and cubic beziers</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============ CURSOR ============ */
+var cDot = document.getElementById('cDot');
+var mx = window.innerWidth/2, my = window.innerHeight/2;
+var cx = mx, cy = my;
+var isTouch = 'ontouchstart' in window;
+
+if(isTouch){ cDot.style.display='none'; }
+
+document.addEventListener('mousemove',function(e){ mx=e.clientX; my=e.clientY; });
+document.addEventListener('touchmove',function(e){ mx=e.touches[0].clientX; my=e.touches[0].clientY; },{passive:true});
+document.addEventListener('touchstart',function(e){ mx=e.touches[0].clientX; my=e.touches[0].clientY; },{passive:true});
+
+/* Hover class on interactive elements */
+var hoverEls = document.querySelectorAll('button,a,input,[data-mag],[data-tilt]');
+hoverEls.forEach(function(el){
+  el.addEventListener('mouseenter',function(){ cDot.classList.add('hover'); });
+  el.addEventListener('mouseleave',function(){ cDot.classList.remove('hover'); });
+});
+
+function tickCursor(){
+  cx += (mx-cx)*0.18;
+  cy += (my-cy)*0.18;
+  cDot.style.left = cx+'px';
+  cDot.style.top = cy+'px';
+  requestAnimationFrame(tickCursor);
+}
+tickCursor();
+
+/* ============ CANVAS BLOB ============ */
+var canvas = document.getElementById('blobCanvas');
+var ctx = canvas.getContext('2d');
+var dpr = 1;
+
+function resizeCanvas(){
+  dpr = window.devicePixelRatio||1;
+  canvas.width = window.innerWidth*dpr;
+  canvas.height = window.innerHeight*dpr;
+  canvas.style.width = window.innerWidth+'px';
+  canvas.style.height = window.innerHeight+'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+/* Trail spring system */
+var TCOUNT = 10;
+var trail = [];
+for(var i=0;i<TCOUNT;i++) trail.push({x:mx,y:my,vx:0,vy:0});
+
+var SPRING = 0.1, DAMP = 0.8;
+var time = 0;
+
+function tickTrail(){
+  /* Head follows mouse */
+  trail[0].vx += (mx - trail[0].x)*SPRING;
+  trail[0].vy += (my - trail[0].y)*SPRING;
+  trail[0].vx *= DAMP;
+  trail[0].vy *= DAMP;
+  trail[0].x += trail[0].vx;
+  trail[0].y += trail[0].vy;
+  /* Others follow previous */
+  for(var i=1;i<TCOUNT;i++){
+    var s = Math.max(0.015, SPRING*(1 - i*0.07));
+    var d = Math.max(0.4, DAMP*(1 - i*0.025));
+    trail[i].vx += (trail[i-1].x - trail[i].x)*s;
+    trail[i].vy += (trail[i-1].y - trail[i].y)*s;
+    trail[i].vx *= d;
+    trail[i].vy *= d;
+    trail[i].x += trail[i].vx;
+    trail[i].y += trail[i].vy;
+  }
+}
+
+/* Click particles */
+var particles = [];
+var MAX_P = 250;
+
+document.addEventListener('click',function(e){
+  /* DOM ripple */
+  var rip = document.createElement('div');
+  rip.className='click-rip';
+  rip.style.left=e.clientX+'px';
+  rip.style.top=e.clientY+'px';
+  document.body.appendChild(rip);
+  setTimeout(function(){ rip.remove(); },750);
+
+  /* Second ripple delayed */
+  var rip2 = document.createElement('div');
+  rip2.className='click-rip';
+  rip2.style.left=e.clientX+'px';
+  rip2.style.top=e.clientY+'px';
+  rip2.style.borderColor='var(--accent2)';
+  rip2.style.animationDelay='0.1s';
+  document.body.appendChild(rip2);
+  setTimeout(function(){ rip2.remove(); },850);
+
+  /* Canvas particles */
+  var count = 22 + Math.floor(Math.random()*12);
+  for(var i=0;i<count&&particles.length<MAX_P;i++){
+    var angle = (Math.PI*2*i)/count + (Math.random()-0.5)*0.6;
+    var speed = 2.5 + Math.random()*5.5;
+    particles.push({
+      x:e.clientX, y:e.clientY,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed,
+      life:1,
+      decay:0.012+Math.random()*0.018,
+      size:2+Math.random()*4.5,
+      hueOff:Math.random()*50-25
+    });
+  }
+});
+
+/* Draw wobbly blob shape */
+function wobblyPath(x,y,r,t){
+  ctx.beginPath();
+  var pts = 72;
+  for(var i=0;i<=pts;i++){
+    var a = (i/pts)*Math.PI*2;
+    var w = Math.sin(a*3+t*2.2)*10 + Math.sin(a*5+t*3.1)*5 + Math.sin(a*7+t*1.7)*3;
+    var rr = Math.max(1, r+w);
+    var px = x+Math.cos(a)*rr;
+    var py = y+Math.sin(a)*rr;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+}
+
+function drawCanvas(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+
+  tickTrail();
+  time += 0.016;
+
+  /* Speed of head for color shift */
+  var speed = Math.sqrt(trail[0].vx*trail[0].vx + trail[0].vy*trail[0].vy);
+  var sn = Math.min(1, speed/18);
+
+  /* Draw trail with additive blending */
+  ctx.globalCompositeOperation = 'lighter';
+
+  for(var i=TCOUNT-1;i>=0;i--){
+    var t = trail[i];
+    var prog = 1 - i/TCOUNT;
+    var radius = Math.max(1, 70*prog*prog);
+    var alpha = 0.06*prog*prog;
+
+    /* Color: pink when slow, gold when fast */
+    var r = 255;
+    var g = Math.round(60 + sn*140 + prog*30);
+    var b = Math.round(111 - sn*90 - prog*40);
+
+    var grad = ctx.createRadialGradient(t.x,t.y,0,t.x,t.y,radius);
+    grad.addColorStop(0, 'rgba('+r+','+g+','+b+','+alpha+')');
+    grad.addColorStop(1, 'rgba('+r+','+g+','+b+',0)');
+    ctx.beginPath();
+    ctx.arc(t.x,t.y,radius,0,Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  /* Main wobbly blob head */
+  var head = trail[0];
+  var mainR = 55;
+  var cr = 255, cg = Math.round(60+sn*160), cb = Math.round(111-sn*100);
+
+  /* Outer glow */
+  wobblyPath(head.x, head.y, mainR+20, time);
+  var og = ctx.createRadialGradient(head.x,head.y,0,head.x,head.y,mainR+25);
+  og.addColorStop(0, 'rgba('+cr+','+cg+','+cb+',0.1)');
+  og.addColorStop(0.6, 'rgba('+cr+','+cg+','+cb+',0.03)');
+  og.addColorStop(1, 'rgba('+cr+','+cg+','+cb+',0)');
+  ctx.fillStyle = og;
+  ctx.fill();
+
+  /* Inner core */
+  wobblyPath(head.x, head.y, mainR, time);
+  var ig = ctx.createRadialGradient(head.x,head.y,0,head.x,head.y,mainR);
+  ig.addColorStop(0, 'rgba(255,255,255,0.06)');
+  ig.addColorStop(0.3, 'rgba('+cr+','+cg+','+cb+',0.08)');
+  ig.addColorStop(1, 'rgba('+cr+','+cg+','+cb+',0)');
+  ctx.fillStyle = ig;
+  ctx.fill();
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  /* Particles */
+  for(var i=particles.length-1;i>=0;i--){
+    var p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.12;
+    p.vx *= 0.985;
+    p.life -= p.decay;
+    if(p.life<=0){ particles.splice(i,1); continue; }
+
+    var sz = Math.max(0.5, p.size*p.life);
+    var pr=255, pg=Math.round(Math.min(255,Math.max(0,80+p.hueOff*2+sn*80))), pb=Math.round(Math.min(255,Math.max(0,60+p.hueOff)));
+
+    /* Soft glow around particle */
+    var pgr = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,sz*2.5);
+    pgr.addColorStop(0, 'rgba('+pr+','+pg+','+pb+','+(p.life*0.8)+')');
+    pgr.addColorStop(0.4, 'rgba('+pr+','+pg+','+pb+','+(p.life*0.3)+')');
+    pgr.addColorStop(1, 'rgba('+pr+','+pg+','+pb+',0)');
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,sz*2.5,0,Math.PI*2);
+    ctx.fillStyle = pgr;
+    ctx.fill();
+
+    /* Hard core */
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,sz*0.6,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,'+(p.life*0.9)+')';
+    ctx.fill();
+  }
+
+  requestAnimationFrame(drawCanvas);
+}
+drawCanvas();
+
+/* ============ MAGNETIC BUTTONS ============ */
+document.querySelectorAll('[data-mag]').forEach(function(btn){
+  btn.addEventListener('mousemove',function(e){
+    var r = btn.getBoundingClientRect();
+    var bcx = r.left+r.width/2, bcy = r.top+r.height/2;
+    var dx = e.clientX-bcx, dy = e.clientY-bcy;
+    var dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist<220){
+      var str = (1-dist/220)*0.45;
+      btn.style.transform = 'translate('+dx*str+'px,'+dy*str+'px)';
+    }
+    /* Move fill origin to cursor */
+    var fill = btn.querySelector('.fill');
+    fill.style.left = (e.clientX-r.left)+'px';
+    fill.style.top = (e.clientY-r.top)+'px';
+  });
+  btn.addEventListener('mouseleave',function(){
+    btn.style.transition='transform .55s cubic-bezier(.34,1.56,.64,1)';
+    btn.style.transform='translate(0,0)';
+    setTimeout(function(){ btn.style.transition=''; },560);
+  });
+});
+
+/* ============ 3D TILT CARDS ============ */
+document.querySelectorAll('[data-tilt]').forEach(function(card){
+  card.addEventListener('mousemove',function(e){
+    var r = card.getBoundingClientRect();
+    var nx = (e.clientX-r.left)/r.width;
+    var ny = (e.clientY-r.top)/r.height;
+    var rx = (ny-0.5)*-18;
+    var ry = (nx-0.5)*18;
+    card.style.transform = 'perspective(800px) rotateX('+rx+'deg) rotateY('+ry+'deg) scale3d(1.03,1.03,1.03)';
+    card.style.boxShadow = (-ry*1.5)+'px '+(rx*1.5)+'px 50px rgba(0,0,0,0.35)';
+    var sh = card.querySelector('.shine');
+    if(sh){ sh.style.setProperty('--mx',(nx*100)+'%'); sh.style.setProperty('--my',(ny*100)+'%'); }
+  });
+  card.addEventListener('mouseleave',function(){
+    card.style.transition='transform .6s cubic-bezier(.19,1,.22,1),box-shadow .6s';
+    card.style.transform='perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+    card.style.boxShadow='none';
+    setTimeout(function(){ card.style.transition='transform .08s ease-out,box-shadow .3s'; },620);
+  });
+});
+
+/* ============ TOGGLE ============ */
+document.querySelectorAll('[data-tog]').forEach(function(t){
+  t.addEventListener('click',function(){ t.classList.toggle('on'); });
+});
+
+/* ============ CHECKBOX ============ */
+document.querySelectorAll('[data-chk]').forEach(function(c){
+  c.addEventListener('click',function(){ c.classList.toggle('on'); });
+});
+
+/* ============ RANGE SLIDER ============ */
+var sRange = document.getElementById('sRange');
+var sVal = document.getElementById('sVal');
+if(sRange){
+  sRange.addEventListener('input',function(){
+    sVal.textContent = sRange.value;
+    /* Dynamic glow color based on value */
+    var v = sRange.value/100;
+    var r = 255;
+    var g = Math.round(60 + v*140);
+    var b = Math.round(111 - v*90);
+    sRange.style.setProperty('--glow-color','rgb('+r+','+g+','+b+')');
+  });
+}
+
+/* ============ PROGRESS BAR ============ */
+var pBar = document.getElementById('pBar');
+var pVal = document.getElementById('pVal');
+var replayBtn = document.getElementById('replayBtn');
+var progressStarted = false;
+
+function animateProgress(){
+  var prog = 0;
+  pBar.style.width = '0%';
+  pVal.textContent = '0%';
+  clearInterval(animateProgress._iv);
+  animateProgress._iv = setInterval(function(){
+    prog += 1.2 + Math.random()*3.5;
+    if(prog>=100){ prog=100; clearInterval(animateProgress._iv); }
+    pBar.style.width = Math.round(prog)+'%';
+    pVal.textContent = Math.round(prog)+'%';
+  },90);
+}
+
+var microObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if(en.isIntersecting && !progressStarted){
+      progressStarted = true;
+      setTimeout(animateProgress, 400);
+      microObs.unobserve(en.target);
+    }
+  });
+},{threshold:0.3});
+
+var microSec = document.getElementById('microSection');
+if(microSec) microObs.observe(microSec);
+
+if(replayBtn) replayBtn.addEventListener('click', animateProgress);
+
+/* ============ TEXT SCRAMBLE ============ */
+var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&';
+document.querySelectorAll('.scramble').forEach(function(el){
+  var orig = el.dataset.text;
+  var busy = false;
+
+  function scramble(){
+    if(busy) return;
+    busy = true;
+    var iter = 0;
+    var maxIter = orig.length * 3;
+    var iv = setInterval(function(){
+      el.textContent = orig.split('').map(function(ch,idx){
+        if(idx < Math.floor(iter/3)) return ch;
+        if(ch===' ') return ' ';
+        return chars[Math.floor(Math.random()*chars.length)];
+      }).join('');
+      iter++;
+      if(iter>=maxIter){
+        el.textContent = orig;
+        clearInterval(iv);
+        busy = false;
+      }
+    },28);
+  }
+
+  el.addEventListener('mouseenter', scramble);
+  setTimeout(scramble, 600);
+});
+
+/* ============ STAGGER LIST ============ */
+var stagObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if(en.isIntersecting) en.target.classList.add('vis');
+  });
+},{threshold:0.08});
+
+document.querySelectorAll('.stag').forEach(function(el){ stagObs.observe(el); });
+
+/* ============ BG FLOATING PARTICLES ============ */
+for(var i=0;i<35;i++){
+  var fp = document.createElement('div');
+  fp.className='fp';
+  var sz = 1+Math.random()*2.5;
+  fp.style.width = sz+'px';
+  fp.style.height = sz+'px';
+  fp.style.left = Math.random()*100+'vw';
+  fp.style.top = Math.random()*100+'vh';
+  fp.style.background = 'rgba(255,255,255,'+(0.04+Math.random()*0.1)+')';
+  var dur = 25+Math.random()*45;
+  fp.style.animation = 'fpf '+dur+'s '+(Math.random()*-dur)+'s infinite ease-in-out';
+  document.body.appendChild(fp);
+}
+
+})();
+</script>
+</body>
+</html>
