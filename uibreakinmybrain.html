@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>This UI Is Breaking My Brain</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #080808;
+    --fg: #e8e8e8;
+    --muted: #555;
+    --accent: #00ff88;
+    --accent2: #ff0055;
+    --card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --glow-green: 0 0 40px rgba(0,255,136,0.15);
+    --glow-pink: 0 0 40px rgba(255,0,85,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Mono', monospace;
+    cursor: none;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Custom cursor */
+  .cursor-dot {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10000;
+    transition: transform 0.1s ease;
+    mix-blend-mode: difference;
+  }
+
+  .cursor-ring {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10000;
+    transition: width 0.3s, height 0.3s, border-color 0.3s;
+    mix-blend-mode: difference;
+  }
+
+  .cursor-ring.hover {
+    width: 60px;
+    height: 60px;
+    border-color: var(--accent2);
+  }
+
+  /* Background canvas */
+  #bgCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  /* Noise overlay */
+  .noise {
+    position: fixed;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: noiseMove 0.5s steps(10) infinite;
+  }
+
+  @keyframes noiseMove {
+    0% { transform: translate(0,0); }
+    10% { transform: translate(-5%,-5%); }
+    20% { transform: translate(3%,8%); }
+    30% { transform: translate(-8%,2%); }
+    40% { transform: translate(6%,-3%); }
+    50% { transform: translate(-2%,6%); }
+    60% { transform: translate(8%,-8%); }
+    70% { transform: translate(-4%,4%); }
+    80% { transform: translate(2%,-6%); }
+    90% { transform: translate(-6%,8%); }
+    100% { transform: translate(5%,0); }
+  }
+
+  /* Main content */
+  .content {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HERO SECTION */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 10vw, 9rem);
+    line-height: 0.9;
+    text-align: center;
+    position: relative;
+  }
+
+  .hero-title .line1 {
+    display: block;
+    color: var(--fg);
+    text-shadow: 0 0 80px rgba(0,255,136,0.1);
+  }
+
+  .hero-title .line2 {
+    display: block;
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--accent);
+    animation: strokeShift 4s ease-in-out infinite;
+  }
+
+  @keyframes strokeShift {
+    0%, 100% { -webkit-text-stroke-color: var(--accent); transform: translateX(0); }
+    50% { -webkit-text-stroke-color: var(--accent2); transform: translateX(8px); }
+  }
+
+  .hero-sub {
+    margin-top: 2rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  .hero-sub::before, .hero-sub::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40px;
+    height: 1px;
+    background: var(--muted);
+  }
+  .hero-sub::before { right: calc(100% + 16px); }
+  .hero-sub::after { left: calc(100% + 16px); }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    animation: floatDown 2s ease-in-out infinite;
+  }
+
+  .scroll-hint i {
+    font-size: 1.2rem;
+    color: var(--accent);
+  }
+
+  @keyframes floatDown {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(8px); opacity: 0.5; }
+  }
+
+  /* GLITCH BAR */
+  .glitch-bar {
+    width: 100%;
+    height: 2px;
+    background: var(--accent);
+    position: relative;
+    overflow: hidden;
+    opacity: 0.4;
+  }
+
+  .glitch-bar::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100%;
+    background: var(--accent2);
+    animation: glitchSlide 3s linear infinite;
+  }
+
+  @keyframes glitchSlide {
+    0% { left: -100px; }
+    100% { left: calc(100% + 100px); }
+  }
+
+  /* IMPOSSIBLE CARDS SECTION */
+  .section {
+    padding: 6rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .section-heading {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1.1;
+    margin-bottom: 3rem;
+    max-width: 600px;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2px;
+    perspective: 1200px;
+  }
+
+  .impossible-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 2.5rem 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.4s ease;
+    transform-style: preserve-3d;
+  }
+
+  .impossible-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(0,255,136,0.03), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .impossible-card:hover::before { opacity: 1; }
+
+  .impossible-card:hover {
+    box-shadow: var(--glow-green);
+  }
+
+  .card-number {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 4rem;
+    color: rgba(255,255,255,0.03);
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    line-height: 1;
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    color: var(--accent);
+    font-size: 1.1rem;
+    position: relative;
+    z-index: 1;
+    transition: background 0.3s, color 0.3s, transform 0.3s;
+  }
+
+  .impossible-card:hover .card-icon {
+    background: var(--accent);
+    color: var(--bg);
+    transform: rotate(45deg) scale(1.1);
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.7;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* INVERSION SECTION */
+  .inversion-section {
+    padding: 6rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .inversion-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(255,0,85,0.05), transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(0,255,136,0.05), transparent 60%);
+  }
+
+  .inversion-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .inversion-text .section-label { justify-content: flex-start; }
+
+  .inversion-text .section-heading {
+    margin-bottom: 1.5rem;
+  }
+
+  .inversion-text p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    max-width: 440px;
+  }
+
+  .inversion-visual {
+    position: relative;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Impossible triangle */
+  .penrose-triangle {
+    width: 200px;
+    height: 200px;
+    position: relative;
+    animation: penroseSpin 20s linear infinite;
+  }
+
+  @keyframes penroseSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .penrose-triangle svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 30px rgba(0,255,136,0.2));
+  }
+
+  /* Floating orbs around penrose */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    animation: orbFloat 6s ease-in-out infinite;
+  }
+
+  .orb-1 {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    top: 20%; left: 15%;
+    animation-delay: 0s;
+    box-shadow: 0 0 20px var(--accent);
+  }
+
+  .orb-2 {
+    width: 5px; height: 5px;
+    background: var(--accent2);
+    top: 70%; right: 10%;
+    animation-delay: -2s;
+    box-shadow: 0 0 20px var(--accent2);
+  }
+
+  .orb-3 {
+    width: 6px; height: 6px;
+    background: var(--fg);
+    bottom: 15%; left: 25%;
+    animation-delay: -4s;
+    box-shadow: 0 0 15px var(--fg);
+  }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(15px, -20px) scale(1.3); }
+    66% { transform: translate(-10px, 15px) scale(0.7); }
+  }
+
+  /* MIRROR TEXT SECTION */
+  .mirror-section {
+    padding: 8rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mirror-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.5rem, 8vw, 7rem);
+    line-height: 1;
+    position: relative;
+    display: inline-block;
+  }
+
+  .mirror-text .top {
+    display: block;
+    color: var(--fg);
+    position: relative;
+  }
+
+  .mirror-text .bottom {
+    display: block;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.08);
+    transform: scaleY(-1);
+    transform-origin: top center;
+    filter: blur(2px);
+    margin-top: -0.05em;
+    user-select: none;
+  }
+
+  /* STATS WITH PARALLAX */
+  .stats-section {
+    padding: 6rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+  }
+
+  .stat-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+
+  .stat-block:hover {
+    background: rgba(255,255,255,0.05);
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    position: relative;
+  }
+
+  .stat-value .percent {
+    font-size: 0.5em;
+    color: var(--accent2);
+    vertical-align: super;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .stat-bar {
+    margin-top: 1rem;
+    height: 2px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 1.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  /* INTERACTIVE CHAOS SECTION */
+  .chaos-section {
+    padding: 6rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .chaos-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2px;
+    min-height: 500px;
+  }
+
+  .chaos-viewport {
+    background: var(--card);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  #chaosCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .chaos-controls {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .control-group label {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .control-group input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+  }
+
+  .control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,255,136,0.4);
+  }
+
+  .control-value {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-top: 0.25rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chaos-btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: auto;
+  }
+
+  .chaos-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: var(--glow-green);
+  }
+
+  /* MARQUEE */
+  .marquee-wrap {
+    overflow: hidden;
+    padding: 2rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marqueeScroll 30s linear infinite;
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+
+  .marquee-item {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    white-space: nowrap;
+    padding: 0 2rem;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.1);
+    transition: -webkit-text-stroke-color 0.3s, color 0.3s;
+  }
+
+  .marquee-item:hover {
+    -webkit-text-stroke-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .marquee-item .sep {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent2);
+    border-radius: 50%;
+    margin: 0 1.5rem;
+    vertical-align: middle;
+    opacity: 0.5;
+  }
+
+  @keyframes marqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .footer-text {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+  }
+
+  .footer-text a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .footer-text a:hover { color: var(--accent2); }
+
+  /* GLITCH EFFECT ON SCROLL */
+  .glitch-on-scroll {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.05s;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,136,0.02) 2px,
+      rgba(0,255,136,0.02) 4px
+    );
+  }
+
+  .glitch-on-scroll.active {
+    opacity: 1;
+    animation: glitchFlash 0.15s steps(3);
+  }
+
+  @keyframes glitchFlash {
+    0% { background-position: 0 0; }
+    33% { background-position: 10px -5px; }
+    66% { background-position: -5px 10px; }
+    100% { background-position: 0 0; }
+  }
+
+  /* SCROLL REVEAL */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--fg);
+    color: var(--bg);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    z-index: 10001;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .inversion-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .inversion-visual { height: 280px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .chaos-container { grid-template-columns: 1fr; }
+    .chaos-viewport { min-height: 300px; }
+    body { cursor: auto; }
+    .cursor-dot, .cursor-ring { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="noise"></div>
+<canvas id="bgCanvas"></canvas>
+<div class="glitch-on-scroll" id="glitchOverlay"></div>
+
+<div class="toast" id="toast"></div>
+
+<div class="content">
+
+  <!-- HERO -->
+  <header class="hero">
+    <h1 class="hero-title">
+      <span class="line1">This UI</span>
+      <span class="line2">Breaks Brains</span>
+    </h1>
+    <p class="hero-sub">Perception is not reality</p>
+    <div class="scroll-hint">
+      <span>Scroll to lose your mind</span>
+      <i class="fas fa-chevron-down"></i>
+    </div>
+  </header>
+
+  <div class="glitch-bar"></div>
+
+  <!-- IMPOSSIBLE CARDS -->
+  <section class="section">
+    <div class="section-label reveal">Paradoxes</div>
+    <h2 class="section-heading reveal">Things that shouldn't work but do</h2>
+    <div class="cards-grid">
+      <div class="impossible-card reveal" data-tilt>
+        <span class="card-number">01</span>
+        <div class="card-icon"><i class="fas fa-infinity"></i></div>
+        <h3 class="card-title">Recursive Layouts</h3>
+        <p class="card-desc">A grid inside a grid inside a grid. Each layer shifts the context until you forget which dimension you started in.</p>
+      </div>
+      <div class="impossible-card reveal" data-tilt>
+        <span class="card-number">02</span>
+        <div class="card-icon"><i class="fas fa-eye-slash"></i></div>
+        <h3 class="card-title">Invisible Hierarchy</h3>
+        <p class="card-desc">Visual weight that contradicts DOM order. Your eyes follow one path while the screen reader follows another entirely.</p>
+      </div>
+      <div class="impossible-card reveal" data-tilt>
+        <span class="card-number">03</span>
+        <div class="card-icon"><i class="fas fa-rotate"></i></div>
+        <h3 class="card-title">Paradox Alignment</h3>
+        <p class="card-desc">Elements centered in a system that's itself off-center. The balance feels right until you measure it.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="glitch-bar"></div>
+
+  <!-- INVERSION SECTION -->
+  <section class="inversion-section">
+    <div class="inversion-grid">
+      <div class="inversion-text">
+        <div class="section-label reveal">Impossible Geometry</div>
+        <h2 class="section-heading reveal">The Penrose triangle rotates forever but never changes angle</h2>
+        <p class="reveal">Every edge connects logically. Every corner makes sense locally. But the whole? The whole contradicts itself at every seam. This is what bad UI feels like — each component is fine, but together they form an impossible object.</p>
+        <p class="reveal">Good design is when the impossible becomes invisible. Bad design is when the possible feels impossible.</p>
+      </div>
+      <div class="inversion-visual reveal">
+        <div class="penrose-triangle">
+          <svg viewBox="0 0 200 200" fill="none">
+            <path d="M100 20 L180 140 L20 140 Z" stroke="var(--accent)" stroke-width="2" fill="none"/>
+            <path d="M100 60 L150 130 L50 130 Z" stroke="var(--accent2)" stroke-width="1.5" fill="none" opacity="0.6"/>
+            <path d="M100 90 L125 125 L75 125 Z" stroke="var(--fg)" stroke-width="1" fill="none" opacity="0.3"/>
+            <!-- Cross lines for impossible effect -->
+            <line x1="100" y1="20" x2="100" y2="60" stroke="var(--accent)" stroke-width="1.5" opacity="0.4"/>
+            <line x1="180" y1="140" x2="150" y2="130" stroke="var(--accent)" stroke-width="1.5" opacity="0.4"/>
+            <line x1="20" y1="140" x2="50" y2="130" stroke="var(--accent)" stroke-width="1.5" opacity="0.4"/>
+          </svg>
+        </div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MIRROR TEXT -->
+  <section class="mirror-section reveal">
+    <div class="mirror-text">
+      <span class="top">NOTHING IS</span>
+      <span class="bottom">NOTHING IS</span>
+    </div>
+  </section>
+
+  <div class="glitch-bar"></div>
+
+  <!-- STATS -->
+  <section class="stats-section">
+    <div class="section-label reveal">By the numbers</div>
+    <h2 class="section-heading reveal">The cognitive toll of bad interfaces</h2>
+    <div class="stats-grid">
+      <div class="stat-block reveal">
+        <div class="stat-value" data-count="73"><span class="percent">%</span></div>
+        <div class="stat-label">Of users leave within 3s</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-width="73"></div></div>
+      </div>
+      <div class="stat-block reveal">
+        <div class="stat-value" data-count="4.2">x</div>
+        <div class="stat-label">More cognitive load</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-width="84"></div></div>
+      </div>
+      <div class="stat-block reveal">
+        <div class="stat-value" data-count="89"><span class="percent">%</span></div>
+        <div class="stat-label">Never return after bad UX</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-width="89"></div></div>
+      </div>
+      <div class="stat-block reveal">
+        <div class="stat-value" data-count="12">ms</div>
+        <div class="stat-label">To form a first impression</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-width="24"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span class="marquee-item">Inconsistent Spacing <span class="sep"></span></span>
+      <span class="marquee-item">Misaligned Grids <span class="sep"></span></span>
+      <span class="marquee-item">Confusing Hierarchy <span class="sep"></span></span>
+      <span class="marquee-item">Arbitrary Colors <span class="sep"></span></span>
+      <span class="marquee-item">Hidden Navigation <span class="sep"></span></span>
+      <span class="marquee-item">Ambiguous Affordances <span class="sep"></span></span>
+      <span class="marquee-item">Inconsistent Spacing <span class="sep"></span></span>
+      <span class="marquee-item">Misaligned Grids <span class="sep"></span></span>
+      <span class="marquee-item">Confusing Hierarchy <span class="sep"></span></span>
+      <span class="marquee-item">Arbitrary Colors <span class="sep"></span></span>
+      <span class="marquee-item">Hidden Navigation <span class="sep"></span></span>
+      <span class="marquee-item">Ambiguous Affordances <span class="sep"></span></span>
+    </div>
+  </div>
+
+  <!-- CHAOS PLAYGROUND -->
+  <section class="chaos-section">
+    <div class="section-label reveal">Interactive</div>
+    <h2 class="section-heading reveal">Create your own brain-breaking pattern</h2>
+    <div class="chaos-container reveal">
+      <div class="chaos-viewport">
+        <canvas id="chaosCanvas"></canvas>
+      </div>
+      <div class="chaos-controls">
+        <div class="control-group">
+          <label>Frequency</label>
+          <input type="range" id="freqSlider" min="1" max="20" value="6" step="0.5">
+          <div class="control-value" id="freqValue">6.0</div>
+        </div>
+        <div class="control-group">
+          <label>Amplitude</label>
+          <input type="range" id="ampSlider" min="10" max="150" value="60">
+          <div class="control-value" id="ampValue">60</div>
+        </div>
+        <div class="control-group">
+          <label>Layers</label>
+          <input type="range" id="layerSlider" min="1" max="12" value="5">
+          <div class="control-value" id="layerValue">5</div>
+        </div>
+        <div class="control-group">
+          <label>Speed</label>
+          <input type="range" id="speedSlider" min="0.1" max="5" value="1" step="0.1">
+          <div class="control-value" id="speedValue">1.0</div>
+        </div>
+        <button class="chaos-btn" id="chaosBtn">Randomize</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="glitch-bar"></div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p class="footer-text">Designed to break your brain, not your browser &mdash; <a href="#">view source</a></p>
+  </footer>
+
+</div>
+
+<script>
+  // === CUSTOM CURSOR ===
+  const dot = document.getElementById('cursorDot');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX - 4 + 'px';
+    dot.style.top = mouseY - 4 + 'px';
+  });
+
+  // Smooth ring follow
+  function animateCursor() {
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+    ring.style.left = ringX - 20 + 'px';
+    ring.style.top = ringY - 20 + 'px';
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // Hover effect on interactive elements
+  document.querySelectorAll('a, button, .impossible-card, .marquee-item, input').forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+  });
+
+  // === BACKGROUND CANVAS - Flowing particles ===
+  const bgCanvas = document.getElementById('bgCanvas');
+  const bgCtx = bgCanvas.getContext('2d');
+  let bgW, bgH;
+
+  function resizeBg() {
+    bgW = bgCanvas.width = window.innerWidth;
+    bgH = bgCanvas.height = window.innerHeight;
+  }
+  resizeBg();
+  window.addEventListener('resize', resizeBg);
+
+  // Particle system
+  const particles = [];
+  const PARTICLE_COUNT = 80;
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * bgW;
+      this.y = Math.random() * bgH;
+      this.vx = (Math.random() - 0.5) * 0.3;
+      this.vy = (Math.random() - 0.5) * 0.3;
+      this.radius = Math.random() * 1.5 + 0.5;
+      this.alpha = Math.random() * 0.3 + 0.1;
+      this.color = Math.random() > 0.8 ? '#ff0055' : '#00ff88';
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Mouse influence
+      const dx = mouseX - this.x;
+      const dy = mouseY - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 200) {
+        const force = (200 - dist) / 200 * 0.02;
+        this.vx -= dx * force * 0.01;
+        this.vy -= dy * force * 0.01;
+      }
+
+      // Damping
+      this.vx *= 0.999;
+      this.vy *= 0.999;
+
+      // Wrap
+      if (this.x < -10) this.x = bgW + 10;
+      if (this.x > bgW + 10) this.x = -10;
+      if (this.y < -10) this.y = bgH + 10;
+      if (this.y > bgH + 10) this.y = -10;
+    }
+    draw(ctx) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.1, this.radius), 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = this.alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  function drawConnections(ctx) {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0, 255, 136, ${0.06 * (1 - dist / 120)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animateBg() {
+    bgCtx.clearRect(0, 0, bgW, bgH);
+    particles.forEach(p => {
+      p.update();
+      p.draw(bgCtx);
+    });
+    drawConnections(bgCtx);
+    requestAnimationFrame(animateBg);
+  }
+  animateBg();
+
+  // === SCROLL REVEAL ===
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+  reveals.forEach(el => observer.observe(el));
+
+  // === GLITCH ON SCROLL ===
+  const glitchOverlay = document.getElementById('glitchOverlay');
+  let lastScrollY = 0;
+  let glitchTimeout;
+
+  window.addEventListener('scroll', () => {
+    const delta = Math.abs(window.scrollY - lastScrollY);
+    if (delta > 80) {
+      glitchOverlay.classList.add('active');
+      clearTimeout(glitchTimeout);
+      glitchTimeout = setTimeout(() => {
+        glitchOverlay.classList.remove('active');
+      }, 150);
+    }
+    lastScrollY = window.scrollY;
+  });
+
+  // === STAT COUNTER ANIMATION ===
+  const statValues = document.querySelectorAll('.stat-value[data-count]');
+  const statBars = document.querySelectorAll('.stat-bar-fill');
+
+  const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = parseFloat(el.dataset.count);
+        const suffix = el.querySelector('.percent') ? el.querySelector('.percent').outerHTML : (el.textContent.includes('x') ? 'x' : (el.textContent.includes('ms') ? 'ms' : '%'));
+        let current = 0;
+        const increment = target / 60;
+        const isFloat = target % 1 !== 0;
+
+        function count() {
+          current += increment;
+          if (current >= target) {
+            current = target;
+            el.innerHTML = (isFloat ? current.toFixed(1) : Math.round(current)) + (suffix === 'x' ? 'x' : suffix === 'ms' ? 'ms' : '<span class="percent">%</span>');
+            return;
+          }
+          el.innerHTML = (isFloat ? current.toFixed(1) : Math.round(current)) + (suffix === 'x' ? 'x' : suffix === 'ms' ? 'ms' : '<span class="percent">%</span>');
+          requestAnimationFrame(count);
+        }
+        count();
+        statObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  statValues.forEach(el => statObserver.observe(el));
+
+  // Stat bar fill
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.width = entry.target.dataset.width + '%';
+        barObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  statBars.forEach(el => barObserver.observe(el));
+
+  // === 3D TILT ON CARDS ===
+  document.querySelectorAll('[data-tilt]').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = (y - centerY) / centerY * -8;
+      const rotateY = (x - centerX) / centerX * 8;
+      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale(1)';
+    });
+  });
+
+  // === CHAOS CANVAS - Moire / Interference patterns ===
+  const chaosCanvas = document.getElementById('chaosCanvas');
+  const chaosCtx = chaosCanvas.getContext('2d');
+  let chaosW, chaosH;
+
+  function resizeChaos() {
+    const rect = chaosCanvas.parentElement.getBoundingClientRect();
+    chaosW = chaosCanvas.width = rect.width;
+    chaosH = chaosCanvas.height = rect.height;
+  }
+  resizeChaos();
+  window.addEventListener('resize', resizeChaos);
+
+  const freqSlider = document.getElementById('freqSlider');
+  const ampSlider = document.getElementById('ampSlider');
+  const layerSlider = document.getElementById('layerSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const freqValue = document.getElementById('freqValue');
+  const ampValue = document.getElementById('ampValue');
+  const layerValue = document.getElementById('layerValue');
+  const speedValue = document.getElementById('speedValue');
+  const chaosBtn = document.getElementById('chaosBtn');
+
+  freqSlider.addEventListener('input', () => freqValue.textContent = parseFloat(freqSlider.value).toFixed(1));
+  ampSlider.addEventListener('input', () => ampValue.textContent = ampSlider.value);
+  layerSlider.addEventListener('input', () => layerValue.textContent = layerSlider.value);
+  speedSlider.addEventListener('input', () => speedValue.textContent = parseFloat(speedSlider.value).toFixed(1));
+
+  // Mouse position in chaos canvas
+  let chaosMouseX = 0.5, chaosMouseY = 0.5;
+  chaosCanvas.parentElement.addEventListener('mousemove', (e) => {
+    const rect = chaosCanvas.parentElement.getBoundingClientRect();
+    chaosMouseX = (e.clientX - rect.left) / rect.width;
+    chaosMouseY = (e.clientY - rect.top) / rect.height;
+  });
+
+  let chaosTime = 0;
+
+  function drawChaos() {
+    const freq = parseFloat(freqSlider.value);
+    const amp = parseFloat(ampSlider.value);
+    const layers = parseInt(layerSlider.value);
+    const speed = parseFloat(speedSlider.value);
+
+    chaosTime += 0.016 * speed;
+
+    chaosCtx.fillStyle = 'rgba(8, 8, 8, 0.15)';
+    chaosCtx.fillRect(0, 0, chaosW, chaosH);
+
+    const cx = chaosW / 2;
+    const cy = chaosH / 2;
+
+    for (let l = 0; l < layers; l++) {
+      const offset = (l / layers) * Math.PI * 2;
+      const hue = (l / layers) * 60 + 140; // green to cyan range
+      const alpha = 0.15 + (l / layers) * 0.15;
+
+      chaosCtx.beginPath();
+      for (let i = 0; i <= 360; i++) {
+        const angle = (i / 360) * Math.PI * 2;
+        const r = amp * Math.sin(freq * angle + chaosTime + offset) *
+                  Math.cos(freq * 0.5 * angle - chaosTime * 0.7 + offset) +
+                  amp * 0.3 * Math.sin(freq * 2 * angle + chaosTime * 1.3 + l);
+
+        // Mouse influence
+        const mouseInfluence = Math.sin(angle * 3 + chaosTime) * 30 * (chaosMouseX - 0.5);
+        const mouseInfluence2 = Math.cos(angle * 2 - chaosTime * 0.5) * 20 * (chaosMouseY - 0.5);
+
+        const finalR = Math.max(1, r + mouseInfluence + mouseInfluence2 + 50 + l * 15);
+        const x = cx + Math.cos(angle) * finalR;
+        const y = cy + Math.sin(angle) * finalR;
+
+        if (i === 0) chaosCtx.moveTo(x, y);
+        else chaosCtx.lineTo(x, y);
+      }
+      chaosCtx.closePath();
+      chaosCtx.strokeStyle = `hsla(${hue}, 100%, 60%, ${alpha})`;
+      chaosCtx.lineWidth = 1;
+      chaosCtx.stroke();
+    }
+
+    // Center dot
+    chaosCtx.beginPath();
+    chaosCtx.arc(cx + (chaosMouseX - 0.5) * 40, cy + (chaosMouseY - 0.5) * 40, 3, 0, Math.PI * 2);
+    chaosCtx.fillStyle = '#ff0055';
+    chaosCtx.fill();
+
+    requestAnimationFrame(drawChaos);
+  }
+  drawChaos();
+
+  // Randomize button
+  chaosBtn.addEventListener('click', () => {
+    freqSlider.value = (Math.random() * 19 + 1).toFixed(1);
+    ampSlider.value = Math.round(Math.random() * 140 + 10);
+    layerSlider.value = Math.round(Math.random() * 11 + 1);
+    speedSlider.value = (Math.random() * 4.9 + 0.1).toFixed(1);
+
+    freqValue.textContent = parseFloat(freqSlider.value).toFixed(1);
+    ampValue.textContent = ampSlider.value;
+    layerValue.textContent = layerSlider.value;
+    speedValue.textContent = parseFloat(speedSlider.value).toFixed(1);
+
+    showToast('Parameters randomized — good luck making sense of this');
+  });
+
+  // === TOAST ===
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // === HERO PARALLAX ON MOUSE MOVE ===
+  const heroTitle = document.querySelector('.hero-title');
+  document.querySelector('.hero').addEventListener('mousemove', (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    heroTitle.style.transform = `translate(${x * -20}px, ${y * -15}px)`;
+  });
+
+  document.querySelector('.hero').addEventListener('mouseleave', () => {
+    heroTitle.style.transform = 'translate(0, 0)';
+    heroTitle.style.transition = 'transform 0.5s ease';
+    setTimeout(() => heroTitle.style.transition = '', 500);
+  });
+
+  // === VIEW SOURCE LINK ===
+  document.querySelector('.footer-text a').addEventListener('click', (e) => {
+    e.preventDefault();
+    showToast('The source is right here — view page source, brave soul');
+  });
+</script>
+</body>
+</html>

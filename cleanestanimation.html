@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cleanest Animation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --fg: #f0e6d3;
+            --muted: #4a4a4a;
+            --accent: #e8c547;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            cursor: crosshair;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            animation: canvasIn 2s ease-out;
+        }
+
+        @keyframes canvasIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2.5rem 2rem;
+            z-index: 10;
+        }
+
+        .title {
+            font-weight: 200;
+            font-size: clamp(1.2rem, 3.5vw, 2.6rem);
+            color: var(--fg);
+            opacity: 0;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            animation: slideDown 1.8s ease-out 0.5s forwards;
+        }
+
+        .hint {
+            font-weight: 200;
+            font-size: clamp(0.6rem, 1.1vw, 0.8rem);
+            color: var(--muted);
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            opacity: 0;
+            animation: slideUp 1.8s ease-out 1.2s forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-16px); }
+            to   { opacity: 0.55; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 0.7; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            canvas, .title, .hint { animation: none; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div class="overlay">
+        <div class="title">The Cleanest Animation</div>
+        <div class="hint">Move to guide &middot; Click to pulse</div>
+    </div>
+
+    <script>
+    (() => {
+        /* ── Setup ─────────────────────────────────────── */
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let W, H, cx, cy;
+        const mouse = { x: 0, y: 0, tx: 0, ty: 0, active: false };
+        let time = 0;
+        let ripples = [];
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const speedMult = prefersReducedMotion ? 0.2 : 1;
+
+        function resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            cx = W / 2;
+            cy = H / 2;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        mouse.x = mouse.tx = cx;
+        mouse.y = mouse.ty = cy;
+
+        /* ── Input ─────────────────────────────────────── */
+        window.addEventListener('mousemove', e => {
+            mouse.tx = e.clientX;
+            mouse.ty = e.clientY;
+            mouse.active = true;
+        });
+        window.addEventListener('click', e => {
+            ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: Math.min(W, H) * 0.55, alpha: 1 });
+        });
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            mouse.tx = e.touches[0].clientX;
+            mouse.ty = e.touches[0].clientY;
+            mouse.active = true;
+        }, { passive: false });
+        window.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            mouse.tx = t.clientX;
+            mouse.ty = t.clientY;
+            ripples.push({ x: t.clientX, y: t.clientY, r: 0, maxR: Math.min(W, H) * 0.55, alpha: 1 });
+        });
+
+        /* ── Color palette ─────────────────────────────── */
+        const C = {
+            gold:    { r: 232, g: 197, b: 71  },
+            lGold:   { r: 245, g: 215, b: 110 },
+            orange:  { r: 212, g: 117, b: 59  },
+            amber:   { r: 235, g: 170, b: 75  },
+            cream:   { r: 245, g: 235, b: 215 },
+        };
+        function rgba(c, a) { return `rgba(${c.r},${c.g},${c.b},${a})`; }
+
+        /* ── Lissajous tracers ─────────────────────────── */
+        const TRAIL = 200;
+        const tracers = [
+            { a: 3,    b: 2.01,  delta: 0,          speed: 0.40, color: C.gold,   hist: [], layer: 0 },
+            { a: 5,    b: 4.02,  delta: Math.PI/4,  speed: 0.33, color: C.lGold,  hist: [], layer: 0 },
+            { a: 2,    b: 3.01,  delta: Math.PI/3,  speed: 0.44, color: C.orange, hist: [], layer: 0 },
+            { a: 7,    b: 6.01,  delta: Math.PI/6,  speed: 0.28, color: C.amber,  hist: [], layer: 1 },
+            { a: 1,    b: 2.005, delta: Math.PI/2,  speed: 0.50, color: C.cream,  hist: [], layer: 1 },
+        ];
+
+        /* ── Ambient particles ─────────────────────────── */
+        const PCOUNT = 70;
+        const particles = Array.from({ length: PCOUNT }, () => ({
+            x: Math.random() * 3000,
+            y: Math.random() * 2000,
+            sz: Math.random() * 1.8 + 0.4,
+            vx: (Math.random() - 0.5) * 0.25,
+            vy: (Math.random() - 0.5) * 0.25,
+            ph: Math.random() * Math.PI * 2,
+            al: Math.random() * 0.25 + 0.08,
+        }));
+
+        /* ── Blob shape ────────────────────────────────── */
+        function blobR(theta, t, ox, oy) {
+            const base = Math.min(W, H) * 0.075;
+            let r = base
+                + base * 0.28 * Math.sin(3 * theta + t * 0.8)
+                + base * 0.14 * Math.sin(5 * theta - t * 0.55)
+                + base * 0.09 * Math.sin(7 * theta + t * 1.05)
+                + base * 0.06 * Math.sin(2 * theta - t * 0.35);
+
+            // Ripple expansion
+            for (const rp of ripples) {
+                const d = Math.hypot(ox - rp.x, oy - rp.y);
+                const gap = Math.abs(d - rp.r);
+                if (gap < 60) {
+                    r += base * 0.35 * (1 - gap / 60) * rp.alpha;
+                }
+            }
+            return Math.max(1, r);
+        }
+
+        /* ── Helpers ───────────────────────────────────── */
+        function lerp(a, b, t) { return a + (b - a) * t; }
+
+        function drawTrail(tr) {
+            const len = tr.hist.length;
+            if (len < 2) return;
+
+            // Draw trail segments with progressive alpha and width
+            for (let i = 1; i < len; i++) {
+                const p = i / len;                       // 0→1 from tail to head
+                const alpha = p * p * 0.55;              // quadratic fade-in
+                const w = p * 2.2 + 0.3;
+
+                ctx.beginPath();
+                ctx.moveTo(tr.hist[i - 1].x, tr.hist[i - 1].y);
+                ctx.lineTo(tr.hist[i].x, tr.hist[i].y);
+                ctx.strokeStyle = rgba(tr.color, alpha);
+                ctx.lineWidth = w;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            // Bright head dot
+            const h = tr.hist[len - 1];
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(tr.color, 0.95);
+            ctx.fill();
+
+            // Head glow
+            const g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, 18);
+            g.addColorStop(0, rgba(tr.color, 0.35));
+            g.addColorStop(1, rgba(tr.color, 0));
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, 18, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        /* ── Main loop ─────────────────────────────────── */
+        let last = 0;
+
+        function frame(ts) {
+            const dt = Math.min((ts - last) / 1000, 0.05);
+            last = ts;
+            time += dt * speedMult;
+
+            // Smooth mouse tracking
+            mouse.x = lerp(mouse.x, mouse.tx, 1 - Math.pow(0.001, dt));
+            mouse.y = lerp(mouse.y, mouse.ty, 1 - Math.pow(0.001, dt));
+
+            // Center offset (mouse influence)
+            const ox = cx + (mouse.x - cx) * 0.04;
+            const oy = cy + (mouse.y - cy) * 0.04;
+
+            // Breathing amplitude
+            const ampBase = Math.min(W, H) * 0.26;
+            const amp = ampBase * (0.92 + 0.08 * Math.sin(time * 0.18));
+
+            // ── Clear ──
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, W, H);
+
+            // ── Background radial glow ──
+            const bg = ctx.createRadialGradient(ox, oy, 0, ox, oy, Math.min(W, H) * 0.65);
+            bg.addColorStop(0, 'rgba(232,197,71,0.035)');
+            bg.addColorStop(0.4, 'rgba(212,117,59,0.012)');
+            bg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // ── Ambient particles ──
+            for (const p of particles) {
+                p.x += p.vx + Math.sin(time * 0.4 + p.ph) * 0.08;
+                p.y += p.vy + Math.cos(time * 0.28 + p.ph) * 0.08;
+                if (p.x < -10) p.x = W + 10;
+                if (p.x > W + 10) p.x = -10;
+                if (p.y < -10) p.y = H + 10;
+                if (p.y > H + 10) p.y = -10;
+
+                const flicker = 0.5 + 0.5 * Math.sin(time * 1.2 + p.ph);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);
+                ctx.fillStyle = rgba(C.gold, p.al * flicker);
+                ctx.fill();
+            }
+
+            // ── Sonar rings ──
+            for (let i = 0; i < 3; i++) {
+                const phase = ((time * 0.25 + i / 3) % 1);
+                const rr = Math.min(W, H) * 0.07 + phase * Math.min(W, H) * 0.35;
+                const ra = (1 - phase) * 0.07;
+                ctx.beginPath();
+                ctx.arc(ox, oy, rr, 0, Math.PI * 2);
+                ctx.strokeStyle = rgba(C.gold, ra);
+                ctx.lineWidth = 0.6;
+                ctx.stroke();
+            }
+
+            // ── Update tracer positions ──
+            for (const tr of tracers) {
+                const t = time * tr.speed;
+                const d = tr.delta + time * 0.08;
+                const px = ox + amp * Math.sin(tr.a * t + d);
+                const py = oy + amp * Math.sin(tr.b * t);
+                tr.hist.push({ x: px, y: py });
+                if (tr.hist.length > TRAIL) tr.hist.shift();
+            }
+
+            // ── Back-layer trails ──
+            for (const tr of tracers) {
+                if (tr.layer === 0) drawTrail(tr);
+            }
+
+            // ── Central blob glow ──
+            const glowR = Math.min(W, H) * 0.22;
+            const glow = ctx.createRadialGradient(ox, oy, 0, ox, oy, glowR);
+            glow.addColorStop(0, 'rgba(232,197,71,0.10)');
+            glow.addColorStop(0.45, 'rgba(232,197,71,0.025)');
+            glow.addColorStop(1, 'rgba(232,197,71,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(ox, oy, glowR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ── Blob shape ──
+            ctx.beginPath();
+            const steps = 150;
+            for (let i = 0; i <= steps; i++) {
+                const theta = (i / steps) * Math.PI * 2;
+                const r = blobR(theta, time, ox, oy);
+                const bx = ox + r * Math.cos(theta);
+                const by = oy + r * Math.sin(theta);
+                i === 0 ? ctx.moveTo(bx, by) : ctx.lineTo(bx, by);
+            }
+            ctx.closePath();
+
+            // Fill
+            const bGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, Math.min(W, H) * 0.13);
+            bGrad.addColorStop(0, 'rgba(232,197,71,0.22)');
+            bGrad.addColorStop(0.55, 'rgba(232,197,71,0.06)');
+            bGrad.addColorStop(1, 'rgba(232,197,71,0)');
+            ctx.fillStyle = bGrad;
+            ctx.fill();
+
+            // Stroke
+            ctx.strokeStyle = 'rgba(232,197,71,0.35)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            // Inner core
+            const coreR = Math.min(W, H) * 0.018;
+            const core = ctx.createRadialGradient(ox, oy, 0, ox, oy, coreR);
+            core.addColorStop(0, 'rgba(255,245,210,0.85)');
+            core.addColorStop(1, 'rgba(232,197,71,0)');
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(ox, oy, coreR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ── Front-layer trails ──
+            for (const tr of tracers) {
+                if (tr.layer === 1) drawTrail(tr);
+            }
+
+            // ── Ripples ──
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const rp = ripples[i];
+                rp.r += dt * 280;
+                rp.alpha = 1 - rp.r / rp.maxR;
+                if (rp.alpha <= 0) { ripples.splice(i, 1); continue; }
+
+                ctx.beginPath();
+                ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+                ctx.strokeStyle = rgba(C.gold, rp.alpha * 0.35);
+                ctx.lineWidth = 1.5 * rp.alpha + 0.3;
+                ctx.stroke();
+
+                // Second thinner ring slightly behind
+                if (rp.r > 20) {
+                    ctx.beginPath();
+                    ctx.arc(rp.x, rp.y, rp.r - 15, 0, Math.PI * 2);
+                    ctx.strokeStyle = rgba(C.cream, rp.alpha * 0.12);
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            }
+
+            // ── Vignette ──
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.35, cx, cy, Math.max(W, H) * 0.82);
+            vig.addColorStop(0, 'rgba(10,10,10,0)');
+            vig.addColorStop(1, 'rgba(10,10,10,0.55)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
+    })();
+    </script>
+</body>
+</html>
