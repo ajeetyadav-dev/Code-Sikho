@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STARK INDUSTRIES — JARVIS HUD</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --cyan: #00d4ff;
+    --cyan-dim: #00d4ff55;
+    --cyan-glow: #00d4ff33;
+    --orange: #ff6b00;
+    --orange-dim: #ff6b0055;
+    --red: #ff2244;
+    --green: #00ff88;
+    --bg: #040810;
+    --panel-bg: #0a1628cc;
+    --border: #00d4ff33;
+    --text: #c0e8ff;
+    --text-dim: #4a7a9a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: crosshair;
+  }
+
+  #hud-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .overlay > * { pointer-events: auto; }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .panel:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 20px var(--cyan-glow), inset 0 0 20px var(--cyan-glow);
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.6;
+  }
+
+  .corner { position: absolute; width: 12px; height: 12px; }
+  .corner-tl { top: -1px; left: -1px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+  .corner-tr { top: -1px; right: -1px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+  .corner-bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+  .corner-br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+
+  .top-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: linear-gradient(180deg, #0a1628ee, transparent);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  .top-bar .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 6px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan-glow);
+  }
+  .top-bar .logo span { color: var(--orange); }
+  .top-bar .status-group {
+    display: flex;
+    gap: 24px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse-dot 2s infinite;
+  }
+  .status-dot.warn { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .arc-reactor {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px; height: 280px;
+    z-index: 2;
+  }
+  .arc-reactor canvas {
+    width: 100%; height: 100%;
+  }
+  .arc-label {
+    position: absolute;
+    bottom: -36px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    white-space: nowrap;
+    text-shadow: 0 0 8px var(--cyan-glow);
+  }
+  .arc-power {
+    position: absolute;
+    bottom: -56px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 16px var(--cyan);
+  }
+  .arc-power span { font-size: 11px; color: var(--text-dim); font-weight: 400; }
+
+  .left-panels {
+    position: absolute;
+    top: 68px; left: 20px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title i { font-size: 10px; }
+  .panel-body { padding: 10px 14px; }
+
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 11px;
+    border-bottom: 1px solid #0d1f3555;
+  }
+  .data-row:last-child { border-bottom: none; }
+  .data-label { color: var(--text-dim); letter-spacing: 1px; }
+  .data-value { color: var(--cyan); font-weight: 500; }
+  .data-value.orange { color: var(--orange); }
+  .data-value.red { color: var(--red); }
+  .data-value.green { color: var(--green); }
+
+  .bar-container {
+    width: 100%;
+    height: 4px;
+    background: #0d1f35;
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+    position: relative;
+  }
+  .bar-fill.cyan { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+  .bar-fill.orange { background: var(--orange); box-shadow: 0 0 8px var(--orange-dim); }
+  .bar-fill.green { background: var(--green); box-shadow: 0 0 8px #00ff8833; }
+
+  .right-panels {
+    position: absolute;
+    top: 68px; right: 20px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .waveform-canvas {
+    width: 100%;
+    height: 60px;
+    display: block;
+  }
+
+  .bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    background: linear-gradient(0deg, #0a1628ee, transparent);
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    z-index: 10;
+  }
+  .bottom-bar .active { color: var(--cyan); text-shadow: 0 0 6px var(--cyan-glow); }
+
+  .mid-left {
+    position: absolute;
+    top: 50%; left: 20px;
+    transform: translateY(-50%);
+    width: 180px;
+  }
+  .mid-right {
+    position: absolute;
+    top: 50%; right: 20px;
+    transform: translateY(-50%);
+    width: 180px;
+  }
+
+  .hex-grid {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    opacity: 0.08;
+    pointer-events: none;
+  }
+
+  .radar-canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    display: block;
+  }
+
+  .threat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 10px;
+  }
+  .threat-icon {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .threat-icon.high { background: var(--red); box-shadow: 0 0 6px var(--red); animation: pulse-dot 1s infinite; }
+  .threat-icon.med { background: var(--orange); box-shadow: 0 0 6px var(--orange); animation: pulse-dot 1.5s infinite; }
+  .threat-icon.low { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  .ring-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .ring-stat canvas { flex-shrink: 0; }
+  .ring-stat-info { font-size: 10px; }
+  .ring-stat-info .val { font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--cyan); }
+  .ring-stat-info .lbl { color: var(--text-dim); letter-spacing: 1px; }
+
+  .scanline {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      #00d4ff03 2px,
+      #00d4ff03 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .cursor-glow {
+    position: fixed;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 70%);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+  }
+
+  .fade-in {
+    animation: fadeIn 1.2s ease forwards;
+    opacity: 0;
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  .slide-left {
+    animation: slideLeft 0.8s ease forwards;
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  @keyframes slideLeft {
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .slide-right {
+    animation: slideRight 0.8s ease forwards;
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  @keyframes slideRight {
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .scale-in {
+    animation: scaleIn 1s ease forwards;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  @keyframes scaleIn {
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  .toast-container {
+    position: fixed;
+    top: 60px; right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--panel-bg);
+    border: 1px solid var(--cyan);
+    border-left: 3px solid var(--cyan);
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 20px var(--cyan-glow);
+    animation: toastIn 0.4s ease forwards, toastOut 0.4s ease 3s forwards;
+    max-width: 280px;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes toastOut {
+    to { opacity: 0; transform: translateX(40px); }
+  }
+
+  @media (max-width: 900px) {
+    .left-panels, .right-panels, .mid-left, .mid-right { display: none; }
+    .arc-reactor { width: 180px; height: 180px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="hud-canvas"></canvas>
+<div class="scanline"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<div class="overlay">
+ 
+  <header class="top-bar fade-in" style="animation-delay:0.2s">
+    <div class="logo">STARK <span>INDUSTRIES</span></div>
+    <div class="status-group">
+      <div class="status-item"><div class="status-dot"></div> JARVIS ONLINE</div>
+      <div class="status-item"><div class="status-dot"></div> NEURAL LINK</div>
+      <div class="status-item"><div class="status-dot warn"></div> SAT UPLINK</div>
+    </div>
+    <div id="clock" style="font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:3px;color:var(--cyan)"></div>
+  </header>
+
+  <nav class="left-panels">
+    <div class="panel slide-left" style="animation-delay:0.4s">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-microchip"></i> SYSTEM DIAGNOSTICS</div>
+      <div class="panel-body" id="sysDiag"></div>
+    </div>
+    <div class="panel slide-left" style="animation-delay:0.6s">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-shield-halved"></i> ARMOR STATUS</div>
+      <div class="panel-body" id="armorStatus"></div>
+    </div>
+    <div class="panel slide-left" style="animation-delay:0.8s">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-wave-square"></i> NEURAL WAVEFORM</div>
+      <div class="panel-body" style="padding:8px 10px">
+        <canvas class="waveform-canvas" id="waveCanvas"></canvas>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mid-left slide-left" style="animation-delay:1s">
+    <div class="panel">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-crosshairs"></i> THREAT ANALYSIS</div>
+      <div class="panel-body" id="threatList"></div>
+    </div>
+  </div>
+
+  <div class="arc-reactor scale-in" style="animation-delay:0.3s">
+    <canvas id="arcCanvas" width="560" height="560"></canvas>
+    <div class="arc-label">ARC REACTOR MK L</div>
+    <div class="arc-power" id="arcPower">3.2 <span>GJ/s</span></div>
+  </div>
+
+  <div class="mid-right slide-right" style="animation-delay:1s">
+    <div class="panel">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-satellite-dish"></i> RADAR SWEEP</div>
+      <div class="panel-body" style="padding:8px">
+        <canvas class="radar-canvas" id="radarCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <aside class="right-panels">
+    <div class="panel slide-right" style="animation-delay:0.5s">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-chart-line"></i> POWER DISTRIBUTION</div>
+      <div class="panel-body" id="powerDist"></div>
+    </div>
+    <div class="panel slide-right" style="animation-delay:0.7s">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-gauge-high"></i> PERFORMANCE METRICS</div>
+      <div class="panel-body" id="perfMetrics"></div>
+    </div>
+    <div class="panel slide-right" style="animation-delay:0.9s">
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="panel-title"><i class="fas fa-location-dot"></i> GEO POSITION</div>
+      <div class="panel-body" id="geoPos"></div>
+    </div>
+  </aside>
+
+  <footer class="bottom-bar fade-in" style="animation-delay:1.2s">
+    <span class="active">COMMS</span>
+    <span>NAV</span>
+    <span>WEAPONS</span>
+    <span>DEFENSE</span>
+    <span>ANALYTICS</span>
+    <span>REPAIR</span>
+    <span id="fps" class="active">60 FPS</span>
+  </footer>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+const rand = (min, max) => Math.random() * (max - min) + min;
+const TAU = Math.PI * 2;
+
+let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+const cursorGlow = document.getElementById('cursorGlow');
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursorGlow.style.left = e.clientX + 'px';
+  cursorGlow.style.top = e.clientY + 'px';
+});
+
+const toastMessages = [
+  'THREAT DETECTED — SECTOR 7-G',
+  'REPELSOR CHARGE AT 98%',
+  'SAT UPLINK RE-ESTABLISHED',
+  'FLIGHT SYSTEMS NOMINAL',
+  'VIBRANIUM SHIELD INTEGRITY OK',
+  'NEW TARGETING DATA RECEIVED',
+  'ARC REACTOR OUTPUT STABLE',
+  'EXTERNAL COMMS ENCRYPTED',
+];
+function showToast() {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = toastMessages[Math.floor(Math.random() * toastMessages.length)];
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+setInterval(showToast, 5000);
+setTimeout(showToast, 2000);
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+const bgCanvas = document.getElementById('hud-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let W, H;
+function resizeBg() {
+  W = bgCanvas.width = window.innerWidth;
+  H = bgCanvas.height = window.innerHeight;
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = rand(0, W);
+    this.y = rand(0, H);
+    this.vx = rand(-0.3, 0.3);
+    this.vy = rand(-0.3, 0.3);
+    this.size = rand(1, 2.5);
+    this.alpha = rand(0.1, 0.5);
+    this.life = rand(200, 600);
+    this.maxLife = this.life;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life--;
+    if (this.life <= 0 || this.x < -10 || this.x > W + 10 || this.y < -10 || this.y > H + 10) this.reset();
+  }
+  draw(ctx) {
+    const a = this.alpha * (this.life / this.maxLife);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.5, this.size), 0, TAU);
+    ctx.fillStyle = `rgba(0,212,255,${a})`;
+    ctx.fill();
+  }
+}
+const particles = Array.from({ length: 120 }, () => new Particle());
+
+function drawGrid(ctx, time) {
+  const spacing = 60;
+  ctx.strokeStyle = 'rgba(0,212,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y < H; y += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+}
+
+function drawConnections(ctx) {
+  const maxDist = 120;
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < maxDist) {
+        const alpha = (1 - dist / maxDist) * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0,212,255,${alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawOrbitalRings(ctx, time) {
+  const cx = W / 2, cy = H / 2;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(time * 0.1);
+  ctx.beginPath();
+  ctx.arc(0, 0, 240, 0, TAU);
+  ctx.strokeStyle = 'rgba(0,212,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([8, 16]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-time * 0.07);
+  ctx.beginPath();
+  ctx.arc(0, 0, 300, 0, TAU);
+  ctx.strokeStyle = 'rgba(0,212,255,0.05)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 24]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(time * 0.03);
+  for (let i = 0; i < 72; i++) {
+    const angle = (i / 72) * TAU;
+    const len = i % 6 === 0 ? 12 : 5;
+    const r = 340;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+    ctx.lineTo(Math.cos(angle) * (r + len), Math.sin(angle) * (r + len));
+    ctx.strokeStyle = i % 6 === 0 ? 'rgba(0,212,255,0.2)' : 'rgba(0,212,255,0.07)';
+    ctx.lineWidth = i % 6 === 0 ? 1.5 : 0.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const margin = 70;
+  const cornerLen = 50;
+  ctx.strokeStyle = 'rgba(0,212,255,0.15)';
+  ctx.lineWidth = 1.5;
+  
+  ctx.beginPath(); ctx.moveTo(margin, margin + cornerLen); ctx.lineTo(margin, margin); ctx.lineTo(margin + cornerLen, margin); ctx.stroke();
+ 
+  ctx.beginPath(); ctx.moveTo(W - margin - cornerLen, margin); ctx.lineTo(W - margin, margin); ctx.lineTo(W - margin, margin + cornerLen); ctx.stroke();
+  
+  ctx.beginPath(); ctx.moveTo(margin, H - margin - cornerLen); ctx.lineTo(margin, H - margin); ctx.lineTo(margin + cornerLen, H - margin); ctx.stroke();
+  
+  ctx.beginPath(); ctx.moveTo(W - margin - cornerLen, H - margin); ctx.lineTo(W - margin, H - margin); ctx.lineTo(W - margin, H - margin - cornerLen); ctx.stroke();
+}
+
+let frameCount = 0, lastFpsTime = performance.now(), currentFps = 60;
+
+function bgLoop(time) {
+  const t = time * 0.001;
+  bgCtx.clearRect(0, 0, W, H);
+
+  const grad = bgCtx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.6);
+  grad.addColorStop(0, '#0a1628');
+  grad.addColorStop(1, '#040810');
+  bgCtx.fillStyle = grad;
+  bgCtx.fillRect(0, 0, W, H);
+
+  drawGrid(bgCtx, t);
+  drawOrbitalRings(bgCtx, t);
+
+  particles.forEach(p => { p.update(); p.draw(bgCtx); });
+  drawConnections(bgCtx);
+
+  // FPS
+  frameCount++;
+  if (time - lastFpsTime >= 1000) {
+    currentFps = frameCount;
+    frameCount = 0;
+    lastFpsTime = time;
+    document.getElementById('fps').textContent = currentFps + ' FPS';
+  }
+
+  requestAnimationFrame(bgLoop);
+}
+requestAnimationFrame(bgLoop);
+
+const arcCanvas = document.getElementById('arcCanvas');
+const arcCtx = arcCanvas.getContext('2d');
+const AW = 560, AH = 560, ACX = AW/2, ACY = AH/2;
+
+function drawArcReactor(time) {
+  const t = time * 0.001;
+  arcCtx.clearRect(0, 0, AW, AH);
+
+  const outerGlow = arcCtx.createRadialGradient(ACX, ACY, 80, ACX, ACY, 260);
+  outerGlow.addColorStop(0, 'rgba(0,212,255,0.06)');
+  outerGlow.addColorStop(1, 'rgba(0,212,255,0)');
+  arcCtx.fillStyle = outerGlow;
+  arcCtx.fillRect(0, 0, AW, AH);
+
+  arcCtx.save();
+  arcCtx.translate(ACX, ACY);
+  arcCtx.rotate(t * 0.5);
+  const segments1 = 12;
+  for (let i = 0; i < segments1; i++) {
+    const a1 = (i / segments1) * TAU;
+    const a2 = ((i + 0.4) / segments1) * TAU;
+    arcCtx.beginPath();
+    arcCtx.arc(0, 0, 200, a1, a2);
+    arcCtx.strokeStyle = i % 3 === 0 ? 'rgba(255,107,0,0.7)' : 'rgba(0,212,255,0.5)';
+    arcCtx.lineWidth = 3;
+    arcCtx.stroke();
+  }
+  arcCtx.restore();
+
+  arcCtx.save();
+  arcCtx.translate(ACX, ACY);
+  arcCtx.rotate(-t * 0.3);
+  const segments2 = 24;
+  for (let i = 0; i < segments2; i++) {
+    const a1 = (i / segments2) * TAU;
+    const a2 = ((i + 0.3) / segments2) * TAU;
+    arcCtx.beginPath();
+    arcCtx.arc(0, 0, 170, a1, a2);
+    arcCtx.strokeStyle = 'rgba(0,212,255,0.3)';
+    arcCtx.lineWidth = 1.5;
+    arcCtx.stroke();
+  }
+  arcCtx.restore();
+
+  arcCtx.save();
+  arcCtx.translate(ACX, ACY);
+  arcCtx.rotate(t * 0.8);
+  arcCtx.beginPath();
+  arcCtx.arc(0, 0, 140, 0, TAU);
+  arcCtx.strokeStyle = 'rgba(0,212,255,0.15)';
+  arcCtx.lineWidth = 1;
+  arcCtx.setLineDash([2, 8]);
+  arcCtx.stroke();
+  arcCtx.setLineDash([]);
+  arcCtx.restore();
+
+  const pulse = 0.8 + Math.sin(t * 3) * 0.2;
+  const coreGrad = arcCtx.createRadialGradient(ACX, ACY, 0, ACX, ACY, 80 * pulse);
+  coreGrad.addColorStop(0, `rgba(0,212,255,${0.9 * pulse})`);
+  coreGrad.addColorStop(0.3, `rgba(0,180,255,${0.4 * pulse})`);
+  coreGrad.addColorStop(0.7, `rgba(0,100,200,${0.1 * pulse})`);
+  coreGrad.addColorStop(1, 'rgba(0,50,100,0)');
+  arcCtx.fillStyle = coreGrad;
+  arcCtx.beginPath();
+  arcCtx.arc(ACX, ACY, 80 * pulse, 0, TAU);
+  arcCtx.fill();
+
+  arcCtx.save();
+  arcCtx.translate(ACX, ACY);
+  arcCtx.rotate(t * 0.2);
+  const triSize = 50;
+  arcCtx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * TAU - Math.PI / 2;
+    const x = Math.cos(a) * triSize;
+    const y = Math.sin(a) * triSize;
+    i === 0 ? arcCtx.moveTo(x, y) : arcCtx.lineTo(x, y);
+  }
+  arcCtx.closePath();
+  arcCtx.strokeStyle = `rgba(0,212,255,${0.6 + Math.sin(t * 4) * 0.3})`;
+  arcCtx.lineWidth = 2;
+  arcCtx.stroke();
+  arcCtx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * TAU - Math.PI / 2 + Math.PI / 3;
+    const x = Math.cos(a) * (triSize * 0.55);
+    const y = Math.sin(a) * (triSize * 0.55);
+    i === 0 ? arcCtx.moveTo(x, y) : arcCtx.lineTo(x, y);
+  }
+  arcCtx.closePath();
+  arcCtx.strokeStyle = `rgba(0,212,255,${0.4 + Math.sin(t * 4) * 0.2})`;
+  arcCtx.lineWidth = 1.5;
+  arcCtx.stroke();
+  arcCtx.restore();
+
+  const dotGrad = arcCtx.createRadialGradient(ACX, ACY, 0, ACX, ACY, 15);
+  dotGrad.addColorStop(0, `rgba(255,255,255,${0.9 * pulse})`);
+  dotGrad.addColorStop(0.5, `rgba(0,212,255,${0.5 * pulse})`);
+  dotGrad.addColorStop(1, 'rgba(0,212,255,0)');
+  arcCtx.fillStyle = dotGrad;
+  arcCtx.beginPath();
+  arcCtx.arc(ACX, ACY, 15, 0, TAU);
+  arcCtx.fill();
+
+  
+  arcCtx.save();
+  arcCtx.translate(ACX, ACY);
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * TAU + t * 0.15;
+    const r = 230;
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r;
+    arcCtx.fillStyle = 'rgba(0,212,255,0.5)';
+    arcCtx.fillRect(x - 3, y - 1, 6, 2);
+   
+    arcCtx.beginPath();
+    arcCtx.moveTo(Math.cos(angle) * 200, Math.sin(angle) * 200);
+    arcCtx.lineTo(x, y);
+    arcCtx.strokeStyle = 'rgba(0,212,255,0.15)';
+    arcCtx.lineWidth = 0.5;
+    arcCtx.stroke();
+  }
+  arcCtx.restore();
+
+  requestAnimationFrame(drawArcReactor);
+}
+requestAnimationFrame(drawArcReactor);
+
+const waveCanvas = document.getElementById('waveCanvas');
+const waveCtx = waveCanvas.getContext('2d');
+let waveData = Array(100).fill(0);
+
+function drawWaveform(time) {
+  const t = time * 0.001;
+  const w = waveCanvas.width = waveCanvas.offsetWidth * 2;
+  const h = waveCanvas.height = waveCanvas.offsetHeight * 2;
+  waveCtx.clearRect(0, 0, w, h);
+
+  for (let i = 0; i < waveData.length; i++) {
+    waveData[i] = Math.sin(t * 4 + i * 0.15) * 0.3
+      + Math.sin(t * 7 + i * 0.08) * 0.15
+      + Math.sin(t * 13 + i * 0.3) * 0.08
+      + (Math.random() - 0.5) * 0.1;
+  }
+
+  const midY = h / 2;
+  const step = w / (waveData.length - 1);
+
+  waveCtx.beginPath();
+  waveCtx.moveTo(0, midY);
+  for (let i = 0; i < waveData.length; i++) {
+    waveCtx.lineTo(i * step, midY + waveData[i] * midY * 0.8);
+  }
+  waveCtx.strokeStyle = 'rgba(0,212,255,0.15)';
+  waveCtx.lineWidth = 6;
+  waveCtx.stroke();
+
+  waveCtx.beginPath();
+  waveCtx.moveTo(0, midY);
+  for (let i = 0; i < waveData.length; i++) {
+    waveCtx.lineTo(i * step, midY + waveData[i] * midY * 0.8);
+  }
+  waveCtx.strokeStyle = '#00d4ff';
+  waveCtx.lineWidth = 1.5;
+  waveCtx.stroke();
+
+  waveCtx.lineTo(w, midY);
+  waveCtx.lineTo(0, midY);
+  waveCtx.fillStyle = 'rgba(0,212,255,0.05)';
+  waveCtx.fill();
+
+  requestAnimationFrame(drawWaveform);
+}
+requestAnimationFrame(drawWaveform);
+
+const radarCanvas = document.getElementById('radarCanvas');
+const radarCtx = radarCanvas.getContext('2d');
+const radarDots = Array.from({ length: 6 }, () => ({
+  angle: rand(0, TAU),
+  dist: rand(0.2, 0.9),
+  size: rand(2, 4),
+  blinkSpeed: rand(1, 3)
+}));
+
+function drawRadar(time) {
+  const t = time * 0.001;
+  const size = radarCanvas.width = radarCanvas.offsetHeight * 2;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 4;
+  radarCtx.clearRect(0, 0, size, size);
+
+  for (let i = 1; i <= 4; i++) {
+    radarCtx.beginPath();
+    radarCtx.arc(cx, cy, (r / 4) * i, 0, TAU);
+    radarCtx.strokeStyle = 'rgba(0,212,255,0.1)';
+    radarCtx.lineWidth = 0.5;
+    radarCtx.stroke();
+  }
+
+  radarCtx.strokeStyle = 'rgba(0,212,255,0.08)';
+  radarCtx.beginPath();
+  radarCtx.moveTo(cx - r, cy); radarCtx.lineTo(cx + r, cy);
+  radarCtx.moveTo(cx, cy - r); radarCtx.lineTo(cx, cy + r);
+  radarCtx.stroke();
+
+  const sweepAngle = t * 1.5;
+  const sweepGrad = radarCtx.createConicGradient(sweepAngle - 0.5, cx, cy);
+  sweepGrad.addColorStop(0, 'rgba(0,212,255,0)');
+  sweepGrad.addColorStop(0.08, 'rgba(0,212,255,0.2)');
+  sweepGrad.addColorStop(0.1, 'rgba(0,212,255,0)');
+  radarCtx.fillStyle = sweepGrad;
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, r, 0, TAU);
+  radarCtx.fill();
+
+  radarCtx.beginPath();
+  radarCtx.moveTo(cx, cy);
+  radarCtx.lineTo(cx + Math.cos(sweepAngle) * r, cy + Math.sin(sweepAngle) * r);
+  radarCtx.strokeStyle = 'rgba(0,212,255,0.6)';
+  radarCtx.lineWidth = 1;
+  radarCtx.stroke();
+
+  radarDots.forEach(dot => {
+    const blink = (Math.sin(t * dot.blinkSpeed) + 1) / 2;
+    const dx = cx + Math.cos(dot.angle) * dot.dist * r;
+    const dy = cy + Math.sin(dot.angle) * dot.dist * r;
+    radarCtx.beginPath();
+    radarCtx.arc(dx, dy, dot.size * (0.5 + blink * 0.5), 0, TAU);
+    radarCtx.fillStyle = `rgba(255,107,0,${0.4 + blink * 0.6})`;
+    radarCtx.fill();
+    radarCtx.beginPath();
+    radarCtx.arc(dx, dy, dot.size * 3, 0, TAU);
+    radarCtx.fillStyle = `rgba(255,107,0,${blink * 0.1})`;
+    radarCtx.fill();
+  });
+
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, 2, 0, TAU);
+  radarCtx.fillStyle = '#00d4ff';
+  radarCtx.fill();
+
+  radarCtx.beginPath();
+  radarCtx.arc(cx, cy, r, 0, TAU);
+  radarCtx.strokeStyle = 'rgba(0,212,255,0.25)';
+  radarCtx.lineWidth = 1;
+  radarCtx.stroke();
+
+  requestAnimationFrame(drawRadar);
+}
+requestAnimationFrame(drawRadar);
+
+const sysData = [
+  { label: 'CPU CORE', value: '87.3%', pct: 87.3, color: 'cyan' },
+  { label: 'MEMORY', value: '14.2 / 16 GB', pct: 88.7, color: 'cyan' },
+  { label: 'THERMAL', value: '72 C', pct: 72, color: 'orange' },
+  { label: 'BANDWIDTH', value: '847 MB/s', pct: 56, color: 'cyan' },
+  { label: 'UPTIME', value: '847:23:11', pct: 0, color: null },
+];
+function renderSysDiag() {
+  const el = document.getElementById('sysDiag');
+  el.innerHTML = sysData.map(d => {
+    let bar = '';
+    if (d.pct > 0) {
+      bar = `<div class="bar-container"><div class="bar-fill ${d.color}" style="width:${d.pct}%"></div></div>`;
+    }
+    return `<div class="data-row">
+      <span class="data-label">${d.label}</span>
+      <span class="data-value ${d.color === 'orange' ? 'orange' : ''}">${d.value}</span>
+    </div>${bar}`;
+  }).join('');
+}
+renderSysDiag();
+
+const armorParts = [
+  { name: 'HELMET', integrity: 98, color: 'green' },
+  { name: 'CHEST PLATE', integrity: 94, color: 'green' },
+  { name: 'LEFT GAUNTLET', integrity: 76, color: 'orange' },
+  { name: 'RIGHT GAUNTLET', integrity: 88, color: 'green' },
+  { name: 'LEFT LEG', integrity: 100, color: 'green' },
+  { name: 'RIGHT LEG', integrity: 65, color: 'red' },
+];
+function renderArmor() {
+  const el = document.getElementById('armorStatus');
+  el.innerHTML = armorParts.map(p => {
+    const cls = p.integrity > 85 ? 'green' : p.integrity > 70 ? 'orange' : 'red';
+    return `<div class="data-row">
+      <span class="data-label">${p.name}</span>
+      <span class="data-value ${cls}">${p.integrity}%</span>
+    </div>
+    <div class="bar-container"><div class="bar-fill ${cls}" style="width:${p.integrity}%"></div></div>`;
+  }).join('');
+}
+renderArmor();
+
+const threats = [
+  { name: 'HOSTILE DRONE — NW', level: 'high' },
+  { name: 'MISSILE LOCK — 12KM', level: 'high' },
+  { name: 'EM INTERFERENCE', level: 'med' },
+  { name: 'UNKNOWN SIGNAL — SE', level: 'low' },
+  { name: 'AIRCRAFT — 45KM', level: 'low' },
+];
+function renderThreats() {
+  const el = document.getElementById('threatList');
+  el.innerHTML = threats.map(t => `
+    <div class="threat-item">
+      <div class="threat-icon ${t.level}"></div>
+      <span style="color:${t.level === 'high' ? 'var(--red)' : t.level === 'med' ? 'var(--orange)' : 'var(--text-dim)'}">${t.name}</span>
+    </div>
+  `).join('');
+}
+renderThreats();
+
+const powerChannels = [
+  { name: 'REPULSORS', pct: 42, color: 'cyan' },
+  { name: 'LIFE SUPPORT', pct: 28, color: 'green' },
+  { name: 'WEAPONS', pct: 15, color: 'orange' },
+  { name: 'SENSORS', pct: 10, color: 'cyan' },
+  { name: 'COMMS', pct: 5, color: 'cyan' },
+];
+function renderPower() {
+  const el = document.getElementById('powerDist');
+  el.innerHTML = powerChannels.map(p => `
+    <div class="data-row">
+      <span class="data-label">${p.name}</span>
+      <span class="data-value ${p.color === 'orange' ? 'orange' : ''}">${p.pct}%</span>
+    </div>
+    <div class="bar-container"><div class="bar-fill ${p.color}" style="width:${p.pct}%"></div></div>
+  `).join('');
+}
+renderPower();
+
+function drawMiniRing(canvasEl, pct, color) {
+  const c = canvasEl.getContext('2d');
+  const s = canvasEl.width = 36;
+  canvasEl.height = 36;
+  const cx = s/2, cy = s/2, r = 13, lw = 3;
+  c.clearRect(0, 0, s, s);
+  c.beginPath();
+  c.arc(cx, cy, r, 0, TAU);
+  c.strokeStyle = 'rgba(0,212,255,0.1)';
+  c.lineWidth = lw;
+  c.stroke();
+  c.beginPath();
+  c.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + (pct/100)*TAU);
+  c.strokeStyle = color === 'orange' ? '#ff6b00' : '#00d4ff';
+  c.lineWidth = lw;
+  c.lineCap = 'round';
+  c.stroke();
+}
+
+const perfData = [
+  { label: 'FLIGHT CTRL', value: 96, color: 'cyan' },
+  { label: 'TARGETING', value: 82, color: 'cyan' },
+  { label: 'EVASION', value: 71, color: 'orange' },
+];
+function renderPerf() {
+  const el = document.getElementById('perfMetrics');
+  el.innerHTML = perfData.map((p, i) => `
+    <div class="ring-stat">
+      <canvas id="ring${i}"></canvas>
+      <div class="ring-stat-info">
+        <div class="val">${p.value}%</div>
+        <div class="lbl">${p.label}</div>
+      </div>
+    </div>
+  `).join('');
+  perfData.forEach((p, i) => {
+    drawMiniRing(document.getElementById('ring' + i), p.value, p.color);
+  });
+}
+renderPerf();
+
+function renderGeo() {
+  const el = document.getElementById('geoPos');
+  el.innerHTML = `
+    <div class="data-row"><span class="data-label">LAT</span><span class="data-value">40.7128 N</span></div>
+    <div class="data-row"><span class="data-label">LON</span><span class="data-value">74.0060 W</span></div>
+    <div class="data-row"><span class="data-label">ALT</span><span class="data-value orange">12,450 FT</span></div>
+    <div class="data-row"><span class="data-label">HEADING</span><span class="data-value">247 NW</span></div>
+    <div class="data-row"><span class="data-label">VELOCITY</span><span class="data-value">MACH 2.1</span></div>
+  `;
+}
+renderGeo();
+
+function updateLiveData() {
+  sysData[0].value = (85 + Math.random() * 5).toFixed(1) + '%';
+  sysData[0].pct = parseFloat(sysData[0].value);
+  sysData[2].value = Math.floor(70 + Math.random() * 8) + ' C';
+  sysData[2].pct = parseInt(sysData[2].value);
+  sysData[3].value = Math.floor(800 + Math.random() * 100) + ' MB/s';
+  sysData[3].pct = 50 + Math.random() * 15;
+  renderSysDiag();
+
+  armorParts.forEach(p => {
+    p.integrity = clamp(p.integrity + Math.floor((Math.random() - 0.4) * 2), 50, 100);
+  });
+  renderArmor();
+
+  let total = 0;
+  powerChannels.forEach((p, i) => {
+    if (i < powerChannels.length - 1) {
+      p.pct = clamp(p.pct + Math.floor((Math.random() - 0.5) * 3), 3, 60);
+      total += p.pct;
+    }
+  });
+  powerChannels[powerChannels.length - 1].pct = clamp(100 - total, 2, 20);
+  renderPower();
+
+  perfData.forEach(p => {
+    p.value = clamp(p.value + Math.floor((Math.random() - 0.4) * 2), 60, 99);
+  });
+  renderPerf();
+
+  const power = (3.0 + Math.random() * 0.4).toFixed(1);
+  document.getElementById('arcPower').innerHTML = `${power} <span>GJ/s</span>`;
+}
+setInterval(updateLiveData, 2000);
+
+document.querySelectorAll('.bottom-bar span:not(#fps)').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.bottom-bar span').forEach(s => s.classList.remove('active'));
+    this.classList.add('active');
+    showToast();
+  });
+});
+</script>
+</body>
+</html>

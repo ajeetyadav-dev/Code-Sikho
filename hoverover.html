@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can't Stop Hovering</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #07070b;
+            --fg: #eee8dd;
+            --muted: #4a4a58;
+            --accent: #ff6b4a;
+            --accent2: #ffb347;
+            --accent3: #00e5a0;
+            --card: #0f0f17;
+            --border: #1a1a26;
+            --radius: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            cursor: none;
+            user-select: none;
+        }
+
+        /* Vignette overlay */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.75) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Custom cursor */
+        .cursor-ring {
+            position: fixed;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1.5px solid var(--accent);
+            pointer-events: none;
+            z-index: 1000;
+            transform: translate(-50%, -50%);
+            opacity: 0.6;
+            transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        opacity 0.3s ease,
+                        border-color 0.3s ease,
+                        background 0.3s ease;
+        }
+        .cursor-ring.active {
+            width: 60px;
+            height: 60px;
+            opacity: 1;
+            border-color: var(--accent2);
+            background: rgba(255, 179, 71, 0.06);
+        }
+        .cursor-dot {
+            position: fixed;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+            pointer-events: none;
+            z-index: 1001;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px var(--accent), 0 0 20px rgba(255,107,74,0.3);
+        }
+
+        /* Background glows that follow cursor */
+        .bg-glow {
+            position: fixed;
+            width: 550px;
+            height: 550px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,107,74,0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+            transform: translate(-50%, -50%);
+        }
+        .bg-glow-2 {
+            position: fixed;
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,179,71,0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Effects canvas */
+        #fx {
+            position: fixed;
+            inset: 0;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        /* Header */
+        header {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 28px 20px 8px;
+        }
+        header h1 {
+            font-size: clamp(1.2rem, 3.5vw, 2.2rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 45%, var(--accent3) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.3;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            margin-top: 8px;
+            font-size: 0.72rem;
+            font-weight: 300;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .stats span {
+            font-weight: 700;
+            font-size: 0.92rem;
+            display: inline-block;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .stats .hover-num { color: var(--accent); }
+        .stats .unique-num { color: var(--accent3); }
+        .stats .total-num { color: var(--muted); font-weight: 500; }
+        .bump { transform: scale(1.6) !important; }
+
+        /* Progress bar */
+        .progress-wrap {
+            position: relative;
+            z-index: 10;
+            max-width: 660px;
+            margin: 10px auto 0;
+            padding: 0 20px;
+        }
+        .progress-track {
+            height: 2px;
+            background: var(--border);
+            border-radius: 1px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+            border-radius: 1px;
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .progress-fill.complete {
+            box-shadow: 0 0 12px rgba(0,229,160,0.5);
+        }
+
+        /* Grid */
+        .grid-wrap {
+            position: relative;
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 14px 20px 20px;
+            height: calc(100vh - 115px);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(var(--cols, 10), 1fr);
+            gap: 7px;
+            max-width: 660px;
+            width: 100%;
+        }
+
+        /* Individual tile */
+        .tile {
+            aspect-ratio: 1;
+            border-radius: var(--radius);
+            background: var(--card);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            will-change: transform, background, border-color, box-shadow;
+            transition:
+                transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.5s ease,
+                background 0.5s ease,
+                border-color 0.5s ease;
+        }
+
+        /* Inner spotlight that follows cursor position on the tile */
+        .tile::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(
+                circle at var(--gx, 50%) var(--gy, 50%),
+                rgba(255,255,255,0.13) 0%, transparent 50%
+            );
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .tile.near::before { opacity: 1; }
+
+        /* Pulse ring animation on tile enter */
+        @keyframes pulse-out {
+            0% { transform: scale(1); opacity: 0.7; }
+            100% { transform: scale(2.4); opacity: 0; }
+        }
+        .pulse-ring {
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            border: 2px solid var(--accent);
+            animation: pulse-out 0.65s ease-out forwards;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Celebration wave */
+        @keyframes celebrate-pop {
+            0% { transform: scale(1); filter: brightness(1); }
+            40% { transform: scale(1.35); filter: brightness(2.2); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .tile.celebrating {
+            animation: celebrate-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            z-index: 20;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            .grid { --cols: 7; gap: 5px; }
+            header { padding: 18px 12px 6px; }
+            .stats { gap: 16px; font-size: 0.65rem; }
+            .stats span { font-size: 0.82rem; }
+        }
+        @media (max-width: 400px) {
+            .grid { --cols: 5; gap: 4px; }
+        }
+
+        /* Respect reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .tile, .progress-fill, .cursor-ring { transition-duration: 0.01s !important; }
+            .pulse-ring { animation: none !important; display: none; }
+            .tile.celebrating { animation: none !important; }
+            .cursor-ring, .cursor-dot { display: none; }
+            body { cursor: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="vignette"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+    <div class="bg-glow" id="bgGlow"></div>
+    <div class="bg-glow-2" id="bgGlow2"></div>
+    <canvas id="fx"></canvas>
+
+    <header>
+        <h1>I Can't Stop Hovering Over This</h1>
+        <div class="stats">
+            <div>Hovers <span class="hover-num" id="hoverCount">0</span></div>
+            <div>Unique <span class="unique-num" id="uniqueCount">0</span>/<span class="total-num" id="totalTiles">0</span></div>
+        </div>
+    </header>
+    <div class="progress-wrap">
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+    <div class="grid-wrap">
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* ── Elements ── */
+        const grid      = document.getElementById('grid');
+        const ring      = document.getElementById('cursorRing');
+        const dot       = document.getElementById('cursorDot');
+        const glow1     = document.getElementById('bgGlow');
+        const glow2     = document.getElementById('bgGlow2');
+        const canvas    = document.getElementById('fx');
+        const ctx       = canvas.getContext('2d');
+        const elHover   = document.getElementById('hoverCount');
+        const elUnique  = document.getElementById('uniqueCount');
+        const elTotal   = document.getElementById('totalTiles');
+        const elProg    = document.getElementById('progressFill');
+
+        /* ── State ── */
+        let mx = -9999, my = -9999;          // raw mouse
+        let rx = -9999, ry = -9999;          // ring position (smoothed)
+        let gx = -9999, gy = -9999;          // glow position (even smoother)
+        let hoverCount  = 0;
+        let lastHovered = null;
+        let particles   = [];
+        let trail       = [];
+        const touched   = new Set();         // unique tiles visited
+        let celebrated  = false;
+        let cols, rows, total;
+        const tiles     = [];
+        let tData       = [];                // cached tile positions
+
+        /* ── Build grid ── */
+        function buildGrid() {
+            grid.innerHTML = '';
+            tiles.length = 0;
+
+            if (window.innerWidth <= 400)      cols = 5;
+            else if (window.innerWidth <= 600) cols = 7;
+            else                               cols = 10;
+
+            rows  = Math.ceil(70 / cols);
+            total = cols * rows;
+            grid.style.setProperty('--cols', cols);
+            elTotal.textContent = total;
+
+            for (let i = 0; i < total; i++) {
+                const t = document.createElement('div');
+                t.className = 'tile';
+                grid.appendChild(t);
+                tiles.push(t);
+            }
+        }
+
+        /* ── Cache tile bounding rects ── */
+        function cachePositions() {
+            tData = tiles.map(t => {
+                const r = t.getBoundingClientRect();
+                return {
+                    cx: r.left + r.width * 0.5,
+                    cy: r.top  + r.height * 0.5,
+                    w: r.width,
+                    h: r.height,
+                    l: r.left,
+                    t: r.top,
+                    nx: r.left / window.innerWidth,
+                    ny: r.top  / window.innerHeight
+                };
+            });
+        }
+
+        /* ── Resize handler ── */
+        function onResize() {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+            buildGrid();
+            // Wait a frame for layout to settle before caching
+            requestAnimationFrame(cachePositions);
+        }
+        onResize();
+        window.addEventListener('resize', onResize);
+
+        /* ── Input ── */
+        document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+        document.addEventListener('touchmove', e => {
+            e.preventDefault();
+            mx = e.touches[0].clientX;
+            my = e.touches[0].clientY;
+        }, { passive: false });
+        document.addEventListener('touchstart', e => {
+            mx = e.touches[0].clientX;
+            my = e.touches[0].clientY;
+        });
+
+        /* ── Particle class ── */
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x;
+                this.y = y;
+                const a = Math.random() * Math.PI * 2;
+                const s = Math.random() * 4.5 + 1.2;
+                this.vx = Math.cos(a) * s;
+                this.vy = Math.sin(a) * s - 1.5;
+                this.life  = 1;
+                this.decay = Math.random() * 0.022 + 0.014;
+                this.size  = Math.random() * 3 + 1.2;
+                this.hue   = hue;
+            }
+            update() {
+                this.x  += this.vx;
+                this.y  += this.vy;
+                this.vy += 0.045;
+                this.vx *= 0.98;
+                this.life -= this.decay;
+            }
+            draw(c) {
+                if (this.life <= 0) return;
+                const r = Math.max(0.1, this.size * this.life);
+                // Core
+                c.beginPath();
+                c.arc(this.x, this.y, r, 0, Math.PI * 2);
+                c.fillStyle = 'hsla(' + this.hue + ',100%,68%,' + (this.life * 0.85) + ')';
+                c.fill();
+                // Glow halo
+                c.beginPath();
+                c.arc(this.x, this.y, r * 3, 0, Math.PI * 2);
+                c.fillStyle = 'hsla(' + this.hue + ',100%,65%,' + (this.life * 0.12) + ')';
+                c.fill();
+            }
+        }
+
+        function burst(x, y, n, hue) {
+            for (let i = 0; i < n; i++) particles.push(new Particle(x, y, hue));
+        }
+
+        /* ── Celebration ── */
+        function celebrate() {
+            if (celebrated) return;
+            celebrated = true;
+
+            // Wave animation across the grid
+            tiles.forEach((tile, i) => {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                const delay = (row + col) * 35;
+                setTimeout(() => {
+                    tile.classList.add('celebrating');
+                    const d = tData[i];
+                    if (d) burst(d.cx, d.cy, 6, (col / cols) * 55 + 10);
+                    setTimeout(() => tile.classList.remove('celebrating'), 550);
+                }, delay);
+            });
+
+            // Big center burst
+            const cx = window.innerWidth  * 0.5;
+            const cy = window.innerHeight * 0.5;
+            setTimeout(() => {
+                burst(cx, cy, 60, 25);
+                burst(cx, cy, 40, 160);
+            }, (cols + rows) * 18);
+
+            // Reset after delay
+            setTimeout(() => {
+                celebrated = false;
+                touched.clear();
+                elUnique.textContent = '0';
+                elProg.style.width = '0%';
+                elProg.classList.remove('complete');
+            }, 3200);
+        }
+
+        /* ── Main render loop ── */
+        function frame() {
+            const now  = performance.now();
+            const time = now * 0.001;
+
+            /* Smooth cursor followers */
+            rx += (mx - rx) * 0.13;
+            ry += (my - ry) * 0.11;
+            ring.style.left = rx + 'px';
+            ring.style.top  = ry + 'px';
+            dot.style.left  = mx + 'px';
+            dot.style.top   = my + 'px';
+
+            gx += (mx - gx) * 0.055;
+            gy += (my - gy) * 0.055;
+            glow1.style.left = gx + 'px';
+            glow1.style.top  = gy + 'px';
+            glow2.style.left = gx + 'px';
+            glow2.style.top  = gy + 'px';
+
+            const MAX_DIST = 170;
+            let currentHovered = null;
+
+            /* ── Update tiles ── */
+            for (let i = 0; i < total; i++) {
+                const tile = tiles[i];
+                const d    = tData[i];
+                if (!d) continue;
+
+                const dx   = d.cx - mx;
+                const dy   = d.cy - my;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const prox = Math.max(0, 1 - dist / MAX_DIST);
+
+                if (prox > 0.005) {
+                    /* Magnetic push — tiles flee the cursor */
+                    const pushStr = prox * prox * 14;
+                    const ang = Math.atan2(dy, dx);
+                    const px  = Math.cos(ang) * pushStr;
+                    const py  = Math.sin(ang) * pushStr;
+
+                    /* Color: spatial gradient + proximity intensity */
+                    const hue  = d.nx * 35 + d.ny * 18 + prox * 22;
+                    const sat  = 72 + prox * 28;
+                    const lit  = 10 + prox * 40;
+
+                    /* Transform */
+                    const sc  = 1 + prox * 0.2;
+                    const rot = prox * 5 * (dx > 0 ? 1 : -1);
+                    tile.style.transform =
+                        'translate(' + px.toFixed(1) + 'px,' + py.toFixed(1) + 'px) ' +
+                        'scale(' + sc.toFixed(3) + ') ' +
+                        'rotate(' + rot.toFixed(2) + 'deg)';
+
+                    /* Colors */
+                    tile.style.background  = 'hsl(' + hue + ',' + sat + '%,' + lit + '%)';
+                    tile.style.borderColor = 'hsla(' + hue + ',100%,55%,' + (prox * 0.75).toFixed(3) + ')';
+                    tile.style.boxShadow   =
+                        '0 0 ' + (prox * 40).toFixed(0) + 'px hsla(' + hue + ',100%,55%,' + (prox * 0.35).toFixed(3) + '),' +
+                        '0 0 ' + (prox * 90).toFixed(0) + 'px hsla(' + hue + ',100%,55%,' + (prox * 0.1).toFixed(3) + '),' +
+                        'inset 0 0 ' + (prox * 22).toFixed(0) + 'px hsla(' + hue + ',100%,60%,' + (prox * 0.18).toFixed(3) + ')';
+
+                    /* Spotlight position on tile surface */
+                    tile.style.setProperty('--gx', ((mx - d.l) / d.w * 100).toFixed(0) + '%');
+                    tile.style.setProperty('--gy', ((my - d.t) / d.h * 100).toFixed(0) + '%');
+                    tile.classList.add('near');
+
+                    /* Is cursor directly over this tile? */
+                    if (mx >= d.l && mx <= d.l + d.w && my >= d.t && my <= d.t + d.h) {
+                        currentHovered = tile;
+
+                        /* Continuous subtle particles while hovering */
+                        if (Math.random() < 0.35) {
+                            burst(d.cx, d.cy, 1, hue);
+                        }
+                    }
+                } else {
+                    /* Idle: gentle breathing */
+                    const breath = Math.sin(time * 1.15 + i * 0.38) * 0.013;
+                    tile.style.transform   = 'scale(' + (1 + breath).toFixed(4) + ')';
+                    tile.style.background  = '';
+                    tile.style.borderColor = '';
+                    tile.style.boxShadow   = '';
+                    tile.classList.remove('near');
+                }
+            }
+
+            /* ── Hover enter event ── */
+            if (currentHovered && currentHovered !== lastHovered) {
+                hoverCount++;
+                elHover.textContent = hoverCount;
+                elHover.classList.add('bump');
+                setTimeout(() => elHover.classList.remove('bump'), 160);
+
+                touched.add(currentHovered);
+                const uCount = touched.size;
+                elUnique.textContent = uCount;
+                const pct = (uCount / total * 100).toFixed(1);
+                elProg.style.width = pct + '%';
+                if (uCount >= total) {
+                    elProg.classList.add('complete');
+                    celebrate();
+                }
+
+                /* Pulse ring */
+                const pulse = document.createElement('div');
+                pulse.className = 'pulse-ring';
+                currentHovered.appendChild(pulse);
+                pulse.addEventListener('animationend', () => pulse.remove());
+
+                /* Burst particles */
+                const idx = tiles.indexOf(currentHovered);
+                if (idx >= 0 && tData[idx]) {
+                    const td = tData[idx];
+                    const hue = td.nx * 35 + td.ny * 18 + 30;
+                    burst(td.cx, td.cy, 6, hue);
+
+                    /* Trail point */
+                    trail.push({ x: td.cx, y: td.cy, time: now, hue: hue });
+                    if (trail.length > 30) trail.shift();
+                }
+            }
+            lastHovered = currentHovered;
+
+            /* Cursor ring state */
+            ring.classList.toggle('active', !!currentHovered);
+
+            /* ── Canvas: trail + particles ── */
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw connecting trail with glow
+            trail = trail.filter(p => now - p.time < 1400);
+            if (trail.length > 1) {
+                // Glow layer
+                for (let i = 1; i < trail.length; i++) {
+                    const age = (now - trail[i].time) / 1400;
+                    const a = (1 - age) * 0.1;
+                    ctx.beginPath();
+                    ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                    ctx.strokeStyle = 'hsla(' + trail[i].hue + ',100%,65%,' + a.toFixed(3) + ')';
+                    ctx.lineWidth = (1 - age) * 14;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+                // Core line
+                for (let i = 1; i < trail.length; i++) {
+                    const age = (now - trail[i].time) / 1400;
+                    const a = (1 - age) * 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                    ctx.strokeStyle = 'hsla(' + trail[i].hue + ',100%,70%,' + a.toFixed(3) + ')';
+                    ctx.lineWidth = (1 - age) * 2.5;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+            }
+
+            // Update and draw particles
+            particles = particles.filter(p => p.life > 0);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw(ctx);
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
+    })();
+    </script>
+</body>
+</html>

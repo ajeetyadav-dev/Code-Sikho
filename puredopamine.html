@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pure Dopamine Hover Effects</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --fg: #f0ece4;
+    --muted: #5a5651;
+    --accent: #ff5733;
+    --accent2: #ffb347;
+    --accent3: #ff6f91;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.07);
+    --glow: rgba(255,87,51,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* --- Background atmosphere --- */
+  .bg-noise {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px;
+  }
+
+  .bg-blobs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+
+  .bg-blobs .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.12;
+    animation: blobFloat 20s ease-in-out infinite alternate;
+  }
+
+  .blob-1 { width: 500px; height: 500px; background: var(--accent); top: -10%; left: -10%; }
+  .blob-2 { width: 400px; height: 400px; background: var(--accent2); bottom: -10%; right: -5%; animation-delay: -7s; }
+  .blob-3 { width: 300px; height: 300px; background: var(--accent3); top: 40%; left: 50%; animation-delay: -14s; }
+
+  @keyframes blobFloat {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+    100% { transform: translate(30px, 10px) scale(1.05); }
+  }
+
+  /* --- Layout --- */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 24px 120px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 100px;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    backdrop-filter: blur(10px);
+  }
+
+  .hero-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(42px, 7vw, 80px);
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 .gradient-text {
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  /* --- Section labels --- */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    margin-bottom: 40px;
+    letter-spacing: -0.5px;
+  }
+
+  .effect-section {
+    margin-bottom: 100px;
+  }
+
+  /* --- Effect 1: Magnetic Button --- */
+  .magnetic-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .magnetic-btn {
+    position: relative;
+    padding: 18px 42px;
+    border: none;
+    border-radius: 60px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease;
+    will-change: transform;
+    overflow: hidden;
+  }
+
+  .magnetic-btn.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,87,51,0.2);
+  }
+
+  .magnetic-btn.primary:hover {
+    box-shadow: 0 8px 40px rgba(255,87,51,0.45);
+  }
+
+  .magnetic-btn.outline {
+    background: transparent;
+    color: var(--fg);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  .magnetic-btn.outline:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 30px rgba(255,87,51,0.15);
+  }
+
+  .magnetic-btn .btn-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 45%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.15) 55%, transparent 60%);
+    transform: translateX(-100%);
+    transition: none;
+    pointer-events: none;
+  }
+
+  .magnetic-btn:hover .btn-shine {
+    transition: transform 0.6s ease;
+    transform: translateX(100%);
+  }
+
+  /* --- Effect 2: 3D Tilt Cards --- */
+  .tilt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .tilt-card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 28px;
+    cursor: default;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    transform-style: preserve-3d;
+    will-change: transform;
+    overflow: hidden;
+  }
+
+  .tilt-card:hover {
+    border-color: rgba(255,87,51,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(255,87,51,0.08);
+  }
+
+  .tilt-card .card-glow {
+    position: absolute;
+    width: 250px; height: 250px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,87,51,0.15), transparent 70%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+  }
+
+  .tilt-card:hover .card-glow { opacity: 1; }
+
+  .tilt-card .card-icon {
+    position: relative;
+    z-index: 1;
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin-bottom: 20px;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), background 0.4s ease;
+  }
+
+  .tilt-card:nth-child(1) .card-icon { background: rgba(255,87,51,0.12); color: var(--accent); }
+  .tilt-card:nth-child(2) .card-icon { background: rgba(255,179,71,0.12); color: var(--accent2); }
+  .tilt-card:nth-child(3) .card-icon { background: rgba(255,111,145,0.12); color: var(--accent3); }
+
+  .tilt-card:hover .card-icon {
+    transform: translateZ(30px) scale(1.1);
+  }
+
+  .tilt-card h3 {
+    position: relative; z-index: 1;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 10px;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .tilt-card:hover h3 { transform: translateZ(20px); }
+
+  .tilt-card p {
+    position: relative; z-index: 1;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .tilt-card:hover p { transform: translateZ(10px); }
+
+  .tilt-card .card-shine {
+    position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 55%, transparent 60%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    border-radius: 20px;
+  }
+
+  .tilt-card:hover .card-shine { opacity: 1; }
+
+  /* --- Effect 3: Text Scramble --- */
+  .scramble-area {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .scramble-word {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(48px, 8vw, 96px);
+    cursor: default;
+    display: inline-block;
+    letter-spacing: -2px;
+    position: relative;
+    transition: color 0.3s ease;
+    color: var(--fg);
+  }
+
+  .scramble-word:hover {
+    color: var(--accent);
+  }
+
+  .scramble-word::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .scramble-word:hover::after { width: 100%; }
+
+  .scramble-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 20px;
+    font-weight: 300;
+  }
+
+  /* --- Effect 4: Particle Burst Button --- */
+  .particle-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+    position: relative;
+  }
+
+  .particle-btn {
+    position: relative;
+    padding: 22px 56px;
+    border: none;
+    border-radius: 60px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease;
+    z-index: 2;
+  }
+
+  .particle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px rgba(255,87,51,0.4);
+  }
+
+  .particle-btn:active { transform: scale(0.97); }
+
+  .particle-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* --- Effect 5: Liquid Morph --- */
+  .liquid-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .liquid-blob {
+    width: 160px; height: 160px;
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    cursor: pointer;
+    transition: border-radius 0.6s cubic-bezier(0.23, 1, 0.32, 1), transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.4s ease;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .liquid-blob i {
+    font-size: 32px;
+    color: #fff;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .liquid-blob:nth-child(1) { background: linear-gradient(135deg, var(--accent), #ff8a65); box-shadow: 0 10px 40px rgba(255,87,51,0.2); }
+  .liquid-blob:nth-child(2) { background: linear-gradient(135deg, var(--accent2), #ffd54f); box-shadow: 0 10px 40px rgba(255,179,71,0.2); }
+  .liquid-blob:nth-child(3) { background: linear-gradient(135deg, var(--accent3), #f48fb1); box-shadow: 0 10px 40px rgba(255,111,145,0.2); }
+  .liquid-blob:nth-child(4) { background: linear-gradient(135deg, #4dd0e1, #00897b); box-shadow: 0 10px 40px rgba(77,208,225,0.2); }
+
+  .liquid-blob:hover {
+    border-radius: 50% 50% 30% 70% / 60% 40% 60% 40%;
+    transform: scale(1.12) rotate(-5deg);
+  }
+
+  .liquid-blob:nth-child(2):hover { border-radius: 40% 60% 50% 50% / 50% 60% 40% 60%; transform: scale(1.12) rotate(5deg); }
+  .liquid-blob:nth-child(3):hover { border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%; transform: scale(1.12) rotate(-3deg); }
+  .liquid-blob:nth-child(4):hover { border-radius: 50% 50% 40% 60% / 70% 30% 70% 30%; transform: scale(1.12) rotate(4deg); }
+
+  .liquid-blob:hover i { transform: scale(1.2) rotate(10deg); }
+
+  .liquid-blob:hover:nth-child(1) { box-shadow: 0 15px 60px rgba(255,87,51,0.4); }
+  .liquid-blob:hover:nth-child(2) { box-shadow: 0 15px 60px rgba(255,179,71,0.4); }
+  .liquid-blob:hover:nth-child(3) { box-shadow: 0 15px 60px rgba(255,111,145,0.4); }
+  .liquid-blob:hover:nth-child(4) { box-shadow: 0 15px 60px rgba(77,208,225,0.4); }
+
+  /* --- Effect 6: Cursor Glow Trail --- */
+  .trail-area {
+    position: relative;
+    height: 300px;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    overflow: hidden;
+    cursor: none;
+  }
+
+  .trail-area .trail-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 24px;
+    color: var(--muted);
+    pointer-events: none;
+    transition: color 0.3s ease;
+  }
+
+  .trail-area:hover .trail-text { color: var(--fg); }
+
+  .trail-canvas {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+
+  .custom-cursor {
+    position: fixed;
+    width: 20px; height: 20px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease, opacity 0.3s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+    opacity: 0;
+  }
+
+  .custom-cursor.active {
+    width: 50px; height: 50px;
+    border-color: var(--accent2);
+  }
+
+  /* --- Effect 7: Elastic Underline Links --- */
+  .elastic-links {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 40px 20px;
+  }
+
+  .elastic-link {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--fg);
+    text-decoration: none;
+    position: relative;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+
+  .elastic-link:hover { color: var(--accent); }
+
+  .elastic-link svg {
+    position: absolute;
+    bottom: -6px; left: 0;
+    width: 100%; height: 8px;
+    overflow: visible;
+  }
+
+  .elastic-link svg path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    transition: stroke-dashoffset 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .elastic-link:hover svg path {
+    stroke-dashoffset: 0;
+  }
+
+  /* --- Effect 8: Ripple Cards --- */
+  .ripple-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  .ripple-card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.4s ease;
+  }
+
+  .ripple-card:hover { border-color: rgba(255,255,255,0.12); }
+
+  .ripple-card .ripple-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .ripple-card .ripple-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .ripple-card .ripple-wave {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,87,51,0.15);
+    transform: scale(0);
+    pointer-events: none;
+    animation: rippleExpand 0.7s ease-out forwards;
+  }
+
+  @keyframes rippleExpand {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* --- Footer --- */
+  .page-footer {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 300;
+  }
+
+  /* --- Scroll reveal --- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s cubic-bezier(0.23, 1, 0.32, 1), transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* --- Reduced motion --- */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .elastic-links { gap: 28px; }
+    .elastic-link { font-size: 18px; }
+    .liquid-blob { width: 120px; height: 120px; }
+    .liquid-blob i { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-noise"></div>
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Custom cursor -->
+<div class="custom-cursor" id="customCursor"></div>
+
+<main>
+  <!-- Hero -->
+  <header class="hero reveal">
+    <div class="hero-badge"><span class="dot"></span> Interactive Collection</div>
+    <h1><span class="gradient-text">Hover Effects</span><br>That Hit Different</h1>
+    <p>Eight handcrafted micro-interactions designed to trigger pure satisfaction. Go ahead, touch them.</p>
+  </header>
+
+  <!-- Effect 1: Magnetic Buttons -->
+  <section class="effect-section reveal">
+    <div class="section-label">01 — Magnetic Pull</div>
+    <div class="section-title">Buttons That Want You</div>
+    <div class="magnetic-row">
+      <button class="magnetic-btn primary" data-magnetic>
+        <span class="btn-shine"></span>
+        Get Started
+      </button>
+      <button class="magnetic-btn outline" data-magnetic>
+        <span class="btn-shine"></span>
+        Learn More
+      </button>
+    </div>
+  </section>
+
+  <!-- Effect 2: 3D Tilt Cards -->
+  <section class="effect-section reveal">
+    <div class="section-label">02 — 3D Tilt</div>
+    <div class="section-title">Cards With Depth</div>
+    <div class="tilt-grid">
+      <div class="tilt-card" data-tilt>
+        <div class="card-glow"></div>
+        <div class="card-shine"></div>
+        <div class="card-icon"><i class="fas fa-bolt"></i></div>
+        <h3>Instant Feedback</h3>
+        <p>Every interaction responds in under 16ms. The speed of thought, literally.</p>
+      </div>
+      <div class="tilt-card" data-tilt>
+        <div class="card-glow"></div>
+        <div class="card-shine"></div>
+        <div class="card-icon"><i class="fas fa-layer-group"></i></div>
+        <h3>Layered Motion</h3>
+        <p>Multiple elements moving at different speeds creates a parallax depth illusion.</p>
+      </div>
+      <div class="tilt-card" data-tilt>
+        <div class="card-glow"></div>
+        <div class="card-shine"></div>
+        <div class="card-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
+        <h3>Dynamic Glow</h3>
+        <p>Light follows your cursor across the surface, like a flashlight on frosted glass.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Effect 3: Text Scramble -->
+  <section class="effect-section reveal">
+    <div class="section-label">03 — Text Scramble</div>
+    <div class="section-title">Decoding In Real Time</div>
+    <div class="scramble-area">
+      <span class="scramble-word" data-scramble="DOPAMINE">DOPAMINE</span>
+      <div class="scramble-sub">Hover to trigger the decode sequence</div>
+    </div>
+  </section>
+
+  <!-- Effect 4: Particle Burst -->
+  <section class="effect-section reveal">
+    <div class="section-label">04 — Particle Burst</div>
+    <div class="section-title">Explosive Satisfaction</div>
+    <div class="particle-area">
+      <canvas class="particle-canvas" id="particleCanvas"></canvas>
+      <button class="particle-btn" id="particleBtn">Hover to Explode</button>
+    </div>
+  </section>
+
+  <!-- Effect 5: Liquid Morph -->
+  <section class="effect-section reveal">
+    <div class="section-label">05 — Liquid Morph</div>
+    <div class="section-title">Shape-Shifting Blobs</div>
+    <div class="liquid-area">
+      <div class="liquid-blob"><i class="fas fa-fire"></i></div>
+      <div class="liquid-blob"><i class="fas fa-star"></i></div>
+      <div class="liquid-blob"><i class="fas fa-heart"></i></div>
+      <div class="liquid-blob"><i class="fas fa-gem"></i></div>
+    </div>
+  </section>
+
+  <!-- Effect 6: Cursor Trail -->
+  <section class="effect-section reveal">
+    <div class="section-label">06 — Glow Trail</div>
+    <div class="section-title">Light Painting</div>
+    <div class="trail-area" id="trailArea">
+      <div class="trail-text">Move your cursor here</div>
+      <canvas class="trail-canvas" id="trailCanvas"></canvas>
+    </div>
+  </section>
+
+  <!-- Effect 7: Elastic Underlines -->
+  <section class="effect-section reveal">
+    <div class="section-label">07 — Elastic Draw</div>
+    <div class="section-title">Underlines That Stretch</div>
+    <div class="elastic-links">
+      <a class="elastic-link" href="#" onclick="return false">
+        Interface
+        <svg viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0,5 Q50,0 100,5 Q150,10 200,5"/></svg>
+      </a>
+      <a class="elastic-link" href="#" onclick="return false">
+        Motion
+        <svg viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0,5 Q50,0 100,5 Q150,10 200,5"/></svg>
+      </a>
+      <a class="elastic-link" href="#" onclick="return false">
+        Detail
+        <svg viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0,5 Q50,0 100,5 Q150,10 200,5"/></svg>
+      </a>
+      <a class="elastic-link" href="#" onclick="return false">
+        Delight
+        <svg viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0,5 Q50,0 100,5 Q150,10 200,5"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- Effect 8: Ripple Cards -->
+  <section class="effect-section reveal">
+    <div class="section-label">08 — Ripple Wave</div>
+    <div class="section-title">Click Anywhere On These</div>
+    <div class="ripple-grid">
+      <div class="ripple-card" data-ripple>
+        <div class="ripple-num">12ms</div>
+        <div class="ripple-label">Response Time</div>
+      </div>
+      <div class="ripple-card" data-ripple>
+        <div class="ripple-num">60fps</div>
+        <div class="ripple-label">Render Rate</div>
+      </div>
+      <div class="ripple-card" data-ripple>
+        <div class="ripple-num">8</div>
+        <div class="ripple-label">Effects Total</div>
+      </div>
+      <div class="ripple-card" data-ripple>
+        <div class="ripple-num">100%</div>
+        <div class="ripple-label">Satisfaction</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="page-footer">
+  Built with raw CSS, vanilla JS, and an unhealthy obsession with micro-interactions.
+</footer>
+
+<script>
+// ==========================================
+// Custom Cursor
+// ==========================================
+const cursor = document.getElementById('customCursor');
+let cursorVisible = false;
+
+document.addEventListener('mousemove', (e) => {
+  if (!cursorVisible) {
+    cursor.style.opacity = '1';
+    cursorVisible = true;
+  }
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+
+document.addEventListener('mouseleave', () => {
+  cursor.style.opacity = '0';
+  cursorVisible = false;
+});
+
+// Enlarge cursor on interactive elements
+document.querySelectorAll('button, a, .tilt-card, .liquid-blob, .ripple-card, .scramble-word, .trail-area').forEach(el => {
+  el.addEventListener('mouseenter', () => cursor.classList.add('active'));
+  el.addEventListener('mouseleave', () => cursor.classList.remove('active'));
+});
+
+// ==========================================
+// Scroll Reveal (IntersectionObserver)
+// ==========================================
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ==========================================
+// Effect 1: Magnetic Buttons
+// ==========================================
+document.querySelectorAll('[data-magnetic]').forEach(btn => {
+  btn.addEventListener('mousemove', (e) => {
+    const rect = btn.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px)`;
+  });
+
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = 'translate(0, 0)';
+  });
+});
+
+// ==========================================
+// Effect 2: 3D Tilt Cards
+// ==========================================
+document.querySelectorAll('[data-tilt]').forEach(card => {
+  const glow = card.querySelector('.card-glow');
+  const shine = card.querySelector('.card-shine');
+
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = (y - centerY) / centerY * -12;
+    const rotateY = (x - centerX) / centerX * 12;
+
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+
+    // Move glow to follow cursor
+    if (glow) {
+      glow.style.left = x + 'px';
+      glow.style.top = y + 'px';
+    }
+
+    // Move shine
+    if (shine) {
+      const shineX = ((x / rect.width) - 0.5) * 100;
+      shine.style.transform = `translateX(${shineX - 50}%)`;
+    }
+  });
+
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+  });
+});
+
+// ==========================================
+// Effect 3: Text Scramble
+// ==========================================
+const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';
+
+document.querySelectorAll('[data-scramble]').forEach(el => {
+  const original = el.dataset.scramble;
+  let isAnimating = false;
+  let frameId = null;
+
+  el.addEventListener('mouseenter', () => {
+    if (isAnimating) return;
+    isAnimating = true;
+    let iteration = 0;
+    const totalIterations = original.length * 3;
+
+    function scramble() {
+      let result = '';
+      for (let i = 0; i < original.length; i++) {
+        if (i < iteration / 3) {
+          result += original[i];
+        } else {
+          result += scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+        }
+      }
+      el.textContent = result;
+      iteration++;
+
+      if (iteration <= totalIterations) {
+        frameId = requestAnimationFrame(scramble);
+      } else {
+        el.textContent = original;
+        isAnimating = false;
+      }
+    }
+
+    scramble();
+  });
+
+  el.addEventListener('mouseleave', () => {
+    if (frameId) cancelAnimationFrame(frameId);
+    el.textContent = original;
+    isAnimating = false;
+  });
+});
+
+// ==========================================
+// Effect 4: Particle Burst
+// ==========================================
+const particleCanvas = document.getElementById('particleCanvas');
+const pCtx = particleCanvas.getContext('2d');
+const particleBtn = document.getElementById('particleBtn');
+let particles = [];
+let particleAnimating = false;
+
+function resizeParticleCanvas() {
+  const parent = particleCanvas.parentElement;
+  particleCanvas.width = parent.offsetWidth;
+  particleCanvas.height = parent.offsetHeight;
+}
+resizeParticleCanvas();
+window.addEventListener('resize', resizeParticleCanvas);
+
+class Particle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 6;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.life = 1;
+    this.decay = 0.015 + Math.random() * 0.02;
+    this.size = 2 + Math.random() * 4;
+    const colors = ['#ff5733', '#ffb347', '#ff6f91', '#ffd54f', '#ff8a65'];
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.gravity = 0.08;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravity;
+    this.vx *= 0.98;
+    this.life -= this.decay;
+    this.size *= 0.98;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.fillStyle = this.color;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+let lastSpawn = 0;
+
+particleBtn.addEventListener('mousemove', (e) => {
+  const now = Date.now();
+  if (now - lastSpawn < 30) return;
+  lastSpawn = now;
+
+  const rect = particleCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  for (let i = 0; i < 5; i++) {
+    particles.push(new Particle(x, y));
+  }
+
+  if (!particleAnimating) {
+    particleAnimating = true;
+    animateParticles();
+  }
+});
+
+particleBtn.addEventListener('mouseleave', () => {
+  // Let existing particles finish
+});
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+  particles.forEach(p => {
+    p.update();
+    p.draw(pCtx);
+  });
+
+  particles = particles.filter(p => p.life > 0);
+
+  if (particles.length > 0) {
+    requestAnimationFrame(animateParticles);
+  } else {
+    particleAnimating = false;
+    pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  }
+}
+
+// ==========================================
+// Effect 6: Cursor Glow Trail
+// ==========================================
+const trailArea = document.getElementById('trailArea');
+const trailCanvas = document.getElementById('trailCanvas');
+const tCtx = trailCanvas.getContext('2d');
+let trailPoints = [];
+let trailAnimating = false;
+
+function resizeTrailCanvas() {
+  trailCanvas.width = trailArea.offsetWidth;
+  trailCanvas.height = trailArea.offsetHeight;
+}
+resizeTrailCanvas();
+window.addEventListener('resize', resizeTrailCanvas);
+
+trailArea.addEventListener('mousemove', (e) => {
+  const rect = trailArea.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  trailPoints.push({
+    x, y,
+    life: 1,
+    size: 20 + Math.random() * 15
+  });
+
+  // Limit trail length
+  if (trailPoints.length > 60) trailPoints.shift();
+
+  if (!trailAnimating) {
+    trailAnimating = true;
+    animateTrail();
+  }
+});
+
+trailArea.addEventListener('mouseleave', () => {
+  // Let trail fade out
+});
+
+function animateTrail() {
+  tCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+
+  trailPoints.forEach((p, i) => {
+    p.life -= 0.025;
+    const alpha = Math.max(0, p.life * 0.5);
+
+    // Glow
+    const gradient = tCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+    gradient.addColorStop(0, `rgba(255,87,51,${alpha})`);
+    gradient.addColorStop(0.4, `rgba(255,179,71,${alpha * 0.5})`);
+    gradient.addColorStop(1, `rgba(255,87,51,0)`);
+
+    tCtx.fillStyle = gradient;
+    tCtx.beginPath();
+    tCtx.arc(p.x, p.y, Math.max(0.1, p.size), 0, Math.PI * 2);
+    tCtx.fill();
+  });
+
+  trailPoints = trailPoints.filter(p => p.life > 0);
+
+  if (trailPoints.length > 0) {
+    requestAnimationFrame(animateTrail);
+  } else {
+    trailAnimating = false;
+    tCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  }
+}
+
+// ==========================================
+// Effect 8: Ripple Cards
+// ==========================================
+document.querySelectorAll('[data-ripple]').forEach(card => {
+  card.addEventListener('click', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const size = Math.max(rect.width, rect.height) * 2;
+
+    const wave = document.createElement('div');
+    wave.className = 'ripple-wave';
+    wave.style.width = size + 'px';
+    wave.style.height = size + 'px';
+    wave.style.left = (x - size / 2) + 'px';
+    wave.style.top = (y - size / 2) + 'px';
+
+    card.appendChild(wave);
+
+    wave.addEventListener('animationend', () => wave.remove());
+  });
+
+  // Also on hover for continuous mini-ripples
+  card.addEventListener('mousemove', (e) => {
+    const now = Date.now();
+    if (!card._lastRipple || now - card._lastRipple > 200) {
+      card._lastRipple = now;
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const wave = document.createElement('div');
+      wave.className = 'ripple-wave';
+      const size = 40 + Math.random() * 30;
+      wave.style.width = size + 'px';
+      wave.style.height = size + 'px';
+      wave.style.left = (x - size / 2) + 'px';
+      wave.style.top = (y - size / 2) + 'px';
+
+      card.appendChild(wave);
+      wave.addEventListener('animationend', () => wave.remove());
+    }
+  });
+});
+
+// ==========================================
+// Liquid blob continuous morph animation
+// ==========================================
+document.querySelectorAll('.liquid-blob').forEach((blob, i) => {
+  let t = i * 2;
+  const shapes = [
+    '30% 70% 70% 30% / 30% 30% 70% 70%',
+    '50% 50% 30% 70% / 60% 40% 60% 40%',
+    '40% 60% 50% 50% / 50% 60% 40% 60%',
+    '60% 40% 60% 40% / 40% 60% 40% 60%',
+    '70% 30% 50% 50% / 30% 70% 30% 70%',
+    '50% 50% 40% 60% / 70% 30% 70% 30%',
+  ];
+
+  function morphBlob() {
+    if (blob.matches(':hover')) {
+      t += 0.02;
+    } else {
+      t += 0.008;
+    }
+    const idx = Math.floor(t) % shapes.length;
+    const nextIdx = (idx + 1) % shapes.length;
+    const progress = t - Math.floor(t);
+
+    // Simple interpolation by switching shapes
+    blob.style.borderRadius = shapes[idx];
+    requestAnimationFrame(morphBlob);
+  }
+  morphBlob();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I Can't Stop Hovering Over This</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --fg: #f0ece4;
+    --muted: #5a5650;
+    --accent: #ff5733;
+    --accent2: #00e59b;
+    --accent3: #ffd166;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.06);
+    --glow-accent: rgba(255,87,51,0.4);
+    --glow-accent2: rgba(0,229,155,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10000;
+    transition: transform 0.15s ease, border-color 0.3s ease, background 0.3s ease;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+  }
+  .cursor.hovering {
+    transform: translate(-50%, -50%) scale(2.5);
+    background: var(--accent);
+    border-color: transparent;
+  }
+
+  .cursor-dot {
+    position: fixed;
+    width: 6px;
+    height: 6px;
+    background: var(--fg);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10001;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Background atmosphere */
+  .bg-atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .bg-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: blobFloat 20s ease-in-out infinite;
+  }
+  .bg-blob:nth-child(1) {
+    width: 600px; height: 600px;
+    background: var(--accent);
+    top: -200px; left: -100px;
+    animation-delay: 0s;
+  }
+  .bg-blob:nth-child(2) {
+    width: 500px; height: 500px;
+    background: var(--accent2);
+    bottom: -200px; right: -100px;
+    animation-delay: -7s;
+  }
+  .bg-blob:nth-child(3) {
+    width: 400px; height: 400px;
+    background: var(--accent3);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: -14s;
+  }
+
+  @keyframes blobFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(40px, -30px) scale(1.1); }
+    50% { transform: translate(-20px, 40px) scale(0.95); }
+    75% { transform: translate(30px, 20px) scale(1.05); }
+  }
+
+  /* Noise overlay */
+  .noise {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+  }
+
+  /* Main layout */
+  .content {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+  .header-label {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(255,87,51,0.3);
+    padding: 6px 18px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+    animation: fadeInUp 0.8s ease both;
+  }
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 7vw, 88px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    animation: fadeInUp 0.8s ease 0.15s both;
+  }
+  .header h1 .highlight {
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    font-size: 17px;
+    color: var(--muted);
+    margin-top: 20px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+    animation: fadeInUp 0.8s ease 0.3s both;
+  }
+  .hover-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    font-size: 14px;
+    color: var(--muted);
+    animation: fadeInUp 0.8s ease 0.45s both;
+  }
+  .hover-counter .count {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent2);
+    min-width: 40px;
+    text-align: center;
+    transition: transform 0.15s ease;
+  }
+  .hover-counter .count.bump {
+    transform: scale(1.3);
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  /* Card base */
+  .card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px;
+    overflow: hidden;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  .card:hover {
+    border-color: rgba(255,255,255,0.12);
+  }
+  .card-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 1. Magnetic Button */
+  .magnetic-btn {
+    position: relative;
+    padding: 16px 40px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Space Grotesk', sans-serif;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    border-radius: 100px;
+    cursor: none;
+    transition: box-shadow 0.3s ease;
+    z-index: 1;
+  }
+  .magnetic-btn:hover {
+    box-shadow: 0 0 40px var(--glow-accent), 0 0 80px rgba(255,87,51,0.15);
+  }
+
+  /* 2. Jelly morph */
+  .jelly-box {
+    width: 100px;
+    height: 100px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, var(--accent2), #00b87a);
+    transition: border-radius 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+  .jelly-box:hover {
+    border-radius: 50% 20% 50% 20%;
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 0 50px var(--glow-accent2);
+  }
+
+  /* 3. Glitch text */
+  .glitch-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+    cursor: none;
+    color: var(--fg);
+  }
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+  .glitch-text::before {
+    color: var(--accent);
+    clip-path: inset(0 0 70% 0);
+  }
+  .glitch-text::after {
+    color: var(--accent2);
+    clip-path: inset(70% 0 0 0);
+  }
+  .glitch-text:hover::before {
+    opacity: 1;
+    animation: glitchTop 0.3s ease infinite;
+  }
+  .glitch-text:hover::after {
+    opacity: 1;
+    animation: glitchBottom 0.3s ease infinite;
+  }
+  @keyframes glitchTop {
+    0% { transform: translate(0); }
+    20% { transform: translate(-4px, -2px); }
+    40% { transform: translate(4px, 2px); }
+    60% { transform: translate(-2px, 1px); }
+    80% { transform: translate(2px, -1px); }
+    100% { transform: translate(0); }
+  }
+  @keyframes glitchBottom {
+    0% { transform: translate(0); }
+    20% { transform: translate(4px, 2px); }
+    40% { transform: translate(-4px, -2px); }
+    60% { transform: translate(2px, -1px); }
+    80% { transform: translate(-2px, 1px); }
+    100% { transform: translate(0); }
+  }
+
+  /* 4. Ripple circles */
+  .ripple-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    z-index: 1;
+  }
+  .ripple-circle {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--accent3);
+    border-radius: 50%;
+    opacity: 0;
+    transition: none;
+  }
+  .ripple-container:hover .ripple-circle {
+    animation: rippleOut 1.5s ease-out infinite;
+  }
+  .ripple-container:hover .ripple-circle:nth-child(2) { animation-delay: 0.3s; }
+  .ripple-container:hover .ripple-circle:nth-child(3) { animation-delay: 0.6s; }
+  .ripple-container:hover .ripple-circle:nth-child(4) { animation-delay: 0.9s; }
+  .ripple-dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 16px; height: 16px;
+    background: var(--accent3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .ripple-container:hover .ripple-dot {
+    transform: translate(-50%, -50%) scale(1.3);
+    box-shadow: 0 0 30px rgba(255,209,102,0.6);
+  }
+  @keyframes rippleOut {
+    0% { transform: scale(0.3); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+
+  /* 5. 3D Tilt Card inside card */
+  .tilt-inner {
+    width: 160px;
+    height: 100px;
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--muted);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    transform-style: preserve-3d;
+    perspective: 600px;
+    z-index: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .tilt-inner::after {
+    content: '';
+    position: absolute;
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    left: var(--mx, 50%);
+    top: var(--my, 50%);
+  }
+  .tilt-inner:hover::after {
+    opacity: 0.4;
+  }
+  .tilt-inner:hover {
+    border-color: rgba(255,87,51,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* 6. Text scramble */
+  .scramble-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    z-index: 1;
+    position: relative;
+    min-height: 40px;
+  }
+
+  /* 7. Orbit dots */
+  .orbit-container {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    z-index: 1;
+  }
+  .orbit-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 20px; height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  }
+  .orbit-container:hover .orbit-center {
+    transform: translate(-50%, -50%) scale(1.4);
+    box-shadow: 0 0 30px var(--glow-accent);
+  }
+  .orbit-dot {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transition: all 0.5s ease;
+  }
+  .orbit-dot:nth-child(2) { background: var(--accent2); animation: orbit1 3s linear infinite; }
+  .orbit-dot:nth-child(3) { background: var(--accent3); animation: orbit2 4s linear infinite; }
+  .orbit-dot:nth-child(4) { background: var(--fg); animation: orbit3 5s linear infinite; }
+  .orbit-container:hover .orbit-dot:nth-child(2) { animation-duration: 0.8s; }
+  .orbit-container:hover .orbit-dot:nth-child(3) { animation-duration: 1s; }
+  .orbit-container:hover .orbit-dot:nth-child(4) { animation-duration: 1.2s; }
+
+  @keyframes orbit1 {
+    0% { transform: translate(-50%, -50%) rotate(0deg) translateX(45px) rotate(0deg) scale(1); }
+    100% { transform: translate(-50%, -50%) rotate(360deg) translateX(45px) rotate(-360deg) scale(1); }
+  }
+  @keyframes orbit2 {
+    0% { transform: translate(-50%, -50%) rotate(120deg) translateX(45px) rotate(-120deg) scale(1); }
+    100% { transform: translate(-50%, -50%) rotate(480deg) translateX(45px) rotate(-480deg) scale(1); }
+  }
+  @keyframes orbit3 {
+    0% { transform: translate(-50%, -50%) rotate(240deg) translateX(45px) rotate(-240deg) scale(1); }
+    100% { transform: translate(-50%, -50%) rotate(600deg) translateX(45px) rotate(-600deg) scale(1); }
+  }
+
+  /* 8. Elastic stretch bar */
+  .elastic-track {
+    width: 200px;
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+  }
+  .elastic-fill {
+    height: 100%;
+    width: 40px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 100px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 20px rgba(255,87,51,0.3);
+  }
+  .elastic-track:hover .elastic-fill {
+    width: 200px;
+  }
+  .elastic-percent {
+    position: absolute;
+    right: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    transition: opacity 0.3s ease;
+    opacity: 0;
+    white-space: nowrap;
+  }
+  .elastic-track:hover .elastic-percent {
+    opacity: 1;
+  }
+
+  /* 9. Particle burst */
+  .burst-area {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .burst-icon {
+    font-size: 32px;
+    color: var(--accent2);
+    transition: transform 0.3s ease, color 0.3s ease;
+    z-index: 2;
+    position: relative;
+  }
+  .burst-area:hover .burst-icon {
+    transform: scale(1.3);
+    color: var(--accent3);
+  }
+  .burst-particle {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 10. Card with follow-glow */
+  .glow-card-inner {
+    width: 180px;
+    height: 110px;
+    border-radius: 14px;
+    background: #111;
+    border: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--muted);
+    transition: border-color 0.3s ease;
+  }
+  .glow-card-inner:hover {
+    border-color: rgba(255,255,255,0.1);
+  }
+  .glow-card-inner .glow-spot {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,87,51,0.25) 0%, transparent 70%);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    left: var(--gx, -100px);
+    top: var(--gy, -100px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .glow-card-inner:hover .glow-spot {
+    opacity: 1;
+  }
+
+  /* 11. Flip card */
+  .flip-wrapper {
+    width: 140px;
+    height: 100px;
+    perspective: 800px;
+    z-index: 1;
+    cursor: none;
+  }
+  .flip-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+  .flip-wrapper:hover .flip-inner {
+    transform: rotateY(180deg);
+  }
+  .flip-front, .flip-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .flip-front {
+    background: linear-gradient(135deg, #1a1a1a, #222);
+    border: 1px solid var(--border);
+    color: var(--fg);
+  }
+  .flip-back {
+    background: linear-gradient(135deg, var(--accent), #e04520);
+    color: var(--bg);
+    transform: rotateY(180deg);
+  }
+
+  /* 12. Magnetic field lines */
+  .field-container {
+    width: 140px;
+    height: 140px;
+    position: relative;
+    z-index: 1;
+  }
+  .field-line {
+    position: absolute;
+    border: 1.5px solid rgba(255,87,51,0.15);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .field-line:nth-child(1) { width: 40px; height: 40px; }
+  .field-line:nth-child(2) { width: 70px; height: 70px; }
+  .field-line:nth-child(3) { width: 100px; height: 100px; }
+  .field-line:nth-child(4) { width: 130px; height: 130px; }
+  .field-container:hover .field-line:nth-child(1) { width: 60px; height: 60px; border-color: rgba(255,87,51,0.6); }
+  .field-container:hover .field-line:nth-child(2) { width: 90px; height: 90px; border-color: rgba(255,87,51,0.45); }
+  .field-container:hover .field-line:nth-child(3) { width: 120px; height: 120px; border-color: rgba(255,87,51,0.3); }
+  .field-container:hover .field-line:nth-child(4) { width: 150px; height: 150px; border-color: rgba(255,87,51,0.15); }
+  .field-dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: box-shadow 0.4s ease;
+  }
+  .field-container:hover .field-dot {
+    box-shadow: 0 0 30px var(--glow-accent), 0 0 60px rgba(255,87,51,0.2);
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 80px;
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .footer span {
+    color: var(--accent);
+  }
+
+  /* Stagger animation for cards */
+  .card {
+    opacity: 0;
+    transform: translateY(40px);
+    animation: cardIn 0.7s ease forwards;
+  }
+  .card:nth-child(1) { animation-delay: 0.5s; }
+  .card:nth-child(2) { animation-delay: 0.6s; }
+  .card:nth-child(3) { animation-delay: 0.7s; }
+  .card:nth-child(4) { animation-delay: 0.8s; }
+  .card:nth-child(5) { animation-delay: 0.9s; }
+  .card:nth-child(6) { animation-delay: 1.0s; }
+  .card:nth-child(7) { animation-delay: 1.1s; }
+  .card:nth-child(8) { animation-delay: 1.2s; }
+  .card:nth-child(9) { animation-delay: 1.3s; }
+  .card:nth-child(10) { animation-delay: 1.4s; }
+  .card:nth-child(11) { animation-delay: 1.5s; }
+  .card:nth-child(12) { animation-delay: 1.6s; }
+
+  @keyframes cardIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .card {
+      min-height: 220px;
+    }
+    .content {
+      padding: 40px 16px 80px;
+    }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- Background -->
+<div class="bg-atmosphere">
+  <div class="bg-blob"></div>
+  <div class="bg-blob"></div>
+  <div class="bg-blob"></div>
+</div>
+<div class="noise"></div>
+
+<!-- Content -->
+<main class="content">
+  <header class="header">
+    <div class="header-label">Interactive Experiment</div>
+    <h1>I Can't Stop<br><span class="highlight">Hovering</span></h1>
+    <p>A collection of impossibly satisfying micro-interactions. Go ahead, try to look away.</p>
+    <div class="hover-counter">
+      <span>Total hovers</span>
+      <span class="count" id="hoverCount">0</span>
+    </div>
+  </header>
+
+  <section class="grid">
+
+    <!-- 1. Magnetic Button -->
+    <div class="card" data-hoverable>
+      <span class="card-label">01</span>
+      <div class="card-title">Magnetic Pull</div>
+      <button class="magnetic-btn" id="magneticBtn" aria-label="Magnetic button that follows cursor">
+        Come closer
+      </button>
+    </div>
+
+    <!-- 2. Jelly Morph -->
+    <div class="card" data-hoverable>
+      <span class="card-label">02</span>
+      <div class="card-title">Jelly Morph</div>
+      <div class="jelly-box" aria-label="Morphing jelly shape"></div>
+    </div>
+
+    <!-- 3. Glitch Text -->
+    <div class="card" data-hoverable>
+      <span class="card-label">03</span>
+      <div class="card-title">Glitch Text</div>
+      <div class="glitch-text" data-text="HOVER ME" aria-label="Glitching text">HOVER ME</div>
+    </div>
+
+    <!-- 4. Ripple Circles -->
+    <div class="card" data-hoverable>
+      <span class="card-label">04</span>
+      <div class="card-title">Ripple Pulse</div>
+      <div class="ripple-container" aria-label="Ripple pulse effect">
+        <div class="ripple-circle"></div>
+        <div class="ripple-circle"></div>
+        <div class="ripple-circle"></div>
+        <div class="ripple-circle"></div>
+        <div class="ripple-dot"></div>
+      </div>
+    </div>
+
+    <!-- 5. 3D Tilt -->
+    <div class="card" data-hoverable>
+      <span class="card-label">05</span>
+      <div class="card-title">3D Tilt</div>
+      <div class="tilt-inner" id="tiltCard" aria-label="3D tilting card">
+        <i class="fa-solid fa-cube" style="font-size:22px; color:var(--muted); transition: color 0.3s;"></i>
+      </div>
+    </div>
+
+    <!-- 6. Text Scramble -->
+    <div class="card" data-hoverable>
+      <span class="card-label">06</span>
+      <div class="card-title">Text Scramble</div>
+      <div class="scramble-text" id="scrambleText" data-final="DECODED" aria-label="Scrambling text">DECODED</div>
+    </div>
+
+    <!-- 7. Orbit Speed -->
+    <div class="card" data-hoverable>
+      <span class="card-label">07</span>
+      <div class="card-title">Orbit Accelerator</div>
+      <div class="orbit-container" aria-label="Orbiting dots that speed up on hover">
+        <div class="orbit-center"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+      </div>
+    </div>
+
+    <!-- 8. Elastic Fill -->
+    <div class="card" data-hoverable>
+      <span class="card-label">08</span>
+      <div class="card-title">Elastic Fill</div>
+      <div class="elastic-track" aria-label="Elastic progress bar">
+        <div class="elastic-fill"></div>
+        <div class="elastic-percent">100%</div>
+      </div>
+    </div>
+
+    <!-- 9. Particle Burst -->
+    <div class="card" data-hoverable>
+      <span class="card-label">09</span>
+      <div class="card-title">Particle Burst</div>
+      <div class="burst-area" id="burstArea" aria-label="Particle burst effect on hover">
+        <div class="burst-icon"><i class="fa-solid fa-star"></i></div>
+      </div>
+    </div>
+
+    <!-- 10. Follow Glow -->
+    <div class="card" data-hoverable>
+      <span class="card-label">10</span>
+      <div class="card-title">Follow Glow</div>
+      <div class="glow-card-inner" id="glowCard" aria-label="Card with glow that follows cursor">
+        <div class="glow-spot"></div>
+        <span>Move around</span>
+      </div>
+    </div>
+
+    <!-- 11. Flip Card -->
+    <div class="card" data-hoverable>
+      <span class="card-label">11</span>
+      <div class="card-title">Card Flip</div>
+      <div class="flip-wrapper" aria-label="Flipping card">
+        <div class="flip-inner">
+          <div class="flip-front">Front</div>
+          <div class="flip-back">Back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12. Field Lines -->
+    <div class="card" data-hoverable>
+      <span class="card-label">12</span>
+      <div class="card-title">Field Expansion</div>
+      <div class="field-container" aria-label="Expanding field lines">
+        <div class="field-line"></div>
+        <div class="field-line"></div>
+        <div class="field-line"></div>
+        <div class="field-line"></div>
+        <div class="field-dot"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="footer">
+    Built with obsession <span>&hearts;</span> &mdash; yes, I hovered over every single one too
+  </footer>
+</main>
+
+<script>
+  // ========== Custom Cursor ==========
+  const cursor = document.getElementById('cursor');
+  const cursorDot = document.getElementById('cursorDot');
+  let mouseX = 0, mouseY = 0;
+  let cursorX = 0, cursorY = 0;
+  let dotX = 0, dotY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  // Smooth cursor follow with lerp
+  function animateCursor() {
+    cursorX += (mouseX - cursorX) * 0.12;
+    cursorY += (mouseY - cursorY) * 0.12;
+    dotX += (mouseX - dotX) * 0.35;
+    dotY += (mouseY - dotY) * 0.35;
+
+    cursor.style.left = cursorX + 'px';
+    cursor.style.top = cursorY + 'px';
+    cursorDot.style.left = dotX + 'px';
+    cursorDot.style.top = dotY + 'px';
+
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // ========== Hover Counter ==========
+  let hoverCount = 0;
+  const countEl = document.getElementById('hoverCount');
+  const hoverables = document.querySelectorAll('[data-hoverable]');
+
+  hoverables.forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      hoverCount++;
+      countEl.textContent = hoverCount;
+      countEl.classList.add('bump');
+      setTimeout(() => countEl.classList.remove('bump'), 150);
+      cursor.classList.add('hovering');
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.classList.remove('hovering');
+    });
+  });
+
+  // ========== 1. Magnetic Button ==========
+  const magneticBtn = document.getElementById('magneticBtn');
+  const magneticCard = magneticBtn.closest('.card');
+
+  magneticCard.addEventListener('mousemove', (e) => {
+    const rect = magneticBtn.getBoundingClientRect();
+    const btnCX = rect.left + rect.width / 2;
+    const btnCY = rect.top + rect.height / 2;
+    const dx = e.clientX - btnCX;
+    const dy = e.clientY - btnCY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const maxDist = 200;
+
+    if (dist < maxDist) {
+      const strength = (1 - dist / maxDist) * 30;
+      const tx = (dx / dist) * strength;
+      const ty = (dy / dist) * strength;
+      magneticBtn.style.transform = `translate(${tx}px, ${ty}px)`;
+    } else {
+      magneticBtn.style.transform = 'translate(0, 0)';
+    }
+  });
+
+  magneticCard.addEventListener('mouseleave', () => {
+    magneticBtn.style.transform = 'translate(0, 0)';
+    magneticBtn.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease';
+    setTimeout(() => { magneticBtn.style.transition = 'box-shadow 0.3s ease'; }, 400);
+  });
+
+  // ========== 5. 3D Tilt Card ==========
+  const tiltCard = document.getElementById('tiltCard');
+
+  tiltCard.addEventListener('mousemove', (e) => {
+    const rect = tiltCard.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rotateX = (y - 0.5) * -20;
+    const rotateY = (x - 0.5) * 20;
+    tiltCard.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+    tiltCard.style.setProperty('--mx', (x * 100) + '%');
+    tiltCard.style.setProperty('--my', (y * 100) + '%');
+
+    // Change icon color based on tilt
+    const icon = tiltCard.querySelector('i');
+    const hue = Math.round(x * 30 + 10);
+    icon.style.color = `hsl(${hue}, 90%, 60%)`;
+  });
+
+  tiltCard.addEventListener('mouseleave', () => {
+    tiltCard.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
+    tiltCard.style.transition = 'transform 0.5s ease, box-shadow 0.3s ease, border-color 0.3s ease';
+    const icon = tiltCard.querySelector('i');
+    icon.style.color = 'var(--muted)';
+    setTimeout(() => { tiltCard.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease'; }, 500);
+  });
+
+  // ========== 6. Text Scramble ==========
+  const scrambleEl = document.getElementById('scrambleText');
+  const finalText = scrambleEl.dataset.final;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?<>';
+  let scrambleInterval = null;
+  let isScrambling = false;
+
+  function startScramble() {
+    if (isScrambling) return;
+    isScrambling = true;
+    let frame = 0;
+    const totalFrames = 20;
+
+    scrambleInterval = setInterval(() => {
+      let result = '';
+      for (let i = 0; i < finalText.length; i++) {
+        if (frame > i * 2 + 5) {
+          result += finalText[i];
+        } else {
+          result += chars[Math.floor(Math.random() * chars.length)];
+        }
+      }
+      scrambleEl.textContent = result;
+      frame++;
+
+      if (frame > totalFrames) {
+        clearInterval(scrambleInterval);
+        scrambleEl.textContent = finalText;
+        isScrambling = false;
+      }
+    }, 40);
+  }
+
+  scrambleEl.addEventListener('mouseenter', startScramble);
+
+  // ========== 9. Particle Burst ==========
+  const burstArea = document.getElementById('burstArea');
+  let burstParticles = [];
+
+  burstArea.addEventListener('mouseenter', () => {
+    // Create burst particles
+    const colors = ['#ff5733', '#00e59b', '#ffd166', '#f0ece4', '#ff8c66'];
+    for (let i = 0; i < 16; i++) {
+      const p = document.createElement('div');
+      p.className = 'burst-particle';
+      const angle = (Math.PI * 2 * i) / 16 + (Math.random() - 0.5) * 0.3;
+      const dist = 40 + Math.random() * 50;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = 4 + Math.random() * 6;
+
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.background = color;
+      p.style.left = '50%';
+      p.style.top = '50%';
+      p.style.transform = 'translate(-50%, -50%)';
+      p.style.opacity = '1';
+      p.style.transition = `all ${0.4 + Math.random() * 0.4}s cubic-bezier(0.34, 1.56, 0.64, 1)`;
+
+      burstArea.appendChild(p);
+
+      // Trigger animation
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          p.style.transform = `translate(calc(-50% + ${Math.cos(angle) * dist}px), calc(-50% + ${Math.sin(angle) * dist}px))`;
+          p.style.opacity = '0';
+        });
+      });
+
+      burstParticles.push(p);
+    }
+
+    // Clean up
+    setTimeout(() => {
+      burstParticles.forEach(p => p.remove());
+      burstParticles = [];
+    }, 1000);
+  });
+
+  // ========== 10. Follow Glow ==========
+  const glowCard = document.getElementById('glowCard');
+
+  glowCard.addEventListener('mousemove', (e) => {
+    const rect = glowCard.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    glowCard.style.setProperty('--gx', x + 'px');
+    glowCard.style.setProperty('--gy', y + 'px');
+  });
+
+  // ========== Card hover glow effect ==========
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.background = `radial-gradient(300px circle at ${x}px ${y}px, rgba(255,255,255,0.04), transparent 60%), var(--card)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.background = 'var(--card)';
+    });
+  });
+
+  // ========== Hide cursor on touch devices ==========
+  if ('ontouchstart' in window) {
+    cursor.style.display = 'none';
+    cursorDot.style.display = 'none';
+    document.body.style.cursor = 'auto';
+  }
+</script>
+</body>
+</html>
