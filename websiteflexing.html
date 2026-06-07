@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>This Website Is Flexing On Everyone</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-elevated: #111111;
+    --fg: #f0f0f0;
+    --muted: #666666;
+    --accent: #00ff88;
+    --accent2: #ffd700;
+    --card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --glow: rgba(0,255,136,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) var(--bg);
+  }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    overflow-x: hidden;
+  }
+
+  /* Custom cursor */
+  .cursor-dot {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10000;
+    transition: transform 0.1s;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10000;
+    transition: transform 0.15s ease-out, width 0.3s, height 0.3s, border-color 0.3s;
+    transform: translate(-50%, -50%);
+  }
+  .cursor-ring.hover {
+    width: 60px;
+    height: 60px;
+    border-color: var(--accent2);
+  }
+
+  /* Grain overlay */
+  .grain {
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grainShift 0.5s steps(1) infinite;
+  }
+
+  @keyframes grainShift {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-5%, -5%); }
+    50% { transform: translate(5%, 0); }
+    75% { transform: translate(0, 5%); }
+    100% { transform: translate(0, 0); }
+  }
+
+  /* Mouse glow */
+  .mouse-glow {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(circle, rgba(0,255,136,0.06) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s;
+  }
+
+  /* Hero section */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 10vw, 9rem);
+    line-height: 0.95;
+    text-align: center;
+    letter-spacing: -0.03em;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-title .line1 {
+    display: block;
+    color: var(--fg);
+    opacity: 0;
+    transform: translateY(80px);
+    animation: slideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+  }
+  .hero-title .line2 {
+    display: block;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0;
+    transform: translateY(80px);
+    animation: slideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+  }
+
+  @keyframes slideUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-sub {
+    margin-top: 2rem;
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 500px;
+    text-align: center;
+    opacity: 0;
+    animation: fadeIn 1s ease 0.8s forwards;
+    line-height: 1.7;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeIn 1s ease 1.2s forwards;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 2s ease infinite;
+  }
+
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.5); }
+    50% { opacity: 1; transform: scaleY(1); }
+  }
+
+  /* Flex meter */
+  .flex-meter-section {
+    padding: 6rem 2rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .flex-meter-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .flex-bar-outer {
+    width: 100%;
+    height: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .flex-bar-inner {
+    height: 100%;
+    width: 0%;
+    border-radius: 12px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), #ff6b35);
+    background-size: 200% 100%;
+    animation: barShimmer 2s linear infinite;
+    transition: width 0.3s ease;
+    position: relative;
+  }
+
+  .flex-bar-inner::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
+  }
+
+  @keyframes barShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Stats section */
+  .stats-section {
+    padding: 4rem 2rem 8rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .stat-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: transform 0.4s ease, border-color 0.3s;
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  .stat-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s;
+  }
+
+  .stat-card:hover {
+    border-color: rgba(0,255,136,0.3);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+
+  .stat-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+
+  .stat-label {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  /* Showcase section */
+  .showcase-section {
+    padding: 4rem 2rem 8rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .showcase-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .showcase-grid { grid-template-columns: 1fr; }
+  }
+
+  .showcase-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    min-height: 350px;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .showcase-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .showcase-card:nth-child(1) { grid-row: span 2; min-height: 720px; }
+
+  .showcase-card img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+  }
+
+  .showcase-card:hover img {
+    transform: scale(1.05);
+  }
+
+  .showcase-overlay {
+    position: relative;
+    z-index: 2;
+    padding: 2rem;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  }
+
+  .showcase-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    margin-bottom: 0.75rem;
+  }
+
+  .showcase-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .showcase-desc {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    line-height: 1.6;
+  }
+
+  /* Marquee */
+  .marquee-section {
+    padding: 3rem 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .marquee-track {
+    display: flex;
+    animation: marquee 20s linear infinite;
+    width: max-content;
+  }
+
+  .marquee-item {
+    font-family: 'Syne', sans-serif;
+    font-size: 4rem;
+    font-weight: 800;
+    white-space: nowrap;
+    padding: 0 2rem;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--muted);
+    transition: color 0.3s, -webkit-text-stroke 0.3s;
+  }
+
+  .marquee-item:hover {
+    color: var(--accent);
+    -webkit-text-stroke: 1px var(--accent);
+  }
+
+  .marquee-dot {
+    font-size: 4rem;
+    padding: 0 1rem;
+    color: var(--accent);
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Features section */
+  .features-section {
+    padding: 8rem 2rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .features-grid {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .feature-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    transform: translateX(-30px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .feature-row.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .feature-icon {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.15);
+    color: var(--accent);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .feature-text h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .feature-text p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .feature-arrow {
+    color: var(--muted);
+    font-size: 1.2rem;
+    transition: transform 0.3s, color 0.3s;
+  }
+
+  .feature-row:hover .feature-arrow {
+    transform: translateX(5px);
+    color: var(--accent);
+  }
+
+  /* Testimonials */
+  .testimonials-section {
+    padding: 4rem 2rem 8rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .testimonials-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .testimonial-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+    transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s;
+  }
+
+  .testimonial-card.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .testimonial-card:hover {
+    border-color: rgba(0,255,136,0.2);
+  }
+
+  .testimonial-stars {
+    color: var(--accent2);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .testimonial-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: rgba(240,240,240,0.8);
+    margin-bottom: 1.5rem;
+  }
+
+  .testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .testimonial-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+
+  .testimonial-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .testimonial-role {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  /* CTA section */
+  .cta-section {
+    padding: 8rem 2rem;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .cta-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 6vw, 5rem);
+    line-height: 1;
+    margin-bottom: 1.5rem;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    border-radius: 100px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+    text-decoration: none;
+  }
+
+  .cta-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px rgba(0,255,136,0.3);
+  }
+
+  .cta-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .cta-btn:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  /* Section headers */
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 20px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+
+  .section-desc {
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    max-width: 600px;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .section-header .section-desc {
+    margin: 0 auto;
+  }
+
+  /* Footer */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 2;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-links a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .footer-links a:hover {
+    color: var(--accent);
+  }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .toast {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    max-width: 350px;
+  }
+
+  .toast.out {
+    animation: toastOut 0.3s ease forwards;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(100px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100px); }
+  }
+
+  /* Floating particles canvas */
+  #particles-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Nav */
+  .site-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(10,10,10,0.6);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    animation: fadeIn 0.8s ease 0.1s forwards;
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .nav-logo-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(0,255,136,0); }
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    transition: color 0.3s;
+    position: relative;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+
+  .nav-links a:hover {
+    color: var(--fg);
+  }
+
+  .nav-links a:hover::after {
+    width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .marquee-item { font-size: 2.5rem; }
+    .marquee-dot { font-size: 2.5rem; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Grain overlay -->
+<div class="grain"></div>
+
+<!-- Mouse glow -->
+<div class="mouse-glow" id="mouseGlow"></div>
+
+<!-- Particles -->
+<canvas id="particles-canvas"></canvas>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Navigation -->
+<nav class="site-nav" role="navigation" aria-label="Main navigation">
+  <div class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    FLEX
+  </div>
+  <ul class="nav-links">
+    <li><a href="#stats">Stats</a></li>
+    <li><a href="#work">Work</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#testimonials">Reviews</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<header class="hero" id="hero">
+  <div class="hero-title" aria-label="This website is flexing on everyone">
+    <span class="line1">THIS WEBSITE</span>
+    <span class="line2">IS FLEXING</span>
+  </div>
+  <p class="hero-sub">Your website looks like a 2012 WordPress template. Mine looks like it was forged in the fires of Mount Doom by a team of designer deities.</p>
+  <div class="scroll-hint">
+    <span>Scroll down to get humbled</span>
+    <div class="scroll-line"></div>
+  </div>
+</header>
+
+<!-- Flex Meter -->
+<section class="flex-meter-section" id="flexMeter">
+  <div class="flex-meter-container">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1rem;">
+      <span class="section-label" style="margin-bottom:0;">Flex Level</span>
+      <span id="flexPercent" style="font-family:'Syne',sans-serif; font-weight:800; font-size:1.5rem; color:var(--accent);">0%</span>
+    </div>
+    <div class="flex-bar-outer">
+      <div class="flex-bar-inner" id="flexBar"></div>
+    </div>
+    <p style="color:var(--muted); font-size:0.8rem; margin-top:0.75rem; text-align:right;">Maximum flex capacity achieved</p>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats-section" id="stats">
+  <div class="section-header">
+    <div class="section-label">Numbers That Intimidate</div>
+    <h2 class="section-title">Statistically Superior</h2>
+    <p class="section-desc">These numbers aren't inflated. They're just that good. Unlike your website's analytics.</p>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card" data-target="999999" data-suffix="+">
+      <div class="stat-number" data-count>0</div>
+      <div class="stat-label">Lines of Flex</div>
+    </div>
+    <div class="stat-card" data-target="99.99" data-suffix="%">
+      <div class="stat-number" data-count>0</div>
+      <div class="stat-label">Aesthetic Accuracy</div>
+    </div>
+    <div class="stat-card" data-target="0" data-suffix="ms">
+      <div class="stat-number" data-count>0</div>
+      <div class="stat-label">Lag Tolerance</div>
+    </div>
+    <div class="stat-card" data-target="420" data-suffix="x">
+      <div class="stat-number" data-count>0</div>
+      <div class="stat-label">Better Than Yours</div>
+    </div>
+  </div>
+</section>
+
+<!-- Marquee -->
+<section class="marquee-section" aria-hidden="true">
+  <div class="marquee-track">
+    <span class="marquee-item">NO PHOTOSHOP</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">PURE HTML</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">ZERO FRAMEWORKS</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">CUSTOM CURSOR</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">PARTICLE SYSTEM</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">GLASS MORPHISM</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">NO PHOTOSHOP</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">PURE HTML</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">ZERO FRAMEWORKS</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">CUSTOM CURSOR</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">PARTICLE SYSTEM</span>
+    <span class="marquee-dot">/</span>
+    <span class="marquee-item">GLASS MORPHISM</span>
+    <span class="marquee-dot">/</span>
+  </div>
+</section>
+
+<!-- Showcase -->
+<section class="showcase-section" id="work">
+  <div class="section-header">
+    <div class="section-label">Visual Proof</div>
+    <h2 class="section-title">Projects That Made<br>Competitors Cry</h2>
+    <p class="section-desc">Every pixel placed with surgical precision. Every animation timed to perfection.</p>
+  </div>
+  <div class="showcase-grid">
+    <article class="showcase-card">
+      <img src="https://picsum.photos/seed/flex1/800/1000.jpg" alt="Project Nebula" loading="lazy">
+      <div class="showcase-overlay">
+        <span class="showcase-tag">Award Winner</span>
+        <h3 class="showcase-title">Project Nebula</h3>
+        <p class="showcase-desc">A 3D interactive experience that won 14 awards and made 3 agencies reconsider their life choices.</p>
+      </div>
+    </article>
+    <article class="showcase-card">
+      <img src="https://picsum.photos/seed/flex2/800/500.jpg" alt="Void Dashboard" loading="lazy">
+      <div class="showcase-overlay">
+        <span class="showcase-tag">Case Study</span>
+        <h3 class="showcase-title">Void Dashboard</h3>
+        <p class="showcase-desc">Real-time data viz so clean it belongs in a museum.</p>
+      </div>
+    </article>
+    <article class="showcase-card">
+      <img src="https://picsum.photos/seed/flex3/800/500.jpg" alt="Eclipse E-Commerce" loading="lazy">
+      <div class="showcase-overlay">
+        <span class="showcase-tag">Revenue Machine</span>
+        <h3 class="showcase-title">Eclipse E-Commerce</h3>
+        <p class="showcase-desc">Conversion rate so high the client thought we were cheating.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features-section" id="features">
+  <div class="section-header">
+    <div class="section-label">Why It's Better</div>
+    <h2 class="section-title">Features Your Site<br>Wishes It Had</h2>
+    <p class="section-desc">We didn't just build a website. We built a masterpiece that makes other websites feel insecure.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-row">
+      <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+      <div class="feature-text">
+        <h3>Sub-millisecond Animations</h3>
+        <p>Every transition is butter-smooth at 60fps. Your site stutters at 12.</p>
+      </div>
+      <div class="feature-arrow"><i class="fas fa-arrow-right"></i></div>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon"><i class="fas fa-eye"></i></div>
+      <div class="feature-text">
+        <h3>Custom Cursor Experience</h3>
+        <p>A cursor that responds to every element. Yours is still the default white arrow.</p>
+      </div>
+      <div class="feature-arrow"><i class="fas fa-arrow-right"></i></div>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
+      <div class="feature-text">
+        <h3>Particle Physics Engine</h3>
+        <p>Real-time particle system running in canvas. Your "dynamic" element is a GIF.</p>
+      </div>
+      <div class="feature-arrow"><i class="fas fa-arrow-right"></i></div>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon"><i class="fas fa-palette"></i></div>
+      <div class="feature-text">
+        <h3>Calculated Color Theory</h3>
+        <p>Every hue, saturation, and value was chosen with mathematical precision. Not a random Tailwind class.</p>
+      </div>
+      <div class="feature-arrow"><i class="fas fa-arrow-right"></i></div>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon"><i class="fas fa-layer-group"></i></div>
+      <div class="feature-text">
+        <h3>Depth and Dimension</h3>
+        <p>Layered parallax, glassmorphism, and 3D transforms. Your site is flatter than a pancake.</p>
+      </div>
+      <div class="feature-arrow"><i class="fas fa-arrow-right"></i></div>
+    </div>
+    <div class="feature-row" style="border-bottom:none;">
+      <div class="feature-icon"><i class="fas fa-moon"></i></div>
+      <div class="feature-text">
+        <h3>Dark Mode By Default</h3>
+        <p>Because light mode is for people who haven't evolved yet.</p>
+      </div>
+      <div class="feature-arrow"><i class="fas fa-arrow-right"></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="testimonials-section" id="testimonials">
+  <div class="section-header">
+    <div class="section-label">Humbled Reactions</div>
+    <h2 class="section-title">What People Said<br>After Seeing This</h2>
+    <p class="section-desc">Real reactions from real people who witnessed the flex firsthand.</p>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <p class="testimonial-text">I showed this to my team and now they're all taking a sabbatical to "find themselves." Absolutely devastating.</p>
+      <div class="testimonial-author">
+        <img class="testimonial-avatar" src="https://picsum.photos/seed/person1/80/80.jpg" alt="Sarah Chen">
+        <div>
+          <div class="testimonial-name">Sarah Chen</div>
+          <div class="testimonial-role">Formerly Confident CTO</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <p class="testimonial-text">I spent $200K on my agency's website. This single HTML file looks better. I'm not okay.</p>
+      <div class="testimonial-author">
+        <img class="testimonial-avatar" src="https://picsum.photos/seed/person2/80/80.jpg" alt="Marcus Webb">
+        <div>
+          <div class="testimonial-name">Marcus Webb</div>
+          <div class="testimonial-role">Agency Owner (In Crisis)</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <p class="testimonial-text">The custom cursor alone has more personality than my entire portfolio site. I need to lie down.</p>
+      <div class="testimonial-author">
+        <img class="testimonial-avatar" src="https://picsum.photos/seed/person3/80/80.jpg" alt="Aisha Patel">
+        <div>
+          <div class="testimonial-name">Aisha Patel</div>
+          <div class="testimonial-role">Freelance Designer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="cta">
+  <h2 class="cta-title">Still Using a<br>Template?</h2>
+  <p style="color:var(--muted); font-size:1.1rem; max-width:500px; margin:0 auto 2.5rem; line-height:1.7;">That's cute. Come back when you're ready to build something that doesn't look like everyone else's.</p>
+  <button class="cta-btn" id="ctaBtn" aria-label="Start flexing">
+    <span style="position:relative; z-index:1;">Start Flexing</span>
+    <i class="fas fa-arrow-right" style="position:relative; z-index:1;"></i>
+  </button>
+</section>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <span>Built with raw HTML, CSS & JS. No frameworks. No excuses.</span>
+  <div class="footer-links">
+    <a href="#hero">Top</a>
+    <a href="#stats">Stats</a>
+    <a href="#work">Work</a>
+  </div>
+</footer>
+
+<script>
+  // ===== Custom Cursor =====
+  const cursorDot = document.getElementById('cursorDot');
+  const cursorRing = document.getElementById('cursorRing');
+  const mouseGlow = document.getElementById('mouseGlow');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    cursorDot.style.left = mouseX - 4 + 'px';
+    cursorDot.style.top = mouseY - 4 + 'px';
+    mouseGlow.style.left = mouseX + 'px';
+    mouseGlow.style.top = mouseY + 'px';
+  });
+
+  // Smooth ring follow
+  function animateCursor() {
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+    cursorRing.style.left = ringX + 'px';
+    cursorRing.style.top = ringY + 'px';
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  // Hover effect on interactive elements
+  const hoverTargets = document.querySelectorAll('a, button, .stat-card, .showcase-card, .testimonial-card, .feature-row');
+  hoverTargets.forEach(el => {
+    el.addEventListener('mouseenter', () => cursorRing.classList.add('hover'));
+    el.addEventListener('mouseleave', () => cursorRing.classList.remove('hover'));
+  });
+
+  // ===== Particle System =====
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 80;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2 + 0.5;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.speedY = (Math.random() - 0.5) * 0.3;
+      this.opacity = Math.random() * 0.5 + 0.1;
+      this.hue = Math.random() > 0.7 ? 45 : 155; // gold or green
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      // Mouse repulsion
+      const dx = this.x - mouseX;
+      const dy = this.y - (mouseY + window.scrollY);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 150) {
+        const force = (150 - dist) / 150;
+        this.x += (dx / dist) * force * 2;
+        this.y += (dy / dist) * force * 2;
+      }
+
+      if (this.x < -10 || this.x > canvas.width + 10 || this.y < -10 || this.y > canvas.height + 10) {
+        this.reset();
+      }
+    }
+    draw() {
+      const scrollY = window.scrollY;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+      if (this.hue === 155) {
+        ctx.fillStyle = `rgba(0, 255, 136, ${this.opacity})`;
+      } else {
+        ctx.fillStyle = `rgba(255, 215, 0, ${this.opacity})`;
+      }
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  function drawConnections() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          const opacity = (1 - dist / 120) * 0.08;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0, 255, 136, ${opacity})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+    drawConnections();
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ===== Flex Meter Animation =====
+  const flexBar = document.getElementById('flexBar');
+  const flexPercent = document.getElementById('flexPercent');
+  let flexValue = 0;
+  let flexStarted = false;
+
+  function animateFlexMeter() {
+    if (flexValue < 100) {
+      flexValue += 0.5;
+      flexBar.style.width = flexValue + '%';
+      flexPercent.textContent = Math.floor(flexValue) + '%';
+      requestAnimationFrame(animateFlexMeter);
+    } else {
+      flexPercent.textContent = '100%';
+      showToast('<i class="fas fa-fire" style="color:var(--accent2);"></i> Flex meter maxed out. No surprise.');
+    }
+  }
+
+  // ===== Scroll Animations (IntersectionObserver) =====
+  const observerOptions = { threshold: 0.15, rootMargin: '0px 0px -50px 0px' };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, idx) => {
+      if (entry.isIntersecting) {
+        const delay = entry.target.dataset.delay || 0;
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, delay);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, observerOptions);
+
+  // Stat cards
+  document.querySelectorAll('.stat-card').forEach((card, i) => {
+    card.dataset.delay = i * 150;
+    observer.observe(card);
+  });
+
+  // Showcase cards
+  document.querySelectorAll('.showcase-card').forEach((card, i) => {
+    card.dataset.delay = i * 200;
+    observer.observe(card);
+  });
+
+  // Feature rows
+  document.querySelectorAll('.feature-row').forEach((row, i) => {
+    row.dataset.delay = i * 100;
+    observer.observe(row);
+  });
+
+  // Testimonial cards
+  document.querySelectorAll('.testimonial-card').forEach((card, i) => {
+    card.dataset.delay = i * 150;
+    observer.observe(card);
+  });
+
+  // Flex meter observer
+  const flexObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !flexStarted) {
+        flexStarted = true;
+        animateFlexMeter();
+      }
+    });
+  }, { threshold: 0.5 });
+  flexObserver.observe(document.getElementById('flexMeter'));
+
+  // ===== Counter Animation =====
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const card = entry.target;
+        const target = parseFloat(card.dataset.target);
+        const suffix = card.dataset.suffix || '';
+        const countEl = card.querySelector('[data-count]');
+        const isFloat = target % 1 !== 0;
+        const duration = 2000;
+        const start = performance.now();
+
+        function updateCount(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = eased * target;
+
+          if (isFloat) {
+            countEl.textContent = current.toFixed(2) + suffix;
+          } else {
+            countEl.textContent = Math.floor(current).toLocaleString() + suffix;
+          }
+
+          if (progress < 1) {
+            requestAnimationFrame(updateCount);
+          } else {
+            if (isFloat) {
+              countEl.textContent = target.toFixed(2) + suffix;
+            } else {
+              countEl.textContent = target.toLocaleString() + suffix;
+            }
+          }
+        }
+        requestAnimationFrame(updateCount);
+        counterObserver.unobserve(card);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.stat-card').forEach(card => counterObserver.observe(card));
+
+  // ===== 3D Tilt on Stat Cards =====
+  document.querySelectorAll('.stat-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((y - centerY) / centerY) * -8;
+      const rotateY = ((x - centerX) / centerX) * 8;
+      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(0)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateY(0)';
+    });
+  });
+
+  // ===== Toast System =====
+  function showToast(html) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = html;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('out');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // Initial toast
+  setTimeout(() => {
+    showToast('<i class="fas fa-crown" style="color:var(--accent2);"></i> Welcome. Prepare to feel inadequate.');
+  }, 2000);
+
+  // ===== CTA Button =====
+  document.getElementById('ctaBtn').addEventListener('click', () => {
+    showToast('<i class="fas fa-rocket" style="color:var(--accent);"></i> Flex level cannot be contained. Redirecting to greatness...');
+
+    // Fun: shake the page slightly
+    document.body.style.animation = 'none';
+    document.body.offsetHeight; // reflow
+    document.body.style.animation = 'shake 0.5s ease';
+  });
+
+  // Shake keyframe injection
+  const shakeStyle = document.createElement('style');
+  shakeStyle.textContent = `
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px) rotate(-0.5deg); }
+      40% { transform: translateX(4px) rotate(0.5deg); }
+      60% { transform: translateX(-3px) rotate(-0.3deg); }
+      80% { transform: translateX(3px) rotate(0.3deg); }
+    }
+  `;
+  document.head.appendChild(shakeStyle);
+
+  // ===== Scroll-triggered toasts =====
+  let toastShown = { stats: false, features: false, cta: false };
+  const toastObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        if (id === 'stats' && !toastShown.stats) {
+          toastShown.stats = true;
+          setTimeout(() => showToast('<i class="fas fa-chart-line" style="color:var(--accent);"></i> Those numbers? Real. Unlike your traffic stats.'), 500);
+        }
+        if (id === 'features' && !toastShown.features) {
+          toastShown.features = true;
+          setTimeout(() => showToast('<i class="fas fa-list-check" style="color:var(--accent2);"></i> Count the features. Now count yours. See the difference?'), 500);
+        }
+        if (id === 'cta' && !toastShown.cta) {
+          toastShown.cta = true;
+          setTimeout(() => showToast('<i class="fas fa-hand-point-down" style="color:var(--accent);"></i> Go ahead. Click it. You know you want to.'), 500);
+        }
+      }
+    });
+  }, { threshold: 0.3 });
+
+  toastObserver.observe(document.getElementById('stats'));
+  toastObserver.observe(document.getElementById('features'));
+  toastObserver.observe(document.getElementById('cta'));
+
+  // ===== Nav background on scroll =====
+  const nav = document.querySelector('.site-nav');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 100) {
+      nav.style.background = 'rgba(10,10,10,0.9)';
+    } else {
+      nav.style.background = 'rgba(10,10,10,0.6)';
+    }
+  });
+
+  // ===== Hide cursor on touch devices =====
+  if ('ontouchstart' in window) {
+    cursorDot.style.display = 'none';
+    cursorRing.style.display = 'none';
+    document.querySelectorAll('*').forEach(el => el.style.cursor = 'auto');
+  }
+</script>
+</body>
+</html>

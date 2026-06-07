@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premium Design System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { inter: ['Inter', 'sans-serif'] },
+    }
+  }
+}
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #f5f5f4; overflow-x: hidden; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #78716c, #57534e); border-radius: 3px; }
+
+  /* --- GLASS --- */
+  .glass {
+    background: rgba(23, 23, 23, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .glass-strong {
+    background: rgba(23, 23, 23, 0.8);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* --- GRADIENT TEXT --- */
+  .gradient-text {
+    background: linear-gradient(135deg, #d6d3d1 0%, #a8a29e 50%, #78716c 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .gradient-text-warm {
+    background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 50%, #f59e0b 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .gradient-text-amber {
+    background: linear-gradient(135deg, #fde68a 0%, #fbbf24 50%, #d97706 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  /* --- ANIMATED GRADIENT BORDER --- */
+  .animated-border {
+    position: relative;
+    background: rgba(23, 23, 23, 0.8);
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+  .animated-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 1px;
+    background: linear-gradient(
+      var(--angle, 0deg),
+      rgba(245, 158, 11, 0.4),
+      transparent 40%,
+      transparent 60%,
+      rgba(168, 162, 158, 0.2)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: rotateBorder 6s linear infinite;
+  }
+  @keyframes rotateBorder {
+    to { --angle: 360deg; }
+  }
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  /* --- REVEAL ANIMATIONS --- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.8s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .reveal-scale.active {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-40px);
+    transition: all 0.8s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .reveal-left.active {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(40px);
+    transition: all 0.8s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .reveal-right.active {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* --- STAGGER CHILDREN --- */
+  .stagger > * { transition-delay: calc(var(--i, 0) * 0.1s); }
+
+  /* --- FLOATING ANIMATION --- */
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-20px) rotate(2deg); }
+    50% { transform: translateY(-10px) rotate(0deg); }
+    75% { transform: translateY(-25px) rotate(-2deg); }
+  }
+  .float { animation: float 6s ease-in-out infinite; }
+  .float-delay { animation: float 6s ease-in-out 2s infinite; }
+  .float-slow { animation: float 8s ease-in-out 1s infinite; }
+
+  /* --- PULSE GLOW --- */
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.05); }
+  }
+  .pulse-glow { animation: pulseGlow 4s ease-in-out infinite; }
+
+  /* --- SHIMMER --- */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .shimmer-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-line::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  /* --- PREMIUM HOVER CARD --- */
+  .premium-card {
+    transition: all 0.5s cubic-bezier(0.17, 0.55, 0.55, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .premium-card::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(245, 158, 11, 0.06) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .premium-card:hover::after { opacity: 1; }
+  .premium-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -5px rgba(0,0,0,0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* --- NAV LINK UNDERLINE --- */
+  .nav-link {
+    position: relative;
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 1px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    transition: width 0.4s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .nav-link:hover::after { width: 100%; }
+
+  /* --- NOISE OVERLAY --- */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+  }
+
+  /* --- SMOOTH SCROLL --- */
+  html { scroll-behavior: smooth; }
+
+  /* --- MARQUEE --- */
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track {
+    animation: marquee 30s linear infinite;
+  }
+
+  /* --- COUNTER ANIMATION --- */
+  .counter { font-variant-numeric: tabular-nums; }
+
+  /* --- TOAST --- */
+  .toast {
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* --- MOBILE MENU --- */
+  .mobile-menu {
+    transform: translateX(100%);
+    transition: transform 0.5s cubic-bezier(0.17, 0.55, 0.55, 1);
+  }
+  .mobile-menu.open {
+    transform: translateX(0);
+  }
+</style>
+</head>
+<body class="font-inter antialiased">
+
+<!-- Noise Overlay -->
+<div class="noise-overlay"></div>
+
+<!-- Background Decorative Elements -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+  <div class="absolute top-1/4 -left-40 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-stone-800/20 to-stone-900/20 blur-[100px] pulse-glow"></div>
+  <div class="absolute bottom-1/4 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-amber-900/15 to-stone-900/15 blur-[120px] pulse-glow" style="animation-delay: 2s;"></div>
+  <div class="absolute top-3/4 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-br from-stone-800/10 to-transparent blur-[100px]"></div>
+</div>
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="fixed top-0 left-0 right-0 z-50 py-4 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="glass-strong rounded-2xl px-6 py-4 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center transition-transform duration-500 group-hover:rotate-12">
+          <span class="iconify text-white text-sm" data-icon="mdi:diamond-stone"></span>
+        </div>
+        <span class="text-stone-100 font-semibold tracking-tight">Luxe<span class="text-amber-500">.</span></span>
+      </a>
+
+      <!-- Desktop Links -->
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#techniques" class="nav-link text-sm text-stone-400 hover:text-stone-200 transition-colors duration-300">Techniques</a>
+        <a href="#showcase" class="nav-link text-sm text-stone-400 hover:text-stone-200 transition-colors duration-300">Showcase</a>
+        <a href="#pricing" class="nav-link text-sm text-stone-400 hover:text-stone-200 transition-colors duration-300">Pricing</a>
+        <a href="#testimonials" class="nav-link text-sm text-stone-400 hover:text-stone-200 transition-colors duration-300">Reviews</a>
+      </div>
+
+      <!-- CTA + Mobile Toggle -->
+      <div class="flex items-center gap-4">
+        <button class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-stone-600 to-stone-700 text-white text-sm font-medium hover:from-stone-500 hover:to-stone-600 transition-all duration-300 hover:shadow-lg hover:shadow-stone-900/50 active:scale-95">
+          Get Started
+          <span class="iconify text-xs" data-icon="mdi:arrow-right"></span>
+        </button>
+        <button id="menuToggle" class="md:hidden w-10 h-10 rounded-xl glass flex items-center justify-center text-stone-400 hover:text-stone-200 transition-colors">
+          <span class="iconify text-xl" data-icon="mdi:menu"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobileMenu" class="mobile-menu fixed inset-0 z-[60] bg-neutral-950/95 backdrop-blur-xl flex flex-col items-center justify-center gap-8">
+  <button id="menuClose" class="absolute top-6 right-6 w-10 h-10 rounded-xl glass flex items-center justify-center text-stone-400 hover:text-stone-200 transition-colors">
+    <span class="iconify text-xl" data-icon="mdi:close"></span>
+  </button>
+  <a href="#techniques" class="mobile-link text-2xl font-light text-stone-300 hover:text-stone-100 transition-colors">Techniques</a>
+  <a href="#showcase" class="mobile-link text-2xl font-light text-stone-300 hover:text-stone-100 transition-colors">Showcase</a>
+  <a href="#pricing" class="mobile-link text-2xl font-light text-stone-300 hover:text-stone-100 transition-colors">Pricing</a>
+  <a href="#testimonials" class="mobile-link text-2xl font-light text-stone-300 hover:text-stone-100 transition-colors">Reviews</a>
+  <button class="mt-4 px-8 py-3 rounded-xl bg-gradient-to-r from-stone-600 to-stone-700 text-white font-medium">Get Started</button>
+</div>
+
+<!-- ===== HERO ===== -->
+<section class="relative min-h-screen flex items-center justify-center px-6 pt-24">
+  <!-- Hero Background Glow -->
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-amber-900/20 via-transparent to-stone-900/20 blur-[100px] pulse-glow"></div>
+
+  <div class="relative z-10 text-center max-w-4xl mx-auto">
+    <!-- Badge -->
+    <div class="reveal inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8">
+      <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+      <span class="text-xs font-medium text-stone-400 uppercase tracking-wider">Design System v3.0</span>
+    </div>
+
+    <!-- Heading -->
+    <h1 class="reveal text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight mb-6" style="transition-delay: 0.1s;">
+      <span class="text-stone-100">This Makes</span><br>
+      <span class="gradient-text-warm">Every Website</span><br>
+      <span class="text-stone-100">Look Premium</span>
+      <span class="inline-block ml-2 float">
+        <span class="iconify text-amber-500 text-4xl md:text-6xl" data-icon="mdi:diamond-stone"></span>
+      </span>
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="reveal text-lg font-light leading-relaxed text-stone-400 max-w-2xl mx-auto mb-10" style="transition-delay: 0.2s;">
+      The secret ingredients that separate amateur designs from world-class experiences. Glass morphism, micro-interactions, and intentional whitespace — distilled into one system.
+    </p>
+
+    <!-- CTA Group -->
+    <div class="reveal flex flex-col sm:flex-row items-center justify-center gap-4" style="transition-delay: 0.3s;">
+      <button onclick="showToast('Welcome aboard! 🎉')" class="group px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-900 font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95 flex items-center gap-2">
+        Explore the System
+        <span class="iconify transition-transform duration-300 group-hover:translate-x-1" data-icon="mdi:arrow-right"></span>
+      </button>
+      <button class="px-8 py-4 rounded-2xl glass text-stone-300 font-medium text-sm hover:text-stone-100 hover:border-white/10 transition-all duration-300 active:scale-95 flex items-center gap-2">
+        <span class="iconify text-amber-500" data-icon="mdi:play-circle-outline"></span>
+        Watch Demo
+      </button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="reveal mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto" style="transition-delay: 0.4s;">
+      <div class="text-center">
+        <div class="text-2xl md:text-3xl font-bold text-stone-100 counter" data-target="47">0</div>
+        <div class="text-xs text-stone-500 mt-1 uppercase tracking-wider">Components</div>
+      </div>
+      <div class="text-center border-x border-white/5 px-4">
+        <div class="text-2xl md:text-3xl font-bold text-stone-100 counter" data-target="12">0</div>
+        <div class="text-xs text-stone-500 mt-1 uppercase tracking-wider">Templates</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl md:text-3xl font-bold gradient-text-amber counter" data-target="99">0</div>
+        <div class="text-xs text-stone-500 mt-1 uppercase tracking-wider">Score</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll Indicator -->
+  <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
+    <span class="text-[10px] uppercase tracking-[0.2em] text-stone-500">Scroll</span>
+    <div class="w-5 h-8 rounded-full border border-stone-700 flex items-start justify-center p-1">
+      <div class="w-1 h-2 rounded-full bg-stone-500 animate-bounce"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MARQUEE ===== -->
+<section class="relative py-8 border-y border-white/5 overflow-hidden">
+  <div class="flex whitespace-nowrap marquee-track">
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Glass Morphism</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Micro Animations</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Gradient Borders</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Noise Textures</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Scroll Reveals</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Premium Typography</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Spotlight Effects</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Intentional Whitespace</span>
+    <!-- Duplicate for seamless loop -->
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Glass Morphism</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Micro Animations</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Gradient Borders</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Noise Textures</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Scroll Reveals</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Premium Typography</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Spotlight Effects</span>
+    <span class="mx-8 text-sm font-medium text-stone-600 uppercase tracking-widest flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50"></span>Intentional Whitespace</span>
+  </div>
+</section>
+
+<!-- ===== TECHNIQUES SECTION ===== -->
+<section id="techniques" class="relative py-24 px-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Section Header -->
+    <div class="text-center mb-16">
+      <div class="reveal inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
+        <span class="iconify text-amber-500 text-xs" data-icon="mdi:lightbulb-outline"></span>
+        <span class="text-[11px] font-medium text-stone-500 uppercase tracking-wider">Core Techniques</span>
+      </div>
+      <h2 class="reveal text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-stone-100 mb-4">
+        The <span class="gradient-text-warm">Premium</span> Blueprint
+      </h2>
+      <p class="reveal text-stone-500 font-light text-lg max-w-xl mx-auto">
+        Seven design principles that transform ordinary interfaces into extraordinary experiences.
+      </p>
+    </div>
+
+    <!-- Technique Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger">
+      <!-- Card 1 -->
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 0;">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center mb-6">
+          <span class="iconify text-amber-500 text-2xl" data-icon="mdi:blur"></span>
+        </div>
+        <h3 class="text-xl font-semibold tracking-tight text-stone-100 mb-3">Glass Morphism</h3>
+        <p class="text-stone-500 font-light leading-relaxed text-sm">
+          Frosted glass panels with backdrop-blur create depth and layer hierarchy. The subtle transparency lets background elements breathe through.
+        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-stone-600">
+          <span class="iconify text-amber-500/60" data-icon="mdi:code-tags"></span>
+          backdrop-filter: blur(20px)
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 1;">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center mb-6">
+          <span class="iconify text-amber-500 text-2xl" data-icon="mdi:cursor-default-click-outline"></span>
+        </div>
+        <h3 class="text-xl font-semibold tracking-tight text-stone-100 mb-3">Micro-Interactions</h3>
+        <p class="text-stone-500 font-light leading-relaxed text-sm">
+          Every hover, click, and state change responds with buttery-smooth transitions. These tiny details signal quality and craftsmanship.
+        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-stone-600">
+          <span class="iconify text-amber-500/60" data-icon="mdi:code-tags"></span>
+          cubic-bezier(0.17, 0.55, 0.55, 1)
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 2;">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center mb-6">
+          <span class="iconify text-amber-500 text-2xl" data-icon="mdi:gradient-horizontal"></span>
+        </div>
+        <h3 class="text-xl font-semibold tracking-tight text-stone-100 mb-3">Gradient Borders</h3>
+        <p class="text-stone-500 font-light leading-relaxed text-sm">
+          Animated gradient borders that rotate around cards create a premium, alive feeling. They catch attention without being distracting.
+        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-stone-600">
+          <span class="iconify text-amber-500/60" data-icon="mdi:code-tags"></span>
+          mask-composite: exclude
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 3;">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center mb-6">
+          <span class="iconify text-amber-500 text-2xl" data-icon="mdi:text-shadow"></span>
+        </div>
+        <h3 class="text-xl font-semibold tracking-tight text-stone-100 mb-3">Typography Hierarchy</h3>
+        <p class="text-stone-500 font-light leading-relaxed text-sm">
+          Precise weight, size, and spacing contrast creates visual rhythm. Bold headlines, light body copy, and tight tracking feel editorial.
+        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-stone-600">
+          <span class="iconify text-amber-500/60" data-icon="mdi:code-tags"></span>
+          font-weight: 300 → 700
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 4;">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center mb-6">
+          <span class="iconify text-amber-500 text-2xl" data-icon="mdi:lightning-bolt-outline"></span>
+        </div>
+        <h3 class="text-xl font-semibold tracking-tight text-stone-100 mb-3">Scroll Reveals</h3>
+        <p class="text-stone-500 font-light leading-relaxed text-sm">
+          Elements gracefully fade and slide into view as users scroll. This creates narrative flow and rewards exploration.
+        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-stone-600">
+          <span class="iconify text-amber-500/60" data-icon="mdi:code-tags"></span>
+          IntersectionObserver API
+        </div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 5;">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center mb-6">
+          <span class="iconify text-amber-500 text-2xl" data-icon="mdi:circle-opacity"></span>
+        </div>
+        <h3 class="text-xl font-semibold tracking-tight text-stone-100 mb-3">Ambient Glows</h3>
+        <p class="text-stone-500 font-light leading-relaxed text-sm">
+          Soft, pulsing background glows add atmosphere and depth. They're barely noticeable consciously but create a warm, premium feeling.
+        </p>
+        <div class="mt-6 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-stone-600">
+          <span class="iconify text-amber-500/60" data-icon="mdi:code-tags"></span>
+          blur: 100px + opacity: 0.2
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SHOWCASE — ANIMATED BORDER CARD ===== -->
+<section id="showcase" class="relative py-24 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <!-- Left: Text -->
+      <div>
+        <div class="reveal-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
+            <span class="iconify text-amber-500 text-xs" data-icon="mdi:star-four-points-outline"></span>
+            <span class="text-[11px] font-medium text-stone-500 uppercase tracking-wider">Signature Effect</span>
+          </div>
+        </div>
+        <h2 class="reveal-left text-3xl md:text-4xl font-bold tracking-tight text-stone-100 mb-6" style="transition-delay: 0.1s;">
+          Animated Gradient<br><span class="gradient-text-warm">Border Frames</span>
+        </h2>
+        <p class="reveal-left text-stone-500 font-light text-lg leading-relaxed mb-8" style="transition-delay: 0.2s;">
+          The rotating gradient border is the single most impactful effect you can add. It's subtle, elegant, and instantly communicates "this was designed with care."
+        </p>
+        <div class="reveal-left space-y-4" style="transition-delay: 0.3s;">
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-amber-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
+              <span class="iconify text-amber-500 text-xs" data-icon="mdi:check"></span>
+            </div>
+            <p class="text-stone-400 text-sm">Uses CSS <code class="text-amber-500/80 bg-amber-500/5 px-1.5 py-0.5 rounded text-xs">@property</code> for smooth angle animation</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-amber-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
+              <span class="iconify text-amber-500 text-xs" data-icon="mdi:check"></span>
+            </div>
+            <p class="text-stone-400 text-sm">Mask composite trick creates the border effect without extra elements</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-amber-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
+              <span class="iconify text-amber-500 text-xs" data-icon="mdi:check"></span>
+            </div>
+            <p class="text-stone-400 text-sm">Zero JavaScript required — pure CSS, GPU-accelerated</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Demo Card -->
+      <div class="reveal-right" style="transition-delay: 0.2s;">
+        <div class="animated-border p-8 md:p-10">
+          <div class="flex items-center gap-4 mb-8">
+            <img src="https://picsum.photos/seed/premium-avatar/80/80.jpg" alt="Avatar" class="w-14 h-14 rounded-2xl object-cover">
+            <div>
+              <h4 class="text-stone-100 font-semibold">Alexis Moreau</h4>
+              <p class="text-stone-500 text-sm">Lead Designer at Vercel</p>
+            </div>
+            <div class="ml-auto px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+              <span class="text-amber-500 text-xs font-medium">Pro</span>
+            </div>
+          </div>
+          <p class="text-stone-400 font-light leading-relaxed text-sm mb-8">
+            "The animated border technique alone elevated our landing page conversion rate by 23%. Users literally stay longer just watching the border rotate. It's the definition of subtle luxury."
+          </p>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-lg font-bold text-stone-100">4.9</div>
+              <div class="text-[10px] text-stone-600 uppercase tracking-wider mt-0.5">Rating</div>
+            </div>
+            <div class="text-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-lg font-bold text-stone-100">2.4k</div>
+              <div class="text-[10px] text-stone-600 uppercase tracking-wider mt-0.5">Projects</div>
+            </div>
+            <div class="text-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-lg font-bold gradient-text-amber">98%</div>
+              <div class="text-[10px] text-stone-600 uppercase tracking-wider mt-0.5">Satisfaction</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SPOTLIGHT CARD DEMO ===== -->
+<section class="relative py-24 px-6">
+  <div class="max-w-7xl mx-auto text-center">
+    <div class="reveal">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
+        <span class="iconify text-amber-500 text-xs" data-icon="mdi:cursor-move"></span>
+        <span class="text-[11px] font-medium text-stone-500 uppercase tracking-wider">Interactive Demo</span>
+      </div>
+    </div>
+    <h2 class="reveal text-3xl md:text-4xl font-bold tracking-tight text-stone-100 mb-4" style="transition-delay: 0.1s;">
+      Hover to <span class="gradient-text-warm">Spotlight</span>
+    </h2>
+    <p class="reveal text-stone-500 font-light text-lg max-w-lg mx-auto mb-16" style="transition-delay: 0.2s;">
+      Move your cursor over these cards. The radial spotlight follows your mouse — a subtle touch that makes the UI feel alive.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Spotlight Card 1 -->
+      <div class="premium-card glass rounded-2xl overflow-hidden reveal-scale" style="--i: 0;">
+        <div class="relative h-48 overflow-hidden">
+          <img src="https://picsum.photos/seed/premium-dark-1/600/400.jpg" alt="Project" class="w-full h-full object-cover opacity-60 transition-transform duration-700 hover:scale-110">
+          <div class="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/40 to-transparent"></div>
+          <div class="absolute top-4 right-4 w-8 h-8 rounded-full glass flex items-center justify-center">
+            <span class="iconify text-amber-500 text-sm" data-icon="mdi:arrow-top-right"></span>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-medium uppercase tracking-wider">Branding</span>
+            <span class="px-2 py-0.5 rounded-md bg-white/5 text-stone-500 text-[10px] font-medium uppercase tracking-wider">2024</span>
+          </div>
+          <h3 class="text-lg font-semibold text-stone-100 tracking-tight mb-2">Aurora Finance</h3>
+          <p class="text-stone-500 text-sm font-light leading-relaxed">Complete brand identity and web platform for a next-gen fintech startup.</p>
+        </div>
+      </div>
+
+      <!-- Spotlight Card 2 -->
+      <div class="premium-card glass rounded-2xl overflow-hidden reveal-scale" style="--i: 1;">
+        <div class="relative h-48 overflow-hidden">
+          <img src="https://picsum.photos/seed/premium-dark-2/600/400.jpg" alt="Project" class="w-full h-full object-cover opacity-60 transition-transform duration-700 hover:scale-110">
+          <div class="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/40 to-transparent"></div>
+          <div class="absolute top-4 right-4 w-8 h-8 rounded-full glass flex items-center justify-center">
+            <span class="iconify text-amber-500 text-sm" data-icon="mdi:arrow-top-right"></span>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-medium uppercase tracking-wider">SaaS</span>
+            <span class="px-2 py-0.5 rounded-md bg-white/5 text-stone-500 text-[10px] font-medium uppercase tracking-wider">2024</span>
+          </div>
+          <h3 class="text-lg font-semibold text-stone-100 tracking-tight mb-2">Nimbus Cloud</h3>
+          <p class="text-stone-500 text-sm font-light leading-relaxed">Dashboard redesign that reduced user onboarding time by 40%.</p>
+        </div>
+      </div>
+
+      <!-- Spotlight Card 3 -->
+      <div class="premium-card glass rounded-2xl overflow-hidden reveal-scale" style="--i: 2;">
+        <div class="relative h-48 overflow-hidden">
+          <img src="https://picsum.photos/seed/premium-dark-3/600/400.jpg" alt="Project" class="w-full h-full object-cover opacity-60 transition-transform duration-700 hover:scale-110">
+          <div class="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/40 to-transparent"></div>
+          <div class="absolute top-4 right-4 w-8 h-8 rounded-full glass flex items-center justify-center">
+            <span class="iconify text-amber-500 text-sm" data-icon="mdi:arrow-top-right"></span>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px] font-medium uppercase tracking-wider">E-commerce</span>
+            <span class="px-2 py-0.5 rounded-md bg-white/5 text-stone-500 text-[10px] font-medium uppercase tracking-wider">2024</span>
+          </div>
+          <h3 class="text-lg font-semibold text-stone-100 tracking-tight mb-2">Maison Luxe</h3>
+          <p class="text-stone-500 text-sm font-light leading-relaxed">High-end e-commerce experience for a luxury fashion house.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section id="pricing" class="relative py-24 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16">
+      <div class="reveal inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
+        <span class="iconify text-amber-500 text-xs" data-icon="mdi:tag-outline"></span>
+        <span class="text-[11px] font-medium text-stone-500 uppercase tracking-wider">Pricing</span>
+      </div>
+      <h2 class="reveal text-3xl md:text-4xl font-bold tracking-tight text-stone-100 mb-4" style="transition-delay: 0.1s;">
+        Invest in <span class="gradient-text-warm">Premium</span>
+      </h2>
+      <p class="reveal text-stone-500 font-light text-lg max-w-lg mx-auto" style="transition-delay: 0.2s;">
+        One-time purchase. Lifetime updates. No subscriptions.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
+      <!-- Starter -->
+      <div class="premium-card glass rounded-2xl p-8 reveal-scale" style="--i: 0;">
+        <div class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-4">Starter</div>
+        <div class="flex items-baseline gap-1 mb-2">
+          <span class="text-4xl font-bold text-stone-100">$29</span>
+          <span class="text-stone-600 text-sm">/one-time</span>
+        </div>
+        <p class="text-stone-500 text-sm font-light mb-8">Perfect for personal projects and experiments.</p>
+        <button onclick="showToast('Starter plan selected!')" class="w-full py-3 rounded-xl border border-white/10 text-stone-300 text-sm font-medium hover:bg-white/5 hover:text-stone-100 transition-all duration-300 active:scale-95 mb-8">
+          Get Started
+        </button>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>12 Components</li>
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>2 Templates</li>
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>Basic Support</li>
+          <li class="flex items-center gap-3 text-sm text-stone-600"><span class="iconify text-stone-800" data-icon="mdi:close-circle-outline"></span>Animated Borders</li>
+          <li class="flex items-center gap-3 text-sm text-stone-600"><span class="iconify text-stone-800" data-icon="mdi:close-circle-outline"></span>Spotlight Effects</li>
+        </ul>
+      </div>
+
+      <!-- Pro — Featured -->
+      <div class="animated-border reveal-scale" style="--i: 1; transform-origin: top center;">
+        <div class="relative p-8 rounded-2xl bg-neutral-900/90">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-900 text-[11px] font-semibold uppercase tracking-wider">
+            Most Popular
+          </div>
+          <div class="text-xs font-medium text-amber-500 uppercase tracking-wider mb-4">Professional</div>
+          <div class="flex items-baseline gap-1 mb-2">
+            <span class="text-4xl font-bold text-stone-100">$79</span>
+            <span class="text-stone-600 text-sm">/one-time</span>
+          </div>
+          <p class="text-stone-500 text-sm font-light mb-8">For freelancers and small teams shipping real products.</p>
+          <button onclick="showToast('Pro plan selected! 🎉')" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-900 text-sm font-semibold hover:from-amber-400 hover:to-amber-500 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95 mb-8">
+            Get Professional
+          </button>
+          <ul class="space-y-3">
+            <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-amber-500" data-icon="mdi:check-circle"></span>47 Components</li>
+            <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-amber-500" data-icon="mdi:check-circle"></span>12 Templates</li>
+            <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-amber-500" data-icon="mdi:check-circle"></span>Priority Support</li>
+            <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-amber-500" data-icon="mdi:check-circle"></span>Animated Borders</li>
+            <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-amber-500" data-icon="mdi:check-circle"></span>Spotlight Effects</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Team -->
+      <div class="premium-card glass rounded-2xl p-8 reveal-scale" style="--i: 2;">
+        <div class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-4">Team</div>
+        <div class="flex items-baseline gap-1 mb-2">
+          <span class="text-4xl font-bold text-stone-100">$199</span>
+          <span class="text-stone-600 text-sm">/one-time</span>
+        </div>
+        <p class="text-stone-500 text-sm font-light mb-8">For agencies and teams building at scale.</p>
+        <button onclick="showToast('Team plan selected!')" class="w-full py-3 rounded-xl border border-white/10 text-stone-300 text-sm font-medium hover:bg-white/5 hover:text-stone-100 transition-all duration-300 active:scale-95 mb-8">
+          Get Team
+        </button>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>Everything in Pro</li>
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>Figma Source Files</li>
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>Team License (10 seats)</li>
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>Custom Branding Guide</li>
+          <li class="flex items-center gap-3 text-sm text-stone-400"><span class="iconify text-stone-600" data-icon="mdi:check-circle-outline"></span>1-on-1 Onboarding Call</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section id="testimonials" class="relative py-24 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16">
+      <div class="reveal inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass mb-6">
+        <span class="iconify text-amber-500 text-xs" data-icon="mdi:message-star-outline"></span>
+        <span class="text-[11px] font-medium text-stone-500 uppercase tracking-wider">Testimonials</span>
+      </div>
+      <h2 class="reveal text-3xl md:text-4xl font-bold tracking-tight text-stone-100 mb-4" style="transition-delay: 0.1s;">
+        Loved by <span class="gradient-text-warm">Creators</span>
+      </h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 0;">
+        <div class="flex items-center gap-1 mb-4">
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+        </div>
+        <p class="text-stone-400 text-sm font-light leading-relaxed mb-6">
+          "I replaced my entire design system with this. Clients started asking what changed — the site felt more 'expensive.' That's the best compliment a designer can get."
+        </p>
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/testimonial-1/48/48.jpg" alt="Sarah" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="text-sm font-medium text-stone-200">Sarah Chen</div>
+            <div class="text-xs text-stone-600">Independent Designer</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 1;">
+        <div class="flex items-center gap-1 mb-4">
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+        </div>
+        <p class="text-stone-400 text-sm font-light leading-relaxed mb-6">
+          "The glass morphism and spotlight effects alone are worth 10x the price. Our SaaS dashboard went from 'clean' to 'wow' in a single afternoon."
+        </p>
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/testimonial-2/48/48.jpg" alt="Marcus" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="text-sm font-medium text-stone-200">Marcus Rivera</div>
+            <div class="text-xs text-stone-600">CTO, Cloudstack</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-card glass rounded-2xl p-8 reveal" style="--i: 2;">
+        <div class="flex items-center gap-1 mb-4">
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star"></span>
+          <span class="iconify text-amber-500" data-icon="mdi:star-half-full"></span>
+        </div>
+        <p class="text-stone-400 text-sm font-light leading-relaxed mb-6">
+          "Finally, a design system that understands the difference between 'minimal' and 'lifeless.' Every element breathes. Every interaction delights."
+        </p>
+        <div class="flex items-center gap-3">
+          <img src="https://picsum.photos/seed/testimonial-3/48/48.jpg" alt="Yuki" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="text-sm font-medium text-stone-200">Yuki Tanaka</div>
+            <div class="text-xs text-stone-600">Design Lead, Stripe</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<section class="relative py-32 px-6">
+  <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div class="w-[600px] h-[600px] rounded-full bg-gradient-to-br from-amber-900/15 to-transparent blur-[120px]"></div>
+  </div>
+  <div class="relative z-10 max-w-3xl mx-auto text-center">
+    <div class="reveal">
+      <span class="iconify text-amber-500 text-5xl mb-6 inline-block float-slow" data-icon="mdi:diamond-stone"></span>
+    </div>
+    <h2 class="reveal text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-stone-100 leading-tight mb-6" style="transition-delay: 0.1s;">
+      Ready to make<br>your website <span class="gradient-text-warm">premium</span>?
+    </h2>
+    <p class="reveal text-stone-500 font-light text-lg max-w-lg mx-auto mb-10" style="transition-delay: 0.2s;">
+      Join 2,400+ designers and developers who've already upgraded their craft.
+    </p>
+    <div class="reveal flex flex-col sm:flex-row items-center justify-center gap-4" style="transition-delay: 0.3s;">
+      <button onclick="showToast('Welcome to the premium club! 💎')" class="group px-10 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-900 font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/25 active:scale-95 flex items-center gap-2">
+        Get Instant Access
+        <span class="iconify transition-transform duration-300 group-hover:translate-x-1" data-icon="mdi:arrow-right"></span>
+      </button>
+      <span class="text-stone-600 text-sm">No subscription. Pay once, own forever.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="relative border-t border-white/5 py-16 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center">
+            <span class="iconify text-white text-xs" data-icon="mdi:diamond-stone"></span>
+          </div>
+          <span class="text-stone-100 font-semibold tracking-tight text-sm">Luxe<span class="text-amber-500">.</span></span>
+        </div>
+        <p class="text-stone-600 text-sm font-light leading-relaxed">
+          The design system that makes every website look premium.
+        </p>
+      </div>
+      <div>
+        <h4 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Product</h4>
+        <ul class="space-y-2">
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Components</a></li>
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Templates</a></li>
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Pricing</a></li>
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Resources</h4>
+        <ul class="space-y-2">
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Documentation</a></li>
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Tutorials</a></li>
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Blog</a></li>
+          <li><a href="#" class="text-sm text-stone-600 hover:text-stone-300 transition-colors duration-300">Community</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Connect</h4>
+        <div class="flex items-center gap-3">
+          <a href="#" class="w-9 h-9 rounded-xl glass flex items-center justify-center text-stone-500 hover:text-stone-200 hover:border-white/10 transition-all duration-300">
+            <span class="iconify text-lg" data-icon="mdi:twitter"></span>
+          </a>
+          <a href="#" class="w-9 h-9 rounded-xl glass flex items-center justify-center text-stone-500 hover:text-stone-200 hover:border-white/10 transition-all duration-300">
+            <span class="iconify text-lg" data-icon="mdi:github"></span>
+          </a>
+          <a href="#" class="w-9 h-9 rounded-xl glass flex items-center justify-center text-stone-500 hover:text-stone-200 hover:border-white/10 transition-all duration-300">
+            <span class="iconify text-lg" data-icon="mdi:discord"></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-xs text-stone-700">© 2024 Luxe. All rights reserved.</p>
+      <div class="flex items-center gap-6">
+        <a href="#" class="text-xs text-stone-700 hover:text-stone-400 transition-colors">Privacy</a>
+        <a href="#" class="text-xs text-stone-700 hover:text-stone-400 transition-colors">Terms</a>
+        <a href="#" class="text-xs text-stone-700 hover:text-stone-400 transition-colors">Cookies</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== TOAST NOTIFICATION ===== -->
+<div id="toast" class="toast fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] glass-strong rounded-2xl px-6 py-4 flex items-center gap-3 shadow-2xl shadow-black/50">
+  <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+    <span class="iconify text-white text-sm" data-icon="mdi:check"></span>
+  </div>
+  <span id="toastMessage" class="text-sm text-stone-200 font-medium"></span>
+</div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+// --- Scroll Reveal ---
+const revealElements = document.querySelectorAll('.reveal, .reveal-scale, .reveal-left, .reveal-right');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('active');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+revealElements.forEach(el => revealObserver.observe(el));
+
+// --- Counter Animation ---
+const counters = document.querySelectorAll('.counter');
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      const target = parseInt(el.dataset.target);
+      let current = 0;
+      const increment = target / 40;
+      const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+          current = target;
+          clearInterval(timer);
+        }
+        el.textContent = Math.round(current);
+      }, 30);
+      counterObserver.unobserve(el);
+    }
+  });
+}, { threshold: 0.5 });
+counters.forEach(el => counterObserver.observe(el));
+
+// --- Mouse Spotlight on Premium Cards ---
+document.querySelectorAll('.premium-card').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    card.style.setProperty('--mouse-x', x + '%');
+    card.style.setProperty('--mouse-y', y + '%');
+  });
+});
+
+// --- Mobile Menu ---
+const menuToggle = document.getElementById('menuToggle');
+const menuClose = document.getElementById('menuClose');
+const mobileMenu = document.getElementById('mobileMenu');
+
+menuToggle.addEventListener('click', () => mobileMenu.classList.add('open'));
+menuClose.addEventListener('click', () => mobileMenu.classList.remove('open'));
+document.querySelectorAll('.mobile-link').forEach(link => {
+  link.addEventListener('click', () => mobileMenu.classList.remove('open'));
+});
+
+// --- Toast Notification ---
+let toastTimeout;
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  const toastMessage = document.getElementById('toastMessage');
+  toastMessage.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+// --- Navbar Background on Scroll ---
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 100) {
+    nav.style.opacity = '0.98';
+  } else {
+    nav.style.opacity = '1';
+  }
+});
+</script>
+
+</body>
+</html>

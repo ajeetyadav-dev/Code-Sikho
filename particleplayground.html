@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Playground</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --card: rgba(18, 18, 28, 0.85);
+    --border: rgba(255, 140, 66, 0.15);
+    --accent: #ff8c42;
+    --accent2: #ffcf56;
+    --accent3: #ff5e6c;
+    --fg: #f0ece4;
+    --muted: #7a7580;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  canvas#main {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+
+  /* Floating HUD */
+  .hud {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 10px 24px;
+    transition: opacity 0.4s;
+  }
+
+  .hud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .hud-stat .value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .hud-stat .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  .hud-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+  }
+
+  /* Mode selector */
+  .toolbar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 8px 12px;
+  }
+
+  .tool-btn {
+    width: 44px; height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 17px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .tool-btn:hover {
+    color: var(--fg);
+    background: rgba(255, 140, 66, 0.08);
+  }
+
+  .tool-btn.active {
+    color: var(--bg);
+    background: var(--accent);
+    box-shadow: 0 0 20px rgba(255, 140, 66, 0.4);
+  }
+
+  .tool-btn .tooltip {
+    position: absolute;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    backdrop-filter: blur(12px);
+  }
+
+  .tool-btn:hover .tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  /* Side panel */
+  .side-panel {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 170px;
+  }
+
+  .slider-group label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 6px;
+  }
+
+  .slider-group input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 140, 66, 0.15);
+    border-radius: 4px;
+    outline: none;
+  }
+
+  .slider-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(255, 140, 66, 0.5);
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.5px;
+  }
+
+  .action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255, 140, 66, 0.06);
+  }
+
+  /* Hint text */
+  .hint {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+    animation: hintPulse 3s ease-in-out infinite;
+    pointer-events: none;
+    transition: opacity 1s;
+  }
+
+  .hint.hidden { opacity: 0; }
+
+  @keyframes hintPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  /* Color palette picker */
+  .palette-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .palette-swatch {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .palette-swatch:hover {
+    transform: scale(1.15);
+  }
+
+  .palette-swatch.active {
+    border-color: var(--fg);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    z-index: 100;
+    background: var(--card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    color: var(--fg);
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    .side-panel { display: none; }
+    .hud { padding: 8px 16px; gap: 14px; }
+    .hud-stat .value { font-size: 18px; }
+    .toolbar { padding: 6px 8px; }
+    .tool-btn { width: 38px; height: 38px; font-size: 15px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="main"></canvas>
+
+<!-- Top HUD -->
+<div class="hud" id="hud">
+  <div class="hud-stat">
+    <span class="value" id="particleCount">0</span>
+    <span class="label">Particles</span>
+  </div>
+  <div class="hud-divider"></div>
+  <div class="hud-stat">
+    <span class="value" id="fpsCount">60</span>
+    <span class="label">FPS</span>
+  </div>
+  <div class="hud-divider"></div>
+  <div class="hud-stat">
+    <span class="value" id="totalSpawned">0</span>
+    <span class="label">Total</span>
+  </div>
+</div>
+
+<!-- Hint -->
+<div class="hint" id="hint">Click and drag anywhere to begin</div>
+
+<!-- Bottom toolbar -->
+<div class="toolbar" id="toolbar">
+  <button class="tool-btn active" data-mode="stream" aria-label="Stream mode">
+    <i class="fas fa-water"></i>
+    <span class="tooltip">Stream</span>
+  </button>
+  <button class="tool-btn" data-mode="burst" aria-label="Burst mode">
+    <i class="fas fa-burst"></i>
+    <span class="tooltip">Burst</span>
+  </button>
+  <button class="tool-btn" data-mode="orbit" aria-label="Orbit mode">
+    <i class="fas fa-hurricane"></i>
+    <span class="tooltip">Orbit</span>
+  </button>
+  <button class="tool-btn" data-mode="firework" aria-label="Firework mode">
+    <i class="fas fa-star"></i>
+    <span class="tooltip">Firework</span>
+  </button>
+  <button class="tool-btn" data-mode="magnet" aria-label="Magnet mode">
+    <i class="fas fa-magnet"></i>
+    <span class="tooltip">Magnet</span>
+  </button>
+  <div class="toolbar-divider"></div>
+  <button class="tool-btn" data-mode="repel" aria-label="Repel mode">
+    <i class="fas fa-expand"></i>
+    <span class="tooltip">Repel</span>
+  </button>
+  <button class="tool-btn" id="gravityToggle" aria-label="Toggle gravity">
+    <i class="fas fa-arrow-down"></i>
+    <span class="tooltip">Gravity</span>
+  </button>
+  <button class="tool-btn" id="trailToggle" aria-label="Toggle trails">
+    <i class="fas fa-paintbrush"></i>
+    <span class="tooltip">Trails</span>
+  </button>
+</div>
+
+<!-- Side panel -->
+<div class="side-panel" id="sidePanel">
+  <div class="slider-group">
+    <label>Size</label>
+    <input type="range" id="sizeSlider" min="1" max="12" value="4" step="0.5">
+  </div>
+  <div class="slider-group">
+    <label>Speed</label>
+    <input type="range" id="speedSlider" min="0.5" max="8" value="3" step="0.5">
+  </div>
+  <div class="slider-group">
+    <label>Lifespan</label>
+    <input type="range" id="lifeSlider" min="30" max="400" value="150" step="10">
+  </div>
+  <div class="slider-group">
+    <label>Spawn Rate</label>
+    <input type="range" id="rateSlider" min="1" max="15" value="5" step="1">
+  </div>
+  <div class="slider-group">
+    <label>Palette</label>
+    <div class="palette-row" id="paletteRow"></div>
+  </div>
+  <button class="action-btn" id="clearBtn"><i class="fas fa-trash-can"></i> Clear All</button>
+  <button class="action-btn" id="screenshotBtn"><i class="fas fa-camera"></i> Screenshot</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// === Canvas setup ===
+const canvas = document.getElementById('main');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// === Color palettes ===
+const palettes = [
+  { name: 'Ember',   colors: ['#ff8c42','#ffcf56','#ff5e6c','#ff9a76','#ffd166'] },
+  { name: 'Ocean',   colors: ['#0ff0b3','#00c9a7','#00b4d8','#48cae4','#90e0ef'] },
+  { name: 'Neon',    colors: ['#f72585','#b5179e','#7209b7','#560bad','#480ca8'] },
+  { name: 'Forest',  colors: ['#95d5b2','#74c69d','#52b788','#40916c','#2d6a4f'] },
+  { name: 'Sunset',  colors: ['#ff6b6b','#ffa07a','#ffd93d','#ff8e53','#ff5252'] },
+  { name: 'Arctic',  colors: ['#caf0f8','#ade8f4','#90e0ef','#a2d2ff','#bde0fe'] },
+  { name: 'Lava',    colors: ['#ff0000','#ff4500','#ff6347','#ff7f50','#ffa500'] },
+  { name: 'Candy',   colors: ['#ff69b4','#ff85c8','#ffa6d1','#ffc4e0','#ffe0ec'] },
+];
+
+let currentPalette = 0;
+
+// Build palette swatches
+const paletteRow = document.getElementById('paletteRow');
+palettes.forEach((p, i) => {
+  const swatch = document.createElement('div');
+  swatch.className = 'palette-swatch' + (i === 0 ? ' active' : '');
+  // Create mini gradient from palette
+  swatch.style.background = `linear-gradient(135deg, ${p.colors[0]}, ${p.colors[2]})`;
+  swatch.title = p.name;
+  swatch.addEventListener('click', () => {
+    document.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    currentPalette = i;
+    showToast(`Palette: ${p.name}`);
+  });
+  paletteRow.appendChild(swatch);
+});
+
+// === State ===
+let particles = [];
+let mode = 'stream';
+let gravity = false;
+let trails = true;
+let mouseX = 0, mouseY = 0;
+let pmouseX = 0, pmouseY = 0;
+let mouseDown = false;
+let totalSpawned = 0;
+let hintVisible = true;
+let frameCount = 0;
+let lastFpsTime = performance.now();
+let fps = 60;
+
+// Slider refs
+const sizeSlider = document.getElementById('sizeSlider');
+const speedSlider = document.getElementById('speedSlider');
+const lifeSlider = document.getElementById('lifeSlider');
+const rateSlider = document.getElementById('rateSlider');
+
+// === Particle class ===
+class Particle {
+  constructor(x, y, vx, vy, opts = {}) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    const pal = palettes[currentPalette].colors;
+    this.color = opts.color || pal[Math.floor(Math.random() * pal.length)];
+    this.size = Math.max(0.5, opts.size || parseFloat(sizeSlider.value));
+    this.life = opts.life || parseInt(lifeSlider.value);
+    this.maxLife = this.life;
+    this.decay = 1;
+    this.friction = opts.friction || 0.99;
+    this.trail = [];
+    this.trailMax = trails ? 12 : 0;
+  }
+
+  update() {
+    if (this.trailMax > 0) {
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > this.trailMax) this.trail.shift();
+    }
+
+    if (gravity) {
+      this.vy += 0.12;
+    }
+
+    this.vx *= this.friction;
+    this.vy *= this.friction;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Bounce off walls
+    if (this.x < this.size) { this.x = this.size; this.vx *= -0.7; }
+    if (this.x > W - this.size) { this.x = W - this.size; this.vx *= -0.7; }
+    if (this.y < this.size) { this.y = this.size; this.vy *= -0.7; }
+    if (this.y > H - this.size) { this.y = H - this.size; this.vy *= -0.7; }
+
+    this.life -= this.decay;
+    return this.life > 0;
+  }
+
+  draw(ctx) {
+    const alpha = Math.max(0, Math.min(1, this.life / this.maxLife));
+    const sz = Math.max(0.3, this.size * alpha);
+
+    // Draw trail
+    if (this.trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+      ctx.lineTo(this.x, this.y);
+      ctx.strokeStyle = this.color + hexAlpha(alpha * 0.3);
+      ctx.lineWidth = Math.max(0.5, sz * 0.6);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    // Glow
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(0.1, sz * 3));
+    grad.addColorStop(0, this.color + hexAlpha(alpha * 0.6));
+    grad.addColorStop(1, this.color + hexAlpha(0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.1, sz * 3), 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.fillStyle = this.color + hexAlpha(alpha);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.1, sz), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Helper: convert 0-1 alpha to 2-char hex
+function hexAlpha(a) {
+  const val = Math.round(Math.max(0, Math.min(1, a)) * 255);
+  return val.toString(16).padStart(2, '0');
+}
+
+// === Spawn functions ===
+function getRandomColor() {
+  const pal = palettes[currentPalette].colors;
+  return pal[Math.floor(Math.random() * pal.length)];
+}
+
+function spawnStream() {
+  const speed = parseFloat(speedSlider.value);
+  const dx = mouseX - pmouseX;
+  const dy = mouseY - pmouseY;
+  const angle = Math.atan2(dy, dx);
+  const spread = 0.5;
+  for (let i = 0; i < parseInt(rateSlider.value); i++) {
+    const a = angle + (Math.random() - 0.5) * spread;
+    const s = speed * (0.5 + Math.random() * 0.8);
+    particles.push(new Particle(
+      mouseX + (Math.random() - 0.5) * 4,
+      mouseY + (Math.random() - 0.5) * 4,
+      Math.cos(a) * s,
+      Math.sin(a) * s
+    ));
+    totalSpawned++;
+  }
+}
+
+function spawnBurst() {
+  const speed = parseFloat(speedSlider.value);
+  const count = 30 + parseInt(rateSlider.value) * 5;
+  for (let i = 0; i < count; i++) {
+    const a = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.3;
+    const s = speed * (0.3 + Math.random() * 1.2);
+    particles.push(new Particle(
+      mouseX, mouseY,
+      Math.cos(a) * s,
+      Math.sin(a) * s,
+      { life: parseInt(lifeSlider.value) * (0.5 + Math.random() * 0.8) }
+    ));
+    totalSpawned++;
+  }
+}
+
+function spawnOrbit() {
+  const speed = parseFloat(speedSlider.value) * 0.5;
+  const count = parseInt(rateSlider.value);
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const dist = 30 + Math.random() * 80;
+    particles.push(new Particle(
+      mouseX + Math.cos(a) * dist,
+      mouseY + Math.sin(a) * dist,
+      -Math.sin(a) * speed * (0.5 + Math.random()),
+      Math.cos(a) * speed * (0.5 + Math.random()),
+      { friction: 0.995, life: parseInt(lifeSlider.value) * 1.5 }
+    ));
+    totalSpawned++;
+  }
+}
+
+function spawnFirework() {
+  const speed = parseFloat(speedSlider.value) * 1.5;
+  const count = 50 + parseInt(rateSlider.value) * 8;
+  const baseColor = getRandomColor();
+  for (let i = 0; i < count; i++) {
+    const a = (Math.PI * 2 * i) / count;
+    const s = speed * (0.6 + Math.random() * 0.6);
+    particles.push(new Particle(
+      mouseX, mouseY,
+      Math.cos(a) * s,
+      Math.sin(a) * s - 1,
+      { color: baseColor, friction: 0.97, life: parseInt(lifeSlider.value) * (0.6 + Math.random() * 0.5), size: parseFloat(sizeSlider.value) * (0.5 + Math.random() * 0.8) }
+    ));
+    totalSpawned++;
+  }
+}
+
+function applyMagnet() {
+  const strength = 0.8;
+  for (const p of particles) {
+    const dx = mouseX - p.x;
+    const dy = mouseY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+    const force = Math.min(strength * 100 / dist, 3);
+    p.vx += (dx / dist) * force;
+    p.vy += (dy / dist) * force;
+  }
+}
+
+function applyRepel() {
+  const strength = 1.2;
+  for (const p of particles) {
+    const dx = p.x - mouseX;
+    const dy = p.y - mouseY;
+    const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+    if (dist < 200) {
+      const force = Math.min(strength * 150 / (dist * dist) * 10, 5);
+      p.vx += (dx / dist) * force;
+      p.vy += (dy / dist) * force;
+    }
+  }
+}
+
+// === Ambient background particles ===
+let bgParticles = [];
+for (let i = 0; i < 50; i++) {
+  bgParticles.push({
+    x: Math.random() * 2000,
+    y: Math.random() * 2000,
+    size: 0.5 + Math.random() * 1.5,
+    speed: 0.1 + Math.random() * 0.3,
+    alpha: 0.1 + Math.random() * 0.2,
+    angle: Math.random() * Math.PI * 2,
+  });
+}
+
+function drawBgParticles() {
+  for (const bp of bgParticles) {
+    bp.x += Math.cos(bp.angle) * bp.speed;
+    bp.y += Math.sin(bp.angle) * bp.speed;
+    bp.angle += (Math.random() - 0.5) * 0.02;
+    if (bp.x < 0) bp.x = W;
+    if (bp.x > W) bp.x = 0;
+    if (bp.y < 0) bp.y = H;
+    if (bp.y > H) bp.y = 0;
+
+    ctx.fillStyle = `rgba(255, 140, 66, ${bp.alpha})`;
+    ctx.beginPath();
+    ctx.arc(bp.x, bp.y, Math.max(0.3, bp.size), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// === Mouse cursor glow ===
+function drawCursorGlow() {
+  if (!mouseDown && mode !== 'magnet' && mode !== 'repel') return;
+  const radius = mode === 'magnet' ? 120 : mode === 'repel' ? 200 : 60;
+  const grad = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, Math.max(1, radius));
+  const col = mode === 'repel' ? '255, 94, 108' : '255, 140, 66';
+  grad.addColorStop(0, `rgba(${col}, 0.15)`);
+  grad.addColorStop(1, `rgba(${col}, 0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(mouseX, mouseY, Math.max(1, radius), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// === Main loop ===
+function animate() {
+  requestAnimationFrame(animate);
+
+  // FPS counter
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFpsTime >= 500) {
+    fps = Math.round(frameCount / ((now - lastFpsTime) / 1000));
+    frameCount = 0;
+    lastFpsTime = now;
+    document.getElementById('fpsCount').textContent = fps;
+  }
+
+  // Background - semi-transparent clear for natural trail fade
+  if (trails) {
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Ambient background particles
+  drawBgParticles();
+
+  // Cursor glow
+  drawCursorGlow();
+
+  // Spawn particles while mouse held
+  if (mouseDown) {
+    switch (mode) {
+      case 'stream': spawnStream(); break;
+      case 'burst': /* burst only on click */ break;
+      case 'orbit': spawnOrbit(); break;
+      case 'firework': /* firework only on click */ break;
+      case 'magnet': applyMagnet(); break;
+      case 'repel': applyRepel(); break;
+    }
+  }
+
+  // Orbit mode: continuously attract existing particles toward cursor
+  if (mouseDown && mode === 'orbit') {
+    for (const p of particles) {
+      const dx = mouseX - p.x;
+      const dy = mouseY - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      if (dist > 20 && dist < 250) {
+        // Tangential force (orbit) + slight radial pull
+        const force = 0.3;
+        p.vx += (-dy / dist) * force + (dx / dist) * 0.05;
+        p.vy += (dx / dist) * force + (dy / dist) * 0.05;
+      }
+    }
+  }
+
+  // Update & draw particles
+  particles = particles.filter(p => {
+    const alive = p.update();
+    if (alive) p.draw(ctx);
+    return alive;
+  });
+
+  // Cap particle count for performance
+  const MAX_PARTICLES = 5000;
+  if (particles.length > MAX_PARTICLES) {
+    particles = particles.slice(particles.length - MAX_PARTICLES);
+  }
+
+  // Update HUD
+  document.getElementById('particleCount').textContent = particles.length;
+  document.getElementById('totalSpawned').textContent = totalSpawned > 9999
+    ? (totalSpawned / 1000).toFixed(1) + 'k'
+    : totalSpawned;
+}
+
+animate();
+
+// === Input handling ===
+function getPos(e) {
+  if (e.touches && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  mouseDown = true;
+  const pos = getPos(e);
+  mouseX = pmouseX = pos.x;
+  mouseY = pmouseY = pos.y;
+  hideHint();
+
+  if (mode === 'burst') spawnBurst();
+  if (mode === 'firework') spawnFirework();
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  pmouseX = mouseX;
+  pmouseY = mouseY;
+  const pos = getPos(e);
+  mouseX = pos.x;
+  mouseY = pos.y;
+});
+
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+canvas.addEventListener('mouseleave', () => { mouseDown = false; });
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  mouseDown = true;
+  const pos = getPos(e);
+  mouseX = pmouseX = pos.x;
+  mouseY = pmouseY = pos.y;
+  hideHint();
+  if (mode === 'burst') spawnBurst();
+  if (mode === 'firework') spawnFirework();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  pmouseX = mouseX;
+  pmouseY = mouseY;
+  const pos = getPos(e);
+  mouseX = pos.x;
+  mouseY = pos.y;
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { mouseDown = false; });
+
+// === Toolbar ===
+document.querySelectorAll('.tool-btn[data-mode]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.tool-btn[data-mode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+    hideHint();
+  });
+});
+
+// Gravity toggle
+const gravityBtn = document.getElementById('gravityToggle');
+gravityBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  gravity = !gravity;
+  gravityBtn.classList.toggle('active', gravity);
+  showToast(gravity ? 'Gravity enabled' : 'Gravity disabled');
+});
+
+// Trail toggle
+const trailBtn = document.getElementById('trailToggle');
+trailBtn.classList.add('active');
+trailBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  trails = !trails;
+  trailBtn.classList.toggle('active', trails);
+  // Update existing particles
+  particles.forEach(p => { p.trailMax = trails ? 12 : 0; });
+  showToast(trails ? 'Trails enabled' : 'Trails disabled');
+});
+
+// Clear button
+document.getElementById('clearBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  particles = [];
+  totalSpawned = 0;
+  // Full clear to remove ghost trails
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+  showToast('Cleared');
+});
+
+// Screenshot
+document.getElementById('screenshotBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const link = document.createElement('a');
+  link.download = 'particle-art.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('Screenshot saved');
+});
+
+// Prevent side panel / toolbar clicks from triggering canvas
+document.getElementById('sidePanel').addEventListener('mousedown', e => e.stopPropagation());
+document.getElementById('toolbar').addEventListener('mousedown', e => e.stopPropagation());
+document.getElementById('hud').addEventListener('mousedown', e => e.stopPropagation());
+
+// === Hint ===
+function hideHint() {
+  if (!hintVisible) return;
+  hintVisible = false;
+  document.getElementById('hint').classList.add('hidden');
+}
+
+// === Toast ===
+let toastTimeout;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 1500);
+}
+
+// === Keyboard shortcuts ===
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  const modes = ['stream', 'burst', 'orbit', 'firework', 'magnet', 'repel'];
+  const num = parseInt(key);
+  if (num >= 1 && num <= 6) {
+    const m = modes[num - 1];
+    document.querySelectorAll('.tool-btn[data-mode]').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === m);
+    });
+    mode = m;
+    showToast(`Mode: ${m.charAt(0).toUpperCase() + m.slice(1)}`);
+    hideHint();
+  }
+  if (key === 'g') {
+    gravity = !gravity;
+    gravityBtn.classList.toggle('active', gravity);
+    showToast(gravity ? 'Gravity enabled' : 'Gravity disabled');
+  }
+  if (key === 't') {
+    trails = !trails;
+    trailBtn.classList.toggle('active', trails);
+    particles.forEach(p => { p.trailMax = trails ? 12 : 0; });
+    showToast(trails ? 'Trails enabled' : 'Trails disabled');
+  }
+  if (key === 'c') {
+    particles = [];
+    totalSpawned = 0;
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+    showToast('Cleared');
+  }
+});
+</script>
+</body>
+</html>
