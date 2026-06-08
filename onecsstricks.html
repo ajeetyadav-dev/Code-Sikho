@@ -1,0 +1,1999 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Million Dollar Design</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --fg: #f0ece4;
+        --muted: #6b6560;
+        --accent: #c9a84c;
+        --accent-light: #e8d48b;
+        --card: #141414;
+        --card-hover: #1a1a1a;
+        --border: #2a2520;
+        --glow: rgba(201, 168, 76, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent) var(--bg);
+      }
+
+      body {
+        font-family: "Space Grotesk", sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ===== THE TRICK: Animated Conic Gradient Border ===== */
+      @property --angle {
+        syntax: "<angle>";
+        initial-value: 0deg;
+        inherits: false;
+      }
+
+      .glow-border {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+      }
+
+      .glow-border::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        background: conic-gradient(
+          from var(--angle),
+          var(--accent) 0%,
+          transparent 15%,
+          transparent 40%,
+          var(--accent-light) 50%,
+          transparent 65%,
+          transparent 85%,
+          var(--accent) 100%
+        );
+        border-radius: inherit;
+        animation: rotate-border 4s linear infinite;
+        z-index: -1;
+      }
+
+      .glow-border::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        background: var(--card);
+        border-radius: 18px;
+        z-index: -1;
+      }
+
+      @keyframes rotate-border {
+        to {
+          --angle: 360deg;
+        }
+      }
+
+      /* Variant: slower, larger spread */
+      .glow-border-slow::before {
+        animation: rotate-border 8s linear infinite;
+        background: conic-gradient(
+          from var(--angle),
+          var(--accent) 0%,
+          transparent 8%,
+          transparent 30%,
+          var(--accent-light) 50%,
+          transparent 70%,
+          transparent 92%,
+          var(--accent) 100%
+        );
+      }
+
+      /* Variant: reverse direction */
+      .glow-border-reverse::before {
+        animation: rotate-border-reverse 6s linear infinite;
+      }
+
+      @keyframes rotate-border-reverse {
+        to {
+          --angle: -360deg;
+        }
+      }
+
+      /* ===== Noise Texture Overlay ===== */
+      .noise::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0.5;
+      }
+
+      /* ===== Hero Background Blobs ===== */
+      .hero-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(120px);
+        opacity: 0.3;
+        animation: blob-float 12s ease-in-out infinite alternate;
+      }
+
+      @keyframes blob-float {
+        0% {
+          transform: translate(0, 0) scale(1);
+        }
+        33% {
+          transform: translate(30px, -40px) scale(1.1);
+        }
+        66% {
+          transform: translate(-20px, 20px) scale(0.95);
+        }
+        100% {
+          transform: translate(10px, -10px) scale(1.05);
+        }
+      }
+
+      /* ===== Gradient Text ===== */
+      .text-gradient {
+        background: linear-gradient(
+          135deg,
+          var(--accent-light) 0%,
+          var(--accent) 40%,
+          #e8d48b 70%,
+          var(--accent) 100%
+        );
+        background-size: 200% 200%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: shimmer-text 5s ease-in-out infinite;
+      }
+
+      @keyframes shimmer-text {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+
+      /* ===== Section Reveal ===== */
+      .reveal {
+        opacity: 0;
+        transform: translateY(40px);
+        transition:
+          opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+          transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* ===== Card Hover Lift ===== */
+      .card-lift {
+        transition:
+          transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .card-lift:hover {
+        transform: translateY(-8px);
+        box-shadow:
+          0 20px 60px -15px var(--glow),
+          0 0 0 1px rgba(201, 168, 76, 0.1);
+      }
+
+      /* ===== Floating Particles ===== */
+      .particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: var(--accent);
+        border-radius: 50%;
+        opacity: 0;
+        animation: particle-rise linear infinite;
+      }
+
+      @keyframes particle-rise {
+        0% {
+          opacity: 0;
+          transform: translateY(0) scale(0);
+        }
+        10% {
+          opacity: 0.8;
+        }
+        90% {
+          opacity: 0.1;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-400px) scale(1.5);
+        }
+      }
+
+      /* ===== Button Shine ===== */
+      .btn-shine {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn-shine::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -60%;
+        width: 40%;
+        height: 200%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.15),
+          transparent
+        );
+        transform: skewX(-25deg);
+        transition: left 0.6s ease;
+      }
+
+      .btn-shine:hover::after {
+        left: 120%;
+      }
+
+      /* ===== Horizontal Divider ===== */
+      .divider-glow {
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent),
+          transparent
+        );
+        opacity: 0.3;
+      }
+
+      /* ===== Marquee ===== */
+      .marquee-track {
+        display: flex;
+        animation: marquee-scroll 30s linear infinite;
+        width: max-content;
+      }
+
+      @keyframes marquee-scroll {
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      /* ===== Code Block Styling ===== */
+      .code-block {
+        background: #0d0d0d;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        overflow: hidden;
+      }
+
+      .code-block .code-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .code-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      .code-keyword {
+        color: var(--accent);
+      }
+      .code-property {
+        color: #e8d48b;
+      }
+      .code-value {
+        color: #a8c7a2;
+      }
+      .code-comment {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .code-selector {
+        color: #d4a0d4;
+      }
+
+      /* ===== Stat Counter ===== */
+      .stat-number {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ===== Comparison Slider ===== */
+      .comparison-container {
+        position: relative;
+        border-radius: 16px;
+        overflow: hidden;
+        cursor: col-resize;
+        user-select: none;
+      }
+
+      .comparison-before,
+      .comparison-after {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        inset: 0;
+      }
+
+      .comparison-before {
+        z-index: 2;
+        clip-path: inset(0 50% 0 0);
+      }
+      .comparison-after {
+        z-index: 1;
+      }
+
+      .comparison-slider {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 3px;
+        background: var(--accent);
+        z-index: 3;
+        transform: translateX(-50%);
+      }
+
+      .comparison-handle {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        background: var(--accent);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bg);
+        font-size: 14px;
+        z-index: 4;
+        box-shadow: 0 0 20px var(--glow);
+      }
+
+      /* ===== Toast ===== */
+      .toast {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        padding: 16px 24px;
+        background: var(--card);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        color: var(--fg);
+        font-size: 14px;
+        z-index: 10000;
+        transform: translateY(120px);
+        opacity: 0;
+        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      /* ===== Mouse Follower ===== */
+      .mouse-glow {
+        position: fixed;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 0;
+        transform: translate(-50%, -50%);
+        transition: opacity 0.3s;
+      }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 768px) {
+        .hero-title {
+          font-size: 2.5rem !important;
+        }
+        .grid-showcase {
+          grid-template-columns: 1fr !important;
+        }
+        .stats-grid {
+          grid-template-columns: 1fr 1fr !important;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="noise">
+    <!-- Mouse Glow Follower -->
+    <div class="mouse-glow" id="mouseGlow"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== HERO ===== -->
+    <header
+      class="relative min-h-screen flex items-center justify-center overflow-hidden"
+      id="hero"
+    >
+      <!-- Background Blobs -->
+      <div
+        class="hero-blob"
+        style="
+          width: 500px;
+          height: 500px;
+          background: var(--accent);
+          top: -10%;
+          left: -10%;
+          animation-delay: 0s;
+        "
+      ></div>
+      <div
+        class="hero-blob"
+        style="
+          width: 400px;
+          height: 400px;
+          background: #8b6914;
+          bottom: -5%;
+          right: -5%;
+          animation-delay: -4s;
+        "
+      ></div>
+      <div
+        class="hero-blob"
+        style="
+          width: 250px;
+          height: 250px;
+          background: var(--accent-light);
+          top: 40%;
+          left: 60%;
+          animation-delay: -8s;
+          opacity: 0.15;
+        "
+      ></div>
+
+      <!-- Particles -->
+      <div
+        id="particles"
+        style="position: absolute; inset: 0; pointer-events: none"
+      ></div>
+
+      <div class="relative z-10 text-center px-6 max-w-5xl mx-auto">
+        <div class="reveal" style="transition-delay: 0.1s">
+          <p
+            class="text-sm tracking-[0.3em] uppercase mb-6"
+            style="color: var(--muted)"
+          >
+            <i
+              class="fa-solid fa-diamond fa-xs"
+              style="color: var(--accent)"
+            ></i>
+            &nbsp; Design Philosophy &nbsp;
+            <i
+              class="fa-solid fa-diamond fa-xs"
+              style="color: var(--accent)"
+            ></i>
+          </p>
+        </div>
+
+        <h1
+          class="reveal hero-title text-gradient"
+          style="
+            font-family: &quot;Playfair Display&quot;, serif;
+            font-size: 5.5rem;
+            font-weight: 900;
+            line-height: 1.05;
+            transition-delay: 0.25s;
+          "
+        >
+          One CSS Trick<br />
+        </h1>
+        <h1
+          class="reveal"
+          style="
+            font-family: &quot;Playfair Display&quot;, serif;
+            font-size: 5.5rem;
+            font-weight: 900;
+            line-height: 1.05;
+            color: var(--fg);
+            transition-delay: 0.35s;
+          "
+        >
+          Million Dollar Design
+        </h1>
+
+        <p
+          class="reveal mt-8 text-lg max-w-xl mx-auto"
+          style="color: var(--muted); line-height: 1.8; transition-delay: 0.5s"
+        >
+          The animated
+          <code
+            style="
+              color: var(--accent);
+              background: rgba(201, 168, 76, 0.1);
+              padding: 2px 8px;
+              border-radius: 4px;
+              font-size: 15px;
+            "
+            >conic-gradient</code
+          >
+          border. One declaration that transforms flat cards into living,
+          breathing interfaces.
+        </p>
+
+        <div
+          class="reveal flex flex-wrap gap-4 justify-center mt-10"
+          style="transition-delay: 0.65s"
+        >
+          <button
+  class="btn-shine px-8 py-4 rounded-full font-semibold text-sm tracking-wide transition-all duration-300 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+  style="background: var(--accent); color: var(--bg);"
+  onclick="scrollToSection('showcase')"
+>
+            See It In Action <i class="fa-solid fa-arrow-down ml-2"></i>
+          </button>
+          <button
+            class="btn-shine px-8 py-4 rounded-full font-semibold text-sm tracking-wide border transition-all duration-300 hover:scale-105 focus:outline-none focus-visible:ring-2"
+            style="border-color: var(--border); color: var(--fg)"
+            onclick="scrollToSection('code')"
+          >
+            View The Code <i class="fa-solid fa-code ml-2"></i>
+          </button>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="reveal mt-20" style="transition-delay: 0.85s">
+          <div
+            style="
+              width: 24px;
+              height: 40px;
+              border: 2px solid var(--border);
+              border-radius: 12px;
+              margin: 0 auto;
+              position: relative;
+            "
+          >
+            <div
+              style="
+                width: 4px;
+                height: 8px;
+                background: var(--accent);
+                border-radius: 2px;
+                position: absolute;
+                top: 6px;
+                left: 50%;
+                transform: translateX(-50%);
+                animation: scroll-dot 2s ease-in-out infinite;
+              "
+            ></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <style>
+      @keyframes scroll-dot {
+        0%,
+        100% {
+          opacity: 1;
+          top: 6px;
+        }
+        50% {
+          opacity: 0.3;
+          top: 22px;
+        }
+      }
+    </style>
+
+    <!-- ===== MARQUEE ===== -->
+    <div
+      class="overflow-hidden py-6"
+      style="
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      "
+    >
+      <div
+        class="marquee-track"
+        style="
+          color: var(--muted);
+          font-size: 14px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        "
+      >
+        <span class="flex items-center gap-8 px-4">
+          <span>Conic Gradient</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>@property</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>Animated Border</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>CSS Only</span><span style="color: var(--accent)">&#9670;</span>
+          <span>Zero JavaScript</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>GPU Accelerated</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>60fps Smooth</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>Premium Feel</span
+          ><span style="color: var(--accent)">&#9670;</span>
+        </span>
+        <span class="flex items-center gap-8 px-4">
+          <span>Conic Gradient</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>@property</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>Animated Border</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>CSS Only</span><span style="color: var(--accent)">&#9670;</span>
+          <span>Zero JavaScript</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>GPU Accelerated</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>60fps Smooth</span
+          ><span style="color: var(--accent)">&#9670;</span>
+          <span>Premium Feel</span
+          ><span style="color: var(--accent)">&#9670;</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- ===== SHOWCASE ===== -->
+    <main>
+      <section id="showcase" class="py-28 px-6">
+        <div class="max-w-6xl mx-auto">
+          <div class="reveal text-center mb-16">
+            <p
+              class="text-sm tracking-[0.2em] uppercase mb-4"
+              style="color: var(--accent)"
+            >
+              Live Showcase
+            </p>
+            <h2
+              style="
+                font-family: &quot;Playfair Display&quot;, serif;
+                font-size: 3rem;
+                font-weight: 900;
+              "
+            >
+              The Same Card, Transformed
+            </h2>
+            <p class="mt-4 max-w-lg mx-auto" style="color: var(--muted)">
+              Hover over each card. Feel the difference. The trick isn't in the
+              content — it's in the border.
+            </p>
+          </div>
+
+          <div
+            class="grid-showcase"
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 32px;
+            "
+          >
+            <!-- Card 1: Without Trick -->
+            <div class="reveal card-lift" style="transition-delay: 0.1s">
+              <div
+                style="
+                  background: var(--card);
+                  border: 1px solid var(--border);
+                  border-radius: 20px;
+                  padding: 36px;
+                  height: 100%;
+                "
+              >
+                <div class="flex items-center justify-between mb-6">
+                  <span
+                    style="
+                      color: var(--muted);
+                      font-size: 12px;
+                      letter-spacing: 0.15em;
+                      text-transform: uppercase;
+                    "
+                    >Without</span
+                  >
+                  <i
+                    class="fa-regular fa-circle-xmark"
+                    style="color: var(--muted)"
+                  ></i>
+                </div>
+                <div
+                  style="
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    background: rgba(255, 255, 255, 0.04);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 20px;
+                  "
+                >
+                  <i
+                    class="fa-solid fa-cube"
+                    style="color: var(--muted); font-size: 20px"
+                  ></i>
+                </div>
+                <h3
+                  style="
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Static Border
+                </h3>
+                <p
+                  style="color: var(--muted); font-size: 14px; line-height: 1.7"
+                >
+                  A flat, lifeless 1px border. Functional but forgettable. No
+                  depth, no movement, no emotion.
+                </p>
+                <div
+                  class="mt-6 pt-6"
+                  style="border-top: 1px solid var(--border)"
+                >
+                  <span style="color: var(--muted); font-size: 13px"
+                    >Perceived value: Low</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: With Trick -->
+            <div class="reveal card-lift" style="transition-delay: 0.25s">
+              <div
+                class="glow-border"
+                style="padding: 36px; height: 100%; background: var(--card)"
+              >
+                <div class="flex items-center justify-between mb-6">
+                  <span
+                    style="
+                      color: var(--accent);
+                      font-size: 12px;
+                      letter-spacing: 0.15em;
+                      text-transform: uppercase;
+                    "
+                    >With Trick</span
+                  >
+                  <i
+                    class="fa-solid fa-sparkles"
+                    style="color: var(--accent)"
+                  ></i>
+                </div>
+                <div
+                  style="
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    background: rgba(201, 168, 76, 0.08);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 20px;
+                  "
+                >
+                  <i
+                    class="fa-solid fa-gem"
+                    style="color: var(--accent); font-size: 20px"
+                  ></i>
+                </div>
+                <h3
+                  style="
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Living Border
+                </h3>
+                <p
+                  style="color: var(--muted); font-size: 14px; line-height: 1.7"
+                >
+                  The same content, now wrapped in light. The rotating gradient
+                  border screams quality and craft.
+                </p>
+                <div
+                  class="mt-6 pt-6"
+                  style="border-top: 1px solid var(--border)"
+                >
+                  <span style="color: var(--accent); font-size: 13px"
+                    >Perceived value: Premium</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Slow Variant -->
+            <div class="reveal card-lift" style="transition-delay: 0.4s">
+              <div
+                class="glow-border glow-border-slow"
+                style="padding: 36px; height: 100%; background: var(--card)"
+              >
+                <div class="flex items-center justify-between mb-6">
+                  <span
+                    style="
+                      color: var(--accent-light);
+                      font-size: 12px;
+                      letter-spacing: 0.15em;
+                      text-transform: uppercase;
+                    "
+                    >Variant</span
+                  >
+                  <i
+                    class="fa-solid fa-wand-magic-sparkles"
+                    style="color: var(--accent-light)"
+                  ></i>
+                </div>
+                <div
+                  style="
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    background: rgba(232, 212, 139, 0.06);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 20px;
+                  "
+                >
+                  <i
+                    class="fa-solid fa-crown"
+                    style="color: var(--accent-light); font-size: 20px"
+                  ></i>
+                </div>
+                <h3
+                  style="
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Slow Sweep
+                </h3>
+                <p
+                  style="color: var(--muted); font-size: 14px; line-height: 1.7"
+                >
+                  Slower rotation, wider light spread. Feels luxurious — like
+                  watching gold pour in slow motion.
+                </p>
+                <div
+                  class="mt-6 pt-6"
+                  style="border-top: 1px solid var(--border)"
+                >
+                  <span style="color: var(--accent-light); font-size: 13px"
+                    >Perceived value: Exclusive</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider-glow max-w-4xl mx-auto"></div>
+
+      <!-- ===== COMPARISON ===== -->
+      <section class="py-28 px-6">
+        <div class="max-w-4xl mx-auto">
+          <div class="reveal text-center mb-16">
+            <p
+              class="text-sm tracking-[0.2em] uppercase mb-4"
+              style="color: var(--accent)"
+            >
+              Side by Side
+            </p>
+            <h2
+              style="
+                font-family: &quot;Playfair Display&quot;, serif;
+                font-size: 3rem;
+                font-weight: 900;
+              "
+            >
+              Drag to Compare
+            </h2>
+            <p class="mt-4" style="color: var(--muted)">
+              The left side is flat. The right side has the trick. Drag the
+              slider.
+            </p>
+          </div>
+
+          <div
+            class="reveal comparison-container"
+            id="comparison"
+            style="height: 380px; background: var(--card)"
+          >
+            <!-- Before (flat) -->
+            <div
+              class="comparison-before"
+              id="compBefore"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--card);
+              "
+            >
+              <div style="text-align: center">
+                <div
+                  style="
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 16px;
+                    border: 1px solid var(--border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 16px;
+                  "
+                >
+                  <i
+                    class="fa-solid fa-credit-card"
+                    style="font-size: 28px; color: var(--muted)"
+                  ></i>
+                </div>
+                <p
+                  style="
+                    font-weight: 600;
+                    font-size: 1.1rem;
+                    margin-bottom: 6px;
+                  "
+                >
+                  Basic Card
+                </p>
+                <p style="color: var(--muted); font-size: 13px">
+                  border: 1px solid #2a2520
+                </p>
+                <div
+                  style="
+                    margin-top: 20px;
+                    padding: 12px 28px;
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    display: inline-block;
+                    font-size: 13px;
+                    color: var(--muted);
+                  "
+                >
+                  Submit
+                </div>
+              </div>
+            </div>
+            <!-- After (with trick) -->
+            <div
+              class="comparison-after"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--card);
+              "
+            >
+              <div
+                class="glow-border"
+                style="padding: 40px; text-align: center"
+              >
+                <div
+                  style="
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 16px;
+                    background: rgba(201, 168, 76, 0.08);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 16px;
+                  "
+                >
+                  <i
+                    class="fa-solid fa-credit-card"
+                    style="font-size: 28px; color: var(--accent)"
+                  ></i>
+                </div>
+                <p
+                  style="
+                    font-weight: 600;
+                    font-size: 1.1rem;
+                    margin-bottom: 6px;
+                  "
+                >
+                  Premium Card
+                </p>
+                <p style="color: var(--muted); font-size: 13px">
+                  animated conic-gradient
+                </p>
+                <div
+                  style="
+                    margin-top: 20px;
+                    padding: 12px 28px;
+                    background: var(--accent);
+                    border-radius: 8px;
+                    display: inline-block;
+                    font-size: 13px;
+                    color: var(--bg);
+                    font-weight: 600;
+                  "
+                >
+                  Submit
+                </div>
+              </div>
+            </div>
+            <div class="comparison-slider" id="compSlider"></div>
+            <div class="comparison-handle" id="compHandle">
+              <i class="fa-solid fa-arrows-left-right"></i>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider-glow max-w-4xl mx-auto"></div>
+
+      <!-- ===== THE CODE ===== -->
+      <section id="code" class="py-28 px-6">
+        <div class="max-w-4xl mx-auto">
+          <div class="reveal text-center mb-16">
+            <p
+              class="text-sm tracking-[0.2em] uppercase mb-4"
+              style="color: var(--accent)"
+            >
+              The Source
+            </p>
+            <h2
+              style="
+                font-family: &quot;Playfair Display&quot;, serif;
+                font-size: 3rem;
+                font-weight: 900;
+              "
+            >
+              12 Lines of CSS
+            </h2>
+            <p class="mt-4" style="color: var(--muted)">
+              That's all it takes. No libraries. No frameworks. No JavaScript.
+            </p>
+          </div>
+
+          <div class="reveal code-block">
+            <div class="code-header">
+              <div class="code-dot" style="background: #ff5f57"></div>
+              <div class="code-dot" style="background: #febc2e"></div>
+              <div class="code-dot" style="background: #28c840"></div>
+              <span
+                style="margin-left: 12px; color: var(--muted); font-size: 12px"
+                >style.css</span
+              >
+              <button
+                onclick="copyCode()"
+                style="
+                  margin-left: auto;
+                  background: none;
+                  border: 1px solid var(--border);
+                  color: var(--muted);
+                  padding: 4px 12px;
+                  border-radius: 6px;
+                  font-size: 11px;
+                  cursor: pointer;
+                  transition: all 0.3s;
+                "
+                onmouseover="
+                  this.style.borderColor = 'var(--accent)';
+                  this.style.color = 'var(--accent)';
+                "
+                onmouseout="
+                  this.style.borderColor = 'var(--border)';
+                  this.style.color = 'var(--muted)';
+                "
+              >
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+            </div>
+            <pre
+              style="padding: 24px; overflow-x: auto"
+              id="codeContent"
+            ><span class="code-comment">/* Register the custom property for animation */</span>
+<span class="code-keyword">@property</span> --angle {
+  <span class="code-property">syntax</span>: <span class="code-value">"&lt;angle&gt;"</span>;
+  <span class="code-property">initial-value</span>: <span class="code-value">0deg</span>;
+  <span class="code-property">inherits</span>: <span class="code-value">false</span>;
+}
+
+<span class="code-selector">.card</span> {
+  <span class="code-property">position</span>: <span class="code-value">relative</span>;
+  <span class="code-property">border-radius</span>: <span class="code-value">20px</span>;
+  <span class="code-property">overflow</span>: <span class="code-value">hidden</span>;
+}
+
+<span class="code-selector">.card::before</span> {
+  <span class="code-property">content</span>: <span class="code-value">''</span>;
+  <span class="code-property">position</span>: <span class="code-value">absolute</span>;
+  <span class="code-property">inset</span>: <span class="code-value">-2px</span>;
+  <span class="code-property">background</span>: <span class="code-value">conic-gradient(from var(--angle), gold, transparent 40%, gold 50%, transparent 90%)</span>;
+  <span class="code-property">animation</span>: <span class="code-value">spin 4s linear infinite</span>;
+  <span class="code-property">z-index</span>: <span class="code-value">-1</span>;
+}
+
+<span class="code-keyword">@keyframes</span> <span class="code-value">spin</span> { <span class="code-property">to</span> { <span class="code-property">--angle</span>: <span class="code-value">360deg</span>; } }</pre>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider-glow max-w-4xl mx-auto"></div>
+
+      <!-- ===== STATS ===== -->
+      <section class="py-28 px-6">
+        <div class="max-w-5xl mx-auto">
+          <div class="reveal text-center mb-16">
+            <p
+              class="text-sm tracking-[0.2em] uppercase mb-4"
+              style="color: var(--accent)"
+            >
+              Impact
+            </p>
+            <h2
+              style="
+                font-family: &quot;Playfair Display&quot;, serif;
+                font-size: 3rem;
+                font-weight: 900;
+              "
+            >
+              Why It Works
+            </h2>
+          </div>
+
+          <div
+            class="stats-grid"
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 24px;
+            "
+          >
+            <div
+              class="reveal glow-border-reverse glow-border card-lift text-center"
+              style="
+                padding: 32px 20px;
+                background: var(--card);
+                transition-delay: 0.05s;
+              "
+            >
+              <div
+                class="stat-number text-gradient"
+                style="
+                  font-family: &quot;Playfair Display&quot;, serif;
+                  font-size: 2.5rem;
+                  font-weight: 900;
+                "
+                data-target="12"
+              >
+                0
+              </div>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px">
+                Lines of CSS
+              </p>
+            </div>
+            <div
+              class="reveal glow-border card-lift text-center"
+              style="
+                padding: 32px 20px;
+                background: var(--card);
+                transition-delay: 0.15s;
+              "
+            >
+              <div
+                class="stat-number text-gradient"
+                style="
+                  font-family: &quot;Playfair Display&quot;, serif;
+                  font-size: 2.5rem;
+                  font-weight: 900;
+                "
+                data-target="60"
+              >
+                0
+              </div>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px">
+                FPS Smooth
+              </p>
+            </div>
+            <div
+              class="reveal glow-border-slow glow-border card-lift text-center"
+              style="
+                padding: 32px 20px;
+                background: var(--card);
+                transition-delay: 0.25s;
+              "
+            >
+              <div
+                class="stat-number text-gradient"
+                style="
+                  font-family: &quot;Playfair Display&quot;, serif;
+                  font-size: 2.5rem;
+                  font-weight: 900;
+                "
+                data-target="0"
+              >
+                0
+              </div>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px">
+                JS Required
+              </p>
+            </div>
+            <div
+              class="reveal glow-border-reverse glow-border card-lift text-center"
+              style="
+                padding: 32px 20px;
+                background: var(--card);
+                transition-delay: 0.35s;
+              "
+            >
+              <div
+                class="stat-number text-gradient"
+                style="
+                  font-family: &quot;Playfair Display&quot;, serif;
+                  font-size: 2.5rem;
+                  font-weight: 900;
+                "
+                data-target="100"
+              >
+                0
+              </div>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px">
+                % GPU Accel.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider-glow max-w-4xl mx-auto"></div>
+
+      <!-- ===== VARIATIONS GALLERY ===== -->
+      <section class="py-28 px-6">
+        <div class="max-w-6xl mx-auto">
+          <div class="reveal text-center mb-16">
+            <p
+              class="text-sm tracking-[0.2em] uppercase mb-4"
+              style="color: var(--accent)"
+            >
+              Variations
+            </p>
+            <h2
+              style="
+                font-family: &quot;Playfair Display&quot;, serif;
+                font-size: 3rem;
+                font-weight: 900;
+              "
+            >
+              One Trick, Infinite Possibilities
+            </h2>
+            <p class="mt-4 max-w-lg mx-auto" style="color: var(--muted)">
+              Change the colors, speed, spread, and direction. Each variation
+              creates a completely different mood.
+            </p>
+          </div>
+
+          <div
+            class="grid-showcase"
+            style="
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 32px;
+            "
+          >
+            <!-- Variation: Emerald -->
+            <div class="reveal card-lift" style="transition-delay: 0.1s">
+              <div
+                style="
+                  position: relative;
+                  border-radius: 20px;
+                  overflow: hidden;
+                "
+              >
+                <div
+                  style="
+                    position: absolute;
+                    inset: -2px;
+                    background: conic-gradient(
+                      from var(--angle),
+                      #34d399 0%,
+                      transparent 15%,
+                      transparent 40%,
+                      #6ee7b7 50%,
+                      transparent 65%,
+                      transparent 85%,
+                      #34d399 100%
+                    );
+                    border-radius: inherit;
+                    animation: rotate-border 5s linear infinite;
+                    z-index: -1;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    inset: 2px;
+                    background: var(--card);
+                    border-radius: 18px;
+                    z-index: -1;
+                  "
+                ></div>
+                <div
+                  style="
+                    padding: 36px;
+                    background: var(--card);
+                    border-radius: 18px;
+                  "
+                >
+                  <div class="flex items-center gap-3 mb-4">
+                    <div
+                      style="
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 50%;
+                        background: #34d399;
+                      "
+                    ></div>
+                    <span
+                      style="
+                        font-size: 12px;
+                        letter-spacing: 0.15em;
+                        text-transform: uppercase;
+                        color: #34d399;
+                      "
+                      >Emerald</span
+                    >
+                  </div>
+                  <h3
+                    style="
+                      font-size: 1.2rem;
+                      font-weight: 600;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Wealth & Growth
+                  </h3>
+                  <p
+                    style="
+                      color: var(--muted);
+                      font-size: 14px;
+                      line-height: 1.7;
+                    "
+                  >
+                    Green conic borders evoke financial products, eco brands,
+                    and health platforms.
+                  </p>
+                  <div style="margin-top: 16px; display: flex; gap: 8px">
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(52, 211, 153, 0.1);
+                        color: #34d399;
+                      "
+                      >Fintech</span
+                    >
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(52, 211, 153, 0.1);
+                        color: #34d399;
+                      "
+                      >Sustainability</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variation: Rose -->
+            <div class="reveal card-lift" style="transition-delay: 0.2s">
+              <div
+                style="
+                  position: relative;
+                  border-radius: 20px;
+                  overflow: hidden;
+                "
+              >
+                <div
+                  style="
+                    position: absolute;
+                    inset: -2px;
+                    background: conic-gradient(
+                      from var(--angle),
+                      #f43f5e 0%,
+                      transparent 10%,
+                      transparent 35%,
+                      #fb7185 50%,
+                      transparent 70%,
+                      transparent 90%,
+                      #f43f5e 100%
+                    );
+                    border-radius: inherit;
+                    animation: rotate-border-reverse 4s linear infinite;
+                    z-index: -1;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    inset: 2px;
+                    background: var(--card);
+                    border-radius: 18px;
+                    z-index: -1;
+                  "
+                ></div>
+                <div
+                  style="
+                    padding: 36px;
+                    background: var(--card);
+                    border-radius: 18px;
+                  "
+                >
+                  <div class="flex items-center gap-3 mb-4">
+                    <div
+                      style="
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 50%;
+                        background: #f43f5e;
+                      "
+                    ></div>
+                    <span
+                      style="
+                        font-size: 12px;
+                        letter-spacing: 0.15em;
+                        text-transform: uppercase;
+                        color: #f43f5e;
+                      "
+                      >Rose</span
+                    >
+                  </div>
+                  <h3
+                    style="
+                      font-size: 1.2rem;
+                      font-weight: 600;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Bold & Daring
+                  </h3>
+                  <p
+                    style="
+                      color: var(--muted);
+                      font-size: 14px;
+                      line-height: 1.7;
+                    "
+                  >
+                    Rose borders command attention. Perfect for fashion, beauty,
+                    and creative portfolios.
+                  </p>
+                  <div style="margin-top: 16px; display: flex; gap: 8px">
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(244, 63, 94, 0.1);
+                        color: #f43f5e;
+                      "
+                      >Fashion</span
+                    >
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(244, 63, 94, 0.1);
+                        color: #f43f5e;
+                      "
+                      >Beauty</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variation: Cyan -->
+            <div class="reveal card-lift" style="transition-delay: 0.3s">
+              <div
+                style="
+                  position: relative;
+                  border-radius: 20px;
+                  overflow: hidden;
+                "
+              >
+                <div
+                  style="
+                    position: absolute;
+                    inset: -2px;
+                    background: conic-gradient(
+                      from var(--angle),
+                      #22d3ee 0%,
+                      transparent 20%,
+                      transparent 45%,
+                      #67e8f9 50%,
+                      transparent 75%,
+                      transparent 95%,
+                      #22d3ee 100%
+                    );
+                    border-radius: inherit;
+                    animation: rotate-border 7s linear infinite;
+                    z-index: -1;
+                  "
+                ></div>
+                <div
+                  style="
+                    position: absolute;
+                    inset: 2px;
+                    background: var(--card);
+                    border-radius: 18px;
+                    z-index: -1;
+                  "
+                ></div>
+                <div
+                  style="
+                    padding: 36px;
+                    background: var(--card);
+                    border-radius: 18px;
+                  "
+                >
+                  <div class="flex items-center gap-3 mb-4">
+                    <div
+                      style="
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 50%;
+                        background: #22d3ee;
+                      "
+                    ></div>
+                    <span
+                      style="
+                        font-size: 12px;
+                        letter-spacing: 0.15em;
+                        text-transform: uppercase;
+                        color: #22d3ee;
+                      "
+                      >Cyan</span
+                    >
+                  </div>
+                  <h3
+                    style="
+                      font-size: 1.2rem;
+                      font-weight: 600;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Tech & Innovation
+                  </h3>
+                  <p
+                    style="
+                      color: var(--muted);
+                      font-size: 14px;
+                      line-height: 1.7;
+                    "
+                  >
+                    Cyan borders feel futuristic and clean. Ideal for SaaS, dev
+                    tools, and AI products.
+                  </p>
+                  <div style="margin-top: 16px; display: flex; gap: 8px">
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(34, 211, 238, 0.1);
+                        color: #22d3ee;
+                      "
+                      >SaaS</span
+                    >
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(34, 211, 238, 0.1);
+                        color: #22d3ee;
+                      "
+                      >AI/ML</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variation: Amber/Gold (original) -->
+            <div class="reveal card-lift" style="transition-delay: 0.4s">
+              <div class="glow-border glow-border-slow">
+                <div
+                  style="
+                    padding: 36px;
+                    background: var(--card);
+                    border-radius: 18px;
+                  "
+                >
+                  <div class="flex items-center gap-3 mb-4">
+                    <div
+                      style="
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 50%;
+                        background: var(--accent);
+                      "
+                    ></div>
+                    <span
+                      style="
+                        font-size: 12px;
+                        letter-spacing: 0.15em;
+                        text-transform: uppercase;
+                        color: var(--accent);
+                      "
+                      >Gold</span
+                    >
+                  </div>
+                  <h3
+                    style="
+                      font-size: 1.2rem;
+                      font-weight: 600;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Luxury & Prestige
+                  </h3>
+                  <p
+                    style="
+                      color: var(--muted);
+                      font-size: 14px;
+                      line-height: 1.7;
+                    "
+                  >
+                    The original. Gold borders whisper exclusivity — high-end
+                    real estate, luxury goods, memberships.
+                  </p>
+                  <div style="margin-top: 16px; display: flex; gap: 8px">
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(201, 168, 76, 0.1);
+                        color: var(--accent);
+                      "
+                      >Luxury</span
+                    >
+                    <span
+                      style="
+                        padding: 4px 12px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        background: rgba(201, 168, 76, 0.1);
+                        color: var(--accent);
+                      "
+                      >Premium</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider-glow max-w-4xl mx-auto"></div>
+
+      <!-- ===== CTA ===== -->
+      <section class="py-28 px-6">
+        <div class="max-w-3xl mx-auto text-center">
+          <div class="reveal">
+            <div
+              class="glow-border glow-border-slow"
+              style="padding: 64px 48px; background: var(--card)"
+            >
+              <p
+                class="text-sm tracking-[0.2em] uppercase mb-6"
+                style="color: var(--accent)"
+              >
+                The Takeaway
+              </p>
+              <h2
+                style="
+                  font-family: &quot;Playfair Display&quot;, serif;
+                  font-size: 2.5rem;
+                  font-weight: 900;
+                  line-height: 1.2;
+                  margin-bottom: 16px;
+                "
+              >
+                Great design isn't about more.<br />
+                <span class="text-gradient">It's about smarter.</span>
+              </h2>
+             <p
+  class="max-w-md mx-auto"
+  style="color: var(--muted); line-height: 1.8; margin-bottom: 32px;"
+>
+                One CSS property. One animation. Zero dependencies. That's the
+                difference between a $5 template and a million dollar interface.
+                The trick is free — the perception is priceless.
+              </p>
+              <button
+                class="btn-shine px-10 py-4 rounded-full font-semibold text-sm tracking-wide transition-all duration-300 hover:scale-105 focus:outline-none focus-visible:ring-2"
+                style="background: var(--accent); color: var(--bg)"
+                onclick="
+                  showToast(
+                    'The trick is already on this page. Inspect the CSS.',
+                  )
+                "
+              >
+                Steal This Trick
+                <i class="fa-solid fa-arrow-up-right-from-square ml-2"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer
+      style="
+        border-top: 1px solid var(--border);
+        padding: 40px 24px;
+        text-align: center;
+      "
+    >
+      <p style="color: var(--muted); font-size: 13px">
+        Built with 12 lines of CSS that change everything.
+      </p>
+      <p style="color: var(--border); font-size: 12px; margin-top: 8px">
+        No frameworks were harmed in the making of this border.
+      </p>
+    </footer>
+
+    <script>
+      /* ===== Mouse Glow Follower ===== */
+      const mouseGlow = document.getElementById("mouseGlow");
+      let mouseX = 0,
+        mouseY = 0,
+        glowX = 0,
+        glowY = 0;
+
+      document.addEventListener("mousemove", (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      function animateGlow() {
+        glowX += (mouseX - glowX) * 0.08;
+        glowY += (mouseY - glowY) * 0.08;
+        mouseGlow.style.left = glowX + "px";
+        mouseGlow.style.top = glowY + "px";
+        requestAnimationFrame(animateGlow);
+      }
+      animateGlow();
+
+      /* ===== Scroll Reveal (IntersectionObserver) ===== */
+      const reveals = document.querySelectorAll(".reveal");
+      const revealObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
+      );
+
+      reveals.forEach((el) => revealObserver.observe(el));
+
+      /* ===== Stat Counter Animation ===== */
+      const statNumbers = document.querySelectorAll(
+        ".stat-number[data-target]",
+      );
+      const statObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const el = entry.target;
+              const target = parseInt(el.dataset.target);
+              let current = 0;
+              const duration = 1500;
+              const start = performance.now();
+
+              function updateCounter(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                /* Ease out cubic */
+                const eased = 1 - Math.pow(1 - progress, 3);
+                current = Math.round(eased * target);
+                el.textContent = current;
+                if (progress < 1) requestAnimationFrame(updateCounter);
+                else el.textContent = target;
+              }
+              requestAnimationFrame(updateCounter);
+              statObserver.unobserve(el);
+            }
+          });
+        },
+        { threshold: 0.5 },
+      );
+
+      statNumbers.forEach((el) => statObserver.observe(el));
+
+      /* ===== Hero Particles ===== */
+      const particlesContainer = document.getElementById("particles");
+      function createParticle() {
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.style.left = Math.random() * 100 + "%";
+        p.style.bottom = "-10px";
+        p.style.animationDuration = 3 + Math.random() * 5 + "s";
+        p.style.animationDelay = Math.random() * 2 + "s";
+        p.style.width = 2 + Math.random() * 3 + "px";
+        p.style.height = p.style.width;
+        p.style.opacity = 0;
+        particlesContainer.appendChild(p);
+
+        /* Remove after animation */
+        setTimeout(() => p.remove(), 10000);
+      }
+
+      /* Spawn particles periodically */
+      setInterval(createParticle, 400);
+      for (let i = 0; i < 15; i++) setTimeout(createParticle, i * 200);
+
+      /* ===== Comparison Slider ===== */
+      const comp = document.getElementById("comparison");
+      const compBefore = document.getElementById("compBefore");
+      const compSlider = document.getElementById("compSlider");
+      const compHandle = document.getElementById("compHandle");
+      let isDragging = false;
+
+      function updateComparison(x) {
+        const rect = comp.getBoundingClientRect();
+        let percent = ((x - rect.left) / rect.width) * 100;
+        percent = Math.max(2, Math.min(98, percent));
+        compBefore.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+        compSlider.style.left = percent + "%";
+        compHandle.style.left = percent + "%";
+      }
+
+      comp.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        updateComparison(e.clientX);
+      });
+      document.addEventListener("mousemove", (e) => {
+        if (isDragging) updateComparison(e.clientX);
+      });
+      document.addEventListener("mouseup", () => {
+        isDragging = false;
+      });
+
+      comp.addEventListener(
+        "touchstart",
+        (e) => {
+          isDragging = true;
+          updateComparison(e.touches[0].clientX);
+        },
+        { passive: true },
+      );
+      document.addEventListener(
+        "touchmove",
+        (e) => {
+          if (isDragging) updateComparison(e.touches[0].clientX);
+        },
+        { passive: true },
+      );
+      document.addEventListener("touchend", () => {
+        isDragging = false;
+      });
+
+      /* ===== Copy Code ===== */
+      function copyCode() {
+        const codeText = `@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.card {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: conic-gradient(from var(--angle), gold, transparent 40%, gold 50%, transparent 90%);
+  animation: spin 4s linear infinite;
+  z-index: -1;
+}
+
+@keyframes spin { to { --angle: 360deg; } }`;
+
+        navigator.clipboard
+          .writeText(codeText)
+          .then(() => {
+            showToast("CSS copied to clipboard. Paste it anywhere.");
+          })
+          .catch(() => {
+            showToast("Code is in the page source — right-click and inspect.");
+          });
+      }
+
+      /* ===== Toast ===== */
+      function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.innerHTML = `<i class="fa-solid fa-check-circle" style="color:var(--accent);margin-right:8px;"></i>${message}`;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 3500);
+      }
+
+      /* ===== Smooth Scroll Helper ===== */
+      function scrollToSection(id) {
+        document
+          .getElementById(id)
+          .scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      /* ===== Parallax Blobs on Mouse Move ===== */
+      const blobs = document.querySelectorAll(".hero-blob");
+      document.addEventListener("mousemove", (e) => {
+        const cx = (e.clientX / window.innerWidth - 0.5) * 2;
+        const cy = (e.clientY / window.innerHeight - 0.5) * 2;
+        blobs.forEach((blob, i) => {
+          const factor = (i + 1) * 15;
+          blob.style.transform = `translate(${cx * factor}px, ${cy * factor}px)`;
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVA — Redefine Everything</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['Space Grotesk', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+      },
+      colors: {
+        nova: {
+          black: '#0a0a0a',
+          dark: '#111111',
+          card: '#1a1a1a',
+          border: '#2a2a2a',
+          muted: '#6b6b6b',
+          light: '#a0a0a0',
+          white: '#f5f5f7',
+          accent: '#2997ff',
+          accentDark: '#0077ed',
+          warm: '#ff6723',
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { 
+    font-family: 'Inter', sans-serif; 
+    background: #0a0a0a; 
+    color: #f5f5f7; 
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+  /* Hero gradient orb */
+  .hero-orb {
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.3;
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+  .hero-orb-1 {
+    background: radial-gradient(circle, #2997ff 0%, transparent 70%);
+    top: -200px;
+    right: -200px;
+    animation-delay: 0s;
+  }
+  .hero-orb-2 {
+    background: radial-gradient(circle, #ff6723 0%, transparent 70%);
+    bottom: -300px;
+    left: -200px;
+    opacity: 0.15;
+    animation-delay: -4s;
+  }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -30px) scale(1.05); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  /* Reveal animations */
+  .reveal {
+    opacity: 0;
+    transform: translateY(60px);
+    transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+  .reveal-delay-5 { transition-delay: 0.5s; }
+
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-scale.active {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    background: linear-gradient(135deg, #2997ff 0%, #a855f7 50%, #ff6723 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #2997ff 0%, #64d2ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-warm {
+    background: linear-gradient(135deg, #ff6723 0%, #ff9a5c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glass card */
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-hover:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Button shine */
+  .btn-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255,255,255,0.15) 50%,
+      transparent 100%
+    );
+    transform: rotate(30deg) translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+  .btn-shine:hover::after {
+    transform: rotate(30deg) translateX(100%);
+  }
+
+  /* Floating badge */
+  .float-badge {
+    animation: floatBadge 3s ease-in-out infinite;
+  }
+  @keyframes floatBadge {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* Pulse ring */
+  .pulse-ring {
+    position: relative;
+  }
+  .pulse-ring::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid #2997ff;
+    animation: pulseRing 2s ease-out infinite;
+  }
+  @keyframes pulseRing {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+
+  /* Counter animation */
+  .counter { font-variant-numeric: tabular-nums; }
+
+  /* Horizontal scroll section */
+  .horizontal-scroll-container {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 max(1.5rem, calc((100vw - 1280px) / 2));
+  }
+  .horizontal-scroll-container::-webkit-scrollbar { display: none; }
+  .horizontal-scroll-container > * { scroll-snap-align: start; }
+
+  /* Parallax image */
+  .parallax-img {
+    transition: transform 0.1s linear;
+    will-change: transform;
+  }
+
+  /* Nav blur */
+  .nav-blur {
+    background: rgba(10, 10, 10, 0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  /* Spec divider line */
+  .spec-line {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+  }
+
+  /* Image glow */
+  .img-glow {
+    position: relative;
+  }
+  .img-glow::after {
+    content: '';
+    position: absolute;
+    inset: 10%;
+    border-radius: 50%;
+    background: inherit;
+    filter: blur(80px);
+    opacity: 0.3;
+    z-index: -1;
+  }
+
+  /* Marquee */
+  .marquee-track {
+    display: flex;
+    animation: marquee 30s linear infinite;
+    width: max-content;
+  }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Video placeholder shimmer */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Ticker number */
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Mobile menu */
+  .mobile-menu {
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .mobile-menu.open {
+    transform: translateX(0);
+  }
+
+  /* Progress bar for scroll */
+  .scroll-progress {
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.1s linear;
+  }
+</style>
+</head>
+<body>
+
+<!-- Scroll Progress -->
+<div class="fixed top-0 left-0 w-full h-[2px] z-[60]">
+  <div class="scroll-progress h-full bg-gradient-to-r from-nova-accent via-purple-500 to-nova-warm" id="scrollProgress"></div>
+</div>
+
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 w-full z-50 nav-blur border-b border-white/[0.06]" id="navbar">
+  <div class="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between">
+    <!-- Logo -->
+    <a href="#" class="flex items-center gap-2.5 group">
+      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-nova-accent to-purple-600 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+        <i data-lucide="zap" class="w-4 h-4 text-white"></i>
+      </div>
+      <span class="font-display font-semibold text-base tracking-tight">NOVA</span>
+    </a>
+
+    <!-- Desktop Links -->
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#features" class="text-xs font-medium text-nova-light hover:text-white transition-colors duration-200 tracking-wide uppercase">Features</a>
+      <a href="#specs" class="text-xs font-medium text-nova-light hover:text-white transition-colors duration-200 tracking-wide uppercase">Specs</a>
+      <a href="#experience" class="text-xs font-medium text-nova-light hover:text-white transition-colors duration-200 tracking-wide uppercase">Experience</a>
+      <a href="#design" class="text-xs font-medium text-nova-light hover:text-white transition-colors duration-200 tracking-wide uppercase">Design</a>
+    </div>
+
+    <!-- CTA + Mobile Toggle -->
+    <div class="flex items-center gap-3">
+      <a href="#order" class="hidden sm:inline-flex items-center gap-2 bg-nova-white text-nova-black text-xs font-semibold px-4 py-2 rounded-full hover:bg-white transition-colors duration-200 btn-shine">
+        Pre-order
+      </a>
+      <button id="menuToggle" class="md:hidden w-9 h-9 flex items-center justify-center rounded-full glass">
+        <i data-lucide="menu" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu fixed inset-0 z-[55] bg-nova-black/98 backdrop-blur-xl flex flex-col" id="mobileMenu">
+  <div class="flex justify-end p-6">
+    <button id="menuClose" class="w-9 h-9 flex items-center justify-center rounded-full glass">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+  <div class="flex-1 flex flex-col justify-center items-center gap-8">
+    <a href="#features" class="mobile-link text-3xl font-display font-semibold tracking-tight hover:text-nova-accent transition-colors">Features</a>
+    <a href="#specs" class="mobile-link text-3xl font-display font-semibold tracking-tight hover:text-nova-accent transition-colors">Specs</a>
+    <a href="#experience" class="mobile-link text-3xl font-display font-semibold tracking-tight hover:text-nova-accent transition-colors">Experience</a>
+    <a href="#design" class="mobile-link text-3xl font-display font-semibold tracking-tight hover:text-nova-accent transition-colors">Design</a>
+    <a href="#order" class="mt-4 bg-nova-white text-nova-black text-sm font-semibold px-8 py-3.5 rounded-full btn-shine">Pre-order Now</a>
+  </div>
+</div>
+
+<!-- ======================== HERO ======================== -->
+<section class="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-14">
+  <!-- Orbs -->
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  
+  <!-- Grid pattern -->
+  <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 80px 80px;"></div>
+
+  <div class="relative z-10 text-center px-6 max-w-5xl mx-auto">
+    <!-- Badge -->
+    <div class="reveal inline-flex items-center gap-2 glass rounded-full px-4 py-2 mb-8 float-badge">
+      <span class="w-2 h-2 rounded-full bg-green-400 pulse-ring"></span>
+      <span class="text-xs font-medium text-nova-light tracking-wide">Now accepting pre-orders</span>
+    </div>
+
+    <!-- Headline -->
+    <h1 class="reveal reveal-delay-1 font-display font-bold text-5xl sm:text-7xl lg:text-[110px] leading-[0.92] tracking-tighter mb-6">
+      The future<br>
+      <span class="text-gradient">is electric.</span>
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="reveal reveal-delay-2 text-lg sm:text-xl text-nova-light max-w-xl mx-auto mb-10 leading-relaxed font-light">
+      NOVA merges breakthrough battery architecture with intelligent design. 620 miles. 1.8s. Zero compromise.
+    </p>
+
+    <!-- CTAs -->
+    <div class="reveal reveal-delay-3 flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="#order" class="group inline-flex items-center gap-2.5 bg-nova-white text-nova-black text-sm font-semibold px-8 py-4 rounded-full hover:bg-white transition-all duration-200 btn-shine">
+        Pre-order — $49,900
+        <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-1"></i>
+      </a>
+      <button id="playBtn" class="group inline-flex items-center gap-2.5 glass glass-hover text-nova-white text-sm font-medium px-8 py-4 rounded-full transition-all duration-200">
+        <i data-lucide="play" class="w-4 h-4 text-nova-accent"></i>
+        Watch the film
+      </button>
+    </div>
+  </div>
+
+  <!-- Hero Product Image -->
+  <div class="reveal-scale relative z-10 mt-16 w-full max-w-5xl mx-auto px-6">
+    <div class="relative rounded-3xl overflow-hidden shimmer" style="aspect-ratio: 21/9;">
+      <img src="https://picsum.photos/seed/nova-hero-car/1400/600.jpg" alt="NOVA Vehicle" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-nova-black/60 via-transparent to-transparent"></div>
+      <div class="absolute bottom-8 left-8 right-8 flex items-end justify-between">
+        <div>
+          <p class="text-xs text-nova-light/70 uppercase tracking-widest mb-1">Starting at</p>
+          <p class="text-2xl font-display font-bold">$49,900</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-nova-light/70 uppercase tracking-widest mb-1">Deliveries begin</p>
+          <p class="text-2xl font-display font-bold">Q2 2026</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
+    <span class="text-[10px] uppercase tracking-[0.2em] text-nova-muted">Scroll</span>
+    <i data-lucide="chevron-down" class="w-4 h-4 text-nova-muted"></i>
+  </div>
+</section>
+
+<!-- ======================== MARQUEE ======================== -->
+<section class="py-8 border-y border-white/[0.06] overflow-hidden">
+  <div class="marquee-track">
+    <div class="flex items-center gap-12 px-6">
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">620-Mile Range</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">1.8s 0–60 mph</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">200 kWh Solid State</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">Full Self-Driving</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">0.19 Cd Drag</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">Over-the-Air Updates</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">Ultra-Wide 16" Display</span>
+      <span class="text-nova-accent">✦</span>
+    </div>
+    <div class="flex items-center gap-12 px-6">
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">620-Mile Range</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">1.8s 0–60 mph</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">200 kWh Solid State</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">Full Self-Driving</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">0.19 Cd Drag</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">Over-the-Air Updates</span>
+      <span class="text-nova-accent">✦</span>
+      <span class="text-sm font-display font-medium text-nova-muted whitespace-nowrap">Ultra-Wide 16" Display</span>
+      <span class="text-nova-accent">✦</span>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== FEATURES ======================== -->
+<section id="features" class="py-24 md:py-32">
+  <div class="max-w-[1280px] mx-auto px-6">
+    <!-- Section header -->
+    <div class="text-center mb-16 md:mb-24">
+      <p class="reveal text-xs font-semibold uppercase tracking-[0.25em] text-nova-accent mb-4">Capabilities</p>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl tracking-tighter leading-tight">
+        Built different.<br>
+        <span class="text-nova-light">By design.</span>
+      </h2>
+    </div>
+
+    <!-- Feature grid -->
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Feature 1 - Large -->
+      <div class="reveal md:row-span-2 glass glass-hover rounded-3xl overflow-hidden group cursor-pointer transition-all duration-500">
+        <div class="relative h-72 md:h-full min-h-[400px]">
+          <img src="https://picsum.photos/seed/nova-battery-tech/800/900.jpg" alt="Battery" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-black via-nova-black/40 to-transparent"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-8">
+            <div class="inline-flex items-center gap-1.5 text-nova-accent text-xs font-semibold uppercase tracking-wider mb-3">
+              <i data-lucide="battery-charging" class="w-3.5 h-3.5"></i>
+              Battery
+            </div>
+            <h3 class="font-display font-bold text-2xl md:text-3xl tracking-tight mb-2">200 kWh Solid-State Cell</h3>
+            <p class="text-nova-light text-sm leading-relaxed max-w-md">Our proprietary solid-state architecture delivers 2x energy density with zero thermal runaway risk. Charge 10–80% in 12 minutes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="reveal reveal-delay-1 glass glass-hover rounded-3xl overflow-hidden group cursor-pointer transition-all duration-500">
+        <div class="relative h-72">
+          <img src="https://picsum.photos/seed/nova-autopilot-ai/800/500.jpg" alt="AI" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-black via-nova-black/30 to-transparent"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-8">
+            <div class="inline-flex items-center gap-1.5 text-purple-400 text-xs font-semibold uppercase tracking-wider mb-3">
+              <i data-lucide="brain" class="w-3.5 h-3.5"></i>
+              Intelligence
+            </div>
+            <h3 class="font-display font-bold text-2xl tracking-tight mb-2">NOVA Mind Full Self-Driving</h3>
+            <p class="text-nova-light text-sm leading-relaxed">8 cameras + 4 LiDAR + neural engine. Level 4 autonomous capability from day one.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="reveal reveal-delay-2 glass glass-hover rounded-3xl overflow-hidden group cursor-pointer transition-all duration-500">
+        <div class="relative h-72">
+          <img src="https://picsum.photos/seed/nova-aero-design/800/500.jpg" alt="Aero" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-black via-nova-black/30 to-transparent"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-8">
+            <div class="inline-flex items-center gap-1.5 text-nova-warm text-xs font-semibold uppercase tracking-wider mb-3">
+              <i data-lucide="wind" class="w-3.5 h-3.5"></i>
+              Aerodynamics
+            </div>
+            <h3 class="font-display font-bold text-2xl tracking-tight mb-2">0.19 Cd — World Record</h3>
+            <p class="text-nova-light text-sm leading-relaxed">Active aero surfaces, flush door handles, and underbody channels redefine efficiency.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== SPECS - Big Numbers ======================== -->
+<section id="specs" class="py-24 md:py-32 border-t border-white/[0.06]">
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="text-center mb-16">
+      <p class="reveal text-xs font-semibold uppercase tracking-[0.25em] text-nova-accent mb-4">Performance</p>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl tracking-tighter">
+        Numbers don't lie.
+      </h2>
+    </div>
+
+    <!-- Big stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
+      <div class="reveal glass rounded-3xl p-8 text-center group hover:border-nova-accent/30 transition-all duration-300">
+        <p class="counter font-display font-bold text-5xl md:text-6xl tracking-tighter text-gradient-blue" data-target="1.8" data-decimal="1">0</p>
+        <p class="text-xs text-nova-muted uppercase tracking-wider mt-3">Seconds 0–60</p>
+      </div>
+      <div class="reveal reveal-delay-1 glass rounded-3xl p-8 text-center group hover:border-nova-accent/30 transition-all duration-300">
+        <p class="counter font-display font-bold text-5xl md:text-6xl tracking-tighter text-gradient-blue" data-target="620" data-decimal="0">0</p>
+        <p class="text-xs text-nova-muted uppercase tracking-wider mt-3">Mile Range</p>
+      </div>
+      <div class="reveal reveal-delay-2 glass rounded-3xl p-8 text-center group hover:border-nova-accent/30 transition-all duration-300">
+        <p class="counter font-display font-bold text-5xl md:text-6xl tracking-tighter text-gradient-warm" data-target="1200" data-decimal="0">0</p>
+        <p class="text-xs text-nova-muted uppercase tracking-wider mt-3">Horsepower</p>
+      </div>
+      <div class="reveal reveal-delay-3 glass rounded-3xl p-8 text-center group hover:border-nova-accent/30 transition-all duration-300">
+        <p class="counter font-display font-bold text-5xl md:text-6xl tracking-tighter text-gradient-warm" data-target="200" data-decimal="0">0</p>
+        <p class="text-xs text-nova-muted uppercase tracking-wider mt-3">kWh Battery</p>
+      </div>
+    </div>
+
+    <!-- Detailed specs list -->
+    <div class="max-w-3xl mx-auto space-y-0">
+      <div class="reveal flex justify-between items-center py-5 spec-line">
+        <span class="text-sm text-nova-light">Top Speed</span>
+        <span class="text-sm font-display font-semibold">200 mph</span>
+      </div>
+      <div class="reveal reveal-delay-1 flex justify-between items-center py-5 spec-line">
+        <span class="text-sm text-nova-light">Drag Coefficient</span>
+        <span class="text-sm font-display font-semibold">0.19 Cd</span>
+      </div>
+      <div class="reveal reveal-delay-2 flex justify-between items-center py-5 spec-line">
+        <span class="text-sm text-nova-light">Charging (10–80%)</span>
+        <span class="text-sm font-display font-semibold">12 minutes</span>
+      </div>
+      <div class="reveal reveal-delay-3 flex justify-between items-center py-5 spec-line">
+        <span class="text-sm text-nova-light">Curb Weight</span>
+        <span class="text-sm font-display font-semibold">4,200 lbs</span>
+      </div>
+      <div class="reveal reveal-delay-4 flex justify-between items-center py-5 spec-line">
+        <span class="text-sm text-nova-light">Cargo Volume</span>
+        <span class="text-sm font-display font-semibold">28 cu ft (frunk + trunk)</span>
+      </div>
+      <div class="reveal reveal-delay-5 flex justify-between items-center py-5">
+        <span class="text-sm text-nova-light">Towing Capacity</span>
+        <span class="text-sm font-display font-semibold">7,500 lbs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== EXPERIENCE ======================== -->
+<section id="experience" class="py-24 md:py-32 border-t border-white/[0.06] relative overflow-hidden">
+  <!-- Background orb -->
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-purple-600/10 blur-[150px]"></div>
+
+  <div class="max-w-[1280px] mx-auto px-6 relative z-10">
+    <div class="text-center mb-16">
+      <p class="reveal text-xs font-semibold uppercase tracking-[0.25em] text-purple-400 mb-4">Experience</p>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl tracking-tighter">
+        Inside, it's<br><span class="text-gradient">another world.</span>
+      </h2>
+    </div>
+
+    <!-- Horizontal scroll cards -->
+    <div class="horizontal-scroll-container -mx-6 pb-6">
+      <!-- Card 1 -->
+      <div class="reveal flex-shrink-0 w-[340px] sm:w-[400px] glass rounded-3xl overflow-hidden group">
+        <div class="relative h-56">
+          <img src="https://picsum.photos/seed/nova-interior-display/800/500.jpg" alt="Display" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-card to-transparent"></div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-display font-semibold text-lg mb-2">16" Ultra-Wide Display</h3>
+          <p class="text-sm text-nova-light leading-relaxed">3456×2160 OLED, 120Hz ProMotion. Runs NOVA OS with spatial audio integration.</p>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="reveal reveal-delay-1 flex-shrink-0 w-[340px] sm:w-[400px] glass rounded-3xl overflow-hidden group">
+        <div class="relative h-56">
+          <img src="https://picsum.photos/seed/nova-sound-system/800/500.jpg" alt="Audio" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-card to-transparent"></div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-display font-semibold text-lg mb-2">22-Speaker Spatial Audio</h3>
+          <p class="text-sm text-nova-light leading-relaxed">Custom-tuned by a Grammy-winning engineer. Dolby Atmos. Concert hall in your car.</p>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="reveal reveal-delay-2 flex-shrink-0 w-[340px] sm:w-[400px] glass rounded-3xl overflow-hidden group">
+        <div class="relative h-56">
+          <img src="https://picsum.photos/seed/nova-glass-roof/800/500.jpg" alt="Glass Roof" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-card to-transparent"></div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-display font-semibold text-lg mb-2">Panoramic Glass Roof</h3>
+          <p class="text-sm text-nova-light leading-relaxed">Electrochromic tinting at the touch of a button. UV protection. Infinite headroom.</p>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="reveal reveal-delay-3 flex-shrink-0 w-[340px] sm:w-[400px] glass rounded-3xl overflow-hidden group">
+        <div class="relative h-56">
+          <img src="https://picsum.photos/seed/nova-seats-luxury/800/500.jpg" alt="Seats" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-card to-transparent"></div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-display font-semibold text-lg mb-2">Adaptive Comfort Seats</h3>
+          <p class="text-sm text-nova-light leading-relaxed">Memory foam + micro-perforation. Heating, cooling, massage. 16-way adjustment.</p>
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="reveal reveal-delay-4 flex-shrink-0 w-[340px] sm:w-[400px] glass rounded-3xl overflow-hidden group">
+        <div class="relative h-56">
+          <img src="https://picsum.photos/seed/nova-app-wireless/800/500.jpg" alt="App" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-nova-card to-transparent"></div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-display font-semibold text-lg mb-2">NOVA App Ecosystem</h3>
+          <p class="text-sm text-nova-light leading-relaxed">Your phone becomes the key. Climate control, summon, sentry mode — all from your wrist.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== DESIGN ======================== -->
+<section id="design" class="py-24 md:py-32 border-t border-white/[0.06]">
+  <div class="max-w-[1280px] mx-auto px-6">
+    <!-- Full width image -->
+    <div class="reveal-scale relative rounded-[2rem] overflow-hidden mb-16 group cursor-pointer" style="aspect-ratio: 21/9;">
+      <img src="https://picsum.photos/seed/nova-side-profile-dark/1400/600.jpg" alt="NOVA Side Profile" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105">
+      <div class="absolute inset-0 bg-gradient-to-r from-nova-black/70 via-transparent to-nova-black/70"></div>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="text-center">
+          <p class="text-xs font-semibold uppercase tracking-[0.25em] text-nova-accent mb-3">Design Philosophy</p>
+          <h2 class="font-display font-bold text-4xl md:text-6xl tracking-tighter max-w-2xl">Every curve has a <span class="text-gradient">purpose.</span></h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two column -->
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="reveal glass rounded-3xl p-10 flex flex-col justify-between min-h-[360px]">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-nova-accent/10 flex items-center justify-center mb-6">
+            <i data-lucide="palette" class="w-6 h-6 text-nova-accent"></i>
+          </div>
+          <h3 class="font-display font-bold text-2xl tracking-tight mb-3">Seven Signature Colors</h3>
+          <p class="text-sm text-nova-light leading-relaxed">Multi-coat paint with color-shifting nano-pigments. Each color tells a different story in different light.</p>
+        </div>
+        <div class="flex gap-2 mt-8">
+          <div class="w-8 h-8 rounded-full bg-[#1a1a2e] border-2 border-white/10"></div>
+          <div class="w-8 h-8 rounded-full bg-[#c0c0c0] border-2 border-white/10"></div>
+          <div class="w-8 h-8 rounded-full bg-[#2997ff] border-2 border-white/10"></div>
+          <div class="w-8 h-8 rounded-full bg-[#ff3b30] border-2 border-white/10"></div>
+          <div class="w-8 h-8 rounded-full bg-[#34c759] border-2 border-white/10"></div>
+          <div class="w-8 h-8 rounded-full bg-[#ffd60a] border-2 border-white/10"></div>
+          <div class="w-8 h-8 rounded-full bg-[#bf5af2] border-2 border-white/10"></div>
+        </div>
+      </div>
+
+      <div class="reveal reveal-delay-1 glass rounded-3xl p-10 flex flex-col justify-between min-h-[360px]">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-nova-warm/10 flex items-center justify-center mb-6">
+            <i data-lucide="shield-check" class="w-6 h-6 text-nova-warm"></i>
+          </div>
+          <h3 class="font-display font-bold text-2xl tracking-tight mb-3">5-Star Everything</h3>
+          <p class="text-sm text-nova-light leading-relaxed">NHTSA 5-star. Euro NCAP 5-star. 12 airbags. Structural battery pack as crash structure. Built to exceed every standard.</p>
+        </div>
+        <div class="flex gap-1 mt-8">
+          <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+          <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+          <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+          <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+          <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+          <span class="text-xs text-nova-muted ml-2 self-center">NHTSA / Euro NCAP</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== QUOTE ======================== -->
+<section class="py-24 md:py-32 border-t border-white/[0.06]">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <div class="reveal">
+      <i data-lucide="quote" class="w-10 h-10 text-nova-accent/30 mx-auto mb-8"></i>
+      <blockquote class="font-display text-2xl md:text-4xl font-medium tracking-tight leading-snug mb-8">
+        "NOVA isn't just a car — it's the most advanced piece of technology you'll ever own. We started from zero and questioned 
+        <span class="text-gradient">every single assumption</span> about what a vehicle should be."
+      </blockquote>
+      <div class="flex items-center justify-center gap-4">
+        <div class="w-12 h-12 rounded-full overflow-hidden bg-nova-card">
+          <img src="https://picsum.photos/seed/nova-ceo-portrait/100/100.jpg" alt="CEO" class="w-full h-full object-cover">
+        </div>
+        <div class="text-left">
+          <p class="text-sm font-semibold">Elena Vasquez</p>
+          <p class="text-xs text-nova-muted">CEO & Co-founder, NOVA</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== ORDER / CTA ======================== -->
+<section id="order" class="py-24 md:py-32 border-t border-white/[0.06] relative overflow-hidden">
+  <!-- Background effect -->
+  <div class="absolute inset-0">
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-nova-accent/8 blur-[150px]"></div>
+    <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-purple-600/8 blur-[150px]"></div>
+  </div>
+
+  <div class="max-w-[1280px] mx-auto px-6 relative z-10">
+    <div class="text-center mb-16">
+      <p class="reveal text-xs font-semibold uppercase tracking-[0.25em] text-nova-accent mb-4">Reserve Yours</p>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-7xl tracking-tighter">
+        The wait is<br><span class="text-gradient">almost over.</span>
+      </h2>
+    </div>
+
+    <!-- Pricing cards -->
+    <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <!-- Standard -->
+      <div class="reveal glass rounded-3xl p-8 flex flex-col">
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-muted mb-4">Standard Range</p>
+        <p class="font-display font-bold text-4xl tracking-tighter mb-1">$49,900</p>
+        <p class="text-xs text-nova-muted mb-8">After est. federal tax credit</p>
+        <ul class="space-y-3 mb-10 flex-1">
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-green-400 flex-shrink-0"></i>400-mile range</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-green-400 flex-shrink-0"></i>Dual motor AWD</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-green-400 flex-shrink-0"></i>0–60 in 3.2s</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-green-400 flex-shrink-0"></i>NOVA Mind Basic</li>
+        </ul>
+        <button class="w-full py-3.5 rounded-full border border-white/20 text-sm font-semibold hover:bg-white/5 transition-colors btn-shine">Reserve</button>
+      </div>
+
+      <!-- Performance - Featured -->
+      <div class="reveal reveal-delay-1 relative rounded-3xl p-8 flex flex-col bg-gradient-to-b from-nova-accent/10 to-nova-card border border-nova-accent/30">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-nova-accent text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full">Most Popular</div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-accent mb-4">Performance</p>
+        <p class="font-display font-bold text-4xl tracking-tighter mb-1">$69,900</p>
+        <p class="text-xs text-nova-muted mb-8">After est. federal tax credit</p>
+        <ul class="space-y-3 mb-10 flex-1">
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-nova-accent flex-shrink-0"></i>620-mile range</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-nova-accent flex-shrink-0"></i>Tri motor AWD</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-nova-accent flex-shrink-0"></i>0–60 in 1.8s</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-nova-accent flex-shrink-0"></i>NOVA Mind Full Self-Driving</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-nova-accent flex-shrink-0"></i>22-speaker spatial audio</li>
+        </ul>
+        <button class="w-full py-3.5 rounded-full bg-nova-white text-nova-black text-sm font-semibold hover:bg-white transition-colors btn-shine">Reserve</button>
+      </div>
+
+      <!-- Ultra -->
+      <div class="reveal reveal-delay-2 glass rounded-3xl p-8 flex flex-col">
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-muted mb-4">Ultra</p>
+        <p class="font-display font-bold text-4xl tracking-tighter mb-1">$94,900</p>
+        <p class="text-xs text-nova-muted mb-8">After est. federal tax credit</p>
+        <ul class="space-y-3 mb-10 flex-1">
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>620-mile range</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>Tri motor + torque vectoring</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>0–60 in 1.8s</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>Everything in Performance</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>Exclusive Ultra color palette</li>
+          <li class="flex items-center gap-2.5 text-sm text-nova-light"><i data-lucide="check" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>Carbon ceramic brakes</li>
+        </ul>
+        <button class="w-full py-3.5 rounded-full border border-white/20 text-sm font-semibold hover:bg-white/5 transition-colors btn-shine">Reserve</button>
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-nova-muted mt-8">$250 fully refundable deposit. No commitment. Delivery priority based on reservation date.</p>
+  </div>
+</section>
+
+<!-- ======================== FOOTER ======================== -->
+<footer class="border-t border-white/[0.06] py-16">
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16">
+      <!-- Brand -->
+      <div class="col-span-2 md:col-span-1">
+        <a href="#" class="flex items-center gap-2.5 mb-4">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-nova-accent to-purple-600 flex items-center justify-center">
+            <i data-lucide="zap" class="w-4 h-4 text-white"></i>
+          </div>
+          <span class="font-display font-semibold text-base tracking-tight">NOVA</span>
+        </a>
+        <p class="text-xs text-nova-muted leading-relaxed">Redefining what's possible.<br>One charge at a time.</p>
+      </div>
+
+      <!-- Links -->
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-light mb-4">Vehicles</p>
+        <ul class="space-y-2.5">
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Standard Range</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Performance</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Ultra</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Compare</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-light mb-4">Technology</p>
+        <ul class="space-y-2.5">
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">NOVA Mind</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Battery</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Charging</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">NOVA OS</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-light mb-4">Company</p>
+        <ul class="space-y-2.5">
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">About</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Careers</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Press</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Investors</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-nova-light mb-4">Support</p>
+        <ul class="space-y-2.5">
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Contact</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Charging Network</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Service</a></li>
+          <li><a href="#" class="text-xs text-nova-muted hover:text-white transition-colors">Roadside Assist</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="spec-line pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-[11px] text-nova-muted">© 2025 NOVA Motors, Inc. All rights reserved.</p>
+      <div class="flex items-center gap-5">
+        <a href="#" class="text-nova-muted hover:text-white transition-colors"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+        <a href="#" class="text-nova-muted hover:text-white transition-colors"><i data-lucide="instagram" class="w-4 h-4"></i></a>
+        <a href="#" class="text-nova-muted hover:text-white transition-colors"><i data-lucide="youtube" class="w-4 h-4"></i></a>
+        <a href="#" class="text-nova-muted hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ======================== VIDEO MODAL ======================== -->
+<div id="videoModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="relative w-full max-w-4xl mx-6">
+    <button id="closeModal" class="absolute -top-12 right-0 w-10 h-10 rounded-full glass flex items-center justify-center hover:bg-white/10 transition-colors">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+    <div class="rounded-2xl overflow-hidden bg-nova-card aspect-video flex items-center justify-center">
+      <div class="text-center">
+        <div class="w-20 h-20 rounded-full border-2 border-white/20 flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="play" class="w-8 h-8 text-white ml-1"></i>
+        </div>
+        <p class="text-sm text-nova-muted">NOVA — The Film</p>
+        <p class="text-xs text-nova-muted/60 mt-1">Video placeholder</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== TOAST ======================== -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] glass rounded-full px-6 py-3 flex items-center gap-2.5 opacity-0 translate-y-4 pointer-events-none transition-all duration-300">
+  <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+  <span class="text-sm font-medium" id="toastMsg">Reservation confirmed!</span>
+</div>
+
+<script>
+// Initialize Lucide icons
+lucide.createIcons();
+
+// ===== SCROLL REVEAL =====
+const revealElements = document.querySelectorAll('.reveal, .reveal-scale');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('active');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+revealElements.forEach(el => revealObserver.observe(el));
+
+// ===== COUNTER ANIMATION =====
+const counters = document.querySelectorAll('.counter');
+let counterStarted = false;
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting && !counterStarted) {
+      counterStarted = true;
+      counters.forEach(counter => {
+        const target = parseFloat(counter.dataset.target);
+        const decimal = parseInt(counter.dataset.decimal) || 0;
+        const duration = 2000;
+        const startTime = performance.now();
+        
+        function update(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = eased * target;
+          counter.textContent = current.toFixed(decimal);
+          if (progress < 1) {
+            requestAnimationFrame(update);
+          } else {
+            counter.textContent = target.toFixed(decimal);
+          }
+        }
+        requestAnimationFrame(update);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+counters.forEach(c => counterObserver.observe(c));
+
+// ===== SCROLL PROGRESS =====
+const scrollProgress = document.getElementById('scrollProgress');
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? scrollTop / docHeight : 0;
+  scrollProgress.style.transform = `scaleX(${progress})`;
+});
+
+// ===== NAVBAR HIDE/SHOW ON SCROLL =====
+let lastScroll = 0;
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  const currentScroll = window.scrollY;
+  if (currentScroll > lastScroll && currentScroll > 100) {
+    navbar.style.transform = 'translateY(-100%)';
+    navbar.style.transition = 'transform 0.3s ease';
+  } else {
+    navbar.style.transform = 'translateY(0)';
+  }
+  lastScroll = currentScroll;
+});
+
+// ===== MOBILE MENU =====
+const menuToggle = document.getElementById('menuToggle');
+const menuClose = document.getElementById('menuClose');
+const mobileMenu = document.getElementById('mobileMenu');
+const mobileLinks = document.querySelectorAll('.mobile-link');
+
+menuToggle.addEventListener('click', () => {
+  mobileMenu.classList.add('open');
+  document.body.style.overflow = 'hidden';
+});
+
+function closeMenu() {
+  mobileMenu.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+menuClose.addEventListener('click', closeMenu);
+mobileLinks.forEach(link => link.addEventListener('click', closeMenu));
+
+// ===== VIDEO MODAL =====
+const playBtn = document.getElementById('playBtn');
+const videoModal = document.getElementById('videoModal');
+const closeModal = document.getElementById('closeModal');
+
+playBtn.addEventListener('click', () => {
+  videoModal.classList.remove('opacity-0', 'pointer-events-none');
+  videoModal.classList.add('opacity-100', 'pointer-events-auto');
+  document.body.style.overflow = 'hidden';
+});
+
+function closeVideoModal() {
+  videoModal.classList.add('opacity-0', 'pointer-events-none');
+  videoModal.classList.remove('opacity-100', 'pointer-events-auto');
+  document.body.style.overflow = '';
+}
+
+closeModal.addEventListener('click', closeVideoModal);
+videoModal.addEventListener('click', (e) => {
+  if (e.target === videoModal) closeVideoModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeVideoModal();
+    closeMenu();
+  }
+});
+
+// ===== TOAST =====
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  toastMsg.textContent = message;
+  toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+  toast.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+  setTimeout(() => {
+    toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+    toast.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+  }, 3000);
+}
+
+// ===== RESERVE BUTTONS =====
+document.querySelectorAll('button').forEach(btn => {
+  if (btn.textContent.trim() === 'Reserve') {
+    btn.addEventListener('click', () => {
+      showToast('Reservation confirmed! Check your email.');
+    });
+  }
+});
+
+// ===== SMOOTH SCROLL FOR ANCHOR LINKS =====
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      const offset = 80;
+      const top = target.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+});
+
+// ===== PARALLAX ON HERO (SUBTLE) =====
+const heroImg = document.querySelector('.reveal-scale img');
+if (heroImg) {
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    if (scrollY < window.innerHeight) {
+      heroImg.style.transform = `scale(1) translateY(${scrollY * 0.08}px)`;
+    }
+  });
+}
+</script>
+
+</body>
+</html>
