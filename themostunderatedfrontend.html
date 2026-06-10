@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Most Underrated Frontend Effect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* ========== CSS @property — The Magic Ingredient ========== */
+        @property --bx1 { syntax: '<percentage>'; initial-value: 25%; inherits: false; }
+        @property --by1 { syntax: '<percentage>'; initial-value: 20%; inherits: false; }
+        @property --bx2 { syntax: '<percentage>'; initial-value: 75%; inherits: false; }
+        @property --by2 { syntax: '<percentage>'; initial-value: 70%; inherits: false; }
+        @property --bx3 { syntax: '<percentage>'; initial-value: 50%; inherits: false; }
+        @property --by3 { syntax: '<percentage>'; initial-value: 10%; inherits: false; }
+        @property --bx4 { syntax: '<percentage>'; initial-value: 15%; inherits: false; }
+        @property --by4 { syntax: '<percentage>'; initial-value: 60%; inherits: false; }
+        @property --bx5 { syntax: '<percentage>'; initial-value: 85%; inherits: false; }
+        @property --by5 { syntax: '<percentage>'; initial-value: 35%; inherits: false; }
+
+        /* Angle property for rotating effects */
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+        /* ========== Base Styles ========== */
+        :root {
+            --c-coral: #FF6B35;
+            --c-amber: #FBBF24;
+            --c-emerald: #34D399;
+            --c-rose: #F43F5E;
+            --c-cyan: #06B6D4;
+            --bg: #08080A;
+            --fg: #F5F0EB;
+            --muted: #8A8A8A;
+            --card: rgba(255,255,255,0.04);
+            --card-hover: rgba(255,255,255,0.07);
+            --border: rgba(255,255,255,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* ========== Fixed Mesh Gradient Background ========== */
+        .mesh-bg {
+            position: fixed;
+            inset: -40%;
+            width: 180%;
+            height: 180%;
+            z-index: 0;
+            opacity: 0.55;
+            pointer-events: none;
+            --mx: 50%;
+            --my: 50%;
+            background:
+                radial-gradient(circle at
+                    calc(var(--bx1) + (var(--mx) - 50%) * 0.12)
+                    calc(var(--by1) + (var(--my) - 50%) * 0.12),
+                    rgba(255,107,53,0.85) 0%, transparent 45%),
+                radial-gradient(circle at
+                    calc(var(--bx2) + (var(--mx) - 50%) * 0.12)
+                    calc(var(--by2) + (var(--my) - 50%) * 0.12),
+                    rgba(251,191,36,0.75) 0%, transparent 45%),
+                radial-gradient(circle at
+                    calc(var(--bx3) + (var(--mx) - 50%) * 0.12)
+                    calc(var(--by3) + (var(--my) - 50%) * 0.12),
+                    rgba(52,211,153,0.75) 0%, transparent 45%),
+                radial-gradient(circle at
+                    calc(var(--bx4) + (var(--mx) - 50%) * 0.12)
+                    calc(var(--by4) + (var(--my) - 50%) * 0.12),
+                    rgba(244,63,94,0.65) 0%, transparent 45%),
+                radial-gradient(circle at
+                    calc(var(--bx5) + (var(--mx) - 50%) * 0.12)
+                    calc(var(--by5) + (var(--my) - 50%) * 0.12),
+                    rgba(6,182,212,0.65) 0%, transparent 45%);
+            filter: blur(70px);
+            animation:
+                drift1 14s ease-in-out infinite alternate,
+                drift2 18s ease-in-out infinite alternate,
+                drift3 11s ease-in-out infinite alternate,
+                drift4 20s ease-in-out infinite alternate,
+                drift5 15s ease-in-out infinite alternate;
+        }
+
+        /* Each blob follows its own organic path */
+        @keyframes drift1 {
+            0%   { --bx1: 20%; --by1: 15%; }
+            33%  { --bx1: 65%; --by1: 25%; }
+            66%  { --bx1: 75%; --by1: 70%; }
+            100% { --bx1: 35%; --by1: 80%; }
+        }
+        @keyframes drift2 {
+            0%   { --bx2: 80%; --by2: 75%; }
+            33%  { --bx2: 25%; --by2: 55%; }
+            66%  { --bx2: 40%; --by2: 20%; }
+            100% { --bx2: 70%; --by2: 30%; }
+        }
+        @keyframes drift3 {
+            0%   { --bx3: 50%; --by3: 8%; }
+            33%  { --bx3: 15%; --by3: 45%; }
+            66%  { --bx3: 85%; --by3: 55%; }
+            100% { --bx3: 55%; --by3: 85%; }
+        }
+        @keyframes drift4 {
+            0%   { --bx4: 12%; --by4: 55%; }
+            33%  { --bx4: 60%; --by4: 80%; }
+            66%  { --bx4: 30%; --by4: 15%; }
+            100% { --bx4: 80%; --by4: 45%; }
+        }
+        @keyframes drift5 {
+            0%   { --bx5: 88%; --by5: 30%; }
+            33%  { --bx5: 45%; --by5: 60%; }
+            66%  { --bx5: 18%; --by5: 75%; }
+            100% { --bx5: 65%; --by5: 15%; }
+        }
+
+        /* Noise texture overlay for depth */
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            opacity: 0.035;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 256px 256px;
+        }
+
+        /* Vignette for cinematic depth */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(8,8,10,0.5) 100%);
+        }
+
+        /* ========== Hero Section ========== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards 0.2s;
+        }
+
+        .hero-badge .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--c-emerald);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.8rem, 8vw, 6.5rem);
+            font-weight: 700;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            max-width: 900px;
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards 0.4s;
+        }
+
+        .hero h1 .line-accent {
+            background: linear-gradient(135deg, var(--c-coral), var(--c-amber), var(--c-emerald));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 200%;
+            animation: textShimmer 6s ease infinite;
+        }
+
+        @keyframes textShimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-sub {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--muted);
+            max-width: 540px;
+            margin-top: 1.5rem;
+            line-height: 1.6;
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards 0.6s;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards 1s;
+        }
+
+        .scroll-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--muted), transparent);
+            animation: scrollPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes scrollPulse {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+            50% { opacity: 1; transform: scaleY(1); }
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* ========== Section Styles ========== */
+        .content-section {
+            position: relative;
+            z-index: 2;
+            padding: 6rem 2rem;
+        }
+
+        .section-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--c-coral);
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            color: var(--muted);
+            max-width: 520px;
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        /* Glass panel for content areas */
+        .glass-panel {
+            background: rgba(12,12,14,0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+        }
+
+        /* ========== Playground Section ========== */
+        .playground-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+            max-width: 1100px;
+            margin: 3rem auto 0;
+        }
+
+        @media (max-width: 860px) {
+            .playground-grid { grid-template-columns: 1fr; }
+        }
+
+        .playground-preview {
+            aspect-ratio: 16/10;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border);
+            background: #0A0A0A;
+        }
+
+        /* Self-contained mini mesh for playground */
+        .mini-mesh {
+            position: absolute;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                radial-gradient(circle at var(--bx1) var(--by1), rgba(255,107,53,0.9) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx2) var(--by2), rgba(251,191,36,0.8) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx3) var(--by3), rgba(52,211,153,0.8) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx4) var(--by4), rgba(244,63,94,0.7) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx5) var(--by5), rgba(6,182,212,0.7) 0%, transparent 40%);
+            animation:
+                drift1 var(--mesh-speed, 14s) ease-in-out infinite alternate,
+                drift2 var(--mesh-speed2, 18s) ease-in-out infinite alternate,
+                drift3 var(--mesh-speed3, 11s) ease-in-out infinite alternate,
+                drift4 var(--mesh-speed4, 20s) ease-in-out infinite alternate,
+                drift5 var(--mesh-speed5, 15s) ease-in-out infinite alternate;
+            filter: blur(var(--mesh-blur, 70px));
+        }
+
+        .playground-controls {
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: 0.02em;
+        }
+
+        .control-group .value-display {
+            float: right;
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--fg);
+            border: 3px solid var(--bg);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
+            transition: transform 0.15s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--fg);
+            border: 3px solid var(--bg);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
+            cursor: pointer;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .btn-action:hover {
+            background: var(--card-hover);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-action:active {
+            transform: translateY(0);
+        }
+
+        /* ========== Variations Grid ========== */
+        .variations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+            max-width: 1100px;
+            margin: 3rem auto 0;
+        }
+
+        .variation-card {
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            padding: 1.5rem;
+            transition: all 0.35s;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .variation-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .variation-card:hover {
+            background: var(--card-hover);
+            border-color: rgba(255,255,255,0.12);
+            transform: translateY(-4px);
+        }
+
+        .variation-demo {
+            height: 160px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .variation-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .variation-card p {
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-family: 'Space Grotesk', monospace;
+        }
+
+        /* --- Variation: Text Fill --- */
+        .text-mesh-fill {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--c-coral), var(--c-amber), var(--c-emerald), var(--c-cyan), var(--c-rose), var(--c-coral));
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: textCycle 8s ease infinite;
+        }
+
+        @keyframes textCycle {
+            0%, 100% { background-position: 0% 50%; }
+            25% { background-position: 100% 0%; }
+            50% { background-position: 100% 100%; }
+            75% { background-position: 0% 100%; }
+        }
+
+        /* --- Variation: Glass Card --- */
+        .glass-card-demo {
+            position: relative;
+            width: 85%;
+            padding: 1.25rem;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.12);
+            z-index: 1;
+        }
+
+        .glass-card-demo .mini-mesh-sm {
+            position: absolute;
+            inset: -40%;
+            width: 180%;
+            height: 180%;
+            z-index: -1;
+            background:
+                radial-gradient(circle at var(--bx1) var(--by1), rgba(255,107,53,0.9) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx2) var(--by2), rgba(251,191,36,0.8) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx3) var(--by3), rgba(52,211,153,0.8) 0%, transparent 40%);
+            filter: blur(40px);
+            animation:
+                drift1 10s ease-in-out infinite alternate,
+                drift2 13s ease-in-out infinite alternate,
+                drift3 8s ease-in-out infinite alternate;
+        }
+
+        .glass-card-demo h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .glass-card-demo p {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+        }
+
+        /* --- Variation: Animated Border --- */
+        .border-demo-wrapper {
+            position: relative;
+            padding: 2px;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .border-demo-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            background: conic-gradient(from var(--angle), var(--c-coral), var(--c-amber), var(--c-emerald), var(--c-cyan), var(--c-rose), var(--c-coral));
+            animation: rotateBorder 3s linear infinite;
+        }
+
+        .border-demo-inner {
+            position: relative;
+            z-index: 1;
+            width: 85%;
+            padding: 1.25rem;
+            border-radius: 12px;
+            background: #0A0A0A;
+            text-align: center;
+        }
+
+        @keyframes rotateBorder {
+            to { --angle: 360deg; }
+        }
+
+        /* --- Variation: Button --- */
+        .btn-mesh {
+            position: relative;
+            padding: 14px 36px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: transparent;
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            overflow: hidden;
+            transition: border-color 0.4s, transform 0.2s;
+        }
+
+        .btn-mesh::before {
+            content: '';
+            position: absolute;
+            inset: -40%;
+            width: 180%;
+            height: 180%;
+            background:
+                radial-gradient(circle at var(--bx1) var(--by1), rgba(255,107,53,0.9) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx2) var(--by2), rgba(251,191,36,0.8) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx3) var(--by3), rgba(52,211,153,0.8) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx4) var(--by4), rgba(244,63,94,0.7) 0%, transparent 40%);
+            filter: blur(30px);
+            opacity: 0;
+            transition: opacity 0.5s;
+            animation:
+                drift1 8s ease-in-out infinite alternate,
+                drift2 10s ease-in-out infinite alternate,
+                drift3 7s ease-in-out infinite alternate,
+                drift4 12s ease-in-out infinite alternate;
+        }
+
+        .btn-mesh:hover::before { opacity: 1; }
+        .btn-mesh:hover { border-color: transparent; transform: scale(1.05); }
+        .btn-mesh:active { transform: scale(0.98); }
+        .btn-mesh span { position: relative; z-index: 1; }
+
+        /* --- Variation: Avatar --- */
+        .avatar-mesh {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(255,107,53,0.2);
+        }
+
+        .avatar-mesh::before {
+            content: '';
+            position: absolute;
+            inset: -40%;
+            width: 180%;
+            height: 180%;
+            background:
+                radial-gradient(circle at var(--bx1) var(--by1), rgba(255,107,53,1) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx2) var(--by2), rgba(251,191,36,1) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx3) var(--by3), rgba(52,211,153,1) 0%, transparent 40%),
+                radial-gradient(circle at var(--bx4) var(--by4), rgba(6,182,212,1) 0%, transparent 40%);
+            filter: blur(20px);
+            animation:
+                drift1 6s ease-in-out infinite alternate,
+                drift2 8s ease-in-out infinite alternate,
+                drift3 5s ease-in-out infinite alternate,
+                drift4 9s ease-in-out infinite alternate;
+        }
+
+        .avatar-mesh::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.15);
+        }
+
+        /* --- Variation: Loader --- */
+        .loader-mesh {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: conic-gradient(from var(--angle), transparent 0%, var(--c-coral) 25%, var(--c-amber) 50%, var(--c-emerald) 75%, transparent 100%);
+            animation: rotateBorder 1.5s linear infinite;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+        }
+
+        /* ========== Code Section ========== */
+        .code-block {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            overflow-x: auto;
+            max-width: 720px;
+            margin: 2rem auto 0;
+            font-family: 'Space Grotesk', monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+            tab-size: 2;
+        }
+
+        .code-block .kw { color: var(--c-rose); }
+        .code-block .prop { color: var(--c-cyan); }
+        .code-block .val { color: var(--c-amber); }
+        .code-block .fn { color: var(--c-emerald); }
+        .code-block .cmt { color: #555; font-style: italic; }
+        .code-block .sel { color: var(--c-coral); }
+        .code-block .punc { color: #666; }
+
+        /* ========== Footer CTA ========== */
+        .footer-cta {
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .footer-cta h2 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .footer-cta p {
+            color: var(--muted);
+            max-width: 480px;
+            margin: 0 auto 2rem;
+            line-height: 1.7;
+        }
+
+        /* ========== Reduced Motion ========== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ========== Focus States ========== */
+        *:focus-visible {
+            outline: 2px solid var(--c-coral);
+            outline-offset: 2px;
+        }
+
+        /* ========== Responsive ========== */
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 2.4rem; }
+            .variations-grid { grid-template-columns: 1fr; }
+            .content-section { padding: 4rem 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed background layers -->
+    <div class="mesh-bg" id="meshBg" aria-hidden="true"></div>
+    <div class="noise-overlay" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <!-- Main content -->
+    <main>
+        <!-- Hero -->
+        <section class="hero" aria-label="Hero">
+            <div class="hero-badge">
+                <span class="dot" aria-hidden="true"></span>
+                Pure CSS — Zero JavaScript for the effect
+            </div>
+            <h1>
+                The Most Underrated<br>
+                <span class="line-accent">Frontend Effect</span>
+            </h1>
+            <p class="hero-sub">
+                Animated mesh gradients powered by CSS <code style="color:var(--c-coral);font-family:'Space Grotesk',monospace;font-size:0.9em;">@property</code> — 
+                fluid, organic, GPU-accelerated, and almost nobody uses it.
+            </p>
+            <div class="scroll-hint" aria-hidden="true">
+                <span>Scroll to explore</span>
+                <div class="scroll-line"></div>
+            </div>
+        </section>
+
+        <!-- Playground -->
+        <section class="content-section" aria-label="Interactive Playground">
+            <div style="max-width:1100px;margin:0 auto;">
+                <p class="section-label">Interactive Playground</p>
+                <h2 class="section-title">Shape it yourself</h2>
+                <p class="section-desc">
+                    Tweak the parameters in real-time. Every change is reflected instantly — 
+                    no re-renders, no canvas, just CSS custom properties.
+                </p>
+            </div>
+
+            <div class="playground-grid">
+                <div class="playground-preview" aria-label="Mesh gradient preview">
+                    <div class="mini-mesh" id="playgroundMesh"></div>
+                </div>
+                <div class="playground-controls glass-panel">
+                    <div class="control-group">
+                        <label>
+                            Speed
+                            <span class="value-display" id="speedVal">1.0x</span>
+                        </label>
+                        <input type="range" id="speedSlider" min="2" max="40" value="14"
+                               aria-label="Animation speed">
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            Blur
+                            <span class="value-display" id="blurVal">70px</span>
+                        </label>
+                        <input type="range" id="blurSlider" min="15" max="140" value="70"
+                               aria-label="Blur amount">
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            Spread
+                            <span class="value-display" id="spreadVal">45%</span>
+                        </label>
+                        <input type="range" id="spreadSlider" min="15" max="70" value="45"
+                               aria-label="Gradient spread">
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            Opacity
+                            <span class="value-display" id="opacityVal">0.55</span>
+                        </label>
+                        <input type="range" id="opacitySlider" min="15" max="100" value="55"
+                               aria-label="Background opacity">
+                    </div>
+                    <button class="btn-action" id="randomizeBtn" aria-label="Randomize colors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                        Randomize Colors
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Variations -->
+        <section class="content-section" aria-label="Gradient variations">
+            <div style="max-width:1100px;margin:0 auto;">
+                <p class="section-label">Beyond Backgrounds</p>
+                <h2 class="section-title">Six ways to use it</h2>
+                <p class="section-desc">
+                    Animated gradients aren't just for page backgrounds. 
+                    Here's what else you can do with the same underlying technique.
+                </p>
+            </div>
+
+            <div class="variations-grid">
+                <!-- 1. Text Fill -->
+                <article class="variation-card" data-reveal>
+                    <div class="variation-demo">
+                        <span class="text-mesh-fill" aria-label="Mesh gradient text">Mesh</span>
+                    </div>
+                    <h3>Text Fill</h3>
+                    <p>background-clip: text + position shift</p>
+                </article>
+
+                <!-- 2. Glassmorphism -->
+                <article class="variation-card" data-reveal>
+                    <div class="variation-demo">
+                        <div class="glass-card-demo">
+                            <div class="mini-mesh-sm" aria-hidden="true"></div>
+                            <h4>Notification</h4>
+                            <p>Your gradient render completed in 0.4ms on the GPU.</p>
+                        </div>
+                    </div>
+                    <h3>Glassmorphism</h3>
+                    <p>backdrop-filter: blur + mesh behind</p>
+                </article>
+
+                <!-- 3. Animated Border -->
+                <article class="variation-card" data-reveal>
+                    <div class="variation-demo">
+                        <div class="border-demo-wrapper">
+                            <div class="border-demo-inner">
+                                <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.9rem;">Rotating Border</span>
+                            </div>
+                        </div>
+                    </div>
+                    <h3>Animated Border</h3>
+                    <p>conic-gradient + @property angle</p>
+                </article>
+
+                <!-- 4. Button -->
+                <article class="variation-card" data-reveal>
+                    <div class="variation-demo">
+                        <button class="btn-mesh" aria-label="Hover to see gradient button effect">
+                            <span>Hover Me</span>
+                        </button>
+                    </div>
+                    <h3>Button Reveal</h3>
+                    <p>opacity transition on gradient layer</p>
+                </article>
+
+                <!-- 5. Avatar -->
+                <article class="variation-card" data-reveal>
+                    <div class="variation-demo" style="gap:12px;flex-wrap:wrap;">
+                        <div class="avatar-mesh" aria-label="Gradient avatar"></div>
+                        <div class="avatar-mesh" style="width:56px;height:56px;" aria-label="Gradient avatar small"></div>
+                        <div class="avatar-mesh" style="width:40px;height:40px;" aria-label="Gradient avatar tiny"></div>
+                    </div>
+                    <h3>Avatar</h3>
+                    <p>circular mesh gradient with glow</p>
+                </article>
+
+                <!-- 6. Loader -->
+                <article class="variation-card" data-reveal>
+                    <div class="variation-demo" style="gap:20px;">
+                        <div class="loader-mesh" aria-label="Loading spinner"></div>
+                        <div class="loader-mesh" style="width:36px;height:36px;animation-direction:reverse;" aria-label="Loading spinner small"></div>
+                    </div>
+                    <h3>Loader</h3>
+                    <p>conic-gradient + CSS mask ring</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- Code Reveal -->
+        <section class="content-section" aria-label="Code explanation">
+            <div style="max-width:1100px;margin:0 auto;">
+                <p class="section-label">Under the Hood</p>
+                <h2 class="section-title">The entire effect in CSS</h2>
+                <p class="section-desc">
+                    No canvas. No WebGL. No build step. Just three things CSS couldn't do before <code style="color:var(--c-coral);font-family:'Space Grotesk',monospace;">@property</code>: 
+                    animate gradient positions, interpolate custom properties, and keep it all on the GPU.
+                </p>
+            </div>
+
+            <div class="code-block" role="figure" aria-label="CSS code for mesh gradient effect">
+<span class="cmt">/* Step 1: Register custom properties as animatable */</span>
+<span class="kw">@property</span> <span class="prop">--bx1</span> <span class="punc">{</span>
+  <span class="prop">syntax</span><span class="punc">:</span> <span class="val">'&lt;percentage&gt;'</span><span class="punc">;</span>
+  <span class="prop">initial-value</span><span class="punc">:</span> <span class="val">25%</span><span class="punc">;</span>
+  <span class="prop">inherits</span><span class="punc">:</span> <span class="val">false</span><span class="punc">;</span>
+<span class="punc">}</span>
+
+<span class="cmt">/* Step 2: Use in gradient positions */</span>
+<span class="sel">.mesh</span> <span class="punc">{</span>
+  <span class="prop">background</span><span class="punc">:</span>
+    <span class="fn">radial-gradient</span><span class="punc">(</span><span class="val">circle at var(--bx1) var(--by1)</span><span class="punc">,</span>
+      <span class="val">#FF6B35</span> <span class="val">0%</span><span class="punc">,</span> <span class="val">transparent</span> <span class="val">45%</span><span class="punc">),</span>
+    <span class="fn">radial-gradient</span><span class="punc">(</span><span class="val">circle at var(--bx2) var(--by2)</span><span class="punc">,</span>
+      <span class="val">#FBBF24</span> <span class="val">0%</span><span class="punc">,</span> <span class="val">transparent</span> <span class="val">45%</span><span class="punc">),</span>
+    <span class="cmt">/* ... more layers */</span>
+  <span class="punc">;</span>
+  <span class="prop">filter</span><span class="punc">:</span> <span class="fn">blur</span><span class="punc">(</span><span class="val">70px</span><span class="punc">);</span>
+  <span class="prop">animation</span><span class="punc">:</span> <span class="val">drift1 14s ease-in-out infinite alternate</span><span class="punc">;</span>
+<span class="punc">}</span>
+
+<span class="cmt">/* Step 3: Animate — this was impossible before @property */</span>
+<span class="kw">@keyframes</span> <span class="fn">drift1</span> <span class="punc">{</span>
+  <span class="val">0%</span>   <span class="punc">{</span> <span class="prop">--bx1</span><span class="punc">:</span> <span class="val">20%</span><span class="punc">;</span> <span class="prop">--by1</span><span class="punc">:</span> <span class="val">15%</span><span class="punc">;</span> <span class="punc">}</span>
+  <span class="val">50%</span>  <span class="punc">{</span> <span class="prop">--bx1</span><span class="punc">:</span> <span class="val">75%</span><span class="punc">;</span> <span class="prop">--by1</span><span class="punc">:</span> <span class="val">70%</span><span class="punc">;</span> <span class="punc">}</span>
+  <span class="val">100%</span> <span class="punc">{</span> <span class="prop">--bx1</span><span class="punc">:</span> <span class="val">35%</span><span class="punc">;</span> <span class="prop">--by1</span><span class="punc">:</span> <span class="val">80%</span><span class="punc">;</span> <span class="punc">}</span>
+<span class="punc">}</span>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer-cta">
+            <h2>Go build something beautiful</h2>
+            <p>
+                Drop this into any project. No dependencies, no bundle size, 
+                no runtime cost. Just CSS doing what CSS couldn't do before.
+            </p>
+            <button class="btn-action" id="copyBtn" style="margin:0 auto;" aria-label="Copy CSS to clipboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span id="copyText">Copy the CSS</span>
+            </button>
+        </footer>
+    </main>
+
+    <script>
+        // ========== Mouse Tracking for Mesh Background ==========
+        const meshBg = document.getElementById('meshBg');
+        let mouseX = 50, mouseY = 50;
+        let currentX = 50, currentY = 50;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) * 100;
+            mouseY = (e.clientY / window.innerHeight) * 100;
+        });
+
+        // Smooth interpolation for mouse follow
+        function animateMouse() {
+            currentX += (mouseX - currentX) * 0.04;
+            currentY += (mouseY - currentY) * 0.04;
+            meshBg.style.setProperty('--mx', currentX + '%');
+            meshBg.style.setProperty('--my', currentY + '%');
+            requestAnimationFrame(animateMouse);
+        }
+        animateMouse();
+
+        // ========== Playground Controls ==========
+        const playgroundMesh = document.getElementById('playgroundMesh');
+        const speedSlider = document.getElementById('speedSlider');
+        const blurSlider = document.getElementById('blurSlider');
+        const spreadSlider = document.getElementById('spreadSlider');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const speedVal = document.getElementById('speedVal');
+        const blurVal = document.getElementById('blurVal');
+        const spreadVal = document.getElementById('spreadVal');
+        const opacityVal = document.getElementById('opacityVal');
+
+        // Base speed values for each drift animation (different for organic feel)
+        const baseSpeeds = [14, 18, 11, 20, 15];
+
+        function updatePlayground() {
+            const speedFactor = 14 / parseFloat(speedSlider.value);
+            const blur = blurSlider.value;
+            const spread = spreadSlider.value;
+            const opacity = (parseInt(opacitySlider.value) / 100).toFixed(2);
+
+            // Update speed display
+            const multiplier = (14 / speedFactor / 14).toFixed(1);
+            speedVal.textContent = multiplier + 'x';
+
+            // Update other displays
+            blurVal.textContent = blur + 'px';
+            spreadVal.textContent = spread + '%';
+            opacityVal.textContent = opacity;
+
+            // Apply to playground mesh
+            playgroundMesh.style.setProperty('--mesh-speed', (baseSpeeds[0] * speedFactor) + 's');
+            playgroundMesh.style.setProperty('--mesh-speed2', (baseSpeeds[1] * speedFactor) + 's');
+            playgroundMesh.style.setProperty('--mesh-speed3', (baseSpeeds[2] * speedFactor) + 's');
+            playgroundMesh.style.setProperty('--mesh-speed4', (baseSpeeds[3] * speedFactor) + 's');
+            playgroundMesh.style.setProperty('--mesh-speed5', (baseSpeeds[4] * speedFactor) + 's');
+            playgroundMesh.style.setProperty('--mesh-blur', blur + 'px');
+
+            // Update gradient spread by rebuilding background
+            const colors = playgroundMesh.dataset.colors
+                ? playgroundMesh.dataset.colors.split(',')
+                : ['255,107,53', '251,191,36', '52,211,153', '244,63,94', '6,182,212'];
+            const opacities = [0.9, 0.8, 0.8, 0.7, 0.7];
+
+            playgroundMesh.style.background = [
+                `radial-gradient(circle at var(--bx1) var(--by1), rgba(${colors[0]},${opacities[0]}) 0%, transparent ${spread}%)`,
+                `radial-gradient(circle at var(--bx2) var(--by2), rgba(${colors[1]},${opacities[1]}) 0%, transparent ${spread}%)`,
+                `radial-gradient(circle at var(--bx3) var(--by3), rgba(${colors[2]},${opacities[2]}) 0%, transparent ${spread}%)`,
+                `radial-gradient(circle at var(--bx4) var(--by4), rgba(${colors[3]},${opacities[3]}) 0%, transparent ${spread}%)`,
+                `radial-gradient(circle at var(--bx5) var(--by5), rgba(${colors[4]},${opacities[4]}) 0%, transparent ${spread}%)`
+            ].join(',');
+
+            // Also update main background opacity
+            meshBg.style.opacity = opacity;
+        }
+
+        speedSlider.addEventListener('input', updatePlayground);
+        blurSlider.addEventListener('input', updatePlayground);
+        spreadSlider.addEventListener('input', updatePlayground);
+        opacitySlider.addEventListener('input', updatePlayground);
+
+        // ========== Randomize Colors ==========
+        document.getElementById('randomizeBtn').addEventListener('click', () => {
+            // Generate 5 vibrant random colors
+            const colors = [];
+            for (let i = 0; i < 5; i++) {
+                // Generate saturated colors by using high ranges and avoiding muddy mid-values
+                const hue = Math.random() * 360;
+                const sat = 70 + Math.random() * 30; // 70-100%
+                const light = 50 + Math.random() * 20; // 50-70%
+                // Convert HSL to RGB
+                const rgb = hslToRgb(hue / 360, sat / 100, light / 100);
+                colors.push(`${rgb[0]},${rgb[1]},${rgb[2]}`);
+            }
+            playgroundMesh.dataset.colors = colors.join(',');
+            updatePlayground();
+
+            // Visual feedback on button
+            const btn = document.getElementById('randomizeBtn');
+            btn.style.borderColor = `rgba(${colors[0]},0.5)`;
+            setTimeout(() => { btn.style.borderColor = ''; }, 600);
+        });
+
+        // HSL to RGB conversion
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        // ========== Scroll Reveal for Variation Cards ==========
+        const revealCards = document.querySelectorAll('[data-reveal]');
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    // Stagger the reveal
+                    const index = Array.from(revealCards).indexOf(entry.target);
+                    setTimeout(() => {
+                        entry.target.classList.add('visible');
+                    }, index * 100);
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        revealCards.forEach(card => revealObserver.observe(card));
+
+        // ========== Copy CSS to Clipboard ==========
+        const copyBtn = document.getElementById('copyBtn');
+        const copyText = document.getElementById('copyText');
+
+        const cssToCopy = `@property --bx1 { syntax: '<percentage>'; initial-value: 25%; inherits: false; }
+@property --by1 { syntax: '<percentage>'; initial-value: 20%; inherits: false; }
+@property --bx2 { syntax: '<percentage>'; initial-value: 75%; inherits: false; }
+@property --by2 { syntax: '<percentage>'; initial-value: 70%; inherits: false; }
+@property --bx3 { syntax: '<percentage>'; initial-value: 50%; inherits: false; }
+@property --by3 { syntax: '<percentage>'; initial-value: 10%; inherits: false; }
+@property --bx4 { syntax: '<percentage>'; initial-value: 15%; inherits: false; }
+@property --by4 { syntax: '<percentage>'; initial-value: 60%; inherits: false; }
+@property --bx5 { syntax: '<percentage>'; initial-value: 85%; inherits: false; }
+@property --by5 { syntax: '<percentage>'; initial-value: 35%; inherits: false; }
+
+.mesh {
+  position: fixed;
+  inset: -40%;
+  width: 180%;
+  height: 180%;
+  background:
+    radial-gradient(circle at var(--bx1) var(--by1), rgba(255,107,53,0.85) 0%, transparent 45%),
+    radial-gradient(circle at var(--bx2) var(--by2), rgba(251,191,36,0.75) 0%, transparent 45%),
+    radial-gradient(circle at var(--bx3) var(--by3), rgba(52,211,153,0.75) 0%, transparent 45%),
+    radial-gradient(circle at var(--bx4) var(--by4), rgba(244,63,94,0.65) 0%, transparent 45%),
+    radial-gradient(circle at var(--bx5) var(--by5), rgba(6,182,212,0.65) 0%, transparent 45%);
+  filter: blur(70px);
+  animation:
+    drift1 14s ease-in-out infinite alternate,
+    drift2 18s ease-in-out infinite alternate,
+    drift3 11s ease-in-out infinite alternate,
+    drift4 20s ease-in-out infinite alternate,
+    drift5 15s ease-in-out infinite alternate;
+}
+
+@keyframes drift1 {
+  0%   { --bx1: 20%; --by1: 15%; }
+  33%  { --bx1: 65%; --by1: 25%; }
+  66%  { --bx1: 75%; --by1: 70%; }
+  100% { --bx1: 35%; --by1: 80%; }
+}
+@keyframes drift2 {
+  0%   { --bx2: 80%; --by2: 75%; }
+  33%  { --bx2: 25%; --by2: 55%; }
+  66%  { --bx2: 40%; --by2: 20%; }
+  100% { --bx2: 70%; --by2: 30%; }
+}
+@keyframes drift3 {
+  0%   { --bx3: 50%; --by3: 8%; }
+  33%  { --bx3: 15%; --by3: 45%; }
+  66%  { --bx3: 85%; --by3: 55%; }
+  100% { --bx3: 55%; --by3: 85%; }
+}
+@keyframes drift4 {
+  0%   { --bx4: 12%; --by4: 55%; }
+  33%  { --bx4: 60%; --by4: 80%; }
+  66%  { --bx4: 30%; --by4: 15%; }
+  100% { --bx4: 80%; --by4: 45%; }
+}
+@keyframes drift5 {
+  0%   { --bx5: 88%; --by5: 30%; }
+  33%  { --bx5: 45%; --by5: 60%; }
+  66%  { --bx5: 18%; --by5: 75%; }
+  100% { --bx5: 65%; --by5: 15%; }
+}`;
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(cssToCopy);
+                copyText.textContent = 'Copied!';
+                copyBtn.style.borderColor = 'rgba(52,211,153,0.5)';
+                setTimeout(() => {
+                    copyText.textContent = 'Copy the CSS';
+                    copyBtn.style.borderColor = '';
+                }, 2000);
+            } catch {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = cssToCopy;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                copyText.textContent = 'Copied!';
+                setTimeout(() => { copyText.textContent = 'Copy the CSS'; }, 2000);
+            }
+        });
+
+        // ========== Subtle parallax on scroll for mesh background ==========
+        let scrollY = 0;
+        let targetScrollY = 0;
+
+        window.addEventListener('scroll', () => {
+            targetScrollY = window.pageYOffset;
+        }, { passive: true });
+
+        function parallaxLoop() {
+            scrollY += (targetScrollY - scrollY) * 0.05;
+            // Subtle vertical shift based on scroll
+            const offsetY = scrollY * 0.03;
+            meshBg.style.transform = `translateY(${offsetY}px)`;
+            requestAnimationFrame(parallaxLoop);
+        }
+        parallaxLoop();
+
+        // Initialize playground
+        updatePlayground();
+    </script>
+</body>
+</html>

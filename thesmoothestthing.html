@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Smoothest Thing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: rgba(255, 255, 255, 0.85);
+            --muted: rgba(255, 255, 255, 0.22);
+            --accent: #f59e0b;
+            --accent-hot: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            overflow: hidden;
+            background: var(--bg);
+            font-family: 'Sora', sans-serif;
+            cursor: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Vignette overlay for depth */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: block;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .title {
+            color: var(--fg);
+            font-size: clamp(1.3rem, 3.6vw, 3rem);
+            font-weight: 200;
+            letter-spacing: 0.04em;
+            text-align: center;
+            padding: 0 2rem;
+            line-height: 1.35;
+            opacity: 0;
+            transform: translateY(18px);
+            animation: titleReveal 2.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+            text-shadow: 0 0 60px rgba(245, 158, 11, 0.2), 0 2px 30px rgba(0,0,0,0.5);
+        }
+
+        .title strong {
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hot) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hint {
+            position: fixed;
+            bottom: 2.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 200;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            opacity: 0;
+            animation: hintReveal 2s ease-out 2.8s forwards;
+            transition: opacity 1.2s ease;
+            z-index: 10;
+        }
+
+        .hint.hidden { opacity: 0 !important; }
+
+        #cursor {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            will-change: left, top;
+        }
+
+        @keyframes titleReveal {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes hintReveal {
+            to { opacity: 1; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .title, .hint { animation-duration: 0.01s; }
+        }
+
+        @media (hover: none) {
+            #cursor { display: none; }
+            body { cursor: auto; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" aria-hidden="true"></canvas>
+    <div class="overlay" role="presentation">
+        <h1 class="title">The <strong>Smoothest</strong> Thing You'll Watch Today</h1>
+    </div>
+    <p class="hint" id="hint">Move your cursor &middot; Click to pulse</p>
+    <div id="cursor" aria-hidden="true"></div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* ── Setup ─────────────────────────────────── */
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const cursorEl = document.getElementById('cursor');
+        const hintEl = document.getElementById('hint');
+
+        let W, H;
+        let time = 0;
+        let firstMove = false;
+        let clickPulse = 0;
+
+        // Mouse state
+        const mouse = { x: 0, y: 0, vx: 0, vy: 0, active: false };
+        const smooth = { x: 0, y: 0 };
+        const cursor = { x: 0, y: 0 };
+
+        // Reduced motion preference
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const motionScale = prefersReduced ? 0.15 : 1;
+
+        /* ── Color Helpers ─────────────────────────── */
+        function hslToRgb(h, s, l) {
+            s /= 100; l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+        }
+
+        function rgba(r, g, b, a) {
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+        }
+
+        /* ── Resize ────────────────────────────────── */
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            if (!mouse.active) {
+                mouse.x = smooth.x = cursor.x = W / 2;
+                mouse.y = smooth.y = cursor.y = H / 2;
+            }
+        }
+        window.addEventListener('resize', resize);
+
+        /* ── Background Aurora Blobs ───────────────── */
+        const auroras = [];
+        function initAuroras() {
+            const hues = [12, 28, 42];
+            for (let i = 0; i < 3; i++) {
+                const [r, g, b] = hslToRgb(hues[i], 75, 38);
+                auroras.push({
+                    angle: (i / 3) * Math.PI * 2,
+                    dist: 180 + i * 120,
+                    speed: 0.08 + i * 0.04,
+                    radius: 320 + i * 110,
+                    r, g, b,
+                    alpha: 0.022 + i * 0.008
+                });
+            }
+        }
+
+        /* ── Main Blobs ────────────────────────────── */
+        const blobs = [];
+        const BLOB_COUNT = 8;
+
+        function initBlobs() {
+            for (let i = 0; i < BLOB_COUNT; i++) {
+                const t = i / BLOB_COUNT;
+                const [r, g, b] = hslToRgb(16 + t * 30, 100, 54 + t * 12);
+                blobs.push({
+                    x: W / 2, y: H / 2,
+                    radius: 95 + Math.random() * 135,
+                    lerp: 0.01 + t * 0.04,
+                    orbitAngle: t * Math.PI * 2,
+                    orbitDist: 22 + Math.random() * 75,
+                    orbitSpeed: 0.35 + Math.random() * 0.65,
+                    phase: Math.random() * Math.PI * 2,
+                    breatheSpeed: 0.7 + Math.random() * 1.3,
+                    breatheAmp: 14 + Math.random() * 28,
+                    r, g, b,
+                    currentRadius: 100
+                });
+            }
+        }
+
+        /* ── Particles ─────────────────────────────── */
+        const particles = [];
+        const PARTICLE_COUNT = 220;
+
+        function spawnParticle(near) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = near ? (15 + Math.random() * 70) : (40 + Math.random() * 320);
+            const [r, g, b] = hslToRgb(14 + Math.random() * 38, 85, 52 + Math.random() * 22);
+            return {
+                x: smooth.x + Math.cos(angle) * dist,
+                y: smooth.y + Math.sin(angle) * dist,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                radius: 0.7 + Math.random() * 2.5,
+                baseAlpha: 0.12 + Math.random() * 0.5,
+                r, g, b,
+                orbitBias: (Math.random() - 0.5) * 0.35
+            };
+        }
+
+        function initParticles() {
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(spawnParticle(false));
+            }
+        }
+
+        /* ── Input Handling ────────────────────────── */
+        function onMove(x, y) {
+            if (!firstMove) {
+                firstMove = true;
+                hintEl.classList.add('hidden');
+            }
+            mouse.vx = x - mouse.x;
+            mouse.vy = y - mouse.y;
+            mouse.x = x;
+            mouse.y = y;
+            mouse.active = true;
+        }
+
+        function triggerPulse() {
+            clickPulse = 1;
+            // Kick particles outward
+            particles.forEach(p => {
+                const dx = p.x - smooth.x;
+                const dy = p.y - smooth.y;
+                const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                const force = 4 / (1 + d * 0.008);
+                p.vx += (dx / d) * force * motionScale;
+                p.vy += (dy / d) * force * motionScale;
+            });
+        }
+
+        window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            onMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+        window.addEventListener('touchstart', e => {
+            onMove(e.touches[0].clientX, e.touches[0].clientY);
+        });
+        window.addEventListener('click', triggerPulse);
+        window.addEventListener('touchend', triggerPulse);
+
+        /* ── Update Functions ──────────────────────── */
+        function updateIdleTarget() {
+            // Gentle auto-animation when user hasn't moved yet
+            if (!mouse.active) {
+                const a = time * 0.0004 * motionScale;
+                const r = 45 + Math.sin(time * 0.00025 * motionScale) * 25;
+                mouse.x = W / 2 + Math.cos(a) * r;
+                mouse.y = H / 2 + Math.sin(a * 0.7) * r * 0.55;
+            }
+        }
+
+        function updateSmooth() {
+            smooth.x += (mouse.x - smooth.x) * 0.055;
+            smooth.y += (mouse.y - smooth.y) * 0.055;
+        }
+
+        function updateCursor() {
+            cursor.x += (mouse.x - cursor.x) * 0.18;
+            cursor.y += (mouse.y - cursor.y) * 0.18;
+            cursorEl.style.left = cursor.x + 'px';
+            cursorEl.style.top = cursor.y + 'px';
+        }
+
+        function updateBlobs() {
+            const pulse = clickPulse * 45 * motionScale;
+            clickPulse *= 0.935;
+            if (clickPulse < 0.001) clickPulse = 0;
+
+            blobs.forEach(b => {
+                const a = b.orbitAngle + time * 0.001 * b.orbitSpeed * motionScale + b.phase;
+                const breathe = Math.sin(time * 0.001 * b.breatheSpeed * motionScale + b.phase) * b.breatheAmp * motionScale;
+                const ox = Math.cos(a) * (b.orbitDist + pulse);
+                const oy = Math.sin(a) * (b.orbitDist + pulse);
+
+                b.x += (smooth.x + ox - b.x) * b.lerp;
+                b.y += (smooth.y + oy - b.y) * b.lerp;
+                b.currentRadius = Math.max(1, b.radius + breathe + pulse);
+            });
+        }
+
+        function updateParticles() {
+            const cx = smooth.x, cy = smooth.y;
+            const speed = Math.sqrt(mouse.vx * mouse.vx + mouse.vy * mouse.vy);
+
+            particles.forEach(p => {
+                const dx = cx - p.x;
+                const dy = cy - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+                // Radial attraction (increases with distance, capped)
+                const attract = 0.00018 * Math.min(dist, 280) * motionScale;
+
+                // Tangential orbit force
+                const tx = -dy / dist;
+                const ty = dx / dist;
+                const tangent = (0.07 + p.orbitBias) * motionScale;
+
+                p.vx += (dx / dist) * attract + tx * tangent * 0.007;
+                p.vy += (dy / dist) * attract + ty * tangent * 0.007;
+
+                // Mouse velocity influence
+                const push = 0.0012 * Math.min(speed, 60) * motionScale;
+                p.vx += mouse.vx * push;
+                p.vy += mouse.vy * push;
+
+                // Damping
+                p.vx *= 0.984;
+                p.vy *= 0.984;
+
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Respawn if too far from center
+                if (dist > 420) {
+                    const np = spawnParticle(true);
+                    p.x = np.x; p.y = np.y;
+                    p.vx = np.vx; p.vy = np.vy;
+                }
+            });
+        }
+
+        /* ── Draw Functions ────────────────────────── */
+        function drawAuroras() {
+            ctx.globalCompositeOperation = 'lighter';
+            auroras.forEach(a => {
+                const angle = a.angle + time * 0.0001 * a.speed * motionScale;
+                const ax = W / 2 + Math.cos(angle) * a.dist;
+                const ay = H / 2 + Math.sin(angle * 0.65) * a.dist * 0.55;
+                const r = Math.max(1, a.radius + Math.sin(time * 0.00025 * motionScale) * 55);
+
+                const g = ctx.createRadialGradient(ax, ay, 0, ax, ay, r);
+                g.addColorStop(0, rgba(a.r, a.g, a.b, a.alpha));
+                g.addColorStop(1, rgba(a.r, a.g, a.b, 0));
+
+                ctx.beginPath();
+                ctx.arc(ax, ay, r, 0, Math.PI * 2);
+                ctx.fillStyle = g;
+                ctx.fill();
+            });
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawParticles() {
+            ctx.globalCompositeOperation = 'lighter';
+            const cx = smooth.x, cy = smooth.y;
+
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                const dx = cx - p.x;
+                const dy = cy - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                const distFactor = Math.max(0, 1 - dist / 380);
+                const alpha = p.baseAlpha * (0.25 + distFactor * 0.75);
+                if (alpha < 0.015) continue;
+
+                const r = Math.max(0.4, p.radius * (0.55 + distFactor * 0.45));
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fillStyle = rgba(p.r, p.g, p.b, alpha);
+                ctx.fill();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawBlobs() {
+            ctx.globalCompositeOperation = 'lighter';
+
+            for (let i = 0; i < blobs.length; i++) {
+                const b = blobs[i];
+                const r = Math.max(1, b.currentRadius);
+
+                const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
+                g.addColorStop(0, rgba(b.r, b.g, b.b, 0.65));
+                g.addColorStop(0.25, rgba(b.r, b.g, b.b, 0.32));
+                g.addColorStop(0.6, rgba(b.r, b.g, b.b, 0.07));
+                g.addColorStop(1, rgba(b.r, b.g, b.b, 0));
+
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+                ctx.fillStyle = g;
+                ctx.fill();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawCenterGlow() {
+            ctx.globalCompositeOperation = 'lighter';
+            const r = Math.max(1, 35 + Math.sin(time * 0.003 * motionScale) * 12);
+
+            const g = ctx.createRadialGradient(smooth.x, smooth.y, 0, smooth.x, smooth.y, r);
+            g.addColorStop(0, rgba(255, 245, 225, 0.55));
+            g.addColorStop(0.45, rgba(245, 165, 20, 0.12));
+            g.addColorStop(1, rgba(245, 158, 11, 0));
+
+            ctx.beginPath();
+            ctx.arc(smooth.x, smooth.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = g;
+            ctx.fill();
+
+            // Outer soft halo
+            const r2 = Math.max(1, 90 + Math.sin(time * 0.002 * motionScale) * 20);
+            const g2 = ctx.createRadialGradient(smooth.x, smooth.y, 0, smooth.x, smooth.y, r2);
+            g2.addColorStop(0, rgba(245, 158, 11, 0.06));
+            g2.addColorStop(1, rgba(239, 68, 68, 0));
+
+            ctx.beginPath();
+            ctx.arc(smooth.x, smooth.y, r2, 0, Math.PI * 2);
+            ctx.fillStyle = g2;
+            ctx.fill();
+
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        /* ── Main Loop ─────────────────────────────── */
+        function frame(ts) {
+            time = ts || 0;
+
+            // Motion blur — semi-transparent overlay for smooth trails
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = rgba(5, 5, 5, 0.13);
+            ctx.fillRect(0, 0, W, H);
+
+            // Updates
+            updateIdleTarget();
+            updateSmooth();
+            updateCursor();
+            updateBlobs();
+            updateParticles();
+
+            // Decay raw mouse velocity
+            mouse.vx *= 0.88;
+            mouse.vy *= 0.88;
+
+            // Render layers (back to front)
+            drawAuroras();
+            drawParticles();
+            drawBlobs();
+            drawCenterGlow();
+
+            requestAnimationFrame(frame);
+        }
+
+        /* ── Init ──────────────────────────────────── */
+        resize();
+        initAuroras();
+        initBlobs();
+        initParticles();
+
+        // Fill canvas with background color on start
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, W, H);
+
+        requestAnimationFrame(frame);
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FORMA — Creative Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #0A0A0B;
+            --bg-elevated: #111113;
+            --fg: #F5F0EB;
+            --fg-dim: #C8C2BA;
+            --muted: #6B6560;
+            --accent: #FF4F30;
+            --accent-glow: rgba(255, 79, 48, 0.35);
+            --card: rgba(255, 255, 255, 0.035);
+            --border: rgba(255, 255, 255, 0.07);
+            --gold: #D4A843;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) var(--bg);
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* Custom Cursor */
+        .cursor-dot {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease;
+            mix-blend-mode: difference;
+        }
+
+        .cursor-ring {
+            position: fixed;
+            width: 44px;
+            height: 44px;
+            border: 1.5px solid rgba(255, 79, 48, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+        }
+
+        .cursor-ring.hovering {
+            width: 72px;
+            height: 72px;
+            border-color: var(--accent);
+            background: rgba(255, 79, 48, 0.06);
+        }
+
+        /* Noise Overlay */
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            pointer-events: none;
+            opacity: 0.028;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 200px;
+        }
+
+        /* Mouse Glow */
+        .mouse-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+            background: radial-gradient(circle, rgba(255, 79, 48, 0.06) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: opacity 0.4s ease;
+        }
+
+        /* Animated Blobs */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.5;
+            will-change: transform;
+        }
+
+        .blob-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            top: -10%;
+            right: -5%;
+            animation: blobMove1 18s ease-in-out infinite;
+        }
+
+        .blob-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+            bottom: -5%;
+            left: -5%;
+            animation: blobMove2 22s ease-in-out infinite;
+        }
+
+        .blob-3 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, #FF7F50 0%, transparent 70%);
+            top: 40%;
+            left: 30%;
+            animation: blobMove3 15s ease-in-out infinite;
+        }
+
+        @keyframes blobMove1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(-80px, 60px) scale(1.15); }
+            50% { transform: translate(-40px, 120px) scale(0.9); }
+            75% { transform: translate(60px, 40px) scale(1.1); }
+        }
+
+        @keyframes blobMove2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(100px, -80px) scale(1.2); }
+            66% { transform: translate(50px, -40px) scale(0.85); }
+        }
+
+        @keyframes blobMove3 {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+            50% { transform: translate(-60px, 80px) scale(1.3); opacity: 0.5; }
+        }
+
+        /* Page Load Animation */
+        .page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+
+        .page-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader-text {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2rem, 6vw, 5rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: loaderPulse 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes loaderPulse {
+            0% { opacity: 0.5; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Reveal Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+        .reveal-delay-5 { transition-delay: 0.5s; }
+
+        /* Hero */
+        .hero-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: clamp(4.5rem, 14vw, 13rem);
+            line-height: 0.88;
+            letter-spacing: -0.05em;
+            color: var(--fg);
+            position: relative;
+        }
+
+        .hero-title .accent-letter {
+            color: var(--accent);
+            display: inline-block;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hero-title .accent-letter:hover {
+            transform: translateY(-12px) rotate(-4deg);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.35rem);
+            font-weight: 300;
+            color: var(--fg-dim);
+            letter-spacing: 0.02em;
+            max-width: 480px;
+            line-height: 1.7;
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .hero-tag .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34D399;
+            animation: dotPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            animation: scrollBounce 2s ease-in-out infinite;
+        }
+
+        .scroll-indicator span {
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .scroll-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            animation: scrollLine 2s ease-in-out infinite;
+        }
+
+        @keyframes scrollBounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(8px); }
+        }
+
+        @keyframes scrollLine {
+            0% { opacity: 0; transform: scaleY(0); transform-origin: top; }
+            50% { opacity: 1; transform: scaleY(1); transform-origin: top; }
+            51% { transform-origin: bottom; }
+            100% { opacity: 0; transform: scaleY(0); transform-origin: bottom; }
+        }
+
+        /* Marquee */
+        .marquee-track {
+            display: flex;
+            width: max-content;
+            animation: marqueeScroll 30s linear infinite;
+        }
+
+        .marquee-track:hover {
+            animation-play-state: paused;
+        }
+
+        @keyframes marqueeScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .marquee-item {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 700;
+            white-space: nowrap;
+            padding: 0 24px;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--border);
+            transition: all 0.4s ease;
+        }
+
+        .marquee-item:hover {
+            -webkit-text-stroke: 1px var(--accent);
+            color: var(--accent);
+        }
+
+        .marquee-divider {
+            color: var(--accent);
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Project Cards */
+        .project-card {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--card);
+            border: 1px solid var(--border);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            transition: transform 0.1s ease;
+        }
+
+        .project-card .card-image {
+            width: 100%;
+            aspect-ratio: 16/10;
+            object-fit: cover;
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease;
+            filter: brightness(0.85) saturate(0.9);
+        }
+
+        .project-card:hover .card-image {
+            transform: scale(1.08);
+            filter: brightness(1) saturate(1.1);
+        }
+
+        .project-card .card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(10, 10, 11, 0.95) 0%, rgba(10, 10, 11, 0.3) 40%, transparent 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 28px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .project-card:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .card-overlay .card-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transform: translateY(20px);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .project-card:hover .card-overlay .card-title {
+            transform: translateY(0);
+        }
+
+        .card-overlay .card-tag {
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 6px;
+            transform: translateY(20px);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s;
+        }
+
+        .project-card:hover .card-overlay .card-tag {
+            transform: translateY(0);
+        }
+
+        .card-overlay .card-arrow {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(10px, -10px) scale(0.8);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+        }
+
+        .project-card:hover .card-overlay .card-arrow {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+        }
+
+        .card-overlay .card-arrow:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Stats */
+        .stat-number {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(3rem, 7vw, 5.5rem);
+            font-weight: 800;
+            line-height: 1;
+            color: var(--fg);
+            letter-spacing: -0.03em;
+        }
+
+        .stat-number .accent { color: var(--accent); }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        /* Section Heading */
+        .section-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .section-heading {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.8rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        /* CTA Section */
+        .cta-text {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(3rem, 9vw, 8rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            text-decoration: none;
+            color: var(--fg);
+            position: relative;
+            display: inline-block;
+            transition: color 0.4s ease;
+        }
+
+        .cta-text::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .cta-text:hover {
+            color: var(--accent);
+        }
+
+        .cta-text:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* Footer Links */
+        .footer-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease, transform 0.3s ease;
+            display: inline-block;
+        }
+
+        .footer-link:hover {
+            color: var(--fg);
+            transform: translateX(4px);
+        }
+
+        /* Nav */
+        .nav-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            letter-spacing: 0.04em;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 1.5px;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover { color: var(--fg); }
+        .nav-link:hover::after { width: 100%; }
+
+        /* Service Row */
+        .service-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 28px 0;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.4s ease;
+        }
+
+        .service-row:hover {
+            padding-left: 16px;
+            border-color: var(--accent);
+        }
+
+        .service-row .service-name {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .service-row:hover .service-name {
+            color: var(--accent);
+        }
+
+        .service-row .service-num {
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        .service-row .service-arrow {
+            font-size: 1.2rem;
+            color: var(--muted);
+            transition: all 0.3s ease;
+            transform: translateX(0) rotate(-45deg);
+        }
+
+        .service-row:hover .service-arrow {
+            color: var(--accent);
+            transform: translateX(4px) rotate(-45deg);
+        }
+
+        /* Testimonial */
+        .testimonial-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.4s ease;
+        }
+
+        .testimonial-card:hover {
+            border-color: rgba(255, 79, 48, 0.3);
+        }
+
+        .testimonial-card::before {
+            content: '\201C';
+            position: absolute;
+            top: 16px;
+            left: 28px;
+            font-family: 'Syne', sans-serif;
+            font-size: 6rem;
+            color: var(--accent);
+            opacity: 0.15;
+            line-height: 1;
+        }
+
+        .testimonial-card .quote-mark {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        /* Horizontal Rule */
+        .hr-accent {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+        }
+
+        /* Floating Elements */
+        .float-element {
+            position: absolute;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .float-1 {
+            width: 120px;
+            height: 120px;
+            top: 20%;
+            right: 8%;
+            animation: floatSpin 20s linear infinite;
+        }
+
+        .float-2 {
+            width: 60px;
+            height: 60px;
+            bottom: 25%;
+            left: 5%;
+            animation: floatSpin 15s linear infinite reverse;
+            border-color: rgba(255, 79, 48, 0.15);
+        }
+
+        @keyframes floatSpin {
+            0% { transform: rotate(0deg) translateX(10px) rotate(0deg); }
+            100% { transform: rotate(360deg) translateX(10px) rotate(-360deg); }
+        }
+
+        /* Grid Background */
+        .grid-bg {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black, transparent);
+            -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black, transparent);
+        }
+
+        /* Reduced Motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+            .marquee-track { animation: none; }
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            body { cursor: auto; }
+            .cursor-dot, .cursor-ring, .mouse-glow { display: none; }
+            .scroll-indicator { display: none; }
+            .float-element { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Page Loader -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-text">FORMA</div>
+    </div>
+
+    <!-- Noise Overlay -->
+    <div class="noise-overlay"></div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor-dot" id="cursorDot"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
+
+    <!-- Mouse Glow -->
+    <div class="mouse-glow" id="mouseGlow"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-[100] px-6 md:px-12 py-5 flex items-center justify-between" style="background: linear-gradient(to bottom, var(--bg) 40%, transparent);">
+        <a href="#" class="font-bold text-lg tracking-tight" style="font-family: 'Syne', sans-serif; color: var(--fg);">
+            FORM<span style="color: var(--accent);">A</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+            <a href="#work" class="nav-link">Work</a>
+            <a href="#services" class="nav-link">Services</a>
+            <a href="#about" class="nav-link">About</a>
+            <a href="#contact" class="nav-link">Contact</a>
+        </div>
+        <div class="hero-tag">
+            <span class="dot"></span>
+            Available for Q1
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative min-h-screen flex flex-col justify-center px-6 md:px-12 overflow-hidden">
+        <div class="grid-bg"></div>
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="float-element float-1"></div>
+        <div class="float-element float-2"></div>
+
+        <div class="relative z-10 pt-24">
+            <div class="hero-tag mb-8 reveal">
+                <span class="dot"></span>
+                Creative Studio &mdash; Est. 2019
+            </div>
+            <h1 class="hero-title reveal reveal-delay-1">
+                FOR<span class="accent-letter" data-hover>M</span>A
+            </h1>
+            <div class="mt-8 md:mt-12 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+                <p class="hero-subtitle reveal reveal-delay-2">
+                    We craft digital experiences that blur the line between art and technology. Every pixel has a purpose. Every interaction tells a story.
+                </p>
+                <a href="#work" class="reveal reveal-delay-3 inline-flex items-center gap-3 px-7 py-3.5 rounded-full text-sm font-medium tracking-wide transition-all duration-300 hover:gap-5" style="background: var(--accent); color: var(--bg);" data-hover>
+                    View Our Work
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="scroll-indicator">
+            <span>Scroll</span>
+            <div class="scroll-line"></div>
+        </div>
+    </header>
+
+    <!-- Marquee Section -->
+    <section class="py-8 overflow-hidden border-y" style="border-color: var(--border);">
+        <div class="marquee-track">
+            <span class="marquee-item" data-hover>Brand Identity</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Web Design</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Motion Graphics</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>3D Experiences</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Product Design</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Art Direction</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <!-- Duplicate for seamless loop -->
+            <span class="marquee-item" data-hover>Brand Identity</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Web Design</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Motion Graphics</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>3D Experiences</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Product Design</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+            <span class="marquee-item" data-hover>Art Direction</span>
+            <span class="marquee-divider"><i class="fas fa-diamond" style="font-size: 0.5em;"></i></span>
+        </div>
+    </section>
+
+    <!-- Work Section -->
+    <section id="work" class="py-24 md:py-36 px-6 md:px-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-16">
+                <div>
+                    <p class="section-label mb-3 reveal">Selected Work</p>
+                    <h2 class="section-heading reveal reveal-delay-1">Projects that<br>speak volumes</h2>
+                </div>
+                <p class="text-sm max-w-xs reveal reveal-delay-2" style="color: var(--muted); line-height: 1.7;">
+                    A curated selection of our most impactful work across branding, digital, and experiential design.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Project 1 -->
+                <div class="project-card reveal" data-tilt data-hover>
+                    <img src="https://picsum.photos/seed/forma-proj1/800/500.jpg" alt="Solaris Brand System" class="card-image">
+                    <div class="card-overlay">
+                        <div class="card-arrow" data-hover><i class="fas fa-arrow-up-right-from-square text-xs"></i></div>
+                        <span class="card-tag">Brand Identity</span>
+                        <h3 class="card-title">Solaris Brand System</h3>
+                    </div>
+                </div>
+
+                <!-- Project 2 -->
+                <div class="project-card reveal reveal-delay-1" data-tilt data-hover>
+                    <img src="https://picsum.photos/seed/forma-proj2/800/500.jpg" alt="Noctis Digital Platform" class="card-image">
+                    <div class="card-overlay">
+                        <div class="card-arrow" data-hover><i class="fas fa-arrow-up-right-from-square text-xs"></i></div>
+                        <span class="card-tag">Web Platform</span>
+                        <h3 class="card-title">Noctis Digital Platform</h3>
+                    </div>
+                </div>
+
+                <!-- Project 3 -->
+                <div class="project-card reveal" data-tilt data-hover>
+                    <img src="https://picsum.photos/seed/forma-proj3/800/500.jpg" alt="Aether Motion Reel" class="card-image">
+                    <div class="card-overlay">
+                        <div class="card-arrow" data-hover><i class="fas fa-arrow-up-right-from-square text-xs"></i></div>
+                        <span class="card-tag">Motion Design</span>
+                        <h3 class="card-title">Aether Motion Reel</h3>
+                    </div>
+                </div>
+
+                <!-- Project 4 -->
+                <div class="project-card reveal reveal-delay-1" data-tilt data-hover>
+                    <img src="https://picsum.photos/seed/forma-proj4/800/500.jpg" alt="Vanta Product Launch" class="card-image">
+                    <div class="card-overlay">
+                        <div class="card-arrow" data-hover><i class="fas fa-arrow-up-right-from-square text-xs"></i></div>
+                        <span class="card-tag">3D / Interactive</span>
+                        <h3 class="card-title">Vanta Product Launch</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section id="about" class="py-20 md:py-28 px-6 md:px-12">
+        <hr class="hr-accent mb-20">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6">
+            <div class="reveal">
+                <div class="stat-number"><span class="counter" data-target="147">0</span><span class="accent">+</span></div>
+                <p class="stat-label">Projects Delivered</p>
+            </div>
+            <div class="reveal reveal-delay-1">
+                <div class="stat-number"><span class="counter" data-target="42">0</span></div>
+                <p class="stat-label">Global Clients</p>
+            </div>
+            <div class="reveal reveal-delay-2">
+                <div class="stat-number"><span class="counter" data-target="18">0</span></div>
+                <p class="stat-label">Design Awards</p>
+            </div>
+            <div class="reveal reveal-delay-3">
+                <div class="stat-number"><span class="counter" data-target="6">0</span><span class="accent">yr</span></div>
+                <p class="stat-label">Of Excellence</p>
+            </div>
+        </div>
+        <hr class="hr-accent mt-20">
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-24 md:py-36 px-6 md:px-12">
+        <div class="max-w-7xl mx-auto">
+            <p class="section-label mb-3 reveal">What We Do</p>
+            <h2 class="section-heading mb-16 reveal reveal-delay-1">Services built for<br>ambitious brands</h2>
+
+            <div>
+                <div class="service-row reveal" data-hover>
+                    <span class="service-num">01</span>
+                    <span class="service-name">Brand Strategy & Identity</span>
+                    <i class="fas fa-arrow-right service-arrow"></i>
+                </div>
+                <div class="service-row reveal reveal-delay-1" data-hover>
+                    <span class="service-num">02</span>
+                    <span class="service-name">Web Design & Development</span>
+                    <i class="fas fa-arrow-right service-arrow"></i>
+                </div>
+                <div class="service-row reveal reveal-delay-2" data-hover>
+                    <span class="service-num">03</span>
+                    <span class="service-name">Motion Design & Animation</span>
+                    <i class="fas fa-arrow-right service-arrow"></i>
+                </div>
+                <div class="service-row reveal reveal-delay-3" data-hover>
+                    <span class="service-num">04</span>
+                    <span class="service-name">3D & Interactive Experiences</span>
+                    <i class="fas fa-arrow-right service-arrow"></i>
+                </div>
+                <div class="service-row reveal reveal-delay-4" data-hover>
+                    <span class="service-num">05</span>
+                    <span class="service-name">Product Design & UI/UX</span>
+                    <i class="fas fa-arrow-right service-arrow"></i>
+                </div>
+                <div class="service-row reveal reveal-delay-5" data-hover>
+                    <span class="service-num">06</span>
+                    <span class="service-name">Creative Direction & Consulting</span>
+                    <i class="fas fa-arrow-right service-arrow"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="py-24 md:py-36 px-6 md:px-12" style="background: var(--bg-elevated);">
+        <div class="max-w-7xl mx-auto">
+            <p class="section-label mb-3 reveal">Client Words</p>
+            <h2 class="section-heading mb-16 reveal reveal-delay-1">Trusted by those<br>who demand the best</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="testimonial-card reveal" data-hover>
+                    <span class="quote-mark"><i class="fas fa-quote-left"></i></span>
+                    <p class="text-sm leading-relaxed mb-6" style="color: var(--fg-dim);">
+                        "FORMA didn't just design our brand — they gave it a soul. The level of craft in every detail is something we've never experienced with another studio."
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <img src="https://picsum.photos/seed/person1/48/48.jpg" alt="Avatar" class="w-10 h-10 rounded-full object-cover">
+                        <div>
+                            <p class="text-sm font-medium" style="color: var(--fg);">Elena Voss</p>
+                            <p class="text-xs" style="color: var(--muted);">CEO, Solaris Labs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card reveal reveal-delay-1" data-hover>
+                    <span class="quote-mark"><i class="fas fa-quote-left"></i></span>
+                    <p class="text-sm leading-relaxed mb-6" style="color: var(--fg-dim);">
+                        "Working with FORMA felt like collaborating with artists who truly understand technology. Our conversion rate jumped 340% after launch."
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <img src="https://picsum.photos/seed/person2/48/48.jpg" alt="Avatar" class="w-10 h-10 rounded-full object-cover">
+                        <div>
+                            <p class="text-sm font-medium" style="color: var(--fg);">Marcus Chen</p>
+                            <p class="text-xs" style="color: var(--muted);">Founder, Noctis</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card reveal reveal-delay-2" data-hover>
+                    <span class="quote-mark"><i class="fas fa-quote-left"></i></span>
+                    <p class="text-sm leading-relaxed mb-6" style="color: var(--fg-dim);">
+                        "They turned our abstract vision into a visceral digital experience. The 3D product configurator they built is a masterclass in interactive design."
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <img src="https://picsum.photos/seed/person3/48/48.jpg" alt="Avatar" class="w-10 h-10 rounded-full object-cover">
+                        <div>
+                            <p class="text-sm font-medium" style="color: var(--fg);">Aria Tanaka</p>
+                            <p class="text-xs" style="color: var(--muted);">CPO, Vanta Inc.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact / CTA Section -->
+    <section id="contact" class="relative py-32 md:py-48 px-6 md:px-12 overflow-hidden">
+        <div class="grid-bg"></div>
+        <div class="blob" style="width: 400px; height: 400px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); top: 20%; right: 10%; filter: blur(120px); opacity: 0.2; animation: blobMove1 20s ease-in-out infinite;"></div>
+
+        <div class="max-w-7xl mx-auto relative z-10">
+            <p class="section-label mb-6 reveal">Ready to start?</p>
+            <a href="#" class="cta-text reveal reveal-delay-1" data-hover>
+                Let's Talk
+            </a>
+            <p class="mt-8 text-sm max-w-md reveal reveal-delay-2" style="color: var(--muted); line-height: 1.7;">
+                Have a project in mind? We'd love to hear about it. Drop us a line and let's create something extraordinary together.
+            </p>
+            <div class="mt-12 flex flex-wrap gap-6 reveal reveal-delay-3">
+                <a href="mailto:hello@forma.studio" class="inline-flex items-center gap-2 text-sm transition-colors duration-300" style="color: var(--fg-dim);" data-hover>
+                    <i class="fas fa-envelope" style="color: var(--accent);"></i>
+                    hello@forma.studio
+                </a>
+                <a href="#" class="inline-flex items-center gap-2 text-sm transition-colors duration-300" style="color: var(--fg-dim);" data-hover>
+                    <i class="fas fa-phone" style="color: var(--accent);"></i>
+                    +1 (555) 234-5678
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="px-6 md:px-12 py-12 border-t" style="border-color: var(--border);">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <div>
+                <p class="font-bold text-lg tracking-tight mb-1" style="font-family: 'Syne', sans-serif;">
+                    FORM<span style="color: var(--accent);">A</span>
+                </p>
+                <p class="text-xs" style="color: var(--muted);">&copy; 2025 FORMA Studio. All rights reserved.</p>
+            </div>
+
+            <div class="flex flex-wrap gap-6">
+                <a href="#" class="footer-link" data-hover>Twitter</a>
+                <a href="#" class="footer-link" data-hover>Dribbble</a>
+                <a href="#" class="footer-link" data-hover>Behance</a>
+                <a href="#" class="footer-link" data-hover>Instagram</a>
+                <a href="#" class="footer-link" data-hover>LinkedIn</a>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs" style="color: var(--muted);">
+                <span>Crafted with</span>
+                <i class="fas fa-heart text-[10px]" style="color: var(--accent);"></i>
+                <span>and obsessive attention to detail</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        /* ===========================
+           Page Loader
+        =========================== */
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('pageLoader').classList.add('hidden');
+                // Trigger hero reveals after loader
+                setTimeout(triggerHeroReveals, 200);
+            }, 800);
+        });
+
+        function triggerHeroReveals() {
+            const heroReveals = document.querySelectorAll('header .reveal');
+            heroReveals.forEach(el => el.classList.add('visible'));
+        }
+
+        /* ===========================
+           Custom Cursor
+        =========================== */
+        const cursorDot = document.getElementById('cursorDot');
+        const cursorRing = document.getElementById('cursorRing');
+        const mouseGlow = document.getElementById('mouseGlow');
+        let mouseX = 0, mouseY = 0;
+        let ringX = 0, ringY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.left = mouseX + 'px';
+            cursorDot.style.top = mouseY + 'px';
+            mouseGlow.style.left = mouseX + 'px';
+            mouseGlow.style.top = mouseY + 'px';
+        });
+
+        // Smooth ring follow
+        function animateCursorRing() {
+            ringX += (mouseX - ringX) * 0.15;
+            ringY += (mouseY - ringY) * 0.15;
+            cursorRing.style.left = ringX + 'px';
+            cursorRing.style.top = ringY + 'px';
+            requestAnimationFrame(animateCursorRing);
+        }
+        animateCursorRing();
+
+        // Hover effect on interactive elements
+        const hoverTargets = document.querySelectorAll('[data-hover], a, button');
+        hoverTargets.forEach(el => {
+            el.addEventListener('mouseenter', () => cursorRing.classList.add('hovering'));
+            el.addEventListener('mouseleave', () => cursorRing.classList.remove('hovering'));
+        });
+
+        /* ===========================
+           Scroll Reveal (IntersectionObserver)
+        =========================== */
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.15,
+            rootMargin: '0px 0px -40px 0px'
+        });
+
+        // Observe all reveal elements EXCEPT those in the hero (handled separately)
+        document.querySelectorAll('.reveal').forEach(el => {
+            if (!el.closest('header')) {
+                revealObserver.observe(el);
+            }
+        });
+
+        /* ===========================
+           3D Tilt on Project Cards
+        =========================== */
+        const tiltCards = document.querySelectorAll('[data-tilt]');
+        tiltCards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -6;
+                const rotateY = ((x - centerX) / centerX) * 6;
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+                card.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+            });
+
+            card.addEventListener('mouseenter', () => {
+                card.style.transition = 'transform 0.1s ease';
+            });
+        });
+
+        /* ===========================
+           Counter Animation
+        =========================== */
+        const counters = document.querySelectorAll('.counter');
+        let countersAnimated = false;
+
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !countersAnimated) {
+                    countersAnimated = true;
+                    counters.forEach(counter => {
+                        const target = parseInt(counter.getAttribute('data-target'));
+                        const duration = 2000;
+                        const startTime = performance.now();
+
+                        function updateCounter(currentTime) {
+                            const elapsed = currentTime - startTime;
+                            const progress = Math.min(elapsed / duration, 1);
+                            // Ease out cubic
+                            const eased = 1 - Math.pow(1 - progress, 3);
+                            const current = Math.round(eased * target);
+                            counter.textContent = current;
+                            if (progress < 1) {
+                                requestAnimationFrame(updateCounter);
+                            }
+                        }
+                        requestAnimationFrame(updateCounter);
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        counters.forEach(c => counterObserver.observe(c.closest('.reveal') || c));
+
+        /* ===========================
+           Parallax on Scroll (subtle)
+        =========================== */
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    const scrollY = window.scrollY;
+                    // Parallax blobs
+                    const blobs = document.querySelectorAll('.blob');
+                    blobs.forEach((blob, i) => {
+                        const speed = 0.05 + (i * 0.02);
+                        blob.style.transform += ''; // keep CSS animation, add subtle scroll offset via will-change
+                    });
+                    // Nav background on scroll
+                    const nav = document.querySelector('nav');
+                    if (scrollY > 80) {
+                        nav.style.background = 'rgba(10, 10, 11, 0.9)';
+                        nav.style.backdropFilter = 'blur(12px)';
+                        nav.style.webkitBackdropFilter = 'blur(12px)';
+                    } else {
+                        nav.style.background = 'linear-gradient(to bottom, rgba(10,10,11,1) 40%, transparent)';
+                        nav.style.backdropFilter = 'none';
+                        nav.style.webkitBackdropFilter = 'none';
+                    }
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        /* ===========================
+           Smooth Scroll for Nav Links
+        =========================== */
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        /* ===========================
+           Hero Letter Hover Effect
+        =========================== */
+        const accentLetter = document.querySelector('.accent-letter');
+        if (accentLetter) {
+            accentLetter.addEventListener('mouseenter', () => {
+                accentLetter.style.color = 'var(--gold)';
+                accentLetter.style.transform = 'translateY(-16px) rotate(-6deg) scale(1.1)';
+            });
+            accentLetter.addEventListener('mouseleave', () => {
+                accentLetter.style.color = 'var(--accent)';
+                accentLetter.style.transform = 'translateY(0) rotate(0) scale(1)';
+            });
+        }
+
+        /* ===========================
+           Toast notification for contact links
+        =========================== */
+        function showToast(message) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.textContent = message;
+            Object.assign(toast.style, {
+                position: 'fixed',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%) translateY(20px)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                border: '1px solid var(--border)',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                fontSize: '0.85rem',
+                zIndex: '9500',
+                opacity: '0',
+                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                backdropFilter: 'blur(12px)',
+                fontFamily: "'Space Grotesk', sans-serif"
+            });
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(-50%) translateY(0)';
+            });
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(20px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 2500);
+        }
+
+        // Contact link clicks
+        document.querySelectorAll('#contact a[href^="mailto"], #contact a[href^="tel"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                showToast('Copied to clipboard — in a real site, this would open your email client.');
+                navigator.clipboard?.writeText(link.textContent.trim());
+            });
+        });
+
+        // CTA "Let's Talk" click
+        document.querySelector('.cta-text').addEventListener('click', (e) => {
+            e.preventDefault();
+            showToast('Thanks for your interest — this is a design showcase.');
+        });
+    </script>
+</body>
+</html>
