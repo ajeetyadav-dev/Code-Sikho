@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light Switch</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --fg: #1a1a1a;
+    --muted: #8a8275;
+    --accent: #d4920b;
+    --card: #fffdf7;
+    --border: #e0d9cc;
+    --wall: #e8ddd0;
+    --wall-dark: #d4c7b5;
+    --plate: #faf8f4;
+    --plate-shadow: rgba(0,0,0,0.12);
+    --toggle-top: #f5f2ec;
+    --toggle-bottom: #e8e3d9;
+    --glow: rgba(255, 195, 50, 0.35);
+    --glow-strong: rgba(255, 195, 50, 0.6);
+    --ambient: rgba(255, 200, 80, 0.08);
+    --shadow-soft: 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.06);
+    --transition-speed: 0.7s;
+  }
+
+  .dark-mode {
+    --bg: #0f1117;
+    --fg: #e8e4dd;
+    --muted: #6b6a6f;
+    --accent: #f0a830;
+    --card: #1a1c24;
+    --border: #2a2d38;
+    --wall: #161820;
+    --wall-dark: #101218;
+    --plate: #22252e;
+    --plate-shadow: rgba(0,0,0,0.5);
+    --toggle-top: #2e3140;
+    --toggle-bottom: #22252e;
+    --glow: rgba(240, 168, 48, 0.0);
+    --glow-strong: rgba(240, 168, 48, 0.0);
+    --ambient: rgba(240, 168, 48, 0.0);
+    --shadow-soft: 0 8px 32px rgba(0,0,0,0.3);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+    overflow-x: hidden;
+  }
+
+  /* Wall texture */
+  .wall-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse at 50% 20%, var(--wall) 0%, var(--bg) 70%),
+      repeating-conic-gradient(var(--wall) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;
+    transition: background var(--transition-speed) ease;
+  }
+
+  .wall-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Ambient light glow */
+  .ambient-glow {
+    position: fixed;
+    top: -10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, var(--glow-strong) 0%, var(--glow) 30%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity var(--transition-speed) ease;
+  }
+
+  .dark-mode .ambient-glow {
+    opacity: 0;
+  }
+
+  /* Dust particles canvas */
+  #dustCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* Main content */
+  .content {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  /* Header */
+  .page-header {
+    text-align: center;
+    margin-bottom: 40px;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease 0.2s forwards;
+  }
+
+  .page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 12px;
+    transition: color var(--transition-speed) ease;
+  }
+
+  .page-header p {
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: var(--muted);
+    transition: color var(--transition-speed) ease;
+  }
+
+  /* Switch area */
+  .switch-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    margin-bottom: 56px;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease 0.4s forwards;
+  }
+
+  /* Light switch container */
+  .switch-container {
+    position: relative;
+    width: 120px;
+    height: 200px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* Wall plate */
+  .wall-plate {
+    position: absolute;
+    inset: 10px 5px;
+    background: var(--plate);
+    border-radius: 12px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.5) inset,
+      0 -1px 0 rgba(0,0,0,0.05) inset,
+      var(--shadow-soft),
+      0 0 0 1px var(--border);
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+  }
+
+  /* Screw details */
+  .screw {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d8d4cc, #b8b4ac);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .screw::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(35deg);
+    width: 6px;
+    height: 1px;
+    background: #999;
+    border-radius: 1px;
+  }
+  .screw-tl { top: 14px; left: 14px; }
+  .screw-tr { top: 14px; right: 14px; }
+  .screw-bl { bottom: 14px; left: 14px; }
+  .screw-br { bottom: 14px; right: 14px; }
+
+  .dark-mode .screw {
+    background: linear-gradient(135deg, #3a3d48, #282b34);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .dark-mode .screw::after { background: #555; }
+
+  /* Toggle switch */
+  .toggle-track {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 80px;
+    background: linear-gradient(180deg, #ccc8c0 0%, #b8b4ac 100%);
+    border-radius: 22px;
+    box-shadow:
+      inset 0 3px 6px rgba(0,0,0,0.25),
+      inset 0 -1px 2px rgba(255,255,255,0.1);
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    overflow: hidden;
+  }
+
+  .dark-mode .toggle-track {
+    background: linear-gradient(180deg, #1e2028 0%, #14161c 100%);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.02);
+  }
+
+  .toggle-handle {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, var(--toggle-top) 0%, var(--toggle-bottom) 100%);
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.15),
+      0 4px 8px rgba(0,0,0,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                background var(--transition-speed) ease,
+                box-shadow var(--transition-speed) ease;
+    transform-origin: center bottom;
+  }
+
+  .dark-mode .toggle-handle {
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.4),
+      0 4px 8px rgba(0,0,0,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .switch-container.on .toggle-handle {
+    transform: translateY(-36px);
+  }
+
+  /* Click flash */
+  .click-flash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--glow-strong);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .click-flash.active {
+    animation: flashPulse 0.4s ease-out;
+  }
+
+  @keyframes flashPulse {
+    0% { opacity: 0.8; transform: translate(-50%, -50%) scale(0.5); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
+  }
+
+  /* Status label */
+  .status-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: color var(--transition-speed) ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+  }
+
+  .switch-container.on ~ .status-label .status-dot {
+    box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent);
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes dotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Demo content cards */
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 960px;
+    width: 100%;
+    padding: 0 20px;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease 0.6s forwards;
+  }
+
+  .demo-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: var(--shadow-card);
+    transition: all var(--transition-speed) ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .demo-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .demo-card:hover::before { opacity: 1; }
+
+  .demo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+  }
+
+  .dark-mode .demo-card:hover {
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 18px;
+    transition: all var(--transition-speed) ease;
+  }
+
+  .card-icon.amber { background: rgba(212, 146, 11, 0.12); color: var(--accent); }
+  .card-icon.teal { background: rgba(20, 184, 166, 0.1); color: #14b8a6; }
+  .card-icon.rose { background: rgba(225, 80, 95, 0.1); color: #e1505f; }
+
+  .demo-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 8px;
+    transition: color var(--transition-speed) ease;
+  }
+
+  .demo-card p {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--muted);
+    transition: color var(--transition-speed) ease;
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    transition: all var(--transition-speed) ease;
+  }
+
+  /* Color swatches card */
+  .swatch-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .swatch:hover {
+    transform: scale(1.15);
+    border-color: var(--fg);
+  }
+
+  /* Progress bars */
+  .progress-item {
+    margin-top: 14px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+    color: var(--muted);
+    transition: color var(--transition-speed) ease;
+  }
+
+  .progress-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+    transition: background var(--transition-speed) ease;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease, background var(--transition-speed) ease;
+  }
+
+  /* Footer */
+  .page-footer {
+    margin-top: auto;
+    padding: 40px 20px 24px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--muted);
+    transition: color var(--transition-speed) ease;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease 0.8s forwards;
+  }
+
+  .page-footer kbd {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 0 var(--border);
+    transition: all var(--transition-speed) ease;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--fg);
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast i {
+    color: var(--accent);
+  }
+
+  /* Animations */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .demo-grid { grid-template-columns: 1fr; }
+    .switch-section { margin-bottom: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Wall background -->
+<div class="wall-bg" aria-hidden="true"></div>
+
+<!-- Ambient glow -->
+<div class="ambient-glow" aria-hidden="true"></div>
+
+<!-- Dust particles -->
+<canvas id="dustCanvas" aria-hidden="true"></canvas>
+
+<!-- Main content -->
+<div class="content">
+
+  <header class="page-header">
+    <h1>The Light Switch</h1>
+    <p>Flip it. Watch everything change.</p>
+  </header>
+
+  <section class="switch-section" aria-label="Light switch control">
+    <div class="switch-container on" id="lightSwitch" role="button" tabindex="0" aria-label="Toggle dark mode" aria-pressed="false">
+      <div class="wall-plate">
+        <div class="screw screw-tl"></div>
+        <div class="screw screw-tr"></div>
+        <div class="screw screw-bl"></div>
+        <div class="screw screw-br"></div>
+        <div class="toggle-track">
+          <div class="toggle-handle"></div>
+        </div>
+      </div>
+      <div class="click-flash" id="clickFlash"></div>
+    </div>
+    <div class="status-label">
+      <span class="status-dot"></span>
+      <span id="statusText">Lights On</span>
+    </div>
+  </section>
+
+  <main class="demo-grid">
+    <!-- Card 1: Design Tokens -->
+    <article class="demo-card">
+      <div class="card-icon amber"><i class="fas fa-palette"></i></div>
+      <h3>Design Tokens</h3>
+      <p>Every color, shadow, and border adapts seamlessly when the switch flips. No half-measures — full theme inversion.</p>
+      <div class="swatch-row">
+        <div class="swatch" style="background: var(--fg);" title="Foreground"></div>
+        <div class="swatch" style="background: var(--muted);" title="Muted"></div>
+        <div class="swatch" style="background: var(--accent);" title="Accent"></div>
+        <div class="swatch" style="background: var(--card);" title="Card"></div>
+        <div class="swatch" style="background: var(--border);" title="Border"></div>
+        <div class="swatch" style="background: var(--bg);" title="Background"></div>
+      </div>
+    </article>
+
+    <!-- Card 2: Smooth Transitions -->
+    <article class="demo-card">
+      <div class="card-icon teal"><i class="fas fa-wand-magic-sparkles"></i></div>
+      <h3>Smooth Transitions</h3>
+      <p>Zero hard cuts. Every property cross-fades over 700ms with carefully tuned easing for a cinematic feel.</p>
+      <div class="progress-item">
+        <div class="progress-label"><span>Background</span><span>700ms</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 92%; background: var(--accent);"></div></div>
+      </div>
+      <div class="progress-item">
+        <div class="progress-label"><span>Shadows</span><span>700ms</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 78%; background: #14b8a6;"></div></div>
+      </div>
+      <div class="progress-item">
+        <div class="progress-label"><span>Typography</span><span>700ms</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 85%; background: #e1505f;"></div></div>
+      </div>
+    </article>
+
+    <!-- Card 3: Interaction Details -->
+    <article class="demo-card">
+      <div class="card-icon rose"><i class="fas fa-hand-pointer"></i></div>
+      <h3>Interaction Details</h3>
+      <p>Physical spring animation on the toggle. Click flash feedback. Keyboard support. Dust particles react to light.</p>
+      <div class="stats-row">
+        <span class="stat-chip"><i class="fas fa-keyboard" style="margin-right:4px;"></i> Space / Enter</span>
+        <span class="stat-chip"><i class="fas fa-mouse-pointer" style="margin-right:4px;"></i> Click</span>
+        <span class="stat-chip"><i class="fas fa-hand" style="margin-right:4px;"></i> Tap</span>
+      </div>
+    </article>
+  </main>
+
+  <footer class="page-footer">
+    Press <kbd>Space</kbd> or <kbd>Enter</kbd> to toggle &middot; Click the switch &middot; Watch the dust float
+  </footer>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <i class="fas fa-lightbulb"></i>
+  <span id="toastText"></span>
+</div>
+
+<script>
+  // ===== State =====
+  let isDark = false;
+  let isAnimating = false;
+
+  // ===== DOM References =====
+  const switchEl = document.getElementById('lightSwitch');
+  const flashEl = document.getElementById('clickFlash');
+  const statusText = document.getElementById('statusText');
+  const toastEl = document.getElementById('toast');
+  const toastTextEl = document.getElementById('toastText');
+  const body = document.body;
+
+  // ===== Toggle Logic =====
+  function toggleLight() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    isDark = !isDark;
+
+    // Flip switch visually
+    if (isDark) {
+      switchEl.classList.remove('on');
+      body.classList.add('dark-mode');
+      statusText.textContent = 'Lights Off';
+      switchEl.setAttribute('aria-pressed', 'true');
+    } else {
+      switchEl.classList.add('on');
+      body.classList.remove('dark-mode');
+      statusText.textContent = 'Lights On';
+      switchEl.setAttribute('aria-pressed', 'false');
+    }
+
+    // Click flash effect
+    flashEl.classList.remove('active');
+    void flashEl.offsetWidth; // reflow
+    flashEl.classList.add('active');
+
+    // Show toast
+    showToast(isDark ? 'Dark mode activated' : 'Light mode activated');
+
+    // Unlock animation after transition
+    setTimeout(() => { isAnimating = false; }, 350);
+  }
+
+  // Click handler
+  switchEl.addEventListener('click', toggleLight);
+
+  // Keyboard handler
+  switchEl.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      toggleLight();
+    }
+  });
+
+  // ===== Toast =====
+  let toastTimer = null;
+  function showToast(msg) {
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTextEl.textContent = msg;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove('show');
+    }, 2000);
+  }
+
+  // ===== Dust Particle System =====
+  const canvas = document.getElementById('dustCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 80;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class DustParticle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2.5 + 0.5;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.speedY = (Math.random() - 0.5) * 0.2 - 0.1;
+      this.opacity = Math.random() * 0.5 + 0.1;
+      this.opacityTarget = this.opacity;
+      this.phase = Math.random() * Math.PI * 2;
+      this.phaseSpeed = Math.random() * 0.01 + 0.005;
+      this.drift = Math.random() * 0.5 + 0.2;
+    }
+    update() {
+      this.phase += this.phaseSpeed;
+      this.x += this.speedX + Math.sin(this.phase) * this.drift * 0.1;
+      this.y += this.speedY + Math.cos(this.phase * 0.7) * 0.05;
+
+      // Fade based on dark/light mode
+      if (isDark) {
+        this.opacityTarget = Math.random() * 0.08 + 0.02;
+      } else {
+        this.opacityTarget = Math.random() * 0.5 + 0.15;
+      }
+      this.opacity += (this.opacityTarget - this.opacity) * 0.02;
+
+      // Wrap around
+      if (this.x < -10) this.x = canvas.width + 10;
+      if (this.x > canvas.width + 10) this.x = -10;
+      if (this.y < -10) this.y = canvas.height + 10;
+      if (this.y > canvas.height + 10) this.y = -10;
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      if (isDark) {
+        ctx.fillStyle = `rgba(200, 195, 185, ${this.opacity})`;
+      } else {
+        ctx.fillStyle = `rgba(180, 160, 120, ${this.opacity})`;
+      }
+      ctx.fill();
+    }
+  }
+
+  // Initialize particles
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new DustParticle());
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ===== Animate progress bars on load =====
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const fills = entry.target.querySelectorAll('.progress-fill');
+        fills.forEach(fill => {
+          const w = fill.style.width;
+          fill.style.width = '0%';
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              fill.style.width = w;
+            });
+          });
+        });
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('.demo-card').forEach(card => observer.observe(card));
+</script>
+
+</body>
+</html>

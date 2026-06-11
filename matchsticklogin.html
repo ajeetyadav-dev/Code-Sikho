@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matchstick Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0604;
+    --bg-warm: #110a06;
+    --card: rgba(20, 12, 8, 0.85);
+    --card-border: rgba(255, 130, 0, 0.15);
+    --fg: #f5e6d3;
+    --fg-muted: #a08a74;
+    --accent: #ff7b00;
+    --accent-bright: #ffaa33;
+    --accent-dim: #cc5500;
+    --ember: #ff4400;
+    --glow: rgba(255, 123, 0, 0.25);
+    --input-bg: rgba(30, 18, 10, 0.9);
+    --input-border: rgba(255, 130, 0, 0.2);
+    --input-focus: rgba(255, 123, 0, 0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--fg);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Background canvas for particles */
+  #fireCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Ambient background glow */
+  .ambient-glow {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,100,0,0.06) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 2s ease;
+  }
+  .ambient-glow.active { opacity: 1; }
+
+  /* ===== MATCHSTICK SCENE ===== */
+  .match-scene {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .match-scene.hidden {
+    opacity: 0;
+    transform: scale(0.8) translateY(-40px);
+    pointer-events: none;
+  }
+
+  .match-label {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--fg-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeSlideUp 1s 0.3s ease forwards;
+  }
+
+  .matchstick-wrapper {
+    position: relative;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeSlideUp 1s 0.5s ease forwards;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .matchstick-wrapper:hover .match-head {
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px rgba(255, 100, 0, 0.3);
+  }
+
+  .matchstick {
+    position: relative;
+    width: 18px;
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: rotate(-25deg);
+    transition: transform 0.4s ease;
+  }
+  .matchstick-wrapper:hover .matchstick {
+    transform: rotate(-25deg) scale(1.05);
+  }
+
+  .match-head {
+    width: 28px;
+    height: 42px;
+    background: linear-gradient(135deg, #cc4400, #e05500, #ff7700);
+    border-radius: 50% 50% 40% 40% / 60% 60% 40% 40%;
+    position: relative;
+    box-shadow: 0 0 10px rgba(255, 100, 0, 0.15);
+    transition: all 0.3s ease;
+    z-index: 2;
+  }
+  .match-head::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 8px; height: 8px;
+    background: rgba(255,200,100,0.3);
+    border-radius: 50%;
+  }
+
+  .match-stick {
+    width: 14px;
+    height: 180px;
+    background: linear-gradient(90deg, #c4a46c, #e8d5a8, #d4b87a, #c9a86e);
+    border-radius: 0 0 3px 3px;
+    position: relative;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+  }
+  .match-stick::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 0;
+    width: 3px; height: 100%;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+  }
+
+  /* Strike hint */
+  .strike-hint {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    opacity: 0;
+    animation: fadeSlideUp 1s 1.2s ease forwards, pulse 2s 2.2s ease-in-out infinite;
+  }
+  .strike-hint i { margin-right: 6px; color: var(--accent); }
+
+  /* Fire on match head */
+  .match-flame {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    width: 30px;
+    height: 50px;
+    background: radial-gradient(ellipse at bottom, #fff8e0 0%, #ffcc00 20%, #ff8800 50%, #ff4400 75%, transparent 100%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    filter: blur(2px);
+    z-index: 3;
+    transition: transform 0.3s ease;
+    animation: none;
+  }
+  .match-flame.lit {
+    transform: translateX(-50%) scale(1);
+    animation: flameFlicker 0.15s ease-in-out infinite alternate;
+  }
+
+  .match-flame-glow {
+    position: absolute;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(255,150,0,0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 1;
+  }
+  .match-flame-glow.lit { opacity: 1; }
+
+  /* ===== LOGIN FORM ===== */
+  .login-container {
+    position: absolute;
+    z-index: 10;
+    width: 420px;
+    max-width: 92vw;
+    opacity: 0;
+    transform: scale(0.9) translateY(30px);
+    pointer-events: none;
+    transition: opacity 1s ease 0.3s, transform 1s ease 0.3s;
+  }
+  .login-container.visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: all;
+  }
+
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 48px 40px 40px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,100,0,0.05);
+  }
+
+  /* Card top glow line */
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+
+  /* Card inner ambient */
+  .login-card::after {
+    content: '';
+    position: absolute;
+    top: -60px; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 120px;
+    background: radial-gradient(ellipse, rgba(255,120,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .form-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    font-size: 1.3rem;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(255, 100, 0, 0.25);
+    position: relative;
+    z-index: 1;
+  }
+
+  .form-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 2rem;
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, var(--fg) 40%, var(--accent-bright));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .form-subtitle {
+    font-size: 0.9rem;
+    color: var(--fg-muted);
+    margin-bottom: 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .input-group {
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-wrapper i {
+    position: absolute;
+    left: 16px;
+    color: var(--fg-muted);
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+    pointer-events: none;
+  }
+
+  .input-wrapper input {
+    width: 100%;
+    padding: 14px 16px 14px 46px;
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 12px;
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  }
+
+  .input-wrapper input::placeholder {
+    color: rgba(160, 138, 116, 0.5);
+  }
+
+  .input-wrapper input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow);
+    background: rgba(35, 20, 12, 0.95);
+  }
+
+  .input-wrapper input:focus + i,
+  .input-wrapper input:focus ~ i {
+    color: var(--accent);
+  }
+
+  /* Fix: icon focus color */
+  .input-wrapper:focus-within i {
+    color: var(--accent);
+  }
+
+  .toggle-pass {
+    position: absolute;
+    right: 14px;
+    background: none;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px;
+    transition: color 0.3s ease;
+  }
+  .toggle-pass:hover { color: var(--accent); }
+
+  .form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+
+  .remember-me input[type="checkbox"] {
+    display: none;
+  }
+
+  .checkmark {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--input-border);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+  .checkmark i {
+    font-size: 0.6rem;
+    color: #fff;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.25s ease;
+  }
+
+  .remember-me input:checked + .checkmark {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .remember-me input:checked + .checkmark i {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .forgot-link {
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+  .forgot-link:hover { color: var(--accent-bright); }
+
+  .login-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    box-shadow: 0 6px 24px rgba(255, 100, 0, 0.25);
+  }
+  .login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(255, 100, 0, 0.35);
+  }
+  .login-btn:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .login-btn .btn-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    transform: scale(0);
+    animation: ripple 0.6s ease-out forwards;
+    pointer-events: none;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 24px 0;
+    position: relative;
+    z-index: 1;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--input-border);
+  }
+  .divider span {
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .social-row {
+    display: flex;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .social-btn {
+    flex: 1;
+    padding: 12px;
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 12px;
+    color: var(--fg-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .social-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255, 100, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .signup-text {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    position: relative;
+    z-index: 1;
+  }
+  .signup-text a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+  }
+  .signup-text a:hover { color: var(--accent-bright); }
+
+  /* ===== TOAST ===== */
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toast {
+    padding: 14px 22px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: toastIn 0.4s ease;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .toast.success {
+    background: rgba(20, 80, 30, 0.9);
+    border: 1px solid rgba(80, 200, 100, 0.3);
+    color: #8fea9e;
+  }
+  .toast.error {
+    background: rgba(80, 20, 10, 0.9);
+    border: 1px solid rgba(255, 80, 40, 0.3);
+    color: #ffaa88;
+  }
+  .toast.info {
+    background: rgba(40, 25, 10, 0.9);
+    border: 1px solid rgba(255, 150, 50, 0.3);
+    color: var(--accent-bright);
+  }
+
+  .toast.removing { animation: toastOut 0.3s ease forwards; }
+
+  /* ===== ERROR STATE ===== */
+  .input-wrapper.error input {
+    border-color: #cc3300;
+    box-shadow: 0 0 0 3px rgba(204, 51, 0, 0.15);
+  }
+  .error-msg {
+    font-size: 0.78rem;
+    color: #ff7766;
+    margin-top: 6px;
+    display: none;
+  }
+  .input-wrapper.error ~ .error-msg { display: block; }
+
+  /* ===== LOADING SPINNER ===== */
+  .btn-spinner {
+    display: none;
+    width: 20px; height: 20px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .login-btn.loading .btn-text { display: none; }
+  .login-btn.loading .btn-spinner { display: inline-block; }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes flameFlicker {
+    0% { transform: translateX(-50%) scale(1) scaleX(1); }
+    100% { transform: translateX(-50%) scale(1.05) scaleX(0.92); }
+  }
+
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(40px); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes emberFloat {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-120px) scale(0); opacity: 0; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Small screens */
+  @media (max-width: 480px) {
+    .login-card { padding: 36px 24px 32px; }
+    .form-title { font-size: 1.6rem; }
+    .matchstick { height: 180px; }
+    .match-stick { height: 145px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="fireCanvas"></canvas>
+<div class="ambient-glow" id="ambientGlow"></div>
+
+<!-- Matchstick Scene -->
+<div class="match-scene" id="matchScene">
+  <div class="match-label">Jalao</div>
+  <div class="matchstick-wrapper" id="matchstickWrapper" role="button" tabindex="0" aria-label="Click to light the matchstick">
+    <div class="match-flame" id="matchFlame"></div>
+    <div class="match-flame-glow" id="matchFlameGlow"></div>
+    <div class="matchstick">
+      <div class="match-head" id="matchHead"></div>
+      <div class="match-stick"></div>
+    </div>
+    <div class="strike-hint"><i class="fas fa-hand-pointer"></i> Click to strike</div>
+  </div>
+</div>
+
+<!-- Login Form -->
+<div class="login-container" id="loginContainer">
+  <div class="login-card">
+    <div class="form-icon">
+      <i class="fas fa-fire"></i>
+    </div>
+    <h1 class="form-title">Welcome Back</h1>
+    <p class="form-subtitle">Sign in to continue your journey</p>
+
+    <form id="loginForm" novalidate>
+      <div class="input-group">
+        <label for="email">Email Address</label>
+        <div class="input-wrapper" id="emailWrapper">
+          <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div class="error-msg" id="emailError">Please enter a valid email address</div>
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper" id="passWrapper">
+          <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+          <i class="fas fa-lock"></i>
+          <button type="button" class="toggle-pass" id="togglePass" aria-label="Toggle password visibility">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div class="error-msg" id="passError">Password must be at least 6 characters</div>
+      </div>
+
+      <div class="form-options">
+        <label class="remember-me">
+          <input type="checkbox" id="rememberMe">
+          <span class="checkmark"><i class="fas fa-check"></i></span>
+          Remember me
+        </label>
+        <a href="#" class="forgot-link" id="forgotLink">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="login-btn" id="loginBtn">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-spinner"></span>
+      </button>
+    </form>
+
+    <div class="divider"><span>or continue with</span></div>
+
+    <div class="social-row">
+      <button class="social-btn" aria-label="Sign in with Google" id="googleBtn">
+        <i class="fab fa-google"></i>
+      </button>
+      <button class="social-btn" aria-label="Sign in with GitHub" id="githubBtn">
+        <i class="fab fa-github"></i>
+      </button>
+      <button class="social-btn" aria-label="Sign in with Apple" id="appleBtn">
+        <i class="fab fa-apple"></i>
+      </button>
+    </div>
+
+    <p class="signup-text">Don't have an account? <a href="#" id="signupLink">Create one</a></p>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ========== PARTICLE SYSTEM ==========
+  const canvas = document.getElementById('fireCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let isLit = false;
+  let formVisible = false;
+  let mouseX = window.innerWidth / 2;
+  let mouseY = window.innerHeight / 2;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+
+  class Particle {
+    constructor(x, y, type) {
+      this.x = x;
+      this.y = y;
+      this.type = type; // 'fire', 'ember', 'ambient'
+      this.life = 1;
+
+      if (type === 'fire') {
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = -(Math.random() * 4 + 2);
+        this.size = Math.random() * 6 + 3;
+        this.decay = Math.random() * 0.02 + 0.015;
+        this.hue = Math.random() * 40 + 15; // 15-55 (red to yellow)
+      } else if (type === 'ember') {
+        this.vx = (Math.random() - 0.5) * 1.5;
+        this.vy = -(Math.random() * 2 + 0.5);
+        this.size = Math.random() * 3 + 1;
+        this.decay = Math.random() * 0.008 + 0.004;
+        this.hue = Math.random() * 30 + 10;
+      } else {
+        // ambient floating embers
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = -(Math.random() * 0.5 + 0.1);
+        this.size = Math.random() * 2 + 0.5;
+        this.decay = Math.random() * 0.003 + 0.001;
+        this.hue = Math.random() * 30 + 20;
+      }
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life -= this.decay;
+
+      if (this.type === 'fire') {
+        this.vx += (Math.random() - 0.5) * 0.3;
+        this.size *= 0.99;
+      } else if (this.type === 'ember') {
+        this.vx += (Math.random() - 0.5) * 0.1;
+        this.vy -= 0.01; // slight upward acceleration
+      } else {
+        // ambient drift
+        this.vx += Math.sin(Date.now() * 0.001 + this.x * 0.01) * 0.01;
+      }
+    }
+
+    draw() {
+      if (this.life <= 0) return;
+      const alpha = Math.max(0, this.life);
+      const sat = this.type === 'fire' ? '100%' : '80%';
+      const light = this.type === 'fire' ? `${50 + this.life * 30}%` : `${40 + this.life * 20}%`;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.globalCompositeOperation = 'lighter';
+
+      if (this.type === 'fire') {
+        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(0.1, this.size));
+        grad.addColorStop(0, `hsla(${this.hue}, ${sat}, ${light}, 1)`);
+        grad.addColorStop(1, `hsla(${this.hue}, ${sat}, ${light}, 0)`);
+        ctx.fillStyle = grad;
+      } else {
+        ctx.fillStyle = `hsla(${this.hue}, ${sat}, ${light}, ${alpha})`;
+      }
+
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Get match head position for fire origin
+  function getMatchHeadPos() {
+    const head = document.getElementById('matchHead');
+    if (!head) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const rect = head.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  function spawnFireParticles() {
+    if (!isLit) return;
+    const pos = getMatchHeadPos();
+    for (let i = 0; i < 3; i++) {
+      particles.push(new Particle(pos.x, pos.y, 'fire'));
+    }
+    if (Math.random() < 0.3) {
+      particles.push(new Particle(pos.x + (Math.random() - 0.5) * 20, pos.y, 'ember'));
+    }
+  }
+
+  function spawnAmbientEmbers() {
+    if (!formVisible) return;
+    if (Math.random() < 0.05) {
+      const x = Math.random() * canvas.width;
+      const y = canvas.height + 10;
+      particles.push(new Particle(x, y, 'ambient'));
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    spawnFireParticles();
+    spawnAmbientEmbers();
+
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // ========== MATCHSTICK INTERACTION ==========
+  const matchScene = document.getElementById('matchScene');
+  const matchWrapper = document.getElementById('matchstickWrapper');
+  const matchFlame = document.getElementById('matchFlame');
+  const matchFlameGlow = document.getElementById('matchFlameGlow');
+  const loginContainer = document.getElementById('loginContainer');
+  const ambientGlow = document.getElementById('ambientGlow');
+
+  function lightMatch() {
+    if (isLit) return;
+    isLit = true;
+
+    // Light the flame
+    matchFlame.classList.add('lit');
+    matchFlameGlow.classList.add('lit');
+
+    // Change match head color to show it's burning
+    const matchHead = document.getElementById('matchHead');
+    matchHead.style.background = 'linear-gradient(135deg, #ff6600, #ff9900, #ffbb00)';
+    matchHead.style.boxShadow = '0 0 20px rgba(255,150,0,0.6)';
+
+    // Hide the strike hint
+    const hint = document.querySelector('.strike-hint');
+    if (hint) hint.style.opacity = '0';
+
+    // Activate ambient glow
+    ambientGlow.classList.add('active');
+
+    // Burst of initial fire particles
+    const pos = getMatchHeadPos();
+    for (let i = 0; i < 30; i++) {
+      const p = new Particle(pos.x, pos.y, 'fire');
+      p.vx = (Math.random() - 0.5) * 5;
+      p.vy = -(Math.random() * 6 + 3);
+      p.size = Math.random() * 8 + 4;
+      particles.push(p);
+    }
+
+    // After a dramatic pause, transition to login form
+    setTimeout(() => {
+      matchScene.classList.add('hidden');
+    }, 1200);
+
+    setTimeout(() => {
+      formVisible = true;
+      loginContainer.classList.add('visible');
+      // Stop match fire, transition to ambient embers
+      setTimeout(() => {
+        isLit = false;
+      }, 500);
+    }, 1800);
+  }
+
+  matchWrapper.addEventListener('click', lightMatch);
+  matchWrapper.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      lightMatch();
+    }
+  });
+
+  // ========== LOGIN FORM LOGIC ==========
+  const loginForm = document.getElementById('loginForm');
+  const emailInput = document.getElementById('email');
+  const passInput = document.getElementById('password');
+  const emailWrapper = document.getElementById('emailWrapper');
+  const passWrapper = document.getElementById('passWrapper');
+  const togglePass = document.getElementById('togglePass');
+  const loginBtn = document.getElementById('loginBtn');
+
+  // Toggle password visibility
+  togglePass.addEventListener('click', () => {
+    const isPassword = passInput.type === 'password';
+    passInput.type = isPassword ? 'text' : 'password';
+    togglePass.querySelector('i').className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+  });
+
+  // Clear error on input
+  emailInput.addEventListener('input', () => emailWrapper.classList.remove('error'));
+  passInput.addEventListener('input', () => passWrapper.classList.remove('error'));
+
+  // Ripple effect on button
+  loginBtn.addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'btn-ripple';
+    ripple.style.left = (e.clientX - rect.left) + 'px';
+    ripple.style.top = (e.clientY - rect.top) + 'px';
+    ripple.style.width = ripple.style.height = Math.max(rect.width, rect.height) + 'px';
+    this.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  });
+
+  // Form submission
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let valid = true;
+
+    // Validate email
+    const emailVal = emailInput.value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailVal)) {
+      emailWrapper.classList.add('error');
+      valid = false;
+    }
+
+    // Validate password
+    if (passInput.value.length < 6) {
+      passWrapper.classList.add('error');
+      valid = false;
+    }
+
+    if (!valid) {
+      showToast('Please fix the errors above', 'error');
+      return;
+    }
+
+    // Simulate login
+    loginBtn.classList.add('loading');
+    loginBtn.disabled = true;
+
+    await new Promise(r => setTimeout(r, 2000));
+
+    loginBtn.classList.remove('loading');
+    loginBtn.disabled = false;
+
+    const remembered = document.getElementById('rememberMe').checked;
+    showToast(`Welcome back!${remembered ? ' Session remembered.' : ''}`, 'success');
+
+    // Burst celebration particles
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    for (let i = 0; i < 50; i++) {
+      const angle = (Math.PI * 2 / 50) * i;
+      const speed = Math.random() * 4 + 2;
+      const p = new Particle(cx, cy, 'ember');
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.size = Math.random() * 4 + 2;
+      p.hue = Math.random() * 50 + 10;
+      particles.push(p);
+    }
+  });
+
+  // Social buttons
+  document.getElementById('googleBtn').addEventListener('click', () => showToast('Google sign-in initiated', 'info'));
+  document.getElementById('githubBtn').addEventListener('click', () => showToast('GitHub sign-in initiated', 'info'));
+  document.getElementById('appleBtn').addEventListener('click', () => showToast('Apple sign-in initiated', 'info'));
+
+  // Forgot password
+  document.getElementById('forgotLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    showToast('Password reset link sent to your email', 'info');
+  });
+
+  // Signup link
+  document.getElementById('signupLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    showToast('Redirecting to registration page...', 'info');
+  });
+
+  // ========== TOAST SYSTEM ==========
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i> ${message}`;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('removing');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+</script>
+</body>
+</html>
