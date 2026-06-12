@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vault Unlock</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #07070c;
+    --bg-elevated: #0f0f18;
+    --steel: #1a1a26;
+    --steel-light: #2a2a3a;
+    --gold: #d4a44c;
+    --gold-bright: #f0c75e;
+    --gold-dim: #8a6a2f;
+    --text: #e8e4dd;
+    --text-muted: #6a6a7a;
+    --error: #c0392b;
+    --success: #27ae60;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Code Pro', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Atmospheric background */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(212,164,76,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(212,164,76,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 0;
+  }
+
+  .bg-radial {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, rgba(212,164,76,0.06) 0%, transparent 60%);
+    z-index: 0;
+  }
+
+  .bg-vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+    z-index: 0;
+  }
+
+  canvas#particles {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Main container */
+  .vault-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+    padding: 20px;
+  }
+
+  /* Vault door visual */
+  .vault-door {
+    position: relative;
+    width: 260px;
+    height: 260px;
+  }
+
+  .vault-door__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid var(--steel-light);
+    transition: border-color 0.6s, box-shadow 0.6s;
+  }
+
+  .vault-door__ring--outer {
+    border-style: dashed;
+    animation: spin-slow 40s linear infinite;
+  }
+
+  .vault-door__ring--inner {
+    inset: 20px;
+    border-width: 2px;
+    border-style: dotted;
+    animation: spin-slow 25s linear infinite reverse;
+  }
+
+  .vault-door__core {
+    position: absolute;
+    inset: 40px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--steel), var(--bg-elevated));
+    border: 2px solid var(--steel-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+      inset 0 0 30px rgba(0,0,0,0.5),
+      0 0 20px rgba(0,0,0,0.3);
+  }
+
+  .vault-door__core i {
+    font-size: 52px;
+    color: var(--gold-dim);
+    transition: all 0.8s;
+    filter: drop-shadow(0 0 8px rgba(212,164,76,0.2));
+  }
+
+  .vault-door__notch {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--steel-light);
+    border-radius: 2px;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
+    transition: background 0.6s, box-shadow 0.6s;
+  }
+
+  /* Notch positions around the outer ring */
+  .vault-door__notch:nth-child(1) { transform: translate(-50%, -50%) rotate(0deg) translateY(-133px); }
+  .vault-door__notch:nth-child(2) { transform: translate(-50%, -50%) rotate(45deg) translateY(-133px); }
+  .vault-door__notch:nth-child(3) { transform: translate(-50%, -50%) rotate(90deg) translateY(-133px); }
+  .vault-door__notch:nth-child(4) { transform: translate(-50%, -50%) rotate(135deg) translateY(-133px); }
+  .vault-door__notch:nth-child(5) { transform: translate(-50%, -50%) rotate(180deg) translateY(-133px); }
+  .vault-door__notch:nth-child(6) { transform: translate(-50%, -50%) rotate(225deg) translateY(-133px); }
+  .vault-door__notch:nth-child(7) { transform: translate(-50%, -50%) rotate(270deg) translateY(-133px); }
+  .vault-door__notch:nth-child(8) { transform: translate(-50%, -50%) rotate(315deg) translateY(-133px); }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* State: focused/active */
+  .vault-container.active .vault-door__ring--outer {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 30px rgba(212,164,76,0.08);
+  }
+  .vault-container.active .vault-door__ring--inner {
+    border-color: var(--gold-dim);
+  }
+  .vault-container.active .vault-door__notch {
+    background: var(--gold-dim);
+    box-shadow: 0 0 6px rgba(212,164,76,0.3);
+  }
+  .vault-container.active .vault-door__core {
+    border-color: var(--gold-dim);
+  }
+  .vault-container.active .vault-door__core i {
+    color: var(--gold);
+    filter: drop-shadow(0 0 15px rgba(212,164,76,0.5));
+  }
+
+  /* State: success */
+  .vault-container.success .vault-door__ring--outer {
+    border-color: var(--success);
+    box-shadow: 0 0 40px rgba(39,174,96,0.15);
+  }
+  .vault-container.success .vault-door__ring--inner {
+    border-color: var(--success);
+  }
+  .vault-container.success .vault-door__notch {
+    background: var(--success);
+    box-shadow: 0 0 10px rgba(39,174,96,0.5);
+  }
+  .vault-container.success .vault-door__core {
+    border-color: var(--success);
+    box-shadow:
+      inset 0 0 30px rgba(39,174,96,0.1),
+      0 0 40px rgba(39,174,96,0.15);
+  }
+  .vault-container.success .vault-door__core i {
+    color: var(--success);
+    filter: drop-shadow(0 0 20px rgba(39,174,96,0.6));
+  }
+
+  /* State: error */
+  .vault-container.error .vault-door__ring--outer {
+    border-color: var(--error);
+    box-shadow: 0 0 40px rgba(192,57,43,0.15);
+  }
+  .vault-container.error .vault-door__ring--inner {
+    border-color: var(--error);
+  }
+  .vault-container.error .vault-door__notch {
+    background: var(--error);
+    box-shadow: 0 0 10px rgba(192,57,43,0.5);
+  }
+  .vault-container.error .vault-door__core {
+    border-color: var(--error);
+  }
+  .vault-container.error .vault-door__core i {
+    color: var(--error);
+    filter: drop-shadow(0 0 20px rgba(192,57,43,0.6));
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 50%, 90% { transform: translateX(-8px); }
+    30%, 70% { transform: translateX(8px); }
+  }
+  .vault-container.shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  @keyframes unlock-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+  .vault-container.unlock-pulse .vault-door__core {
+    animation: unlock-pulse 0.6s ease-in-out;
+  }
+
+  /* Title */
+  .vault-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(22px, 5vw, 32px);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--text);
+    text-align: center;
+    position: relative;
+  }
+  .vault-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 2px;
+    background: var(--gold-dim);
+    margin: 12px auto 0;
+    transition: width 0.6s, background 0.6s;
+  }
+  .vault-container.active .vault-title::after {
+    width: 120px;
+    background: var(--gold);
+  }
+  .vault-container.success .vault-title::after {
+    background: var(--success);
+  }
+  .vault-container.error .vault-title::after {
+    background: var(--error);
+  }
+
+  /* PIN display */
+  .pin-display {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 28px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--steel-light);
+    border-radius: 12px;
+    position: relative;
+    transition: border-color 0.4s, box-shadow 0.4s;
+  }
+  .vault-container.active .pin-display {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 30px rgba(212,164,76,0.06);
+  }
+  .vault-container.success .pin-display {
+    border-color: var(--success);
+  }
+  .vault-container.error .pin-display {
+    border-color: var(--error);
+  }
+
+  .pin-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--steel-light);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  .pin-dot.filled {
+    border-color: var(--gold);
+    background: var(--gold);
+    box-shadow: 0 0 12px rgba(212,164,76,0.4);
+    transform: scale(1.15);
+  }
+  .pin-dot.filled::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+  }
+  .vault-container.success .pin-dot.filled {
+    border-color: var(--success);
+    background: var(--success);
+    box-shadow: 0 0 12px rgba(39,174,96,0.5);
+  }
+  .vault-container.success .pin-dot.filled::after {
+    background: #5dde9e;
+  }
+  .vault-container.error .pin-dot.filled {
+    border-color: var(--error);
+    background: var(--error);
+    box-shadow: 0 0 12px rgba(192,57,43,0.5);
+  }
+
+  .pin-cursor {
+    width: 2px;
+    height: 24px;
+    background: var(--gold);
+    animation: blink 1s step-end infinite;
+    margin-left: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .vault-container.active .pin-cursor {
+    opacity: 1;
+  }
+  .vault-container.success .pin-cursor,
+  .vault-container.error .pin-cursor {
+    opacity: 0;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Keypad */
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 280px;
+  }
+
+  .key {
+    width: 100%;
+    aspect-ratio: 1.4;
+    border: 1px solid var(--steel-light);
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .key::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(212,164,76,0.08), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .key:hover {
+    border-color: var(--gold-dim);
+    transform: translateY(-1px);
+  }
+  .key:hover::before {
+    opacity: 1;
+  }
+  .key:active {
+    transform: scale(0.94);
+    background: var(--steel);
+    border-color: var(--gold);
+    box-shadow: 0 0 15px rgba(212,164,76,0.15);
+  }
+  .key:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .key--action {
+    font-size: 16px;
+    color: var(--text-muted);
+  }
+  .key--action:hover {
+    color: var(--text);
+  }
+  .key--submit {
+    background: linear-gradient(145deg, var(--gold-dim), #6a4f1f);
+    border-color: var(--gold-dim);
+    color: var(--bg);
+    font-size: 18px;
+  }
+  .key--submit:hover {
+    background: linear-gradient(145deg, var(--gold), var(--gold-dim));
+    border-color: var(--gold);
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(212,164,76,0.2);
+  }
+  .key--submit:active {
+    background: var(--gold-bright);
+  }
+  .key--submit:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Status message */
+  .status-bar {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 400;
+    transition: color 0.4s;
+    color: var(--text-muted);
+  }
+  .status-bar.error { color: var(--error); }
+  .status-bar.success { color: var(--success); }
+
+  /* Attempts */
+  .attempts {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .attempt-dots {
+    display: flex;
+    gap: 4px;
+  }
+  .attempt-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--steel-light);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .attempt-dot.used {
+    background: var(--error);
+    box-shadow: 0 0 6px rgba(192,57,43,0.5);
+  }
+
+  /* Hidden input for keyboard support */
+  .hidden-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* Success overlay */
+  .success-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: rgba(7,7,12,0.95);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  .success-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .success-overlay .check-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    box-shadow: 0 0 40px rgba(39,174,96,0.2);
+  }
+  .success-overlay .check-icon i {
+    font-size: 44px;
+    color: var(--success);
+  }
+  .success-overlay h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: 6px;
+    color: var(--success);
+    animation: fade-up 0.6s 0.2s both;
+  }
+  .success-overlay p {
+    color: var(--text-muted);
+    font-size: 14px;
+    letter-spacing: 2px;
+    animation: fade-up 0.6s 0.35s both;
+  }
+
+  @keyframes pop-in {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { transform: translateY(15px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Lockout overlay */
+  .lockout-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: rgba(7,7,12,0.95);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  .lockout-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .lockout-overlay i {
+    font-size: 56px;
+    color: var(--error);
+    animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .lockout-overlay h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 24px;
+    letter-spacing: 4px;
+    color: var(--error);
+    animation: fade-up 0.6s 0.2s both;
+  }
+  .lockout-timer {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+    animation: fade-up 0.6s 0.35s both;
+  }
+  .lockout-overlay p {
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 2px;
+    animation: fade-up 0.6s 0.5s both;
+  }
+
+  /* Scanline effect */
+  .scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(212,164,76,0.06), transparent);
+    z-index: 2;
+    animation: scan 6s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes scan {
+    0% { top: -2px; }
+    100% { top: 100vh; }
+  }
+
+  /* Responsive */
+  @media (max-width: 400px) {
+    .vault-door { width: 200px; height: 200px; }
+    .vault-door__notch:nth-child(1) { transform: translate(-50%, -50%) rotate(0deg) translateY(-103px); }
+    .vault-door__notch:nth-child(2) { transform: translate(-50%, -50%) rotate(45deg) translateY(-103px); }
+    .vault-door__notch:nth-child(3) { transform: translate(-50%, -50%) rotate(90deg) translateY(-103px); }
+    .vault-door__notch:nth-child(4) { transform: translate(-50%, -50%) rotate(135deg) translateY(-103px); }
+    .vault-door__notch:nth-child(5) { transform: translate(-50%, -50%) rotate(180deg) translateY(-103px); }
+    .vault-door__notch:nth-child(6) { transform: translate(-50%, -50%) rotate(225deg) translateY(-103px); }
+    .vault-door__notch:nth-child(7) { transform: translate(-50%, -50%) rotate(270deg) translateY(-103px); }
+    .vault-door__notch:nth-child(8) { transform: translate(-50%, -50%) rotate(315deg) translateY(-103px); }
+    .vault-door__core { inset: 30px; }
+    .vault-door__core i { font-size: 38px; }
+    .keypad { width: 240px; }
+    .key { font-size: 18px; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .vault-door__ring--outer,
+    .vault-door__ring--inner { animation: none; }
+    .scanline { animation: none; display: none; }
+    .pin-cursor { animation: none; opacity: 1; }
+    * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-radial"></div>
+<div class="bg-vignette"></div>
+<canvas id="particles"></canvas>
+<div class="scanline"></div>
+
+<!-- Hidden input for keyboard entry -->
+<input type="text" class="hidden-input" id="hiddenInput" autocomplete="off" aria-label="PIN entry">
+
+<main class="vault-container" id="vaultContainer" role="form" aria-label="Vault unlock">
+  <!-- Vault door -->
+  <div class="vault-door" aria-hidden="true">
+    <div class="vault-door__ring vault-door__ring--outer"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__notch"></div>
+    <div class="vault-door__ring vault-door__ring--inner"></div>
+    <div class="vault-door__core">
+      <i class="fas fa-lock" id="lockIcon"></i>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <h1 class="vault-title">Vault Access</h1>
+
+  <!-- PIN display -->
+  <div class="pin-display" id="pinDisplay" aria-live="polite">
+    <div class="pin-dot" data-index="0"></div>
+    <div class="pin-dot" data-index="1"></div>
+    <div class="pin-dot" data-index="2"></div>
+    <div class="pin-dot" data-index="3"></div>
+    <div class="pin-dot" data-index="4"></div>
+    <div class="pin-dot" data-index="5"></div>
+    <div class="pin-cursor"></div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">Enter 6-digit code</div>
+
+  <!-- Keypad -->
+  <div class="keypad" role="group" aria-label="Numeric keypad">
+    <button class="key" data-key="1" aria-label="1">1</button>
+    <button class="key" data-key="2" aria-label="2">2</button>
+    <button class="key" data-key="3" aria-label="3">3</button>
+    <button class="key" data-key="4" aria-label="4">4</button>
+    <button class="key" data-key="5" aria-label="5">5</button>
+    <button class="key" data-key="6" aria-label="6">6</button>
+    <button class="key" data-key="7" aria-label="7">7</button>
+    <button class="key" data-key="8" aria-label="8">8</button>
+    <button class="key" data-key="9" aria-label="9">9</button>
+    <button class="key key--action" data-key="clear" aria-label="Clear"><i class="fas fa-rotate-left"></i></button>
+    <button class="key" data-key="0" aria-label="0">0</button>
+    <button class="key key--submit" data-key="submit" id="submitBtn" disabled aria-label="Unlock">
+      <i class="fas fa-arrow-right"></i>
+    </button>
+  </div>
+
+  <!-- Attempts -->
+  <div class="attempts" id="attemptsBar">
+    <span>ATTEMPTS</span>
+    <div class="attempt-dots">
+      <div class="attempt-dot" data-attempt="0"></div>
+      <div class="attempt-dot" data-attempt="1"></div>
+      <div class="attempt-dot" data-attempt="2"></div>
+      <div class="attempt-dot" data-attempt="3"></div>
+      <div class="attempt-dot" data-attempt="4"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Success overlay -->
+<div class="success-overlay" id="successOverlay" aria-hidden="true">
+  <div class="check-icon"><i class="fas fa-check"></i></div>
+  <h2>VAULT OPENED</h2>
+  <p>Access granted. Welcome back.</p>
+</div>
+
+<!-- Lockout overlay -->
+<div class="lockout-overlay" id="lockoutOverlay" aria-hidden="true">
+  <i class="fas fa-shield-halved"></i>
+  <h2>LOCKED OUT</h2>
+  <div class="lockout-timer" id="lockoutTimer">30</div>
+  <p>Too many failed attempts</p>
+</div>
+
+<script>
+(function() {
+  /* ── Config ── */
+  const CORRECT_PIN = '140923';
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_SECONDS = 30;
+  const PIN_LENGTH = 6;
+
+  /* ── State ── */
+  let pin = '';
+  let attempts = 0;
+  let locked = false;
+  let lockoutInterval = null;
+
+  /* ── DOM refs ── */
+  const container = document.getElementById('vaultContainer');
+  const pinDots = document.querySelectorAll('.pin-dot');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusBar = document.getElementById('statusBar');
+  const lockIcon = document.getElementById('lockIcon');
+  const hiddenInput = document.getElementById('hiddenInput');
+  const successOverlay = document.getElementById('successOverlay');
+  const lockoutOverlay = document.getElementById('lockoutOverlay');
+  const lockoutTimer = document.getElementById('lockoutTimer');
+  const attemptDots = document.querySelectorAll('.attempt-dot');
+
+  /* ── Focus hidden input on page load for keyboard support ── */
+  hiddenInput.focus();
+  document.addEventListener('click', () => { if (!locked) hiddenInput.focus(); });
+
+  /* ── Keyboard input ── */
+  hiddenInput.addEventListener('input', (e) => {
+    const val = e.data;
+    if (val && /^\d$/.test(val)) {
+      addDigit(val);
+    }
+    /* Clear the hidden input value to keep it clean */
+    hiddenInput.value = '';
+  });
+  hiddenInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      removeDigit();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      attemptUnlock();
+    }
+  });
+
+  /* ── Keypad clicks ── */
+  document.querySelectorAll('.key').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (locked) return;
+      const key = btn.dataset.key;
+      if (/^\d$/.test(key)) {
+        addDigit(key);
+      } else if (key === 'clear') {
+        clearPin();
+      } else if (key === 'submit') {
+        attemptUnlock();
+      }
+    });
+  });
+
+  /* ── Core logic ── */
+  function addDigit(digit) {
+    if (locked || pin.length >= PIN_LENGTH) return;
+    pin += digit;
+    updateDisplay();
+    container.classList.add('active');
+    container.classList.remove('error', 'success');
+    statusBar.textContent = 'Enter 6-digit code';
+    statusBar.className = 'status-bar';
+  }
+
+  function removeDigit() {
+    if (locked || pin.length === 0) return;
+    pin = pin.slice(0, -1);
+    updateDisplay();
+    if (pin.length === 0) {
+      container.classList.remove('active');
+    }
+  }
+
+  function clearPin() {
+    if (locked) return;
+    pin = '';
+    updateDisplay();
+    container.classList.remove('active', 'error', 'success');
+    statusBar.textContent = 'Enter 6-digit code';
+    statusBar.className = 'status-bar';
+  }
+
+  function updateDisplay() {
+    pinDots.forEach((dot, i) => {
+      dot.classList.toggle('filled', i < pin.length);
+    });
+    submitBtn.disabled = pin.length !== PIN_LENGTH;
+  }
+
+  function attemptUnlock() {
+    if (locked || pin.length !== PIN_LENGTH) return;
+
+    if (pin === CORRECT_PIN) {
+      onSuccess();
+    } else {
+      onFailure();
+    }
+  }
+
+  function onSuccess() {
+    container.classList.remove('active', 'error');
+    container.classList.add('success', 'unlock-pulse');
+    statusBar.textContent = 'Access granted';
+    statusBar.className = 'status-bar success';
+    lockIcon.className = 'fas fa-lock-open';
+
+    /* Flash all dots green */
+    pinDots.forEach((dot, i) => {
+      setTimeout(() => {
+        dot.style.transform = 'scale(1.3)';
+        setTimeout(() => { dot.style.transform = ''; }, 200);
+      }, i * 80);
+    });
+
+    /* Show success overlay after brief delay */
+    setTimeout(() => {
+      successOverlay.classList.add('visible');
+      successOverlay.setAttribute('aria-hidden', 'false');
+      spawnBurst();
+    }, 800);
+
+    /* Reset after a while */
+    setTimeout(() => {
+      resetVault();
+    }, 5000);
+  }
+
+  function onFailure() {
+    attempts++;
+    container.classList.remove('active', 'success');
+    container.classList.add('error', 'shake');
+    statusBar.textContent = `Invalid code — ${MAX_ATTEMPTS - attempts} remaining`;
+    statusBar.className = 'status-bar error';
+
+    /* Mark attempt dot */
+    if (attemptDots[attempts - 1]) {
+      attemptDots[attempts - 1].classList.add('used');
+    }
+
+    /* Shake the dots */
+    pinDots.forEach((dot, i) => {
+      setTimeout(() => {
+        dot.style.borderColor = 'var(--error)';
+        dot.style.background = 'var(--error)';
+        dot.style.boxShadow = '0 0 12px rgba(192,57,43,0.5)';
+      }, i * 50);
+    });
+
+    setTimeout(() => {
+      container.classList.remove('shake');
+      pin = '';
+      updateDisplay();
+      pinDots.forEach(dot => {
+        dot.style.borderColor = '';
+        dot.style.background = '';
+        dot.style.boxShadow = '';
+      });
+
+      if (attempts >= MAX_ATTEMPTS) {
+        lockout();
+      } else {
+        container.classList.remove('error');
+        statusBar.textContent = 'Enter 6-digit code';
+        statusBar.className = 'status-bar';
+      }
+    }, 900);
+  }
+
+  function lockout() {
+    locked = true;
+    let seconds = LOCKOUT_SECONDS;
+    lockoutTimer.textContent = seconds;
+    lockoutOverlay.classList.add('visible');
+    lockoutOverlay.setAttribute('aria-hidden', 'false');
+
+    lockoutInterval = setInterval(() => {
+      seconds--;
+      lockoutTimer.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(lockoutInterval);
+        lockoutInterval = null;
+        lockoutOverlay.classList.remove('visible');
+        lockoutOverlay.setAttribute('aria-hidden', 'true');
+        resetVault();
+      }
+    }, 1000);
+  }
+
+  function resetVault() {
+    pin = '';
+    attempts = 0;
+    locked = false;
+    updateDisplay();
+    container.className = 'vault-container';
+    statusBar.textContent = 'Enter 6-digit code';
+    statusBar.className = 'status-bar';
+    lockIcon.className = 'fas fa-lock';
+    attemptDots.forEach(d => d.classList.remove('used'));
+    successOverlay.classList.remove('visible');
+    successOverlay.setAttribute('aria-hidden', 'true');
+    pinDots.forEach(dot => {
+      dot.style.borderColor = '';
+      dot.style.background = '';
+      dot.style.boxShadow = '';
+      dot.style.transform = '';
+    });
+    hiddenInput.focus();
+  }
+
+  /* ── Particle system ── */
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let burstParticles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 1.5 + 0.3;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.speedY = (Math.random() - 0.5) * 0.3;
+      this.opacity = Math.random() * 0.3 + 0.05;
+      this.pulse = Math.random() * Math.PI * 2;
+      this.pulseSpeed = Math.random() * 0.02 + 0.005;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+      this.pulse += this.pulseSpeed;
+      if (this.x < -10 || this.x > canvas.width + 10 ||
+          this.y < -10 || this.y > canvas.height + 10) {
+        this.reset();
+      }
+    }
+    draw() {
+      const o = this.opacity * (0.6 + 0.4 * Math.sin(this.pulse));
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(212,164,76,${o})`;
+      ctx.fill();
+    }
+  }
+
+  class BurstParticle {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 4 + 1;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.life = 1;
+      this.decay = Math.random() * 0.02 + 0.01;
+      this.size = Math.random() * 3 + 1;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vx *= 0.98;
+      this.vy *= 0.98;
+      this.life -= this.decay;
+    }
+    draw() {
+      if (this.life <= 0) return;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.1, this.size * this.life), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(39,174,96,${this.life * 0.8})`;
+      ctx.fill();
+    }
+  }
+
+  /* Initialize ambient particles */
+  for (let i = 0; i < 60; i++) {
+    particles.push(new Particle());
+  }
+
+  function spawnBurst() {
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    for (let i = 0; i < 80; i++) {
+      burstParticles.push(new BurstParticle(cx, cy));
+    }
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    /* Ambient */
+    for (const p of particles) {
+      p.update();
+      p.draw();
+    }
+
+    /* Burst */
+    for (let i = burstParticles.length - 1; i >= 0; i--) {
+      burstParticles[i].update();
+      burstParticles[i].draw();
+      if (burstParticles[i].life <= 0) {
+        burstParticles.splice(i, 1);
+      }
+    }
+
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+})();
+</script>
+</body>
+</html>
