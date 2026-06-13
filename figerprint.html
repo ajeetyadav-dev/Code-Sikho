@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fingerprint Authentication</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#060A10;
+            --accent:#00E5CC;
+            --ar:0,229,204;
+            --success:#00FF88;
+            --sr:0,255,136;
+            --text:#D8E2EC;
+            --muted:#384555;
+        }
+        body{
+            background:var(--bg);
+            color:var(--text);
+            font-family:'Outfit',sans-serif;
+            height:100vh;height:100dvh;
+            overflow:hidden;
+            display:flex;align-items:center;justify-content:center;
+            user-select:none;-webkit-user-select:none;
+            -webkit-tap-highlight-color:transparent;
+        }
+        #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+        .overlay{
+            position:relative;z-index:1;
+            display:flex;flex-direction:column;align-items:center;
+            gap:20px;padding:20px;
+        }
+        .title{
+            font-size:13px;font-weight:400;
+            letter-spacing:4px;text-transform:uppercase;
+            color:var(--muted);
+        }
+        .fp-wrap{
+            position:relative;width:240px;height:240px;
+            cursor:pointer;transition:transform .15s ease;
+            outline:none;
+        }
+        .fp-wrap:focus-visible{
+            outline:2px solid var(--accent);
+            outline-offset:8px;border-radius:50%;
+        }
+        .fp-wrap.pop{animation:pop .4s ease}
+        @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+        #fp{width:240px;height:240px;display:block}
+        .status{
+            font-size:18px;font-weight:200;letter-spacing:1px;
+            transition:color .4s,opacity .4s;
+            min-height:28px;text-align:center;
+        }
+        .status.scanning{color:var(--accent)}
+        .status.success{color:var(--success);font-weight:600;font-size:20px}
+        .status.idle{color:var(--muted)}
+        .hint{
+            font-size:12px;color:var(--muted);
+            opacity:.5;transition:opacity .4s;margin-top:-8px;
+        }
+        .readout{
+            position:absolute;bottom:-36px;left:50%;
+            transform:translateX(-50%);
+            font-size:10px;letter-spacing:1.5px;
+            color:var(--accent);opacity:0;
+            transition:opacity .25s;white-space:nowrap;
+            font-variant-numeric:tabular-nums;
+        }
+        .readout.on{opacity:.65}
+        @media(prefers-reduced-motion:reduce){
+            .fp-wrap.pop{animation:none}
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg"></canvas>
+    <div class="overlay">
+        <div class="title">Biometric Authentication</div>
+        <div class="fp-wrap" id="wrap" tabindex="0" role="button" aria-label="Fingerprint scanner. Hold spacebar or click to scan.">
+            <canvas id="fp" width="480" height="480"></canvas>
+            <div class="readout" id="readout"></div>
+        </div>
+        <div class="status idle" id="status">Hold to scan</div>
+        <div class="hint" id="hint">Click and hold on the fingerprint</div>
+    </div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── Config ────────────────────────────────────── */
+const ACCENT   = '#00E5CC';
+const AR       = '0,229,204';
+const SUCCESS  = '#00FF88';
+const SR       = '0,255,136';
+const DUR      = 2600;   // scan duration ms
+const HOLD     = 3500;   // success display ms
+const REDUCED  = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ── State ─────────────────────────────────────── */
+let st='idle', prog=0, tScan=0, tOk=0, down=false;
+let sParts=[], oParts=[], bgP=[];
+let ridges=[], minutiae=[];
+let bnd={y0:1e9,y1:-1e9,x0:1e9,x1:-1e9};
+
+/* ── DOM ───────────────────────────────────────── */
+const bgC=document.getElementById('bg'), bgX=bgC.getContext('2d');
+const fpC=document.getElementById('fp'), fpX=fpC.getContext('2d');
+const wrap=document.getElementById('wrap');
+const stEl=document.getElementById('status');
+const hEl=document.getElementById('hint');
+const rdEl=document.getElementById('readout');
+
+/* ── Resize ────────────────────────────────────── */
+function rsz(){bgC.width=innerWidth;bgC.height=innerHeight}
+rsz(); addEventListener('resize',rsz);
+
+/* ── Noise texture ─────────────────────────────── */
+const nC=document.createElement('canvas');
+nC.width=nC.height=128;
+const nX=nC.getContext('2d');
+const nD=nX.createImageData(128,128);
+for(let i=0;i<nD.data.length;i+=4){const v=Math.random()*255;nD.data[i]=nD.data[i+1]=nD.data[i+2]=v;nD.data[i+3]=6}
+nX.putImageData(nD,0,0);
+let noisePat=null;
+// create pattern after first bg resize
+function makeNoise(){noisePat=bgX.createPattern(nC,'repeat')}
+makeNoise();
+addEventListener('resize',makeNoise);
+
+/* ── Ridge Generation ──────────────────────────── */
+function genRidges(){
+    const cx=240,cy=230,N=16,res=[];
+    for(let i=0;i<N;i++){
+        const t=(i+1)/N, pts=[], nPts=110;
+        const rx=10+t*88, ry=14+t*118;
+        const gh=(0.05+t*0.26)*Math.PI;
+        const sa=Math.PI*0.5+gh, ea=Math.PI*0.5-gh+Math.PI*2, ta=ea-sa;
+        for(let j=0;j<=nPts;j++){
+            const f=j/nPts, a=sa+f*ta;
+            const w=Math.sin(a*2.7+i*1.3)*(1.5+t*3.8)+Math.sin(a*5.3+i*0.7)*(0.4+t*1.6);
+            const x=cx+(rx+w)*Math.cos(a), y=cy+(ry+w*0.6)*Math.sin(a);
+            pts.push({x,y});
+            bnd.y0=Math.min(bnd.y0,y); bnd.y1=Math.max(bnd.y1,y);
+            bnd.x0=Math.min(bnd.x0,x); bnd.x1=Math.max(bnd.x1,x);
+        }
+        res.push(pts);
+        // minutiae at endpoints for every 3rd ridge
+        if(i%3===0){
+            minutiae.push({x:pts[0].x,y:pts[0].y});
+            minutiae.push({x:pts[pts.length-1].x,y:pts[pts.length-1].y});
+        }
+        if(i%5===2&&pts.length>50){
+            const m=Math.floor(pts.length*0.48+Math.sin(i)*pts.length*0.06);
+            minutiae.push({x:pts[m].x,y:pts[m].y});
+        }
+    }
+    return res;
+}
+ridges=genRidges();
+
+/* ── Background Particles ──────────────────────── */
+(function(){
+    for(let i=0;i<55;i++){
+        bgP.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+            vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,
+            r:Math.random()*1.4+.4, a:Math.random()*.18+.03});
+    }
+})();
+
+/* ── Emitters ──────────────────────────────────── */
+function emitScan(sy){
+    if(REDUCED)return;
+    const n=2+Math.floor(prog*5);
+    for(let i=0;i<n;i++) sParts.push({
+        x:240+(Math.random()-.5)*130,y:sy+(Math.random()-.5)*8,
+        vx:(Math.random()-.5)*3.2,vy:-Math.random()*2.8-.6,
+        l:1,d:.013+Math.random()*.02,r:Math.random()*2.6+.7
+    });
+}
+function emitBurst(){
+    if(REDUCED)return;
+    for(let i=0;i<50;i++){
+        const a=Math.random()*Math.PI*2, sp=2+Math.random()*6;
+        oParts.push({x:240,y:230,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,
+            l:1,d:.007+Math.random()*.013,r:Math.random()*3+1,
+            g:Math.random()>.25});
+    }
+}
+
+/* ── Smooth Path ───────────────────────────────── */
+function sPath(c,pts){
+    if(pts.length<2)return;
+    c.beginPath();c.moveTo(pts[0].x,pts[0].y);
+    for(let i=0;i<pts.length-1;i++){
+        const mx=(pts[i].x+pts[i+1].x)*.5, my=(pts[i].y+pts[i+1].y)*.5;
+        c.quadraticCurveTo(pts[i].x,pts[i].y,mx,my);
+    }
+    c.lineTo(pts[pts.length-1].x,pts[pts.length-1].y);
+}
+
+/* ── Draw Background ───────────────────────────── */
+function drawBg(){
+    const w=bgC.width,h=bgC.height;
+    bgX.clearRect(0,0,w,h);
+    // radial gradient
+    const g=bgX.createRadialGradient(w*.5,h*.44,0,w*.5,h*.44,Math.max(w,h)*.72);
+    g.addColorStop(0,'#0d1422');g.addColorStop(1,'#060A10');
+    bgX.fillStyle=g;bgX.fillRect(0,0,w,h);
+    // noise
+    if(noisePat){bgX.fillStyle=noisePat;bgX.fillRect(0,0,w,h)}
+    // grid
+    bgX.strokeStyle=`rgba(${AR},0.022)`;bgX.lineWidth=.5;
+    const gs=50;
+    for(let x=gs;x<w;x+=gs){bgX.beginPath();bgX.moveTo(x,0);bgX.lineTo(x,h);bgX.stroke()}
+    for(let y=gs;y<h;y+=gs){bgX.beginPath();bgX.moveTo(0,y);bgX.lineTo(w,y);bgX.stroke()}
+    // vignette
+    const v=bgX.createRadialGradient(w*.5,h*.5,w*.18,w*.5,h*.5,w*.82);
+    v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,0.55)');
+    bgX.fillStyle=v;bgX.fillRect(0,0,w,h);
+    // particles
+    bgP.forEach(p=>{
+        p.x+=p.vx;p.y+=p.vy;
+        if(p.x<-10)p.x=w+10;if(p.x>w+10)p.x=-10;
+        if(p.y<-10)p.y=h+10;if(p.y>h+10)p.y=-10;
+        bgX.beginPath();bgX.arc(p.x,p.y,p.r,0,Math.PI*2);
+        bgX.fillStyle=`rgba(${AR},${p.a})`;bgX.fill();
+    });
+}
+
+/* ── Draw Fingerprint Canvas ───────────────────── */
+function drawFp(t){
+    fpX.clearRect(0,0,480,480);
+    const cx=240,cy=230,RR=210;
+    const sy=bnd.y0+prog*(bnd.y1-bnd.y0);
+
+    /* ─ ring ─ */
+    if(st==='idle'){
+        const p=REDUCED?.8:Math.sin(t*.003)*.3+.7;
+        fpX.beginPath();fpX.arc(cx,cy,RR,0,Math.PI*2);
+        fpX.strokeStyle=`rgba(${AR},${.04*p})`;fpX.lineWidth=14;fpX.stroke();
+        fpX.beginPath();fpX.arc(cx,cy,RR,0,Math.PI*2);
+        fpX.strokeStyle=`rgba(${AR},${.16*p})`;fpX.lineWidth=1.5;fpX.stroke();
+        // radar sweep
+        if(!REDUCED){
+            const sa=(t*.0008)%(Math.PI*2);
+            fpX.save();fpX.beginPath();
+            fpX.arc(cx,cy,RR-6,sa-.55,sa);fpX.lineTo(cx,cy);fpX.closePath();
+            const sg=fpX.createRadialGradient(cx,cy,0,cx,cy,RR-6);
+            sg.addColorStop(0,`rgba(${AR},0.09)`);sg.addColorStop(1,`rgba(${AR},0.015)`);
+            fpX.fillStyle=sg;fpX.fill();fpX.restore();
+        }
+    }else if(st==='scanning'){
+        fpX.beginPath();fpX.arc(cx,cy,RR,0,Math.PI*2);
+        fpX.strokeStyle=`rgba(${AR},0.08)`;fpX.lineWidth=2.5;fpX.stroke();
+        fpX.beginPath();fpX.arc(cx,cy,RR,-Math.PI*.5,-Math.PI*.5+prog*Math.PI*2);
+        fpX.strokeStyle=ACCENT;fpX.lineWidth=2.5;fpX.lineCap='round';fpX.stroke();fpX.lineCap='butt';
+        // glow dot
+        const ea=-Math.PI*.5+prog*Math.PI*2;
+        const gx=cx+RR*Math.cos(ea),gy=cy+RR*Math.sin(ea);
+        const gg=fpX.createRadialGradient(gx,gy,0,gx,gy,16);
+        gg.addColorStop(0,`rgba(${AR},0.6)`);gg.addColorStop(1,`rgba(${AR},0)`);
+        fpX.fillStyle=gg;fpX.beginPath();fpX.arc(gx,gy,16,0,Math.PI*2);fpX.fill();
+    }else if(st==='success'){
+        const el=t-tOk, p=REDUCED?.8:Math.sin(el*.004)*.2+.8;
+        fpX.beginPath();fpX.arc(cx,cy,RR,0,Math.PI*2);
+        fpX.strokeStyle=`rgba(${SR},${.35*p})`;fpX.lineWidth=2.5;fpX.stroke();
+        if(el<900&&!REDUCED){
+            const et=el/900,er=RR+et*55;
+            fpX.beginPath();fpX.arc(cx,cy,er,0,Math.PI*2);
+            fpX.strokeStyle=`rgba(${SR},${.45*(1-et)})`;fpX.lineWidth=2;fpX.stroke();
+            // second ring
+            const er2=RR+et*30;
+            fpX.beginPath();fpX.arc(cx,cy,er2,0,Math.PI*2);
+            fpX.strokeStyle=`rgba(${SR},${.25*(1-et)})`;fpX.lineWidth=1.5;fpX.stroke();
+        }
+        // inner glow
+        const ig=fpX.createRadialGradient(cx,cy,0,cx,cy,RR*.75);
+        ig.addColorStop(0,`rgba(${SR},${.07*p})`);ig.addColorStop(1,`rgba(${SR},0)`);
+        fpX.fillStyle=ig;fpX.beginPath();fpX.arc(cx,cy,RR*.75,0,Math.PI*2);fpX.fill();
+    }
+
+    /* ─ center glow ─ */
+    if(st==='idle'){
+        const fg=fpX.createRadialGradient(cx,cy,0,cx,cy,150);
+        fg.addColorStop(0,`rgba(${AR},0.025)`);fg.addColorStop(1,`rgba(${AR},0)`);
+        fpX.fillStyle=fg;fpX.beginPath();fpX.arc(cx,cy,150,0,Math.PI*2);fpX.fill();
+    }
+
+    /* ─ ridges ─ */
+    fpX.lineCap='round';fpX.lineJoin='round';
+    ridges.forEach((r,ri)=>{
+        if(st==='idle'){
+            const a=REDUCED?.2:Math.sin(t*.002+ri*.4)*.1+.2;
+            sPath(fpX,r);fpX.strokeStyle=`rgba(${AR},${a})`;fpX.lineWidth=2.3;fpX.stroke();
+        }else if(st==='scanning'){
+            // dim full
+            sPath(fpX,r);fpX.strokeStyle=`rgba(${AR},0.1)`;fpX.lineWidth=2;fpX.stroke();
+            // bright clipped
+            const ry0=Math.min(...r.map(p=>p.y));
+            if(ry0<=sy){
+                fpX.save();fpX.beginPath();fpX.rect(0,0,480,sy);fpX.clip();
+                sPath(fpX,r);fpX.strokeStyle=ACCENT;fpX.lineWidth=2.8;
+                fpX.shadowColor=ACCENT;fpX.shadowBlur=5;fpX.stroke();
+                fpX.shadowBlur=0;fpX.restore();
+            }
+        }else if(st==='success'){
+            const el=t-tOk,fade=Math.max(0,1-el/400);
+            if(fade>0){sPath(fpX,r);fpX.strokeStyle=`rgba(${SR},${fade*.65})`;fpX.lineWidth=2.8;fpX.stroke()}
+        }
+    });
+
+    /* ─ minutiae dots ─ */
+    if(st==='idle'||st==='scanning'){
+        const ma=st==='scanning'?.35:.15;
+        minutiae.forEach(m=>{
+            const inScan=st==='scanning'&&m.y<=sy;
+            const a=inScan?ma*.7:ma*(REDUCED?1:Math.sin(t*.003+m.x*.02)*.3+.7);
+            fpX.beginPath();fpX.arc(m.x,m.y,inScan?2.5:1.8,0,Math.PI*2);
+            fpX.fillStyle=inScan?`rgba(${AR},${a})`:`rgba(${AR},${a})`;fpX.fill();
+        });
+    }
+
+    /* ─ center dot ─ */
+    if(st!=='success'){
+        const dp=REDUCED?.3:Math.sin(t*.004)*.15+.3;
+        fpX.beginPath();fpX.arc(cx,cy,3,0,Math.PI*2);
+        fpX.fillStyle=`rgba(${AR},${dp})`;fpX.fill();
+    }
+
+    /* ─ scan line ─ */
+    if(st==='scanning'){
+        // band
+        const lg=fpX.createLinearGradient(0,sy-28,0,sy+28);
+        lg.addColorStop(0,`rgba(${AR},0)`);
+        lg.addColorStop(0.42,`rgba(${AR},0.12)`);
+        lg.addColorStop(0.5,`rgba(${AR},0.22)`);
+        lg.addColorStop(0.58,`rgba(${AR},0.12)`);
+        lg.addColorStop(1,`rgba(${AR},0)`);
+        fpX.fillStyle=lg;fpX.fillRect(bnd.x0-25,sy-28,bnd.x1-bnd.x0+50,56);
+        // wavy line
+        fpX.beginPath();
+        for(let x=bnd.x0-25;x<=bnd.x1+25;x+=2){
+            const wv=Math.sin(x*.045+t*.008)*1.8;
+            x===bnd.x0-25?fpX.moveTo(x,sy+wv):fpX.lineTo(x,sy+wv);
+        }
+        fpX.strokeStyle=ACCENT;fpX.lineWidth=1.5;
+        fpX.shadowColor=ACCENT;fpX.shadowBlur=14;fpX.stroke();fpX.shadowBlur=0;
+        emitScan(sy);
+    }
+
+    /* ─ scan particles ─ */
+    sParts.forEach(p=>{
+        p.x+=p.vx;p.y+=p.vy;p.vy-=.02;p.l-=p.d;
+        if(p.l>0){
+            fpX.beginPath();fpX.arc(p.x,p.y,Math.max(.1,p.r*p.l),0,Math.PI*2);
+            fpX.fillStyle=`rgba(${AR},${p.l*.65})`;fpX.fill();
+        }
+    });
+    sParts=sParts.filter(p=>p.l>0);
+
+    /* ─ success particles ─ */
+    oParts.forEach(p=>{
+        p.x+=p.vx;p.y+=p.vy;p.vx*=.98;p.vy*=.98;p.l-=p.d;
+        if(p.l>0){
+            fpX.beginPath();fpX.arc(p.x,p.y,Math.max(.1,p.r*p.l),0,Math.PI*2);
+            fpX.fillStyle=`rgba(${p.g?SR:AR},${p.l*.75})`;fpX.fill();
+        }
+    });
+    oParts=oParts.filter(p=>p.l>0);
+
+    /* ─ checkmark ─ */
+    if(st==='success'){
+        const el=t-tOk, dt=Math.min(1,el/500);
+        if(dt>0){
+            const e=1-Math.pow(1-dt,3);
+            const s=48;
+            const p1={x:cx-s*.4,y:cy+s*.05},p2={x:cx-s*.05,y:cy+s*.4},p3={x:cx+s*.5,y:cy-s*.3};
+            const d1=Math.hypot(p2.x-p1.x,p2.y-p1.y),d2=Math.hypot(p3.x-p2.x,p3.y-p2.y),tot=d1+d2;
+            const dr=e*tot;
+            fpX.beginPath();fpX.moveTo(p1.x,p1.y);
+            if(dr<=d1){const f=dr/d1;fpX.lineTo(p1.x+(p2.x-p1.x)*f,p1.y+(p2.y-p1.y)*f)}
+            else{fpX.lineTo(p2.x,p2.y);const f=Math.min(1,(dr-d1)/d2);fpX.lineTo(p2.x+(p3.x-p2.x)*f,p2.y+(p3.y-p2.y)*f)}
+            fpX.strokeStyle=SUCCESS;fpX.lineWidth=5;fpX.lineCap='round';fpX.lineJoin='round';
+            fpX.shadowColor=SUCCESS;fpX.shadowBlur=22;fpX.stroke();fpX.shadowBlur=0;
+        }
+    }
+}
+
+/* ── Readout ───────────────────────────────────── */
+const reads=['RIDGES: 26  MINUTIAE: 51','MATCH CONFIDENCE: 97.3%','PATTERN: LOOP  TYPE: ULNAR','QUALITY: EXCELLENT'];
+let rIdx=-1;
+function updRead(){
+    if(st==='scanning'){
+        const i=Math.min(reads.length-1,Math.floor(prog*reads.length));
+        if(i!==rIdx){rIdx=i;rdEl.textContent=reads[i];rdEl.classList.add('on')}
+    }else{rdEl.classList.remove('on');rIdx=-1}
+}
+
+/* ── Transitions ───────────────────────────────── */
+function goScan(){
+    if(st!=='idle')return;
+    st='scanning';tScan=performance.now();prog=0;
+    stEl.textContent='Scanning...';stEl.className='status scanning';
+    hEl.style.opacity='0';
+}
+function cancel(){
+    if(st!=='scanning')return;
+    st='idle';prog=0;sParts=[];
+    stEl.textContent='Hold to scan';stEl.className='status idle';
+    hEl.style.opacity='.5';
+}
+function done(){
+    st='success';tOk=performance.now();
+    wrap.classList.add('pop');setTimeout(()=>wrap.classList.remove('pop'),400);
+    emitBurst();
+    stEl.textContent='Login Complete';stEl.className='status success';
+    hEl.style.opacity='0';
+    setTimeout(()=>{
+        st='idle';prog=0;sParts=[];oParts=[];
+        stEl.textContent='Hold to scan';stEl.className='status idle';
+        hEl.style.opacity='.5';
+    },HOLD);
+}
+
+/* ── Input ─────────────────────────────────────── */
+function onD(e){e.preventDefault();down=true;goScan()}
+function onU(){down=false;cancel()}
+wrap.addEventListener('mousedown',onD);
+addEventListener('mouseup',onU);
+wrap.addEventListener('touchstart',onD,{passive:false});
+addEventListener('touchend',onU);
+addEventListener('touchcancel',onU);
+wrap.addEventListener('keydown',e=>{
+    if(e.key===' '||e.key==='Enter'){e.preventDefault();down=true;goScan()}
+});
+wrap.addEventListener('keyup',e=>{
+    if(e.key===' '||e.key==='Enter'){down=false;cancel()}
+});
+
+/* ── Loop ──────────────────────────────────────── */
+function loop(t){
+    if(st==='scanning'&&down){
+        prog=Math.min(1,(t-tScan)/DUR);
+        if(prog>=1){down=false;done()}
+    }
+    drawBg();drawFp(t);updRead();
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
