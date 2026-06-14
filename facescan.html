@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Face Scan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #06080c;
+            --accent: #00ff88;
+            --accent-rgb: 0,255,136;
+            --secondary: #ff8c00;
+            --sec-rgb: 255,140,0;
+            --muted: #1a1a2e;
+            --text: #8a8a9a;
+            --dim: #2a2a3e;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Background grid */
+        .bg-grid {
+            position: fixed; inset: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(var(--accent-rgb),0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(var(--accent-rgb),0.025) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        .vignette {
+            position: fixed; inset: 0; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(6,8,12,0.85) 100%);
+        }
+        .page-scanline {
+            position: fixed; left: 0; right: 0; height: 1px; pointer-events: none;
+            background: linear-gradient(90deg, transparent 5%, rgba(var(--accent-rgb),0.06) 50%, transparent 95%);
+            animation: pageScan 6s linear infinite;
+        }
+        @keyframes pageScan { 0%{top:-2px} 100%{top:100%} }
+
+        /* Canvas container */
+        .scan-wrap { position: relative; }
+        .bracket {
+            position: absolute; width: 28px; height: 28px;
+            border-color: var(--accent); border-style: solid; border-width: 0;
+            opacity: 0; animation: bracketIn 0.6s ease-out forwards;
+        }
+        .bracket-tl { top:-1px; left:-1px; border-top-width:2px; border-left-width:2px; }
+        .bracket-tr { top:-1px; right:-1px; border-top-width:2px; border-right-width:2px; }
+        .bracket-bl { bottom:-1px; left:-1px; border-bottom-width:2px; border-left-width:2px; }
+        .bracket-br { bottom:-1px; right:-1px; border-bottom-width:2px; border-right-width:2px; }
+        @keyframes bracketIn { from{opacity:0;transform:scale(1.6)} to{opacity:0.7;transform:scale(1)} }
+
+        /* HUD panels */
+        .hud-panel {
+            background: rgba(var(--accent-rgb),0.025);
+            border: 1px solid rgba(var(--accent-rgb),0.12);
+            backdrop-filter: blur(6px);
+            border-radius: 4px;
+        }
+        .hud-val {
+            color: var(--accent);
+            text-shadow: 0 0 8px rgba(var(--accent-rgb),0.35);
+        }
+        .hud-lbl {
+            color: #555; font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* Progress bar */
+        .prog-track {
+            background: rgba(var(--accent-rgb),0.08);
+            border: 1px solid rgba(var(--accent-rgb),0.15);
+        }
+        .prog-fill {
+            background: linear-gradient(90deg, #00cc6a, var(--accent));
+            box-shadow: 0 0 12px rgba(var(--accent-rgb),0.5);
+            transition: width 0.15s linear;
+        }
+
+        /* Blink cursor */
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        .blink { animation: blink 0.9s step-end infinite; }
+
+        /* Pulse */
+        @keyframes pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+        .pulse { animation: pulse 1.8s ease-in-out infinite; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blink, .pulse, .page-scanline, .bracket { animation: none !important; opacity: 0.7; }
+        }
+        @media (max-width: 640px) {
+            .side-panel { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="vignette"></div>
+    <div class="page-scanline"></div>
+
+    <!-- Canvas -->
+    <div class="scan-wrap" id="wrap">
+        <canvas id="c"></canvas>
+        <div class="bracket bracket-tl"></div>
+        <div class="bracket bracket-tr"></div>
+        <div class="bracket bracket-bl"></div>
+        <div class="bracket bracket-br"></div>
+    </div>
+
+    <!-- Title -->
+    <header class="fixed top-5 left-1/2 -translate-x-1/2 z-10 text-center pointer-events-none select-none">
+        <div style="font-family:'Orbitron',sans-serif; color:var(--accent); font-size:15px; letter-spacing:0.35em; font-weight:700; text-shadow:0 0 18px rgba(var(--accent-rgb),0.4);">
+            BIOMETRIC VERIFICATION
+        </div>
+        <div style="color:#444; font-size:10px; letter-spacing:0.2em; margin-top:3px;">FACIAL RECOGNITION SYSTEM v4.7</div>
+    </header>
+
+    <!-- Left panels -->
+    <div class="side-panel fixed top-16 left-5 z-10 flex flex-col gap-2">
+        <div class="hud-panel px-3 py-2">
+            <div class="hud-lbl">Status</div>
+            <div class="hud-val text-xs mt-0.5" id="hStatus">INITIALIZING<span class="blink">_</span></div>
+        </div>
+        <div class="hud-panel px-3 py-2">
+            <div class="hud-lbl">Landmarks</div>
+            <div class="hud-val text-xs mt-0.5" id="hLandmarks">0 / 33</div>
+        </div>
+        <div class="hud-panel px-3 py-2">
+            <div class="hud-lbl">Depth Map</div>
+            <div class="hud-val text-xs mt-0.5" id="hDepth">INACTIVE</div>
+        </div>
+    </div>
+
+    <!-- Right panels -->
+    <div class="side-panel fixed top-16 right-5 z-10 flex flex-col gap-2 text-right">
+        <div class="hud-panel px-3 py-2">
+            <div class="hud-lbl">Timestamp</div>
+            <div class="hud-val text-xs mt-0.5" id="hTime">--:--:--</div>
+        </div>
+        <div class="hud-panel px-3 py-2">
+            <div class="hud-lbl">Confidence</div>
+            <div class="hud-val text-xs mt-0.5" id="hConf">---.--%</div>
+        </div>
+        <div class="hud-panel px-3 py-2">
+            <div class="hud-lbl">Match ID</div>
+            <div class="hud-val text-xs mt-0.5" id="hMatch">PENDING</div>
+        </div>
+    </div>
+
+    <!-- Bottom progress -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-10" style="width:340px;">
+        <div class="flex justify-between mb-1.5">
+            <span class="hud-lbl" id="hPhase">CALIBRATING</span>
+            <span class="hud-val text-[10px]" id="hPct">0%</span>
+        </div>
+        <div class="prog-track h-[3px] rounded-full overflow-hidden">
+            <div class="prog-fill h-full rounded-full" id="hBar" style="width:0%"></div>
+        </div>
+    </div>
+
+    <!-- Restart -->
+    <button id="btnRestart" class="fixed bottom-6 right-5 z-10 hud-panel px-4 py-2 text-[10px] hud-val cursor-pointer hover:bg-[rgba(0,255,136,0.08)] transition-colors tracking-widest" style="display:none;" aria-label="Restart scan">
+        <i class="fas fa-redo mr-1.5"></i>RESCAN
+    </button>
+
+    <script>
+    /* ============================================================
+       CONFIGURATION
+    ============================================================ */
+    const ACC  = '#00ff88';
+    const ARGB = '0,255,136';
+    const SEC  = '#ff8c00';
+    const SRGB = '255,140,0';
+
+    // Phase durations in ms
+    const DUR = [1500, 1500, 4200, 2800]; // calibrate, outline, scan, analyze
+    const TOTAL_DUR = DUR.reduce((a,b)=>a+b,0);
+
+    /* ============================================================
+       DOM REFS
+    ============================================================ */
+    const canvas   = document.getElementById('c');
+    const ctx      = canvas.getContext('2d');
+    const $status  = document.getElementById('hStatus');
+    const $lm      = document.getElementById('hLandmarks');
+    const $depth   = document.getElementById('hDepth');
+    const $time    = document.getElementById('hTime');
+    const $conf    = document.getElementById('hConf');
+    const $match   = document.getElementById('hMatch');
+    const $phase   = document.getElementById('hPhase');
+    const $pct     = document.getElementById('hPct');
+    const $bar     = document.getElementById('hBar');
+    const $restart = document.getElementById('btnRestart');
+
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let W, H, dpr;
+    let cx, cy, rx, ry; // face center & radii
+    let meshH = [], meshV = [];
+    let particles = [];
+    let measurements = [];
+    let startT = null;
+    let needReset = false;
+
+    /* ============================================================
+       LANDMARK DEFINITIONS (normalized coords, nx/ny in [-1,1])
+    ============================================================ */
+    const LM = [
+        // Head outline
+        {nx:0,ny:-.92,id:'CRANIAL_APEX'},{nx:-.62,ny:-.74,id:'TEMPORAL_L'},
+        {nx:.62,ny:-.74,id:'TEMPORAL_R'},{nx:-.88,ny:-.18,id:'ZYGOMATIC_L'},
+        {nx:.88,ny:-.18,id:'ZYGOMATIC_R'},{nx:-.82,ny:.26,id:'MANDIBLE_UL'},
+        {nx:.82,ny:.26,id:'MANDIBLE_UR'},{nx:-.48,ny:.78,id:'MANDIBLE_LL'},
+        {nx:.48,ny:.78,id:'MANDIBLE_LR'},{nx:0,ny:.96,id:'MENTON'},
+        // Eyes
+        {nx:-.3,ny:-.28,id:'L_CANTHUS_M'},{nx:-.12,ny:-.28,id:'L_CANTHUS_L'},
+        {nx:-.21,ny:-.36,id:'L_EYE_SUP'},{nx:-.21,ny:-.2,id:'L_EYE_INF'},
+        {nx:.12,ny:-.28,id:'R_CANTHUS_M'},{nx:.3,ny:-.28,id:'R_CANTHUS_L'},
+        {nx:.21,ny:-.36,id:'R_EYE_SUP'},{nx:.21,ny:-.2,id:'R_EYE_INF'},
+        // Nose
+        {nx:0,ny:-.12,id:'NASION'},{nx:0,ny:.13,id:'PRONASALE'},
+        {nx:-.13,ny:.1,id:'ALARE_L'},{nx:.13,ny:.1,id:'ALARE_R'},
+        {nx:0,ny:.06,id:'SUBNASALE'},
+        // Mouth
+        {nx:-.26,ny:.46,id:'CHEILON_L'},{nx:.26,ny:.46,id:'CHEILON_R'},
+        {nx:0,ny:.41,id:'LABRALE_SUP'},{nx:-.11,ny:.43,id:'UL_L'},
+        {nx:.11,ny:.43,id:'UL_R'},{nx:0,ny:.52,id:'LABRALE_INF'},
+        // Brows
+        {nx:-.42,ny:-.46,id:'BROW_L_LAT'},{nx:-.14,ny:-.52,id:'BROW_L_MED'},
+        {nx:.14,ny:-.52,id:'BROW_R_MED'},{nx:.42,ny:-.46,id:'BROW_R_LAT'},
+        // Extra
+        {nx:-.16,ny:.02,id:'CHEEK_L'},{nx:.16,ny:.02,id:'CHEEK_R'},
+        {nx:0,ny:-.62,id:'FOREHEAD_C'},
+    ];
+
+    // Landmark connections (index pairs)
+    const CONN = [
+        [0,1],[1,3],[3,5],[5,7],[7,9],[9,8],[8,6],[6,4],[4,2],[2,0],
+        [10,12],[12,11],[11,13],[13,10],
+        [14,16],[16,15],[15,17],[17,14],
+        [18,19],[18,22],[19,20],[19,21],[20,22],[21,22],
+        [23,26],[26,25],[25,27],[27,24],[24,23],[26,28],[27,28],
+        [29,30],[31,32],
+        [12,30],[16,31],[13,18],[17,18],
+        [22,25],[22,28],[20,23],[21,24],
+        [33,20],[34,21],[33,5],[34,6],
+        [35,0],[35,30],[35,31],
+    ];
+
+    // Measurement definitions
+    const MEAS_DEFS = [
+        {a:10,b:14,label:'I.P.D.'},
+        {a:18,b:19,label:'NOSE_L'},
+        {a:23,b:24,label:'MOUTH_W'},
+        {a:0,b:9,label:'FACE_H'},
+    ];
+
+    /* ============================================================
+       HELPERS
+    ============================================================ */
+    function lmPos(d){ return {x:cx+d.nx*rx, y:cy+d.ny*ry, ny:d.ny, id:d.id}; }
+    function easeIO(t){ return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+    function easeO(t){ return 1-Math.pow(1-t,3); }
+    function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+    /* ============================================================
+       CANVAS SETUP
+    ============================================================ */
+    function resize(){
+        dpr = Math.min(window.devicePixelRatio||1, 2);
+        const mw = window.innerWidth * (window.innerWidth<640?0.85:0.48);
+        const mh = window.innerHeight * 0.7;
+        const asp = 0.78;
+        let h = Math.min(mh, 560);
+        let w = h * asp;
+        if(w > mw){ w = mw; h = w / asp; }
+        W = w; H = h;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W+'px';
+        canvas.style.height = H+'px';
+        cx = W/2; cy = H/2 + H*0.015;
+        rx = W*0.33; ry = H*0.39;
+        buildMesh();
+    }
+
+    /* ============================================================
+       MESH BUILDER
+    ============================================================ */
+    function buildMesh(){
+        meshH=[]; meshV=[];
+        const rows=22, cols=14;
+        for(let i=1;i<rows;i++){
+            const t=i/rows, ny=-1+t*2, y=cy+ny*ry;
+            const hw=rx*Math.sqrt(Math.max(0,1-ny*ny));
+            meshH.push({y,x1:cx-hw,x2:cx+hw,ny});
+        }
+        for(let i=1;i<cols;i++){
+            const u=i/cols, nx=-1+u*2, x=cx+nx*rx;
+            const mny=Math.sqrt(Math.max(0,1-nx*nx));
+            meshV.push({x,y1:cy-mny*ry,y2:cy+mny*ry,nx});
+        }
+    }
+
+    /* ============================================================
+       PARTICLES
+    ============================================================ */
+    function spawnP(x,y){
+        if(particles.length>120) return;
+        particles.push({
+            x,y,
+            vx:(Math.random()-.5)*1.8,
+            vy:-Math.random()*2.2-.4,
+            life:1,
+            decay:.012+Math.random()*.025,
+            size:1+Math.random()*2,
+        });
+    }
+    function tickP(){
+        for(let i=particles.length-1;i>=0;i--){
+            const p=particles[i];
+            p.x+=p.vx; p.y+=p.vy; p.life-=p.decay;
+            if(p.life<=0) particles.splice(i,1);
+        }
+    }
+    function drawP(){
+        for(const p of particles){
+            const a=p.life*.55;
+            ctx.fillStyle=`rgba(${ARGB},${a})`;
+            ctx.beginPath();
+            ctx.arc(p.x,p.y,Math.max(.4,p.size*p.life),0,Math.PI*2);
+            ctx.fill();
+        }
+    }
+
+    /* ============================================================
+       MEASUREMENTS
+    ============================================================ */
+    function checkMeas(scanNY,time){
+        for(const d of MEAS_DEFS){
+            const a=LM[d.a], b=LM[d.b];
+            if(a.ny<=scanNY && b.ny<=scanNY){
+                if(!measurements.find(m=>m.label===d.label)){
+                    measurements.push({a:d.a,b:d.b,label:d.label,t0:time});
+                }
+            }
+        }
+    }
+    function drawMeas(time,alpha){
+        ctx.save();
+        ctx.font='8px "Share Tech Mono"';
+        for(const m of measurements){
+            const age=(time-m.t0)/1000;
+            if(age>2.5) continue;
+            const fa = age<.4?age/.4 : age>1.8?(2.5-age)/.7 : 1;
+            const pa=lmPos(LM[m.a]), pb=lmPos(LM[m.b]);
+            // Dashed line
+            ctx.strokeStyle=`rgba(${SRGB},${fa*.35*alpha})`;
+            ctx.lineWidth=.5;
+            ctx.setLineDash([3,3]);
+            ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y); ctx.stroke();
+            ctx.setLineDash([]);
+            // Label
+            const dist=Math.hypot(pb.x-pa.x,pb.y-pa.y);
+            const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+            ctx.fillStyle=`rgba(${SRGB},${fa*.65*alpha})`;
+            ctx.fillText(`${m.label}: ${dist.toFixed(1)}`,mx+6,my-4);
+        }
+        ctx.restore();
+    }
+
+    /* ============================================================
+       DRAWING FUNCTIONS
+    ============================================================ */
+
+    // Background glow inside face
+    function drawBgGlow(alpha){
+        const g=ctx.createRadialGradient(cx,cy-ry*.08,0,cx,cy,ry*1.1);
+        g.addColorStop(0,`rgba(${ARGB},${.035*alpha})`);
+        g.addColorStop(1,`rgba(${ARGB},0)`);
+        ctx.fillStyle=g;
+        ctx.beginPath();
+        ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    // Targeting ring
+    function drawRing(time,alpha){
+        ctx.save();
+        ctx.translate(cx,cy);
+        const R=Math.max(rx,ry)*1.1;
+        const rot=time*.0008;
+        // Outer dashed ring
+        ctx.rotate(rot);
+        ctx.strokeStyle=`rgba(${ARGB},${alpha*.35})`;
+        ctx.lineWidth=1;
+        ctx.setLineDash([14,8,4,8]);
+        ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+        // Inner ring (counter-rotate)
+        ctx.rotate(-rot*2.4);
+        ctx.strokeStyle=`rgba(${ARGB},${alpha*.18})`;
+        ctx.lineWidth=.5;
+        ctx.setLineDash([3,7]);
+        ctx.beginPath(); ctx.arc(0,0,R*.94,0,Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+        // Tick marks
+        ctx.rotate(rot*1.4);
+        for(let i=0;i<48;i++){
+            const a=(i/48)*Math.PI*2;
+            const big=i%4===0;
+            const len=big?9:3;
+            ctx.strokeStyle=`rgba(${ARGB},${alpha*(big?.45:.15)})`;
+            ctx.lineWidth=big?1.2:.5;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a)*(R-len),Math.sin(a)*(R-len));
+            ctx.lineTo(Math.cos(a)*R,Math.sin(a)*R);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // Crosshairs
+    function drawCross(alpha){
+        ctx.save();
+        ctx.strokeStyle=`rgba(${ARGB},${alpha*.22})`;
+        ctx.lineWidth=.5;
+        const gap=rx*.14, ext=rx*1.18;
+        ctx.beginPath();
+        ctx.moveTo(cx-ext,cy); ctx.lineTo(cx-gap,cy);
+        ctx.moveTo(cx+gap,cy); ctx.lineTo(cx+ext,cy);
+        ctx.moveTo(cx,cy-ry*1.18); ctx.lineTo(cx,cy-ry*.14);
+        ctx.moveTo(cx,cy+ry*.14); ctx.lineTo(cx,cy+ry*1.18);
+        ctx.stroke();
+        // Small center dot
+        ctx.fillStyle=`rgba(${ARGB},${alpha*.5})`;
+        ctx.beginPath(); ctx.arc(cx,cy,1.5,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    // Head outline (progressive)
+    function drawOutline(progress,alpha){
+        if(progress<=0) return;
+        ctx.save();
+        ctx.strokeStyle=`rgba(${ARGB},${alpha*.65})`;
+        ctx.lineWidth=1.5;
+        ctx.shadowColor=ACC;
+        ctx.shadowBlur=10*alpha;
+        ctx.beginPath();
+        ctx.ellipse(cx,cy,rx,ry,0,-Math.PI/2,-Math.PI/2+Math.PI*2*clamp(progress,0,1));
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Scan line with glow
+    function drawScanLine(scanY,alpha){
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.clip();
+        // Wide glow band above scan line
+        const gh=45;
+        const gg=ctx.createLinearGradient(0,scanY-gh,0,scanY);
+        gg.addColorStop(0,`rgba(${ARGB},0)`);
+        gg.addColorStop(1,`rgba(${ARGB},${.07*alpha})`);
+        ctx.fillStyle=gg;
+        ctx.fillRect(cx-rx-5,scanY-gh,rx*2+10,gh);
+        // Bright line
+        const lg=ctx.createLinearGradient(cx-rx,0,cx+rx,0);
+        lg.addColorStop(0,`rgba(${ARGB},0)`);
+        lg.addColorStop(.12,`rgba(${ARGB},${.5*alpha})`);
+        lg.addColorStop(.5,`rgba(${ARGB},${alpha})`);
+        lg.addColorStop(.88,`rgba(${ARGB},${.5*alpha})`);
+        lg.addColorStop(1,`rgba(${ARGB},0)`);
+        ctx.strokeStyle=lg;
+        ctx.lineWidth=2;
+        ctx.shadowColor=ACC;
+        ctx.shadowBlur=18*alpha;
+        ctx.beginPath();
+        ctx.moveTo(cx-rx-5,scanY);
+        ctx.lineTo(cx+rx+5,scanY);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Mesh grid (revealed by scan)
+    function drawMesh(scanNY,alpha){
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.clip();
+        ctx.lineWidth=.5;
+        // Horizontal lines
+        for(const l of meshH){
+            if(l.ny>scanNY) continue;
+            const d=scanNY-l.ny;
+            const a=Math.min(1,d*3)*.11*alpha;
+            ctx.strokeStyle=`rgba(${ARGB},${a})`;
+            ctx.beginPath(); ctx.moveTo(l.x1,l.y); ctx.lineTo(l.x2,l.y); ctx.stroke();
+        }
+        // Vertical lines (only portion above scan)
+        const scanY=cy+scanNY*ry;
+        for(const l of meshV){
+            const bot=Math.min(l.y2,scanY);
+            if(bot<=l.y1) continue;
+            ctx.strokeStyle=`rgba(${ARGB},${.11*alpha})`;
+            ctx.beginPath(); ctx.moveTo(l.x,l.y1); ctx.lineTo(l.x,bot); ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // Facial feature lines
+    function drawFeatures(scanNY,alpha){
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.clip();
+        ctx.strokeStyle=`rgba(${ARGB},${.45*alpha})`;
+        ctx.lineWidth=1;
+        ctx.shadowColor=ACC;
+        ctx.shadowBlur=4*alpha;
+        const s=rx;
+        // Left eye
+        const leX=cx-.21*s, leY=cy-.28*ry;
+        ctx.beginPath(); ctx.ellipse(leX,leY,.09*s,.04*ry,0,0,Math.PI*2); ctx.stroke();
+        // Right eye
+        const reX=cx+.21*s, reY=cy-.28*ry;
+        ctx.beginPath(); ctx.ellipse(reX,reY,.09*s,.04*ry,0,0,Math.PI*2); ctx.stroke();
+        // Nose
+        const ntY=cy+.13*ry;
+        if(ntY<cy+scanNY*ry){
+            ctx.beginPath(); ctx.moveTo(cx,cy-.12*ry); ctx.lineTo(cx,ntY); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx-.13*s,cy+.1*ry);
+            ctx.quadraticCurveTo(cx,cy+.06*ry,cx+.13*s,cy+.1*ry);
+            ctx.stroke();
+        }
+        // Mouth
+        const mY=cy+.46*ry;
+        if(mY<cy+scanNY*ry){
+            ctx.beginPath();
+            ctx.moveTo(cx-.26*s,mY);
+            ctx.quadraticCurveTo(cx,cy+.38*ry,cx+.26*s,mY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx-.2*s,mY);
+            ctx.quadraticCurveTo(cx,cy+.54*ry,cx+.2*s,mY);
+            ctx.stroke();
+        }
+        // Eyebrows
+        const bY=cy-.52*ry;
+        if(bY<cy+scanNY*ry){
+            ctx.beginPath();
+            ctx.moveTo(cx-.42*s,cy-.42*ry);
+            ctx.quadraticCurveTo(cx-.21*s,cy-.54*ry,cx-.08*s,cy-.47*ry);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx+.08*s,cy-.47*ry);
+            ctx.quadraticCurveTo(cx+.21*s,cy-.54*ry,cx+.42*s,cy-.42*ry);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // Landmark dots + labels
+    function drawLandmarks(scanNY,time,alpha){
+        let count=0;
+        for(const d of LM){
+            if(d.ny>scanNY) continue;
+            count++;
+            const p=lmPos(d);
+            const age=scanNY-d.ny;
+            const pop=clamp(age*10,0,1);
+            const pulse=1+Math.sin(time*.004+d.nx*12)*.15;
+            const sz=2.5*pop;
+            // Outer glow
+            ctx.fillStyle=`rgba(${ARGB},${.12*alpha*pulse})`;
+            ctx.beginPath(); ctx.arc(p.x,p.y,sz*3.5*pulse,0,Math.PI*2); ctx.fill();
+            // Core dot
+            ctx.fillStyle=`rgba(${ARGB},${.85*alpha})`;
+            ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(.5,sz),0,Math.PI*2); ctx.fill();
+            // Flash label
+            if(age<.18 && age>0){
+                const la=1-age/.18;
+                ctx.fillStyle=`rgba(${ARGB},${la*.6*alpha})`;
+                ctx.font='8px "Share Tech Mono"';
+                ctx.fillText(d.id,p.x+8,p.y-4);
+            }
+        }
+        return count;
+    }
+
+    // Connection lines between landmarks
+    function drawConns(scanNY,alpha){
+        ctx.save();
+        ctx.strokeStyle=`rgba(${ARGB},${.16*alpha})`;
+        ctx.lineWidth=.5;
+        for(const [i,j] of CONN){
+            if(LM[i].ny>scanNY || LM[j].ny>scanNY) continue;
+            const a=lmPos(LM[i]), b=lmPos(LM[j]);
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // "VERIFIED" text
+    function drawVerified(alpha){
+        ctx.save();
+        ctx.fillStyle=`rgba(${ARGB},${alpha})`;
+        ctx.shadowColor=ACC;
+        ctx.shadowBlur=20;
+        ctx.font='bold 20px "Orbitron"';
+        ctx.textAlign='center';
+        ctx.textBaseline='top';
+        ctx.fillText('VERIFIED',cx,cy+ry+22);
+        // Sub-line
+        ctx.shadowBlur=0;
+        ctx.font='10px "Share Tech Mono"';
+        ctx.fillStyle=`rgba(${ARGB},${alpha*.5})`;
+        ctx.fillText('SUBJECT ID: FR-4827-ALPHA',cx,cy+ry+48);
+        ctx.restore();
+    }
+
+    /* ============================================================
+       PHASE CALCULATION
+    ============================================================ */
+    function getPhase(elapsed){
+        let acc=0;
+        for(let i=0;i<DUR.length;i++){
+            if(elapsed<acc+DUR[i]) return {phase:i, t:(elapsed-acc)/DUR[i], total:elapsed};
+            acc+=DUR[i];
+        }
+        return {phase:DUR.length, t:1, total:elapsed};
+    }
+
+    /* ============================================================
+       HUD UPDATE
+    ============================================================ */
+    function updateHUD(phase,t,elapsed,lmCount){
+        const now=new Date();
+        $time.textContent=now.toTimeString().split(' ')[0];
+        const prog=clamp(elapsed/TOTAL_DUR*100,0,100);
+        $pct.textContent=Math.floor(prog)+'%';
+        $bar.style.width=prog+'%';
+
+        switch(phase){
+            case 0:
+                $status.innerHTML='CALIBRATING<span class="blink">_</span>';
+                $phase.textContent='CALIBRATING';
+                $lm.textContent='0 / 33';
+                $conf.textContent='---.--%';
+                $depth.textContent='STANDBY';
+                $depth.style.color='#555';
+                $match.textContent='PENDING';
+                $match.style.color='#555';
+                break;
+            case 1:
+                $status.innerHTML='MAPPING TOPOLOGY<span class="blink">_</span>';
+                $phase.textContent='MAPPING';
+                break;
+            case 2:
+                $status.innerHTML='SCANNING BIOMETRIC DATA<span class="blink">_</span>';
+                $phase.textContent='SCANNING';
+                $lm.textContent=`${lmCount} / 33`;
+                $conf.textContent=(lmCount/33*98.73).toFixed(2)+'%';
+                $depth.textContent='ACTIVE';
+                $depth.style.color='var(--accent)';
+                $match.textContent='COMPARING...';
+                $match.style.color='var(--secondary)';
+                break;
+            case 3:
+                $lm.textContent='33 / 33';
+                $conf.textContent='98.73%';
+                $depth.textContent='COMPLETE';
+                if(t<.55){
+                    $status.innerHTML='ANALYZING FEATURES<span class="blink">_</span>';
+                    $phase.textContent='ANALYZING';
+                    $match.textContent='COMPARING...';
+                } else {
+                    $status.textContent='VERIFICATION COMPLETE';
+                    $status.classList.remove('blink');
+                    $phase.textContent='COMPLETE';
+                    $match.textContent='FR-4827-ALPHA';
+                    $match.style.color='var(--accent)';
+                }
+                break;
+            default:
+                $status.textContent='IDENTITY VERIFIED';
+                $phase.textContent='VERIFIED';
+                $lm.textContent='33 / 33';
+                $conf.textContent='98.73%';
+                $depth.textContent='COMPLETE';
+                $depth.style.color='var(--accent)';
+                $match.textContent='FR-4827-ALPHA';
+                $match.style.color='var(--accent)';
+                $restart.style.display='block';
+                break;
+        }
+    }
+
+    /* ============================================================
+       MAIN ANIMATION LOOP
+    ============================================================ */
+    function frame(time){
+        if(needReset || startT===null){
+            startT=time; needReset=false;
+        }
+        const elapsed=time-startT;
+        const {phase,t}=getPhase(elapsed);
+
+        // Reset transform & clear
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+        ctx.clearRect(0,0,W,H);
+
+        // Background glow
+        drawBgGlow(phase>=1?(phase===1?easeO(t):.8):easeO(t)*.3);
+
+        // Phase 0+: Targeting ring & crosshairs
+        if(phase>=0){
+            const a=phase===0?easeO(t):1;
+            drawCross(a);
+            drawRing(time,a);
+        }
+
+        // Phase 1+: Head outline
+        if(phase>=1){
+            const p=phase===1?easeIO(t):1;
+            const a=phase===1?1:phase===2?.55:.5;
+            drawOutline(p,a);
+        }
+
+        // Phase 2: Scanning
+        let lmCount=0;
+        if(phase===2){
+            const st=easeIO(t);
+            const sny=-1+st*2;
+            const sy=cy+sny*ry;
+            drawMesh(sny,1);
+            drawConns(sny,1);
+            drawFeatures(sny,1);
+            lmCount=drawLandmarks(sny,time,1);
+            drawMeas(time,1);
+            drawScanLine(sy,1);
+            checkMeas(sny,time);
+            // Spawn particles
+            if(Math.random()<.5){
+                const sx=cx+(Math.random()-.5)*rx*1.4;
+                const snx2=(sx-cx)/rx;
+                if(snx2*snx2+sny*sny<.92) spawnP(sx,sy);
+            }
+        }
+
+        // Phase 3+: Full reveal
+        if(phase>=3){
+            const fa=phase===3?clamp(t*2.5,0,1):1;
+            const pa=phase===3?.45+Math.sin(time*.007)*.25*(1-t):.55;
+            drawMesh(1,pa);
+            drawConns(1,pa);
+            drawFeatures(1,fa);
+            drawLandmarks(1,time,fa);
+            drawMeas(time,fa);
+            // Flash at start
+            if(phase===3 && t<.08){
+                const fl=(1-t/.08)*.25;
+                ctx.fillStyle=`rgba(${ARGB},${fl})`;
+                ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.fill();
+            }
+            // Verified text
+            if(phase===3 && t>.5){
+                drawVerified(clamp((t-.5)*3,0,1));
+            }
+            if(phase>=4) drawVerified(1);
+        }
+
+        // Particles
+        tickP();
+        drawP();
+
+        // HUD
+        updateHUD(phase,t,elapsed,lmCount);
+
+        requestAnimationFrame(frame);
+    }
+
+    /* ============================================================
+       EVENTS & INIT
+    ============================================================ */
+    resize();
+    window.addEventListener('resize',resize);
+
+    $restart.addEventListener('click',()=>{
+        needReset=true;
+        particles=[];
+        measurements=[];
+        $restart.style.display='none';
+        $status.innerHTML='INITIALIZING<span class="blink">_</span>';
+    });
+
+    // Keyboard accessibility
+    $restart.addEventListener('keydown',e=>{
+        if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $restart.click(); }
+    });
+
+    requestAnimationFrame(frame);
+    </script>
+</body>
+</html>

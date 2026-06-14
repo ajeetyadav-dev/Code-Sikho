@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Insert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a090f;
+            --fg: #e8e0d0;
+            --muted: #6b6358;
+            --accent: #d4a843;
+            --card: #16151d;
+            --border: #2a2835;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        #ui {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 36px 20px 32px;
+            z-index: 10;
+        }
+        .title {
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            font-size: clamp(24px, 4.5vw, 44px);
+            letter-spacing: 0.18em;
+            color: var(--accent);
+            text-shadow: 0 0 50px rgba(212,168,67,0.25);
+            opacity: 0;
+            animation: fadeUp 1.4s ease forwards 0.3s;
+        }
+        .instruction {
+            font-weight: 200;
+            font-size: clamp(13px, 1.8vw, 17px);
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            transition: color 0.5s ease, opacity 0.5s ease;
+            opacity: 0;
+            animation: fadeUp 1.4s ease forwards 0.9s;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .instruction.bright { color: var(--fg); }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .reveal-box {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 1.8s cubic-bezier(0.22,1,0.36,1);
+        }
+        .reveal-box.visible { opacity: 1; }
+        .reveal-box h2 {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: clamp(18px, 3.5vw, 34px);
+            color: var(--accent);
+            letter-spacing: 0.12em;
+            line-height: 1.7;
+            text-shadow: 0 0 70px rgba(212,168,67,0.45);
+        }
+        .reveal-box p {
+            margin-top: 12px;
+            font-weight: 200;
+            font-size: clamp(12px, 1.6vw, 15px);
+            color: var(--muted);
+            letter-spacing: 0.06em;
+        }
+
+        .reset-btn {
+            pointer-events: all;
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 400;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            padding: 10px 30px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.6s ease 0.4s, background 0.3s ease, color 0.3s ease;
+            z-index: 30;
+        }
+        .reset-btn.visible { opacity: 1; }
+        .reset-btn:hover { background: var(--accent); color: var(--bg); }
+        .reset-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .title, .instruction { animation: none; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="scene" aria-label="Interactive key insertion animation"></canvas>
+    <div id="ui">
+        <div class="title">KEY INSERT</div>
+        <div class="instruction" id="instruction">Drag the key toward the lock</div>
+    </div>
+    <div class="reveal-box" id="reveal">
+        <h2>The Chamber Is Open</h2>
+        <p>What lies within is yours to discover</p>
+    </div>
+    <button class="reset-btn" id="resetBtn" aria-label="Reset animation">TRY AGAIN</button>
+
+    <script>
+    (() => {
+        /* ========== Canvas Setup ========== */
+        const canvas = document.getElementById('scene');
+        const ctx = canvas.getContext('2d');
+        const instructionEl = document.getElementById('instruction');
+        const revealEl = document.getElementById('reveal');
+        const resetBtn = document.getElementById('resetBtn');
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        let W, H, dpr;
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+
+        /* ========== States ========== */
+        const IDLE = 0, DRAGGING = 1, RETURNING = 2, INSERTING = 3,
+              INSERTED = 4, TURNING = 5, OPENING = 6, UNLOCKED = 7;
+        let state = IDLE;
+        let time = 0, lastTime = 0;
+
+        /* ========== Geometry ========== */
+        let lockX, lockY, lockW, lockH, scale;
+        let keyX, keyY, keyBaseX, keyBaseY, keyInsertX, keyInsertY;
+        let keyRotation = 0;
+        let insertProg = 0, turnProg = 0, openProg = 0, revealProg = 0, introProg = 0;
+
+        function initLayout() {
+            scale = Math.min(W * 0.17, H * 0.22, 170) / 160;
+            lockW = 160 * scale;
+            lockH = 210 * scale;
+            lockX = W * 0.55;
+            lockY = H * 0.44;
+
+            /* Key anchor = bit tip position */
+            keyBaseX = W * 0.28 + 80 * scale;
+            keyBaseY = H * 0.44;
+            keyInsertX = lockX;
+            keyInsertY = lockY + lockH * 0.22;
+            if (state <= IDLE) { keyX = keyBaseX; keyY = keyBaseY; }
+        }
+        initLayout();
+        window.addEventListener('resize', () => { resize(); initLayout(); });
+
+        /* ========== Ambient Particles ========== */
+        let ambient = [];
+        function initAmbient() {
+            ambient = [];
+            const count = reducedMotion ? 15 : 45;
+            for (let i = 0; i < count; i++) {
+                ambient.push({
+                    x: Math.random() * W, y: Math.random() * H,
+                    vx: (Math.random() - 0.5) * 0.25,
+                    vy: -Math.random() * 0.15 - 0.05,
+                    r: Math.random() * 1.8 + 0.4,
+                    a: Math.random() * 0.25 + 0.04,
+                    ph: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        initAmbient();
+
+        /* ========== Effect Particles ========== */
+        let sparks = [], rays = [], rings = [];
+
+        function spawnUnlockBurst() {
+            const cx = lockX, cy = lockY + lockH * 0.2;
+            for (let i = 0; i < 90; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = Math.random() * 5 + 1.5;
+                const hue = Math.random() > 0.3 ? '212,168,67' :
+                            (Math.random() > 0.5 ? '255,225,130' : '255,255,240');
+                sparks.push({
+                    x: cx, y: cy,
+                    vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 1.5,
+                    life: 1, decay: Math.random() * 0.012 + 0.004,
+                    r: Math.random() * 3.5 + 0.8, hue
+                });
+            }
+            for (let i = 0; i < 14; i++) {
+                rays.push({
+                    x: cx, y: cy,
+                    ang: (i / 14) * Math.PI * 2 + Math.random() * 0.15,
+                    len: 0, maxLen: Math.random() * 160 + 90,
+                    w: Math.random() * 2.5 + 0.8,
+                    life: 1, decay: 0.006 + Math.random() * 0.004,
+                    spd: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function spawnRing(x, y) {
+            rings.push({ x, y, r: 4, maxR: 55 * scale, life: 1, decay: 0.018 });
+        }
+
+        function spawnSparks(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = Math.random() * 2 + 0.5;
+                sparks.push({
+                    x, y,
+                    vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+                    life: 1, decay: Math.random() * 0.03 + 0.02,
+                    r: Math.random() * 1.5 + 0.3, hue: '200,180,100'
+                });
+            }
+        }
+
+        /* ========== Helpers ========== */
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function easeInOut(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+        function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+        function roundRect(x, y, w, h, r) {
+            r = Math.max(0, Math.min(r, w / 2, h / 2));
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h);
+            ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+        }
+
+        /* ========== Drawing: Background ========== */
+        function drawBg() {
+            const g = ctx.createRadialGradient(W*0.5, H*0.42, 0, W*0.5, H*0.42, Math.max(W,H)*0.85);
+            g.addColorStop(0, '#13111c');
+            g.addColorStop(0.5, '#0c0b12');
+            g.addColorStop(1, '#050509');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+
+            /* Warm spotlight behind lock */
+            if (state < UNLOCKED) {
+                const sp = ctx.createRadialGradient(lockX, lockY, 0, lockX, lockY, lockH * 2.2);
+                sp.addColorStop(0, 'rgba(100,65,20,0.045)');
+                sp.addColorStop(0.6, 'rgba(60,40,15,0.015)');
+                sp.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = sp;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            /* Vignette */
+            const v = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.28, W/2, H/2, Math.max(W,H)*0.72);
+            v.addColorStop(0, 'rgba(0,0,0,0)');
+            v.addColorStop(1, 'rgba(0,0,0,0.55)');
+            ctx.fillStyle = v;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        function drawAmbient() {
+            for (const p of ambient) {
+                p.x += p.vx; p.y += p.vy; p.ph += 0.012;
+                if (p.x < -10) p.x = W + 10;
+                if (p.x > W + 10) p.x = -10;
+                if (p.y < -10) p.y = H + 10;
+                if (p.y > H + 10) p.y = -10;
+                const flicker = 0.5 + 0.5 * Math.sin(p.ph);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(212,168,67,${(p.a * flicker).toFixed(3)})`;
+                ctx.fill();
+            }
+        }
+
+        /* ========== Drawing: Lock ========== */
+        function drawLock() {
+            const s = scale;
+            ctx.save();
+            ctx.translate(lockX, lockY);
+
+            /* Shake during turning */
+            if (state === TURNING) {
+                const shake = Math.sin(turnProg * Math.PI * 22) * 1.8 * (1 - turnProg);
+                ctx.translate(shake, shake * 0.4);
+            }
+
+            /* Split when opening */
+            if (state >= OPENING) {
+                ctx.translate(openProg * 10 * s, 0);
+            }
+
+            /* --- Shackle --- */
+            ctx.save();
+            if (state >= OPENING) ctx.translate(0, -openProg * 45 * s);
+            const shW = lockW * 0.62;
+            const shH = lockH * 0.48;
+            const shR = shW / 2;
+            const shT = Math.max(1, 11 * s);
+
+            ctx.beginPath();
+            ctx.moveTo(-shR, -2*s);
+            ctx.lineTo(-shR, -shH + shR);
+            ctx.arc(0, -shH + shR, shR, Math.PI, 0, false);
+            ctx.lineTo(shR, -2*s);
+            ctx.lineTo(shR - shT, -2*s);
+            ctx.lineTo(shR - shT, -shH + shR);
+            ctx.arc(0, -shH + shR, shR - shT, 0, Math.PI, true);
+            ctx.lineTo(-shR + shT, -2*s);
+            ctx.closePath();
+
+            const shG = ctx.createLinearGradient(-shR, 0, shR, 0);
+            shG.addColorStop(0, '#42424d');
+            shG.addColorStop(0.25, '#7a7a88');
+            shG.addColorStop(0.48, '#9696a4');
+            shG.addColorStop(0.52, '#9696a4');
+            shG.addColorStop(0.75, '#7a7a88');
+            shG.addColorStop(1, '#42424d');
+            ctx.fillStyle = shG;
+            ctx.fill();
+            ctx.strokeStyle = '#2a2a34';
+            ctx.lineWidth = Math.max(0.5, 1 * s);
+            ctx.stroke();
+
+            /* Shackle highlight */
+            ctx.beginPath();
+            ctx.moveTo(-shR + shT + 2*s, -4*s);
+            ctx.lineTo(shR - shT - 2*s, -4*s);
+            ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+            ctx.lineWidth = Math.max(0.5, 1.2 * s);
+            ctx.stroke();
+            ctx.restore();
+
+            /* --- Body shadow --- */
+            ctx.shadowColor = 'rgba(0,0,0,0.55)';
+            ctx.shadowBlur = 28 * s;
+            ctx.shadowOffsetY = 8 * s;
+
+            const bW = lockW, bH = lockH, bR = Math.max(1, 10 * s);
+            ctx.beginPath();
+            roundRect(-bW/2, -bH*0.08, bW, bH*1.08, bR);
+
+            const bG = ctx.createLinearGradient(-bW/2, 0, bW/2, 0);
+            bG.addColorStop(0, '#33333e');
+            bG.addColorStop(0.12, '#52525f');
+            bG.addColorStop(0.38, '#636374');
+            bG.addColorStop(0.5, '#6a6a7c');
+            bG.addColorStop(0.62, '#636374');
+            bG.addColorStop(0.88, '#4a4a58');
+            bG.addColorStop(1, '#2a2a36');
+            ctx.fillStyle = bG;
+            ctx.fill();
+
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = '#1a1a26';
+            ctx.lineWidth = Math.max(0.5, 1.8 * s);
+            ctx.stroke();
+
+            /* Body top highlight */
+            ctx.beginPath();
+            ctx.moveTo(-bW/2 + bR, -bH*0.08 + 1);
+            ctx.lineTo(bW/2 - bR, -bH*0.08 + 1);
+            ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+            ctx.lineWidth = Math.max(0.5, 1.2 * s);
+            ctx.stroke();
+
+            /* Bottom edge shadow */
+            ctx.beginPath();
+            ctx.moveTo(-bW/2 + bR, bH);
+            ctx.lineTo(bW/2 - bR, bH);
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = Math.max(0.5, 2 * s);
+            ctx.stroke();
+
+            /* Shackle grooves */
+            const grW = shT + 3*s;
+            [-shR + shT/2 + 1*s, shR - shT/2 - 1*s].forEach(gx => {
+                ctx.beginPath();
+                ctx.ellipse(gx, -bH*0.08 + 2*s, grW/2, 4*s, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.fill();
+            });
+
+            /* --- Keyhole --- */
+            const khX = 0, khY = bH * 0.26;
+            const khCR = Math.max(1, 5.5 * s);
+            const khSW = Math.max(1, 9 * s);
+            const khSH = Math.max(1, 15 * s);
+
+            /* Keyhole glow: breathing in idle, proximity in dragging, pulse in inserted */
+            let glowA = 0;
+            if (state === IDLE) {
+                glowA = 0.06 + 0.04 * Math.sin(time * 2);
+            } else if (state === DRAGGING) {
+                const d = Math.hypot(keyX - lockX, keyY - keyInsertY);
+                glowA = clamp(1 - d / 200, 0, 1) * 0.5;
+            } else if (state === INSERTED) {
+                glowA = 0.3 + 0.12 * Math.sin(time * 3.5);
+            }
+            if (glowA > 0.001) {
+                const gl = ctx.createRadialGradient(khX, khY, 0, khX, khY, 28*s);
+                gl.addColorStop(0, `rgba(212,168,67,${glowA.toFixed(3)})`);
+                gl.addColorStop(1, 'rgba(212,168,67,0)');
+                ctx.fillStyle = gl;
+                ctx.beginPath();
+                ctx.arc(khX, khY, 28*s, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            /* Keyhole shape */
+            ctx.fillStyle = '#080810';
+            ctx.beginPath();
+            ctx.arc(khX, khY, khCR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.rect(khX - khSW/2, khY, khSW, khSH);
+            ctx.fill();
+
+            /* Keyhole inner bevel */
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = Math.max(0.3, 0.6 * s);
+            ctx.beginPath();
+            ctx.arc(khX, khY, khCR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            /* Fade lock when fully unlocked */
+            if (state === UNLOCKED) {
+                ctx.globalAlpha = clamp(1 - revealProg * 0.7, 0.15, 1);
+            }
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+        /* ========== Drawing: Key ========== */
+        function drawKey() {
+            const s = scale;
+            const alpha = clamp(introProg * 2, 0, 1) * (state === UNLOCKED ? clamp(1 - revealProg * 0.5, 0.1, 1) : 1);
+            if (alpha < 0.01) return;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(keyX, keyY);
+            ctx.rotate(keyRotation);
+
+            /* Key dims (anchor = bit tip) */
+            const bowR = Math.max(4, 24 * s);
+            const shaftL = Math.max(8, 78 * s);
+            const shaftW = Math.max(2, 7.5 * s);
+            const bitL = Math.max(3, 22 * s);
+            const bitW = Math.max(3, 16 * s);
+
+            /* Glow */
+            if (state <= INSERTED) {
+                ctx.shadowColor = 'rgba(212,168,67,0.25)';
+                ctx.shadowBlur = 18 * s;
+            }
+
+            /* Gradient (top-to-bottom for metallic feel) */
+            const kG = ctx.createLinearGradient(0, -bowR, 0, bowR);
+            kG.addColorStop(0, '#b8860b');
+            kG.addColorStop(0.2, '#d4a843');
+            kG.addColorStop(0.42, '#eacf5e');
+            kG.addColorStop(0.58, '#e0b840');
+            kG.addColorStop(0.8, '#c9952e');
+            kG.addColorStop(1, '#9a7020');
+
+            /* Bit (only visible if not fully inserted) */
+            if (state < INSERTED) {
+                ctx.fillStyle = kG;
+                ctx.beginPath();
+                ctx.rect(0, -bitW/2, bitL, bitW);
+                ctx.fill();
+                ctx.strokeStyle = '#8a6a18';
+                ctx.lineWidth = Math.max(0.3, 0.8 * s);
+                ctx.stroke();
+
+                /* Teeth */
+                ctx.fillStyle = '#0a0a0f';
+                const teeth = [
+                    { pos: 0.25, depth: 0.55 },
+                    { pos: 0.45, depth: 0.8 },
+                    { pos: 0.65, depth: 0.45 },
+                    { pos: 0.82, depth: 0.7 }
+                ];
+                for (const t of teeth) {
+                    const tx = bitL * t.pos;
+                    const td = bitW * t.depth / 2;
+                    ctx.fillRect(tx, -bitW/2, Math.max(1, 2.5*s), td);
+                    ctx.fillRect(tx, bitW/2 - td, Math.max(1, 2.5*s), td);
+                }
+
+                /* Bit highlight */
+                ctx.fillStyle = 'rgba(255,255,230,0.08)';
+                ctx.fillRect(0, -bitW/2, bitL, bitW * 0.25);
+            }
+
+            /* Shaft */
+            ctx.fillStyle = kG;
+            ctx.beginPath();
+            ctx.rect(-shaftL, -shaftW/2, shaftL, shaftW);
+            ctx.fill();
+            ctx.strokeStyle = '#8a6a18';
+            ctx.lineWidth = Math.max(0.3, 0.7 * s);
+            ctx.stroke();
+
+            /* Shaft highlight */
+            ctx.fillStyle = 'rgba(255,255,230,0.1)';
+            ctx.fillRect(-shaftL, -shaftW/2, shaftL, shaftW * 0.28);
+
+            /* Shaft edge lines */
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = Math.max(0.2, 0.4 * s);
+            ctx.beginPath();
+            ctx.moveTo(-shaftL, shaftW/2);
+            ctx.lineTo(0, shaftW/2);
+            ctx.stroke();
+
+            /* Bow */
+            ctx.fillStyle = kG;
+            ctx.beginPath();
+            ctx.arc(-shaftL, 0, bowR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#8a6a18';
+            ctx.lineWidth = Math.max(0.5, 1.5 * s);
+            ctx.stroke();
+
+            /* Bow inner hole */
+            ctx.beginPath();
+            ctx.arc(-shaftL, 0, bowR * 0.52, 0, Math.PI * 2);
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fill();
+            ctx.strokeStyle = '#a07e22';
+            ctx.lineWidth = Math.max(0.4, 1.2 * s);
+            ctx.stroke();
+
+            /* Bow inner ring decoration */
+            ctx.beginPath();
+            ctx.arc(-shaftL, 0, bowR * 0.72, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(160,126,34,0.35)';
+            ctx.lineWidth = Math.max(0.3, 0.7 * s);
+            ctx.stroke();
+
+            /* Bow highlight (specular) */
+            ctx.beginPath();
+            ctx.arc(-shaftL - bowR * 0.22, -bowR * 0.22, bowR * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,230,0.13)';
+            ctx.fill();
+
+            /* Bow shadow */
+            ctx.beginPath();
+            ctx.arc(-shaftL + bowR * 0.15, bowR * 0.2, bowR * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fill();
+
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        /* ========== Drawing: Effects ========== */
+        function drawEffects() {
+            /* Rings */
+            for (const r of rings) {
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, Math.max(0.1, r.r), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(212,168,67,${(r.life * 0.45).toFixed(3)})`;
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+            }
+
+            /* Sparks */
+            for (const p of sparks) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(0.1, p.r * p.life), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${p.hue},${p.life.toFixed(3)})`;
+                ctx.fill();
+            }
+
+            /* Light rays */
+            for (const r of rays) {
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                ctx.rotate(r.ang);
+                const rg = ctx.createLinearGradient(0, 0, Math.max(1, r.len), 0);
+                rg.addColorStop(0, `rgba(212,168,67,${(r.life * 0.5).toFixed(3)})`);
+                rg.addColorStop(1, 'rgba(212,168,67,0)');
+                ctx.beginPath();
+                ctx.moveTo(0, -r.w / 2);
+                ctx.lineTo(Math.max(1, r.len), 0);
+                ctx.lineTo(0, r.w / 2);
+                ctx.closePath();
+                ctx.fillStyle = rg;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            /* Central burst glow */
+            if (state >= OPENING && state <= UNLOCKED) {
+                const a = state === OPENING ? openProg * 0.28 : 0.28 * Math.max(0, 1 - revealProg * 0.8);
+                if (a > 0.001) {
+                    const bg = ctx.createRadialGradient(lockX, lockY + lockH * 0.2, 0, lockX, lockY + lockH * 0.2, 280 * scale);
+                    bg.addColorStop(0, `rgba(212,168,67,${a.toFixed(3)})`);
+                    bg.addColorStop(0.35, `rgba(212,168,67,${(a * 0.25).toFixed(3)})`);
+                    bg.addColorStop(1, 'rgba(212,168,67,0)');
+                    ctx.fillStyle = bg;
+                    ctx.fillRect(0, 0, W, H);
+                }
+            }
+        }
+
+        /* ========== Input ========== */
+        let dragOff = { x: 0, y: 0 };
+
+        function evtPos(e) {
+            return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+                             : { x: e.clientX, y: e.clientY };
+        }
+
+        function hitKey(px, py) {
+            const s = scale;
+            const bowCX = keyX - 78 * s;
+            const bowCY = keyY;
+            const bowR = Math.max(30, 24 * s + 10);
+            return Math.hypot(px - bowCX, py - bowCY) < bowR;
+        }
+
+        function onDown(e) {
+            e.preventDefault();
+            const p = evtPos(e);
+            if (state === IDLE && hitKey(p.x, p.y)) {
+                state = DRAGGING;
+                dragOff.x = keyX - p.x;
+                dragOff.y = keyY - p.y;
+                canvas.style.cursor = 'grabbing';
+            } else if (state === INSERTED) {
+                state = TURNING;
+                turnProg = 0;
+                instructionEl.textContent = 'Turning...';
+                instructionEl.classList.remove('bright');
+            }
+        }
+
+        function onMove(e) {
+            e.preventDefault();
+            const p = evtPos(e);
+            if (state === DRAGGING) {
+                keyX = p.x + dragOff.x;
+                keyY = p.y + dragOff.y;
+
+                /* Magnetic pull when close */
+                const dx = keyInsertX - keyX;
+                const dy = keyInsertY - keyY;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 80) {
+                    const pull = (1 - dist / 80) * 0.18;
+                    keyX += dx * pull;
+                    keyY += dy * pull;
+                }
+
+                /* Snap */
+                if (dist < 30) {
+                    state = INSERTING;
+                    insertProg = 0;
+                    canvas.style.cursor = 'default';
+                }
+            } else if (state === IDLE) {
+                canvas.style.cursor = hitKey(p.x, p.y) ? 'grab' : 'default';
+            }
+        }
+
+        function onUp(e) {
+            e.preventDefault();
+            if (state === DRAGGING) {
+                state = RETURNING;
+                canvas.style.cursor = 'default';
+            }
+        }
+
+        canvas.addEventListener('mousedown', onDown);
+        canvas.addEventListener('mousemove', onMove);
+        canvas.addEventListener('mouseup', onUp);
+        canvas.addEventListener('mouseleave', onUp);
+        canvas.addEventListener('touchstart', onDown, { passive: false });
+        canvas.addEventListener('touchmove', onMove, { passive: false });
+        canvas.addEventListener('touchend', onUp, { passive: false });
+        canvas.addEventListener('touchcancel', onUp, { passive: false });
+
+        /* Reset */
+        resetBtn.addEventListener('click', () => {
+            state = IDLE;
+            keyX = keyBaseX; keyY = keyBaseY;
+            keyRotation = 0;
+            insertProg = turnProg = openProg = revealProg = 0;
+            sparks = []; rays = []; rings = [];
+            instructionEl.textContent = 'Drag the key toward the lock';
+            instructionEl.classList.remove('bright');
+            revealEl.classList.remove('visible');
+            resetBtn.classList.remove('visible');
+            canvas.style.cursor = 'default';
+        });
+
+        /* ========== Update ========== */
+        function update(dt) {
+            time += dt;
+            introProg = clamp(introProg + dt * 0.7, 0, 1);
+
+            /* Idle float */
+            if (state === IDLE && !reducedMotion) {
+                keyX = keyBaseX + Math.sin(time * 0.9) * 4;
+                keyY = keyBaseY + Math.sin(time * 1.6) * 7;
+                keyRotation = Math.sin(time * 0.7) * 0.025;
+            }
+
+            /* Return to base */
+            if (state === RETURNING) {
+                keyX = lerp(keyX, keyBaseX, 0.08);
+                keyY = lerp(keyY, keyBaseY, 0.08);
+                keyRotation = lerp(keyRotation, 0, 0.08);
+                if (Math.hypot(keyX - keyBaseX, keyY - keyBaseY) < 1) {
+                    state = IDLE;
+                }
+            }
+
+            /* Inserting */
+            if (state === INSERTING) {
+                insertProg = clamp(insertProg + dt * 2.5, 0, 1);
+                const t = easeInOut(insertProg);
+                keyX = lerp(keyX, keyInsertX, 0.14);
+                keyY = lerp(keyY, keyInsertY, 0.14);
+                keyRotation = lerp(keyRotation, 0, 0.12);
+                if (insertProg >= 1) {
+                    state = INSERTED;
+                    instructionEl.textContent = 'Click to turn the key';
+                    instructionEl.classList.add('bright');
+                    spawnRing(lockX, keyInsertY);
+                    setTimeout(() => spawnRing(lockX, keyInsertY), 140);
+                }
+            }
+
+            /* Turning */
+            if (state === TURNING) {
+                turnProg = clamp(turnProg + dt * 0.75, 0, 1);
+                keyRotation = easeInOut(turnProg) * (Math.PI / 2);
+                /* Sparks during turn */
+                if (Math.random() < 0.35) {
+                    spawnSparks(lockX, keyInsertY, 1);
+                }
+                if (turnProg >= 1) {
+                    state = OPENING;
+                    openProg = 0;
+                    instructionEl.textContent = '';
+                    spawnUnlockBurst();
+                }
+            }
+
+            /* Opening */
+            if (state === OPENING) {
+                openProg = clamp(openProg + dt * 1.0, 0, 1);
+                if (openProg >= 1) {
+                    state = UNLOCKED;
+                    revealProg = 0;
+                    revealEl.classList.add('visible');
+                    resetBtn.classList.add('visible');
+                }
+            }
+
+            /* Unlocked */
+            if (state === UNLOCKED) {
+                revealProg = clamp(revealProg + dt * 0.45, 0, 1);
+            }
+
+            /* Update particles */
+            sparks = sparks.filter(p => {
+                p.x += p.vx; p.y += p.vy;
+                p.vy += 0.025;
+                p.vx *= 0.99;
+                p.life -= p.decay;
+                return p.life > 0;
+            });
+            rays = rays.filter(r => {
+                r.len = Math.min(r.len + r.spd, r.maxLen);
+                r.life -= r.decay;
+                return r.life > 0;
+            });
+            rings = rings.filter(r => {
+                r.r += (r.maxR - r.r) * 0.06;
+                r.life -= r.decay;
+                return r.life > 0;
+            });
+        }
+
+        /* ========== Render ========== */
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            drawBg();
+            drawAmbient();
+
+            /* Key behind lock when inserted */
+            if (state >= INSERTING) drawKey();
+
+            drawLock();
+
+            /* Key in front when free */
+            if (state < INSERTING) drawKey();
+
+            drawEffects();
+        }
+
+        /* ========== Loop ========== */
+        function loop(ts) {
+            if (!lastTime) lastTime = ts;
+            const dt = Math.min((ts - lastTime) / 1000, 0.05);
+            lastTime = ts;
+            update(dt);
+            render();
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+    })();
+    </script>
+</body>
+</html>
