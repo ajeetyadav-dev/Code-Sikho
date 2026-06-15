@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torch Light Reveal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --mx: 50vw;
+            --my: 50vh;
+            --torch-r: 130px;
+            --amber: #F59E0B;
+            --amber-deep: #B45309;
+            --warm-white: #EDE0CC;
+            --bronze: #D4A574;
+            --dark-base: #060604;
+            --input-bg: rgba(28, 20, 10, 0.55);
+            --input-border: #3D2E1F;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--dark-base);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'DM Sans', sans-serif;
+            cursor: none;
+        }
+
+        /* ===== Background texture ===== */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(ellipse 600px 400px at 25% 30%, rgba(120, 60, 10, 0.04), transparent),
+                radial-gradient(ellipse 500px 500px at 75% 70%, rgba(100, 50, 5, 0.03), transparent);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== Decorative runes ===== */
+        .rune {
+            position: fixed;
+            font-family: 'Cinzel', serif;
+            color: rgba(212, 165, 116, 0.04);
+            pointer-events: none;
+            z-index: 0;
+            user-select: none;
+            line-height: 1;
+        }
+
+        /* ===== Hint text — always slightly visible ===== */
+        .hint-text {
+            position: fixed;
+            top: 36px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            color: rgba(212, 165, 116, 0.25);
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            animation: hintPulse 4s ease-in-out infinite;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+        }
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.25; }
+            50% { opacity: 0.55; }
+        }
+
+        /* ===== Subtle guide arrows ===== */
+        .guide-arrow {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            pointer-events: none;
+            user-select: none;
+            animation: guideBob 2s ease-in-out infinite;
+        }
+        .guide-arrow i {
+            font-size: 18px;
+            color: rgba(212, 165, 116, 0.15);
+        }
+        @keyframes guideBob {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(6px); }
+        }
+
+        /* ===== Content layer (form sits here) ===== */
+        .content-layer {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        /* ===== Torch warm glow — UNDER the overlay ===== */
+        .torch-glow {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                rgba(245, 180, 50, 0.18) 0%,
+                rgba(217, 119, 6, 0.09) 30%,
+                rgba(180, 83, 9, 0.03) 55%,
+                transparent 72%
+            );
+            transform: translate(-50%, -50%);
+            left: var(--mx);
+            top: var(--my);
+            z-index: 2;
+            pointer-events: none;
+            will-change: transform, width, height;
+        }
+
+        /* ===== Secondary inner glow for realism ===== */
+        .torch-inner {
+            position: fixed;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                rgba(255, 220, 130, 0.12) 0%,
+                rgba(245, 158, 11, 0.05) 50%,
+                transparent 100%
+            );
+            transform: translate(-50%, -50%);
+            left: var(--mx);
+            top: var(--my);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        /* ===== Particle canvas ===== */
+        .dust-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        /* ===== Dark overlay — main torch mask ===== */
+        .dark-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--dark-base);
+            z-index: 10;
+            pointer-events: none;
+            -webkit-mask-image: radial-gradient(
+                circle var(--torch-r) at var(--mx) var(--my),
+                transparent 0%,
+                transparent 55%,
+                rgba(0,0,0,0.4) 78%,
+                black 100%
+            );
+            mask-image: radial-gradient(
+                circle var(--torch-r) at var(--mx) var(--my),
+                transparent 0%,
+                transparent 55%,
+                rgba(0,0,0,0.4) 78%,
+                black 100%
+            );
+            will-change: mask-image, -webkit-mask-image;
+        }
+
+        /* ===== Second overlay — sharper inner edge ===== */
+        .dark-overlay-inner {
+            position: fixed;
+            inset: 0;
+            background: var(--dark-base);
+            z-index: 11;
+            pointer-events: none;
+            -webkit-mask-image: radial-gradient(
+                circle calc(var(--torch-r) * 0.75) at var(--mx) var(--my),
+                transparent 0%,
+                transparent 50%,
+                black 100%
+            );
+            mask-image: radial-gradient(
+                circle calc(var(--torch-r) * 0.75) at var(--mx) var(--my),
+                transparent 0%,
+                transparent 50%,
+                black 100%
+            );
+        }
+
+        /* ===== Custom cursor ===== */
+        .cursor-dot {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: var(--amber);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            left: var(--mx);
+            top: var(--my);
+            z-index: 100;
+            pointer-events: none;
+            box-shadow:
+                0 0 6px var(--amber),
+                0 0 18px rgba(245, 158, 11, 0.4),
+                0 0 40px rgba(245, 158, 11, 0.15);
+        }
+        .cursor-ring {
+            position: fixed;
+            width: 28px;
+            height: 28px;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            left: var(--mx);
+            top: var(--my);
+            z-index: 99;
+            pointer-events: none;
+            transition: width 0.2s, height 0.2s, border-color 0.2s;
+        }
+        .cursor-ring.hover {
+            width: 44px;
+            height: 44px;
+            border-color: rgba(245, 158, 11, 0.5);
+        }
+
+        /* ===== Form card ===== */
+        .hidden-form {
+            width: 420px;
+            max-width: 90vw;
+            padding: 48px 40px 40px;
+            background: rgba(18, 12, 5, 0.75);
+            border: 1px solid rgba(212, 165, 116, 0.12);
+            border-radius: 14px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: relative;
+        }
+        .hidden-form::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 14px;
+            background: linear-gradient(
+                160deg,
+                rgba(212, 165, 116, 0.18) 0%,
+                transparent 35%,
+                transparent 65%,
+                rgba(212, 165, 116, 0.08) 100%
+            );
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Corner ornaments */
+        .corner {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-color: rgba(212, 165, 116, 0.25);
+            border-style: solid;
+            pointer-events: none;
+        }
+        .corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-radius: 14px 0 0 0; }
+        .corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; border-radius: 0 14px 0 0; }
+        .corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; border-radius: 0 0 0 14px; }
+        .corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-radius: 0 0 14px 0; }
+
+        /* Small diamond ornament at center-top */
+        .diamond-ornament {
+            position: absolute;
+            top: -7px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
+            background: var(--dark-base);
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            pointer-events: none;
+        }
+
+        .form-title {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 26px;
+            color: var(--warm-white);
+            text-align: center;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .form-subtitle {
+            text-align: center;
+            color: rgba(212, 165, 116, 0.4);
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+        }
+        .form-divider {
+            width: 50px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--bronze), transparent);
+            margin: 0 auto 28px;
+            opacity: 0.6;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+            position: relative;
+        }
+        .form-group label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--bronze);
+            margin-bottom: 7px;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 11px 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            color: var(--warm-white);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            cursor: none;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--bronze);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.08), inset 0 1px 20px rgba(245, 158, 11, 0.03);
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(212, 165, 116, 0.2);
+            font-style: italic;
+        }
+        .form-group textarea {
+            resize: none;
+            height: 76px;
+        }
+        .form-error {
+            font-size: 11px;
+            color: #E0704A;
+            margin-top: 5px;
+            display: none;
+            padding-left: 2px;
+        }
+        .form-error.show { display: block; animation: errorShake 0.35s ease; }
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-4px); }
+            40% { transform: translateX(4px); }
+            60% { transform: translateX(-3px); }
+            80% { transform: translateX(2px); }
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 13px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #D97706, #92400E);
+            border: none;
+            border-radius: 8px;
+            color: #0C0804;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            cursor: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #F59E0B, #B45309);
+            box-shadow: 0 4px 30px rgba(245, 158, 11, 0.25);
+            transform: translateY(-1px);
+        }
+        .submit-btn:hover::after {
+            transform: translateX(100%);
+        }
+        .submit-btn:active { transform: translateY(0); }
+
+        /* ===== Success overlay ===== */
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: var(--dark-base);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+        .success-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .success-ring {
+            width: 90px;
+            height: 90px;
+            border: 2px solid var(--bronze);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 28px;
+            opacity: 0;
+            transform: scale(0);
+        }
+        .success-overlay.active .success-ring {
+            animation: ringPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s forwards;
+        }
+        @keyframes ringPop {
+            to { opacity: 1; transform: scale(1); }
+        }
+        .success-ring i {
+            font-size: 34px;
+            color: var(--amber);
+        }
+        .success-heading {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            color: var(--warm-white);
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        .success-overlay.active .success-heading {
+            animation: fadeUp 0.5s ease 0.8s forwards;
+        }
+        .success-sub {
+            font-size: 13px;
+            color: rgba(212, 165, 116, 0.45);
+            margin-top: 10px;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        .success-overlay.active .success-sub {
+            animation: fadeUp 0.5s ease 1s forwards;
+        }
+        .reset-btn {
+            margin-top: 36px;
+            padding: 10px 32px;
+            background: transparent;
+            border: 1px solid rgba(212, 165, 116, 0.25);
+            border-radius: 6px;
+            color: var(--bronze);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            letter-spacing: 1px;
+            cursor: none;
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        .success-overlay.active .reset-btn {
+            animation: fadeUp 0.5s ease 1.2s forwards;
+        }
+        .reset-btn:hover {
+            border-color: var(--bronze);
+            background: rgba(212, 165, 116, 0.06);
+        }
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Toast notification ===== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(28, 20, 10, 0.9);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            border-radius: 8px;
+            padding: 12px 24px;
+            color: var(--warm-white);
+            font-size: 13px;
+            z-index: 60;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ===== Touch device: hide custom cursor ===== */
+        @media (hover: none) and (pointer: coarse) {
+            .cursor-dot, .cursor-ring { display: none; }
+            body { cursor: auto; }
+            .form-group input, .form-group textarea, .submit-btn, .reset-btn { cursor: auto; }
+        }
+
+        /* ===== Reduced motion ===== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ===== Small screens ===== */
+        @media (max-width: 480px) {
+            .hidden-form { padding: 36px 22px 30px; }
+            .form-title { font-size: 21px; }
+            .hint-text { font-size: 10px; letter-spacing: 3px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background runes -->
+    <div class="rune" style="top:8%;left:6%;font-size:140px;transform:rotate(-12deg);">I</div>
+    <div class="rune" style="top:55%;right:7%;font-size:110px;transform:rotate(8deg);">II</div>
+    <div class="rune" style="bottom:12%;left:12%;font-size:100px;transform:rotate(-6deg);">III</div>
+    <div class="rune" style="top:18%;right:22%;font-size:90px;transform:rotate(15deg);">IV</div>
+    <div class="rune" style="bottom:30%;right:35%;font-size:70px;transform:rotate(-20deg);">V</div>
+
+    <!-- Hint text -->
+    <div class="hint-text" aria-hidden="true">Move to reveal what hides in darkness</div>
+    <div class="guide-arrow" aria-hidden="true"><i class="fas fa-chevron-down"></i></div>
+
+    <!-- Hidden content -->
+    <main class="content-layer">
+        <form class="hidden-form" id="secretForm" novalidate aria-label="Hidden registration form">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="diamond-ornament"></div>
+
+            <h1 class="form-title">The Hidden Registry</h1>
+            <p class="form-subtitle">Speak your name to enter</p>
+            <div class="form-divider"></div>
+
+            <div class="form-group">
+                <label for="fname">Your Name</label>
+                <input type="text" id="fname" placeholder="As you are known..." autocomplete="off" aria-required="true">
+                <div class="form-error" id="fnameErr" role="alert">A name is required to proceed</div>
+            </div>
+            <div class="form-group">
+                <label for="femail">Signal Frequency</label>
+                <input type="email" id="femail" placeholder="Your channel of contact..." autocomplete="off" aria-required="true">
+                <div class="form-error" id="femailErr" role="alert">A valid signal frequency is required</div>
+            </div>
+            <div class="form-group">
+                <label for="fpass">Secret Passphrase</label>
+                <input type="password" id="fpass" placeholder="Whisper it here..." autocomplete="off" aria-required="true">
+                <div class="form-error" id="fpassErr" role="alert">The passphrase must not be empty</div>
+            </div>
+            <div class="form-group">
+                <label for="fmsg">Your Intent</label>
+                <textarea id="fmsg" placeholder="Why do you seek entry?..."></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn" aria-label="Submit the form">
+                <i class="fas fa-fire" style="margin-right:8px;"></i>Ignite the Flame
+            </button>
+        </form>
+    </main>
+
+    <!-- Torch glow layers -->
+    <div class="torch-glow" id="torchGlow"></div>
+    <div class="torch-inner" id="torchInner"></div>
+
+    <!-- Particle canvas -->
+    <canvas class="dust-canvas" id="dustCanvas" aria-hidden="true"></canvas>
+
+    <!-- Dark overlays (torch mask) -->
+    <div class="dark-overlay" id="overlay1"></div>
+    <div class="dark-overlay-inner" id="overlay2"></div>
+
+    <!-- Custom cursor -->
+    <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+    <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+
+    <!-- Success overlay -->
+    <div class="success-overlay" id="successOverlay" role="dialog" aria-label="Submission successful">
+        <div class="success-ring"><i class="fas fa-fire"></i></div>
+        <div class="success-heading">The Flame Recognizes You</div>
+        <div class="success-sub">Your name has been inscribed in the eternal ledger</div>
+        <button class="reset-btn" id="resetBtn">Return to Darkness</button>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    (() => {
+        /* ===== State ===== */
+        let mx = window.innerWidth / 2;
+        let my = window.innerHeight / 2;
+        let sx = mx, sy = my;            // smooth position
+        const BASE_R = 130;
+        let phase = 0;
+        let submitted = false;
+        let expanding = false;
+
+        /* ===== DOM refs ===== */
+        const root = document.documentElement;
+        const glow = document.getElementById('torchGlow');
+        const inner = document.getElementById('torchInner');
+        const canvas = document.getElementById('dustCanvas');
+        const ctx = canvas.getContext('2d');
+        const form = document.getElementById('secretForm');
+        const successEl = document.getElementById('successOverlay');
+        const cursorDot = document.getElementById('cursorDot');
+        const cursorRing = document.getElementById('cursorRing');
+        const toast = document.getElementById('toast');
+
+        /* ===== Canvas resize ===== */
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        /* ===== Pointer tracking ===== */
+        document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+        document.addEventListener('touchmove', e => {
+            e.preventDefault();
+            mx = e.touches[0].clientX;
+            my = e.touches[0].clientY;
+        }, { passive: false });
+        document.addEventListener('touchstart', e => {
+            mx = e.touches[0].clientX;
+            my = e.touches[0].clientY;
+        });
+
+        /* ===== Hover detection for cursor ring ===== */
+        const interactives = () => document.querySelectorAll('input, textarea, button, a, [role="button"]');
+        document.addEventListener('mouseover', e => {
+            if (e.target.closest('input, textarea, button, a, [role="button"]')) {
+                cursorRing.classList.add('hover');
+            }
+        });
+        document.addEventListener('mouseout', e => {
+            if (e.target.closest('input, textarea, button, a, [role="button"]')) {
+                cursorRing.classList.remove('hover');
+            }
+        });
+
+        /* ===== Dust Particles ===== */
+        class Dust {
+            constructor() { this.reset(); }
+            reset() {
+                const a = Math.random() * Math.PI * 2;
+                const d = Math.random() * 150;
+                this.x = sx + Math.cos(a) * d;
+                this.y = sy + Math.sin(a) * d;
+                this.r = Math.random() * 1.8 + 0.4;
+                this.vx = (Math.random() - 0.5) * 0.25;
+                this.vy = -Math.random() * 0.45 - 0.08;
+                this.alpha = Math.random() * 0.5 + 0.1;
+                this.life = 1;
+                this.decay = Math.random() * 0.006 + 0.003;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx += (Math.random() - 0.5) * 0.015;
+                this.life -= this.decay;
+                if (this.life <= 0) this.reset();
+            }
+            draw() {
+                const a = Math.max(0, this.alpha * this.life);
+                if (a < 0.01) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.r), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(250,195,75,${a})`;
+                ctx.fill();
+            }
+        }
+
+        /* ===== Ember / Spark Particles ===== */
+        class Ember {
+            constructor() { this.reset(); this.life = Math.random(); }
+            reset() {
+                const a = Math.random() * Math.PI * 2;
+                this.x = sx + Math.cos(a) * (Math.random() * 30);
+                this.y = sy + Math.sin(a) * (Math.random() * 30);
+                this.r = Math.random() * 1.2 + 0.3;
+                this.vx = (Math.random() - 0.5) * 0.6;
+                this.vy = -Math.random() * 1.5 - 0.5;
+                this.alpha = Math.random() * 0.8 + 0.3;
+                this.life = 1;
+                this.decay = Math.random() * 0.015 + 0.008;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.01; // slight gravity curve
+                this.vx *= 0.995;
+                this.life -= this.decay;
+                if (this.life <= 0) this.reset();
+            }
+            draw() {
+                const a = Math.max(0, this.alpha * this.life);
+                if (a < 0.01) return;
+                // Embers are more orange-red
+                const r = 255;
+                const g = Math.floor(120 + 80 * this.life);
+                const b = Math.floor(30 * this.life);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.r * this.life), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
+                ctx.fill();
+            }
+        }
+
+        const dusts = Array.from({ length: 55 }, () => new Dust());
+        const embers = Array.from({ length: 18 }, () => new Ember());
+
+        /* ===== Main animation loop ===== */
+        function loop() {
+            requestAnimationFrame(loop);
+
+            if (submitted && !expanding) return;
+
+            // Smooth follow
+            sx += (mx - sx) * 0.1;
+            sy += (my - sy) * 0.1;
+
+            // Torch flicker
+            phase += 0.04;
+            const flicker =
+                Math.sin(phase * 3.1) * 5 +
+                Math.sin(phase * 7.3) * 3 +
+                Math.sin(phase * 13.7) * 1.5 +
+                (Math.random() - 0.5) * 3;
+            const r = BASE_R + flicker;
+
+            // Update CSS variables
+            root.style.setProperty('--mx', sx + 'px');
+            root.style.setProperty('--my', sy + 'px');
+            root.style.setProperty('--torch-r', r + 'px');
+
+            // Glow sizing
+            const glowSize = r * 4;
+            glow.style.width = glowSize + 'px';
+            glow.style.height = glowSize + 'px';
+
+            const innerSize = r * 1.5;
+            inner.style.width = innerSize + 'px';
+            inner.style.height = innerSize + 'px';
+
+            // Draw particles
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const d of dusts) { d.update(); d.draw(); }
+            for (const e of embers) { e.update(); e.draw(); }
+        }
+        loop();
+
+        /* ===== Toast utility ===== */
+        let toastTimer;
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        /* ===== Form validation & submit ===== */
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            if (submitted) return;
+
+            let ok = true;
+
+            // Name
+            const nameIn = document.getElementById('fname');
+            const nameErr = document.getElementById('fnameErr');
+            if (!nameIn.value.trim()) {
+                nameErr.classList.add('show');
+                nameIn.style.borderColor = '#E0704A';
+                ok = false;
+            } else {
+                nameErr.classList.remove('show');
+                nameIn.style.borderColor = '';
+            }
+
+            // Email
+            const emailIn = document.getElementById('femail');
+            const emailErr = document.getElementById('femailErr');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailIn.value.trim())) {
+                emailErr.classList.add('show');
+                emailIn.style.borderColor = '#E0704A';
+                ok = false;
+            } else {
+                emailErr.classList.remove('show');
+                emailIn.style.borderColor = '';
+            }
+
+            // Passphrase
+            const passIn = document.getElementById('fpass');
+            const passErr = document.getElementById('fpassErr');
+            if (!passIn.value.trim()) {
+                passErr.classList.add('show');
+                passIn.style.borderColor = '#E0704A';
+                ok = false;
+            } else {
+                passErr.classList.remove('show');
+                passIn.style.borderColor = '';
+            }
+
+            if (!ok) {
+                showToast('Complete all required fields to ignite the flame');
+                return;
+            }
+
+            // === Success: expand torch to full reveal ===
+            submitted = true;
+            expanding = true;
+            let progress = 0;
+
+            function expandStep() {
+                progress += 0.015;
+                // Ease-out curve
+                const eased = 1 - Math.pow(1 - Math.min(progress, 1), 3);
+                const maxDim = Math.max(window.innerWidth, window.innerHeight) * 1.2;
+                const expandedR = BASE_R + eased * maxDim;
+                root.style.setProperty('--torch-r', expandedR + 'px');
+
+                const glowSize = expandedR * 4;
+                glow.style.width = glowSize + 'px';
+                glow.style.height = glowSize + 'px';
+                inner.style.width = (expandedR * 1.5) + 'px';
+                inner.style.height = (expandedR * 1.5) + 'px';
+
+                if (progress < 1) {
+                    requestAnimationFrame(expandStep);
+                } else {
+                    expanding = false;
+                    // Fade to success
+                    setTimeout(() => successEl.classList.add('active'), 400);
+                }
+            }
+            expandStep();
+        });
+
+        // Clear errors on input
+        document.querySelectorAll('.form-group input, .form-group textarea').forEach(el => {
+            el.addEventListener('input', () => {
+                el.style.borderColor = '';
+                const err = el.parentElement.querySelector('.form-error');
+                if (err) err.classList.remove('show');
+            });
+        });
+
+        /* ===== Reset ===== */
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            submitted = false;
+            expanding = false;
+            successEl.classList.remove('active');
+            form.reset();
+            document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
+            document.querySelectorAll('.form-group input, .form-group textarea').forEach(e => e.style.borderColor = '');
+        });
+
+        /* ===== Keyboard: expand torch on Tab for accessibility ===== */
+        let kbMode = false;
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Tab' && !submitted) {
+                kbMode = true;
+                root.style.setProperty('--torch-r', '220px');
+            }
+        });
+        document.addEventListener('mousedown', () => {
+            if (kbMode && !submitted) {
+                kbMode = false;
+            }
+        });
+
+        /* ===== Prevent context menu on long-press (mobile) ===== */
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    })();
+    </script>
+</body>
+</html>

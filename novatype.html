@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVA Typewriter — Contact</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --desk: #2a1f14;
+            --desk-light: #3d2e1f;
+            --machine: #1a1a1a;
+            --machine-edge: #111;
+            --chrome: #b0b0b0;
+            --chrome-hi: #d8d8d8;
+            --chrome-lo: #606060;
+            --paper: #f5f0e1;
+            --paper-aged: #ede6d0;
+            --paper-line: #d4cbb8;
+            --ink: #1a1008;
+            --ink-red: #8b1a1a;
+            --ink-red-light: rgba(139,26,26,0.3);
+            --brass: #c9a84c;
+            --brass-dark: #8b6914;
+            --key-face: #222;
+            --key-ring: #555;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Special Elite', 'Courier New', monospace;
+            background-color: var(--desk);
+            background-image:
+                repeating-linear-gradient(87deg, transparent, transparent 1px, rgba(0,0,0,0.04) 1px, rgba(0,0,0,0.04) 3px),
+                repeating-linear-gradient(89deg, transparent, transparent 11px, rgba(0,0,0,0.05) 11px, rgba(0,0,0,0.05) 14px),
+                linear-gradient(180deg, #2a1f14, #342618 18%, #2a1f14 35%, #3d2e1f 55%, #2a1f14 75%, #342618 92%, #2a1f14);
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* Vignette overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(0,0,0,0.5) 100%);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Warm desk lamp glow */
+        .lamp-glow {
+            position: fixed;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(255,220,150,0.07) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Dust particles */
+        .dust {
+            position: fixed;
+            border-radius: 50%;
+            background: rgba(255,245,220,0.2);
+            pointer-events: none;
+            z-index: 1;
+            animation: dustFloat linear infinite;
+        }
+        @keyframes dustFloat {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            8% { opacity: 1; }
+            92% { opacity: 0.6; }
+            100% { transform: translateY(-100vh) translateX(40px); opacity: 0; }
+        }
+
+        /* === TYPEWRITER MACHINE === */
+        .typewriter-machine {
+            position: relative;
+            width: 620px;
+            max-width: 100%;
+            background: linear-gradient(180deg, #1e1e1e 0%, var(--machine) 8%, var(--machine-edge) 50%, #0d0d0d 100%);
+            border-radius: 14px 14px 24px 24px;
+            padding: 0 0 28px 0;
+            box-shadow:
+                0 30px 80px rgba(0,0,0,0.8),
+                0 10px 30px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.06),
+                inset 0 -1px 0 rgba(0,0,0,0.3);
+            z-index: 10;
+            animation: machineAppear 0.8s ease-out both;
+        }
+        @keyframes machineAppear {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Brand plate */
+        .brand-plate {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 0 8px;
+        }
+        .brand-plate span {
+            background: linear-gradient(180deg, var(--brass), var(--brass-dark), var(--brass));
+            color: var(--ink);
+            padding: 3px 24px;
+            border-radius: 2px;
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        /* Platen area */
+        .platen-area {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: relative;
+        }
+        .platen-knob {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 38% 32%, #999, #444 60%, #333);
+            border: 2px solid #555;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+            position: relative;
+            z-index: 5;
+        }
+        .platen-knob::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #777, #2a2a2a);
+            border: 1px solid #444;
+        }
+        .platen-bar {
+            flex: 1;
+            height: 22px;
+            background: linear-gradient(180deg, #555 0%, #333 30%, #222 70%, #444 100%);
+            border-radius: 11px;
+            margin: 0 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        /* Ribbon */
+        .ribbon-strip {
+            height: 7px;
+            margin: 4px 60px 0;
+            background: repeating-linear-gradient(90deg, var(--ink) 0px, var(--ink) 18px, var(--ink-red) 18px, var(--ink-red) 36px);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            opacity: 0.8;
+        }
+
+        /* Carriage return lever */
+        .carriage-lever {
+            position: absolute;
+            left: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 56px;
+            height: 10px;
+            background: linear-gradient(180deg, #888, #555, #777);
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            z-index: 15;
+            transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+        .carriage-lever.returned {
+            transform: translateY(-50%) translateX(35px);
+        }
+
+        /* Paper guides */
+        .paper-guides {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 28px;
+        }
+        .paper-guide {
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(180deg, #666, #3a3a3a);
+            border-radius: 1px;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+        }
+
+        /* === PAPER === */
+        .paper-wrapper {
+            padding: 6px 28px 0;
+            overflow: hidden;
+        }
+        .paper {
+            background: var(--paper);
+            background-image:
+                repeating-linear-gradient(transparent, transparent 31px, var(--paper-line) 31px, var(--paper-line) 32px);
+            padding: 32px 44px 36px;
+            position: relative;
+            box-shadow:
+                2px 3px 12px rgba(0,0,0,0.35),
+                inset 0 0 40px rgba(139,26,26,0.03);
+            animation: paperFeed 1s ease-out 0.3s both;
+            transform-origin: top center;
+        }
+        @keyframes paperFeed {
+            from { transform: translateY(60px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Red margin line */
+        .paper::before {
+            content: '';
+            position: absolute;
+            left: 38px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--ink-red-light);
+        }
+
+        /* Paper aging effects */
+        .paper::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            width: 30px;
+            height: 20px;
+            background: rgba(139,100,60,0.06);
+            border-radius: 50%;
+            filter: blur(6px);
+        }
+
+        /* Paper header */
+        .paper-header {
+            text-align: center;
+            margin-bottom: 24px;
+            color: var(--ink-red);
+            font-size: 13px;
+            letter-spacing: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .paper-header .rule {
+            flex: 1;
+            max-width: 80px;
+            height: 1px;
+            background: var(--ink-red);
+            opacity: 0.5;
+        }
+
+        /* Form fields */
+        .form-row {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .form-row.full {
+            flex-direction: column;
+            gap: 4px;
+        }
+        .form-label {
+            font-size: 13px;
+            color: var(--ink);
+            letter-spacing: 2px;
+            min-width: 80px;
+            opacity: 0.7;
+        }
+        .type-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid transparent;
+            font-family: 'Special Elite', 'Courier New', monospace;
+            font-size: 15px;
+            color: var(--ink);
+            caret-color: var(--ink-red);
+            outline: none;
+            width: 100%;
+            padding: 7px 0;
+            transition: border-color 0.2s;
+        }
+        .type-input::placeholder {
+            color: rgba(26,16,8,0.2);
+            font-style: italic;
+        }
+        .type-input:focus {
+            border-bottom-color: var(--ink-red);
+        }
+        .type-input.error {
+            border-bottom-color: var(--ink-red);
+            animation: inputShake 0.4s ease;
+        }
+        @keyframes inputShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-4px); }
+            40% { transform: translateX(4px); }
+            60% { transform: translateX(-3px); }
+            80% { transform: translateX(3px); }
+        }
+        .type-textarea {
+            resize: none;
+            line-height: 32px;
+            min-height: 192px;
+        }
+        .error-msg {
+            font-size: 11px;
+            color: var(--ink-red);
+            min-height: 16px;
+            padding-left: 2px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .error-msg.visible {
+            opacity: 1;
+        }
+
+        /* === KEYBOARD === */
+        .keyboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 20px 30px 8px;
+        }
+        .key-row {
+            display: flex;
+            gap: 6px;
+        }
+        .key {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 32%, #3a3a3a, var(--key-face) 70%);
+            border: 2.5px solid var(--key-ring);
+            box-shadow:
+                0 4px 8px rgba(0,0,0,0.5),
+                0 1px 2px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--chrome);
+            font-family: 'Special Elite', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: transform 0.04s, box-shadow 0.04s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .key:hover {
+            border-color: var(--chrome-hi);
+        }
+        .key.pressed {
+            transform: translateY(3px);
+            box-shadow:
+                0 1px 2px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+            border-color: var(--chrome-lo);
+        }
+
+        /* Space bar & Return bar */
+        .bottom-bars {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 6px 30px 0;
+        }
+        .space-bar {
+            flex: 1;
+            max-width: 280px;
+            height: 28px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #444, #222 50%, #333);
+            border: 2px solid var(--key-ring);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+            cursor: pointer;
+            transition: transform 0.04s, box-shadow 0.04s;
+        }
+        .space-bar.pressed {
+            transform: translateY(2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .return-bar {
+            height: 32px;
+            padding: 0 28px;
+            border-radius: 6px;
+            background: linear-gradient(180deg, #c0392b, #8b1a1a 50%, #6b1010);
+            border: 2px solid #a02020;
+            color: #f5f0e1;
+            font-family: 'Special Elite', monospace;
+            font-size: 13px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(139,26,26,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+            transition: transform 0.06s, box-shadow 0.06s, background 0.15s;
+        }
+        .return-bar:hover {
+            background: linear-gradient(180deg, #d4433a, #a02020 50%, #7b1212);
+        }
+        .return-bar:active, .return-bar.pressed {
+            transform: translateY(2px);
+            box-shadow: 0 1px 3px rgba(139,26,26,0.4);
+        }
+
+        /* === TOAST === */
+        .toast {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 300px;
+            background: var(--paper);
+            padding: 24px;
+            border-radius: 2px;
+            box-shadow: 4px 6px 24px rgba(0,0,0,0.5);
+            z-index: 200;
+            transform: translateX(120%);
+            transition: transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+            font-family: 'Special Elite', monospace;
+            color: var(--ink);
+            position: fixed;
+        }
+        .toast.show {
+            transform: translateX(0);
+        }
+        .toast-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        .toast-header i {
+            color: var(--ink-red);
+            font-size: 18px;
+        }
+        .toast-body {
+            font-size: 12px;
+            line-height: 1.6;
+            opacity: 0.7;
+        }
+        /* Postmark stamp */
+        .postmark {
+            position: absolute;
+            bottom: 12px;
+            right: 16px;
+            width: 64px;
+            height: 64px;
+            border: 2.5px solid var(--ink-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.35;
+            transform: rotate(-15deg);
+        }
+        .postmark-inner {
+            font-size: 7px;
+            text-align: center;
+            letter-spacing: 1px;
+            line-height: 1.3;
+            color: var(--ink-red);
+        }
+        .postmark-line {
+            width: 80%;
+            height: 1.5px;
+            background: var(--ink-red);
+            position: absolute;
+            transform: rotate(-30deg);
+        }
+
+        /* Ink splatters (decorative) */
+        .ink-splat {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(26,16,8,0.04);
+            pointer-events: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 680px) {
+            .typewriter-machine { border-radius: 10px 10px 18px 18px; }
+            .paper { padding: 24px 24px 28px; }
+            .paper::before { left: 20px; }
+            .form-row { flex-direction: column; gap: 0; }
+            .form-label { min-width: unset; }
+            .keyboard { display: none; }
+            .bottom-bars { padding: 10px 20px 0; }
+            .ribbon-strip { margin: 4px 36px 0; }
+            .paper-guides { padding: 0 16px; }
+            .paper-wrapper { padding: 4px 16px 0; }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+            .dust { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Desk lamp glow -->
+    <div class="lamp-glow"></div>
+
+    <!-- Dust particles container -->
+    <div id="dustContainer"></div>
+
+    <main>
+        <div class="typewriter-machine" role="form" aria-label="Typewriter contact form">
+
+            <!-- Brand plate -->
+            <div class="brand-plate">
+                <span>NOVA</span>
+            </div>
+
+            <!-- Platen area -->
+            <div class="platen-area">
+                <!-- Carriage return lever -->
+                <div class="carriage-lever" id="carriageLever" aria-hidden="true" title="Carriage return"></div>
+                <div class="platen-knob"></div>
+                <div class="platen-bar"></div>
+                <div class="platen-knob"></div>
+            </div>
+
+            <!-- Ink ribbon -->
+            <div class="ribbon-strip" aria-hidden="true"></div>
+
+            <!-- Paper guides -->
+            <div class="paper-guides" aria-hidden="true">
+                <div class="paper-guide"></div>
+                <div class="paper-guide"></div>
+            </div>
+
+            <!-- Paper with form -->
+            <div class="paper-wrapper">
+                <div class="paper" id="paper">
+                    <!-- Decorative ink splatters -->
+                    <div class="ink-splat" style="width:18px;height:14px;top:60px;right:30px;opacity:0.6;" aria-hidden="true"></div>
+                    <div class="ink-splat" style="width:10px;height:10px;bottom:80px;left:60px;opacity:0.4;" aria-hidden="true"></div>
+
+                    <div class="paper-header">
+                        <span class="rule"></span>
+                        CORRESPONDENCE
+                        <span class="rule"></span>
+                    </div>
+
+                    <form id="contactForm" novalidate>
+                        <div class="form-row">
+                            <label class="form-label" for="nameInput">NAME:</label>
+                            <input type="text" id="nameInput" class="type-input" name="name"
+                                   placeholder="Your full name" required autocomplete="name" aria-required="true">
+                        </div>
+                        <div class="error-msg" id="nameError">Please enter your name</div>
+
+                        <div class="form-row">
+                            <label class="form-label" for="emailInput">EMAIL:</label>
+                            <input type="email" id="emailInput" class="type-input" name="email"
+                                   placeholder="your@email.com" required autocomplete="email" aria-required="true">
+                        </div>
+                        <div class="error-msg" id="emailError">Please enter a valid email address</div>
+
+                        <div class="form-row">
+                            <label class="form-label" for="subjectInput">SUBJECT:</label>
+                            <input type="text" id="subjectInput" class="type-input" name="subject"
+                                   placeholder="What is this regarding" required aria-required="true">
+                        </div>
+                        <div class="error-msg" id="subjectError">Please enter a subject</div>
+
+                        <div class="form-row full">
+                            <label class="form-label" for="messageInput">MESSAGE:</label>
+                            <textarea id="messageInput" class="type-input type-textarea" name="message"
+                                      placeholder="Type your message here..." required aria-required="true"></textarea>
+                        </div>
+                        <div class="error-msg" id="messageError">Please write a message</div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Keyboard -->
+            <div class="keyboard" id="keyboard" aria-hidden="true"></div>
+
+            <!-- Space bar & Return bar -->
+            <div class="bottom-bars">
+                <div class="space-bar" id="spaceBar"></div>
+                <button class="return-bar" id="returnBar" type="button" aria-label="Send message">
+                    RETURN <i class="fa-solid fa-arrow-right" style="font-size:11px;margin-left:4px;"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast" role="alert" aria-live="polite">
+        <div class="toast-header">
+            <i class="fa-solid fa-check-circle"></i>
+            MESSAGE DELIVERED
+        </div>
+        <div class="toast-body">
+            Your correspondence has been received.
+            We shall respond at our earliest convenience.
+        </div>
+        <!-- Postmark decoration -->
+        <div class="postmark">
+            <div class="postmark-line"></div>
+            <div class="postmark-inner">NOVA<br>RECEIVED</div>
+        </div>
+    </div>
+
+    <script>
+        /* ===========================
+           Audio Engine (Web Audio API)
+           =========================== */
+        let audioCtx = null;
+
+        function getAudioCtx() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+
+        // Typewriter key strike sound — short noise burst
+        function playTypeSound() {
+            const ctx = getAudioCtx();
+            const duration = 0.035;
+            const bufferSize = Math.floor(ctx.sampleRate * duration);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                const t = i / ctx.sampleRate;
+                // Sharp attack, quick exponential decay — metallic click
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-t / 0.004)
+                        + Math.sin(2 * Math.PI * 4200 * t) * Math.exp(-t / 0.003) * 0.3;
+            }
+
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 3500;
+            filter.Q.value = 1.2;
+
+            const gain = ctx.createGain();
+            gain.gain.value = 0.18;
+
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            source.start();
+        }
+
+        // Carriage return "ding" — bell-like tone
+        function playDingSound() {
+            const ctx = getAudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.frequency.value = 2400;
+            osc.type = 'sine';
+
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.6);
+        }
+
+        // Space bar — slightly deeper thud
+        function playSpaceSound() {
+            const ctx = getAudioCtx();
+            const duration = 0.05;
+            const bufferSize = Math.floor(ctx.sampleRate * duration);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                const t = i / ctx.sampleRate;
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-t / 0.008)
+                        + Math.sin(2 * Math.PI * 800 * t) * Math.exp(-t / 0.006) * 0.4;
+            }
+
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 2000;
+
+            const gain = ctx.createGain();
+            gain.gain.value = 0.15;
+
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            source.start();
+        }
+
+        /* ===========================
+           Visual Keyboard Generation
+           =========================== */
+        const keyRows = [
+            ['1','2','3','4','5','6','7','8','9','0'],
+            ['Q','W','E','R','T','Y','U','I','O','P'],
+            ['A','S','D','F','G','H','J','K','L'],
+            ['Z','X','C','V','B','N','M',',','.']
+        ];
+
+        const keyboard = document.getElementById('keyboard');
+        const keyElements = {};
+
+        keyRows.forEach(row => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'key-row';
+            row.forEach(char => {
+                const key = document.createElement('div');
+                key.className = 'key';
+                key.textContent = char;
+                key.dataset.char = char;
+                keyElements[char.toLowerCase()] = key;
+                rowDiv.appendChild(key);
+            });
+            keyboard.appendChild(rowDiv);
+        });
+
+        /* ===========================
+           Key Press Mapping
+           =========================== */
+        const spaceBar = document.getElementById('spaceBar');
+
+        document.addEventListener('keydown', (e) => {
+            // Check if focus is in one of our form fields
+            const active = document.activeElement;
+            const isFormInput = active && active.classList.contains('type-input');
+
+            if (!isFormInput) return;
+
+            const k = e.key.toLowerCase();
+
+            if (k === ' ') {
+                spaceBar.classList.add('pressed');
+                playSpaceSound();
+                return;
+            }
+
+            if (keyElements[k]) {
+                keyElements[k].classList.add('pressed');
+                playTypeSound();
+            } else if (e.key.length === 1) {
+                // Character not on our visual keyboard
+                playTypeSound();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === ' ') {
+                spaceBar.classList.remove('pressed');
+                return;
+            }
+            if (keyElements[k]) {
+                keyElements[k].classList.remove('pressed');
+            }
+        });
+
+        // Visual keyboard click support (for mobile / mouse users)
+        keyboard.addEventListener('pointerdown', (e) => {
+            const key = e.target.closest('.key');
+            if (!key) return;
+            const char = key.dataset.char;
+            key.classList.add('pressed');
+            playTypeSound();
+
+            // Insert character into focused input
+            const active = document.activeElement;
+            if (active && active.classList.contains('type-input')) {
+                const start = active.selectionStart;
+                const end = active.selectionEnd;
+                const val = active.value;
+                active.value = val.slice(0, start) + char + val.slice(end);
+                active.selectionStart = active.selectionEnd = start + 1;
+                active.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+
+        keyboard.addEventListener('pointerup', (e) => {
+            const key = e.target.closest('.key');
+            if (key) key.classList.remove('pressed');
+        });
+
+        keyboard.addEventListener('pointerleave', (e) => {
+            const key = e.target.closest('.key');
+            if (key) key.classList.remove('pressed');
+        });
+
+        /* ===========================
+           Form Validation & Submit
+           =========================== */
+        const form = document.getElementById('contactForm');
+        const returnBar = document.getElementById('returnBar');
+        const carriageLever = document.getElementById('carriageLever');
+
+        const fields = [
+            { input: document.getElementById('nameInput'),    error: document.getElementById('nameError'),    validate: v => v.trim().length > 0 },
+            { input: document.getElementById('emailInput'),   error: document.getElementById('emailError'),   validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+            { input: document.getElementById('subjectInput'), error: document.getElementById('subjectError'), validate: v => v.trim().length > 0 },
+            { input: document.getElementById('messageInput'), error: document.getElementById('messageError'), validate: v => v.trim().length > 0 }
+        ];
+
+        // Clear error on input
+        fields.forEach(({ input, error }) => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                error.classList.remove('visible');
+            });
+        });
+
+        function validateForm() {
+            let valid = true;
+            fields.forEach(({ input, error, validate }) => {
+                if (!validate(input.value)) {
+                    input.classList.add('error');
+                    error.classList.add('visible');
+                    valid = false;
+                }
+            });
+            return valid;
+        }
+
+        function handleSubmit() {
+            if (!validateForm()) {
+                // Shake the first invalid field
+                const first = fields.find(f => f.input.classList.contains('error'));
+                if (first) first.input.focus();
+                return;
+            }
+
+            // Carriage return animation
+            playDingSound();
+            carriageLever.classList.add('returned');
+
+            // Disable button briefly
+            returnBar.disabled = true;
+            returnBar.style.opacity = '0.6';
+
+            setTimeout(() => {
+                carriageLever.classList.remove('returned');
+            }, 400);
+
+            setTimeout(() => {
+                // Show toast
+                showToast();
+
+                // Reset form
+                form.reset();
+                fields.forEach(({ input, error }) => {
+                    input.classList.remove('error');
+                    error.classList.remove('visible');
+                });
+
+                returnBar.disabled = false;
+                returnBar.style.opacity = '1';
+            }, 800);
+        }
+
+        returnBar.addEventListener('click', handleSubmit);
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSubmit();
+        });
+
+        // Also allow Enter key to submit when focused on the return bar
+        returnBar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleSubmit();
+            }
+        });
+
+        /* ===========================
+           Toast Notification
+           =========================== */
+        const toast = document.getElementById('toast');
+        let toastTimeout = null;
+
+        function showToast() {
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toast.classList.add('show');
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        /* ===========================
+           Dust Particles
+           =========================== */
+        const dustContainer = document.getElementById('dustContainer');
+
+        function createDust() {
+            const dust = document.createElement('div');
+            dust.className = 'dust';
+            const size = Math.random() * 2.5 + 1;
+            dust.style.width = size + 'px';
+            dust.style.height = size + 'px';
+            dust.style.left = Math.random() * 100 + 'vw';
+            dust.style.top = Math.random() * 100 + 'vh';
+            dust.style.animationDuration = (Math.random() * 12 + 10) + 's';
+            dust.style.animationDelay = (Math.random() * 8) + 's';
+            dustContainer.appendChild(dust);
+        }
+
+        // Create dust particles
+        for (let i = 0; i < 18; i++) createDust();
+
+        /* ===========================
+           Subtle Paper Movement
+           =========================== */
+        const paper = document.getElementById('paper');
+        let paperFloatFrame;
+
+        function animatePaperFloat(time) {
+            const y = Math.sin(time * 0.0008) * 1.2;
+            const r = Math.sin(time * 0.0006) * 0.15;
+            paper.style.transform = `translateY(${y}px) rotate(${r}deg)`;
+            paperFloatFrame = requestAnimationFrame(animatePaperFloat);
+        }
+
+        // Start after initial feed animation
+        setTimeout(() => {
+            paperFloatFrame = requestAnimationFrame(animatePaperFloat);
+        }, 1400);
+
+        /* ===========================
+           Carriage Lever Click
+           =========================== */
+        carriageLever.addEventListener('click', () => {
+            playDingSound();
+            carriageLever.classList.add('returned');
+            setTimeout(() => carriageLever.classList.remove('returned'), 400);
+        });
+    </script>
+</body>
+</html>
