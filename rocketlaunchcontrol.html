@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Launch Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #060610;
+            --panel-bg: #0e0f1e;
+            --panel-border: #1c1d35;
+            --text: #b0b5c4;
+            --text-bright: #eef0f4;
+            --red: #e53e3e;
+            --red-glow: rgba(229,62,62,0.45);
+            --orange: #f97316;
+            --amber: #fbbf24;
+            --green: #22c55e;
+            --cyan: #06b6d4;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;width:100vw;height:100vh}
+        canvas.layer{position:fixed;top:0;left:0;width:100%;height:100%}
+        #stars-canvas{z-index:0}
+        #fx-canvas{z-index:100;pointer-events:none}
+
+        /* Ambient glow at bottom during ignition/launch */
+        #ambient{position:fixed;bottom:0;left:0;width:100%;height:55%;background:radial-gradient(ellipse at 50% 100%,rgba(249,115,22,0.18),transparent 70%);opacity:0;z-index:5;pointer-events:none;transition:opacity .6s}
+        #ambient.on{opacity:1}
+
+        /* Scene container */
+        #scene{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:16px}
+
+        /* Countdown overlay */
+        #cd-overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .15s}
+        #cd-overlay.on{opacity:1}
+        .cd-num{font-family:'Orbitron',monospace;font-size:clamp(90px,22vw,260px);font-weight:900;color:var(--text-bright);text-shadow:0 0 50px rgba(255,255,255,0.25);animation:cdPulse 1s ease-out forwards}
+        .cd-num.warn{color:var(--amber);text-shadow:0 0 50px rgba(251,191,36,0.35)}
+        .cd-num.crit{color:var(--red);text-shadow:0 0 60px var(--red-glow)}
+        @keyframes cdPulse{0%{transform:scale(2.2);opacity:0}18%{transform:scale(1);opacity:1}78%{opacity:1}100%{opacity:0;transform:scale(.88)}}
+
+        /* Rocket wrapper — translated upward on launch */
+        #rocket-wrap{position:relative;transition:none}
+        .rocket{position:relative;width:68px;display:flex;flex-direction:column;align-items:center}
+        .rocket.idle{animation:bob 3s ease-in-out infinite}
+        @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+        /* Nose */
+        .nose{width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:52px solid #d4d4d8;position:relative;z-index:2}
+        .nose::after{content:'';position:absolute;top:16px;left:-11px;width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:36px solid var(--red)}
+
+        /* Body */
+        .r-body{width:44px;height:105px;background:linear-gradient(90deg,#a1a1aa 0%,#e4e4e7 30%,#fafafa 50%,#e4e4e7 70%,#a1a1aa 100%);position:relative;z-index:2}
+        .r-body .win{position:absolute;top:16px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 38% 38%,#67e8f9,#0891b2,#164e63);border:2px solid #71717a;box-shadow:0 0 10px rgba(6,182,212,0.5)}
+        .r-body .band{position:absolute;left:0;width:100%;height:4px;background:var(--red)}
+        .band-a{top:52px}.band-b{top:60px}
+
+        /* Fins */
+        .fin{position:absolute;bottom:0;width:0;height:0;z-index:1}
+        .fin-l{left:-18px;border-right:22px solid #71717a;border-top:12px solid transparent;border-bottom:26px solid transparent}
+        .fin-r{right:-18px;border-left:22px solid #71717a;border-top:12px solid transparent;border-bottom:26px solid transparent}
+        .fin-c{left:50%;transform:translateX(-50%);bottom:-4px;border-left:10px solid transparent;border-right:10px solid transparent;border-top:18px solid #52525b}
+
+        /* Nozzle */
+        .nozzle{width:28px;height:14px;background:linear-gradient(to bottom,#52525b,#27272a);border-radius:0 0 6px 6px;position:relative;z-index:2}
+
+        /* Flames */
+        .flames{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%) scaleY(0);width:50px;height:100px;opacity:0;transition:opacity .25s;z-index:0;transform-origin:top center}
+        .flames.on{opacity:1}
+        .fl{position:absolute;bottom:0;left:50%;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;transform:translateX(-50%)}
+        .fl-core{width:14px;height:52px;background:linear-gradient(to bottom,#fff,#fef08a,#fbbf24);filter:blur(2px);animation:fk1 .08s infinite alternate}
+        .fl-mid{width:24px;height:72px;background:linear-gradient(to bottom,#fbbf24,#f97316,#ea580c);filter:blur(4px);animation:fk2 .11s infinite alternate;margin-left:-12px}
+        .fl-out{width:38px;height:92px;background:linear-gradient(to bottom,#f97316,#dc2626,#991b1b,transparent);filter:blur(6px);animation:fk3 .14s infinite alternate;margin-left:-19px}
+        .fl-glow{width:90px;height:90px;background:radial-gradient(circle,rgba(251,191,36,0.3),transparent 70%);bottom:-22px;margin-left:-45px;filter:blur(12px);animation:gp .18s infinite alternate}
+        @keyframes fk1{0%{height:46px;width:12px}100%{height:58px;width:16px}}
+        @keyframes fk2{0%{height:66px;width:22px}100%{height:78px;width:27px}}
+        @keyframes fk3{0%{height:84px;width:34px}100%{height:98px;width:42px}}
+        @keyframes gp{0%{opacity:.55;transform:translateX(-50%) scale(.88)}100%{opacity:1;transform:translateX(-50%) scale(1.12)}}
+
+        /* Launch pad */
+        .pad{width:120px;height:12px;background:linear-gradient(to bottom,#3f3f46,#27272a);border-radius:2px;position:relative;box-shadow:0 4px 24px rgba(0,0,0,.5);flex-shrink:0}
+        .pad::before,.pad::after{content:'';position:absolute;bottom:-22px;width:8px;height:22px;background:#3f3f46;border-radius:0 0 2px 2px}
+        .pad::before{left:10px}.pad::after{right:10px}
+
+        /* Control panel */
+        #panel{margin-top:36px;background:linear-gradient(145deg,var(--panel-bg),#090a16);border:1px solid var(--panel-border);border-radius:16px;padding:22px 34px 26px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 8px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.03);position:relative;flex-shrink:0}
+        #panel::before{content:'';position:absolute;inset:0;border-radius:16px;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.008) 3px,rgba(255,255,255,.008) 4px);pointer-events:none}
+        .p-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:#3f3f50;text-transform:uppercase}
+
+        /* Indicator row */
+        .inds{display:flex;gap:14px}
+        .ind-g{display:flex;flex-direction:column;align-items:center;gap:4px}
+        .ind{width:8px;height:8px;border-radius:50%;background:#181828;border:1px solid #252538;transition:all .3s}
+        .ind.g{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.55)}
+        .ind.r{background:var(--red);box-shadow:0 0 8px var(--red-glow)}
+        .ind.a{background:var(--amber);box-shadow:0 0 8px rgba(251,191,36,.55)}
+        .ind-lbl{font-family:'Orbitron',monospace;font-size:6px;letter-spacing:1px;color:#333348}
+
+        /* Button area */
+        .btn-area{position:relative;width:88px;height:88px;perspective:500px}
+        .cover{position:absolute;inset:0;background:linear-gradient(150deg,#2a2a40,#18182c);border:2px solid #38385a;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transform-origin:bottom center;transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .3s;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05)}
+        .cover:hover{border-color:#4a4a6e}
+        .cover.open{transform:rotateX(-145deg);opacity:0;pointer-events:none}
+        .cover-txt{font-family:'Orbitron',monospace;font-size:7px;letter-spacing:1px;color:#6b6b88;text-align:center;line-height:1.5}
+
+        #launch-btn{width:88px;height:88px;border-radius:50%;border:3px solid #7f1d1d;background:radial-gradient(circle at 35% 35%,#f87171,#dc2626,#991b1b);cursor:pointer;position:relative;box-shadow:0 4px 16px rgba(0,0,0,.45),inset 0 2px 4px rgba(255,255,255,.18);transition:all .12s;outline:none;z-index:1}
+        #launch-btn:disabled{cursor:not-allowed;opacity:.45;filter:saturate(.3)}
+        #launch-btn:not(:disabled):hover{box-shadow:0 4px 28px var(--red-glow),inset 0 2px 4px rgba(255,255,255,.18)}
+        #launch-btn:not(:disabled):active{transform:scale(.94);box-shadow:0 2px 10px var(--red-glow),inset 0 2px 8px rgba(0,0,0,.35)}
+        #launch-btn.pulse{animation:bp 1.4s ease-in-out infinite}
+        @keyframes bp{0%,100%{box-shadow:0 4px 16px rgba(0,0,0,.45),inset 0 2px 4px rgba(255,255,255,.18)}50%{box-shadow:0 4px 34px var(--red-glow),0 0 70px rgba(229,62,62,.18),inset 0 2px 4px rgba(255,255,255,.18)}}
+        .btn-lbl{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;color:#fecaca;letter-spacing:2px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+        #status{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--green);text-transform:uppercase;min-height:16px;text-align:center;transition:color .3s}
+
+        /* Shake classes */
+        .sk-l{animation:sl .1s infinite}
+        .sk-m{animation:sm .08s infinite}
+        .sk-h{animation:sh .05s infinite}
+        @keyframes sl{0%,100%{transform:translate(0,0)}25%{transform:translate(-1px,1px)}75%{transform:translate(1px,-1px)}}
+        @keyframes sm{0%,100%{transform:translate(0,0)}20%{transform:translate(-3px,2px)}40%{transform:translate(2px,-3px)}60%{transform:translate(-2px,1px)}80%{transform:translate(3px,-1px)}}
+        @keyframes sh{0%,100%{transform:translate(0,0)}10%{transform:translate(-6px,3px)}30%{transform:translate(5px,-5px)}50%{transform:translate(-4px,4px)}70%{transform:translate(6px,-3px)}90%{transform:translate(-5px,-3px)}}
+
+        /* Success overlay */
+        #success{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .9s;background:radial-gradient(ellipse at center,rgba(6,6,16,.7),transparent 80%)}
+        #success.on{opacity:1;pointer-events:auto}
+        .s-title{font-family:'Orbitron',monospace;font-size:clamp(26px,5vw,54px);font-weight:900;color:var(--green);text-shadow:0 0 50px rgba(34,197,94,.35);letter-spacing:4px}
+        .s-sub{font-size:15px;color:#52525b;margin-top:10px;letter-spacing:2px}
+        #reset-btn{margin-top:38px;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px;color:var(--text);background:transparent;border:1px solid #33334a;padding:12px 30px;border-radius:8px;cursor:pointer;transition:all .2s}
+        #reset-btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 24px rgba(6,182,212,.14)}
+
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+        @media(max-height:580px){#panel{margin-top:18px;padding:16px 28px 20px}.pad{margin-top:8px}.rocket{transform:scale(.78);transform-origin:top center}}
+    </style>
+</head>
+<body>
+    <canvas id="stars-canvas" class="layer"></canvas>
+    <div id="ambient"></div>
+
+    <main id="scene">
+        <div id="cd-overlay"><div class="cd-num" id="cd-num"></div></div>
+
+        <div id="rocket-wrap">
+            <div class="rocket idle" id="rocket">
+                <div class="nose"></div>
+                <div class="r-body">
+                    <div class="win"></div>
+                    <div class="band band-a"></div>
+                    <div class="band band-b"></div>
+                    <div class="fin fin-l"></div>
+                    <div class="fin fin-r"></div>
+                    <div class="fin fin-c"></div>
+                </div>
+                <div class="nozzle"></div>
+                <div class="flames" id="flames">
+                    <div class="fl fl-glow"></div>
+                    <div class="fl fl-out"></div>
+                    <div class="fl fl-mid"></div>
+                    <div class="fl fl-core"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pad" id="pad"></div>
+
+        <div id="panel">
+            <div class="p-title">Launch Control</div>
+            <div class="inds">
+                <div class="ind-g"><div class="ind g" id="i0"></div><span class="ind-lbl">FUEL</span></div>
+                <div class="ind-g"><div class="ind g" id="i1"></div><span class="ind-lbl">O2</span></div>
+                <div class="ind-g"><div class="ind g" id="i2"></div><span class="ind-lbl">NAV</span></div>
+                <div class="ind-g"><div class="ind g" id="i3"></div><span class="ind-lbl">COM</span></div>
+                <div class="ind-g"><div class="ind" id="i4"></div><span class="ind-lbl">ARM</span></div>
+            </div>
+            <div class="btn-area">
+                <div class="cover" id="cover" role="button" aria-label="Open safety cover" tabindex="0">
+                    <span class="cover-txt">LIFT TO<br>ARM</span>
+                </div>
+                <button id="launch-btn" disabled aria-label="Launch rocket">
+                    <span class="btn-lbl">LAUNCH</span>
+                </button>
+            </div>
+            <div id="status">SYSTEMS NOMINAL</div>
+        </div>
+    </main>
+
+    <div id="success">
+        <div class="s-title">LAUNCH SUCCESSFUL</div>
+        <div class="s-sub">Payload delivered to orbit</div>
+        <button id="reset-btn">RESET SEQUENCE</button>
+    </div>
+
+    <canvas id="fx-canvas" class="layer"></canvas>
+
+    <script>
+    /* =============================================
+       STAR FIELD
+       ============================================= */
+    const sCvs = document.getElementById('stars-canvas');
+    const sCtx = sCvs.getContext('2d');
+    const fCvs = document.getElementById('fx-canvas');
+    const fCtx = fCvs.getContext('2d');
+    let W, H;
+
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        sCvs.width = fCvs.width = W;
+        sCvs.height = fCvs.height = H;
+        initStars();
+    }
+
+    const stars = [];
+    function initStars() {
+        stars.length = 0;
+        const count = Math.floor(W * H / 4000);
+        for (let i = 0; i < count; i++) {
+            stars.push({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                r: Math.random() * 1.4 + 0.4,
+                a: Math.random() * 0.7 + 0.3,
+                sp: Math.random() * 0.018 + 0.004,
+                ph: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    /* Subtle nebula patches — warm tones only */
+    const nebulae = [
+        { x: 0.18, y: 0.28, r: 0.16, c: [140, 50, 30] },
+        { x: 0.75, y: 0.55, r: 0.20, c: [30, 100, 90] },
+        { x: 0.50, y: 0.82, r: 0.13, c: [130, 100, 20] }
+    ];
+
+    function drawStars(t) {
+        sCtx.fillStyle = '#060610';
+        sCtx.fillRect(0, 0, W, H);
+        /* Nebulae */
+        for (const n of nebulae) {
+            const cx = n.x * W, cy = n.y * H, rad = n.r * W;
+            const g = sCtx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+            g.addColorStop(0, `rgba(${n.c[0]},${n.c[1]},${n.c[2]},0.035)`);
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            sCtx.fillStyle = g;
+            sCtx.fillRect(0, 0, W, H);
+        }
+        /* Stars */
+        for (const s of stars) {
+            const alpha = s.a * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph));
+            sCtx.beginPath();
+            sCtx.arc(s.x, s.y, Math.max(0.2, s.r), 0, Math.PI * 2);
+            sCtx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+            sCtx.fill();
+        }
+    }
+
+    /* =============================================
+       PARTICLE SYSTEM
+       ============================================= */
+    const parts = [];
+
+    function spawnP(x, y, type, n) {
+        for (let i = 0; i < n; i++) parts.push(mkP(x, y, type));
+    }
+
+    function mkP(x, y, type) {
+        const p = { x, y, type, life: 1, dead: false };
+        switch (type) {
+            case 'smoke':
+                p.vx = (Math.random() - 0.5) * 5;
+                p.vy = Math.random() * 1.5 + 0.8;
+                p.r = Math.random() * 18 + 10;
+                p.decay = Math.random() * 0.004 + 0.003;
+                p.grow = Math.random() * 0.6 + 0.3;
+                p.c = [170, 170, 180];
+                break;
+            case 'gndsmoke':
+                p.vx = (Math.random() - 0.5) * 10;
+                p.vy = -(Math.random() * 1.5 + 0.4);
+                p.r = Math.random() * 28 + 16;
+                p.decay = Math.random() * 0.003 + 0.002;
+                p.grow = Math.random() * 0.9 + 0.4;
+                p.c = [150, 150, 160];
+                break;
+            case 'fire': {
+                p.vx = (Math.random() - 0.5) * 2;
+                p.vy = Math.random() * 4 + 2;
+                p.r = Math.random() * 7 + 4;
+                p.decay = Math.random() * 0.016 + 0.01;
+                const f = Math.random();
+                p.c = [255, Math.floor(230 - f * 190), Math.floor(f < 0.3 ? 80 : 0)];
+                break;
+            }
+            case 'spark': {
+                const a = Math.random() * Math.PI * 2;
+                const sp = Math.random() * 9 + 2;
+                p.vx = Math.cos(a) * sp;
+                p.vy = Math.sin(a) * sp - 2;
+                p.r = Math.random() * 2 + 0.8;
+                p.decay = Math.random() * 0.022 + 0.012;
+                p.c = [255, Math.floor(Math.random() * 140 + 110), 0];
+                break;
+            }
+            case 'trail': {
+                p.vx = (Math.random() - 0.5) * 1.2;
+                p.vy = Math.random() * 3 + 1;
+                p.r = Math.random() * 6 + 3;
+                p.decay = Math.random() * 0.022 + 0.016;
+                const t = Math.random();
+                p.c = [255, Math.floor(210 - t * 160), Math.floor(50 - t * 50)];
+                break;
+            }
+        }
+        return p;
+    }
+
+    function updateParts() {
+        fCtx.clearRect(0, 0, W, H);
+        for (let i = parts.length - 1; i >= 0; i--) {
+            const p = parts[i];
+            p.life -= p.decay;
+            if (p.life <= 0) { parts.splice(i, 1); continue; }
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.type === 'smoke' || p.type === 'gndsmoke') {
+                p.r += p.grow;
+                p.vx *= 0.99; p.vy *= 0.985;
+            } else if (p.type === 'fire' || p.type === 'trail') {
+                p.r *= 0.98;
+            } else if (p.type === 'spark') {
+                p.vy += 0.12;
+                p.r *= 0.995;
+            }
+            drawP(p);
+        }
+    }
+
+    function drawP(p) {
+        const a = Math.max(0, p.life);
+        const r = Math.max(0.2, p.r);
+        const [cr, cg, cb] = p.c;
+        if (p.type === 'smoke' || p.type === 'gndsmoke') {
+            fCtx.beginPath();
+            fCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            fCtx.fillStyle = `rgba(${cr},${cg},${cb},${(a * 0.28).toFixed(3)})`;
+            fCtx.fill();
+        } else if (p.type === 'spark') {
+            fCtx.beginPath();
+            fCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            fCtx.fillStyle = `rgba(${cr},${cg},${cb},${a.toFixed(3)})`;
+            fCtx.fill();
+        } else {
+            const g = fCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+            g.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.8).toFixed(3)})`);
+            g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+            fCtx.beginPath();
+            fCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            fCtx.fillStyle = g;
+            fCtx.fill();
+        }
+    }
+
+    /* =============================================
+       STATE MACHINE
+       ============================================= */
+    const S = { IDLE: 0, ARMED: 1, CD: 2, IGN: 3, LAUNCH: 4, DONE: 5 };
+    let state = S.IDLE;
+    let cdVal = 10, cdTimer = null;
+    let rktY = 0, rktV = 0, ignT = 0, lchT = 0;
+
+    /* DOM refs */
+    const cover = document.getElementById('cover');
+    const btn = document.getElementById('launch-btn');
+    const cdOvl = document.getElementById('cd-overlay');
+    const cdNum = document.getElementById('cd-num');
+    const flames = document.getElementById('flames');
+    const scene = document.getElementById('scene');
+    const rktWrap = document.getElementById('rocket-wrap');
+    const rkt = document.getElementById('rocket');
+    const status = document.getElementById('status');
+    const ambient = document.getElementById('ambient');
+    const success = document.getElementById('success');
+    const resetBtn = document.getElementById('reset-btn');
+    const pad = document.getElementById('pad');
+    const inds = [0,1,2,3,4].map(i => document.getElementById('i' + i));
+
+    function basePos() {
+        const r = rktWrap.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.bottom - 16 };
+    }
+    function padPos() {
+        const r = pad.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top };
+    }
+
+    /* Open safety cover */
+    cover.addEventListener('click', () => {
+        if (state !== S.IDLE) return;
+        cover.classList.add('open');
+        btn.disabled = false;
+        btn.classList.add('pulse');
+        state = S.ARMED;
+        status.textContent = 'ARMED — READY';
+        status.style.color = 'var(--amber)';
+        /* Flash indicators */
+        inds.forEach((ind, i) => {
+            setTimeout(() => {
+                ind.classList.remove('g');
+                ind.classList.add('a');
+                setTimeout(() => { ind.classList.remove('a'); ind.classList.add('g'); }, 200);
+            }, i * 140);
+        });
+        setTimeout(() => { inds[4].classList.remove('g'); inds[4].classList.add('a'); }, inds.length * 140 + 100);
+    });
+    cover.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cover.click(); } });
+
+    /* Launch button */
+    btn.addEventListener('click', () => {
+        if (state !== S.ARMED) return;
+        startCD();
+    });
+
+    function startCD() {
+        state = S.CD;
+        cdVal = 10;
+        btn.disabled = true;
+        btn.classList.remove('pulse');
+        status.textContent = 'COUNTDOWN INITIATED';
+        status.style.color = 'var(--red)';
+        inds[4].classList.remove('a'); inds[4].classList.add('r');
+        showCD(cdVal);
+        cdTimer = setInterval(() => {
+            cdVal--;
+            if (cdVal > 0) { showCD(cdVal); }
+            else { clearInterval(cdTimer); showCD(0); setTimeout(startIgn, 850); }
+        }, 1000);
+    }
+
+    function showCD(n) {
+        cdNum.textContent = n;
+        cdNum.className = 'cd-num';
+        if (n <= 3 && n > 0) cdNum.classList.add('warn');
+        if (n === 0) cdNum.classList.add('crit');
+        cdOvl.classList.add('on');
+        cdNum.style.animation = 'none';
+        void cdNum.offsetHeight;
+        cdNum.style.animation = '';
+    }
+
+    function startIgn() {
+        state = S.IGN;
+        cdOvl.classList.remove('on');
+        status.textContent = 'IGNITION SEQUENCE';
+        rkt.classList.remove('idle');
+        flames.classList.add('on');
+        flames.style.transform = 'translateX(-50%) scaleY(0.15)';
+        ambient.classList.add('on');
+        scene.classList.add('sk-l');
+        ignT = 0;
+    }
+
+    function startLaunch() {
+        state = S.LAUNCH;
+        status.textContent = 'LIFTOFF';
+        scene.classList.remove('sk-l', 'sk-m');
+        scene.classList.add('sk-h');
+        rktV = 0;
+        lchT = 0;
+    }
+
+    function showSuccess() {
+        state = S.DONE;
+        scene.classList.remove('sk-h');
+        flames.classList.remove('on');
+        flames.style.transform = 'translateX(-50%) scaleY(0)';
+        ambient.classList.remove('on');
+        status.textContent = 'MISSION SUCCESS';
+        status.style.color = 'var(--green)';
+        setTimeout(() => success.classList.add('on'), 600);
+    }
+
+    /* Reset */
+    resetBtn.addEventListener('click', () => {
+        state = S.IDLE;
+        cdVal = 10; rktY = 0; rktV = 0; ignT = 0; lchT = 0;
+        cover.classList.remove('open');
+        btn.disabled = true;
+        btn.classList.remove('pulse');
+        cdOvl.classList.remove('on');
+        flames.classList.remove('on');
+        flames.style.transform = 'translateX(-50%) scaleY(0)';
+        ambient.classList.remove('on');
+        scene.classList.remove('sk-l', 'sk-m', 'sk-h');
+        success.classList.remove('on');
+        rkt.classList.add('idle');
+        rktWrap.style.transform = 'translateY(0px)';
+        status.textContent = 'SYSTEMS NOMINAL';
+        status.style.color = 'var(--green)';
+        inds.forEach((ind, i) => {
+            ind.className = 'ind' + (i < 4 ? ' g' : '');
+        });
+        parts.length = 0;
+    });
+
+    /* =============================================
+       MAIN LOOP
+       ============================================= */
+    let prev = 0;
+
+    function loop(ts) {
+        const dt = Math.min((ts - prev) / 1000, 0.05);
+        prev = ts;
+        const t = ts * 0.001;
+
+        drawStars(t);
+
+        /* Ignition phase */
+        if (state === S.IGN) {
+            ignT += dt;
+            const prog = Math.min(ignT / 2.2, 1);
+            flames.style.transform = `translateX(-50%) scaleY(${(0.15 + prog * 0.85).toFixed(3)})`;
+
+            const bp = basePos();
+            if (Math.random() < 0.2 + prog * 0.3) spawnP(bp.x, bp.y, 'smoke', 2);
+            if (Math.random() < 0.15 + prog * 0.25) spawnP(bp.x, bp.y, 'fire', 1);
+            if (Math.random() < prog * 0.15) spawnP(bp.x, bp.y, 'spark', 1);
+
+            /* Ground deflection smoke */
+            const pp = padPos();
+            if (prog > 0.3 && Math.random() < prog * 0.4) spawnP(pp.x, pp.y, 'gndsmoke', 1);
+
+            if (ignT > 1.0 && !scene.classList.contains('sk-m')) {
+                scene.classList.remove('sk-l');
+                scene.classList.add('sk-m');
+            }
+            if (ignT >= 2.2) startLaunch();
+        }
+
+        /* Launch phase */
+        if (state === S.LAUNCH) {
+            lchT += dt;
+            rktV += 650 * dt;
+            rktY -= rktV * dt;
+            rktWrap.style.transform = `translateY(${rktY.toFixed(1)}px)`;
+
+            const bp = basePos();
+            spawnP(bp.x, bp.y, 'smoke', 3);
+            spawnP(bp.x, bp.y, 'fire', 5);
+            spawnP(bp.x, bp.y, 'trail', 3);
+            if (Math.random() < 0.35) spawnP(bp.x, bp.y, 'spark', 2);
+
+            /* Ground smoke cloud */
+            const pp = padPos();
+            if (lchT < 3.5) {
+                spawnP(pp.x, pp.y, 'gndsmoke', 4);
+                if (Math.random() < 0.15) spawnP(pp.x, pp.y, 'spark', 1);
+            }
+
+            /* Transition shake down as rocket leaves */
+            if (lchT > 1.5 && scene.classList.contains('sk-h')) {
+                scene.classList.remove('sk-h');
+                scene.classList.add('sk-m');
+            }
+            if (lchT > 2.5) scene.classList.remove('sk-m');
+
+            if (rktY < -H - 200) showSuccess();
+        }
+
+        updateParts();
+        requestAnimationFrame(loop);
+    }
+
+    /* =============================================
+       INIT
+       ============================================= */
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

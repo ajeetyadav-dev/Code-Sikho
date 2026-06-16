@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newspaper Fold → Signup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --paper: #f4eed8;
+            --paper-shadow: #d8cead;
+            --ink: #1a1410;
+            --ink-light: #5a5248;
+            --red: #b83218;
+            --form-bg: #080808;
+            --form-card: #111111;
+            --form-border: #252525;
+            --form-accent: #c9952c;
+            --form-accent-glow: rgba(201, 149, 44, 0.25);
+            --form-text: #ede6d6;
+            --form-muted: #6b6560;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--form-bg);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Paper texture using SVG noise */
+        .paper-texture {
+            background-color: var(--paper);
+            background-image:
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 28px,
+                    rgba(0,0,0,0.015) 28px,
+                    rgba(0,0,0,0.015) 29px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 28px,
+                    rgba(0,0,0,0.01) 28px,
+                    rgba(0,0,0,0.01) 29px
+                );
+        }
+
+        /* ===== NEWSPAPER SCENE ===== */
+        .newspaper-scene {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 2200px;
+            z-index: 10;
+            background: radial-gradient(ellipse at center, #2a2520 0%, #0e0d0b 70%);
+        }
+
+        .newspaper {
+            width: min(640px, 88vw);
+            height: min(860px, 82vh);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.15s ease-out;
+            cursor: pointer;
+        }
+
+        .newspaper-half {
+            position: absolute;
+            width: 100%;
+            height: 50%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            overflow: hidden;
+        }
+
+        .newspaper-bottom {
+            bottom: 0;
+            border-radius: 0 0 3px 3px;
+            z-index: 1;
+            box-shadow:
+                0 8px 40px rgba(0,0,0,0.6),
+                0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .newspaper-top {
+            top: 0;
+            transform-origin: 50% 100%;
+            transform: rotateX(-180deg);
+            border-radius: 3px 3px 0 0;
+            z-index: 2;
+            box-shadow:
+                0 -4px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Fold crease shadow on top panel's bottom edge */
+        .fold-crease {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to top, rgba(0,0,0,0.25), transparent);
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Shadow cast onto bottom panel during fold */
+        .fold-cast-shadow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.18), transparent);
+            z-index: 3;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* ===== NEWSPAPER TYPOGRAPHY ===== */
+        .np-header {
+            border-bottom: 4px double var(--ink);
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+
+        .np-masthead {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(26px, 5.5vw, 44px);
+            text-align: center;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: var(--ink);
+            line-height: 1;
+        }
+
+        .np-date {
+            font-size: 10px;
+            text-align: center;
+            color: var(--ink-light);
+            letter-spacing: 1.5px;
+            margin-top: 5px;
+        }
+
+        .np-rule { height: 3px; background: var(--ink); margin: 8px 0; }
+        .np-rule-thin { height: 1px; background: var(--ink); opacity: 0.2; margin: 6px 0; }
+
+        .np-section-label {
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--red);
+            margin-bottom: 5px;
+        }
+
+        .np-headline {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(16px, 2.8vw, 24px);
+            line-height: 1.15;
+            color: var(--ink);
+            margin-bottom: 5px;
+        }
+
+        .np-subhead {
+            font-family: 'Playfair Display', serif;
+            font-weight: 400;
+            font-style: italic;
+            font-size: clamp(12px, 1.8vw, 15px);
+            color: var(--ink-light);
+            margin-bottom: 8px;
+            line-height: 1.35;
+        }
+
+        .np-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .np-body {
+            font-size: 10.5px;
+            line-height: 1.6;
+            color: var(--ink-light);
+            text-align: justify;
+            hyphens: auto;
+        }
+
+        .np-divider {
+            height: 1px;
+            background: var(--ink);
+            opacity: 0.15;
+            margin: 8px 0;
+        }
+
+        .np-quote {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: clamp(13px, 2.2vw, 17px);
+            color: var(--ink);
+            border-left: 3px solid var(--red);
+            padding-left: 12px;
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+
+        .np-ad-box {
+            border: 2px solid var(--ink);
+            padding: 8px 6px;
+            text-align: center;
+            margin-top: 6px;
+            background: rgba(0,0,0,0.02);
+        }
+
+        .np-ad-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--ink);
+        }
+
+        .np-ad-sub {
+            font-size: 9px;
+            color: var(--ink-light);
+            margin-top: 2px;
+        }
+
+        .np-footer-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--ink-light);
+            margin-top: 6px;
+        }
+
+        /* Unfold hint */
+        .unfold-hint {
+            position: absolute;
+            bottom: -48px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+            color: #8a7e6e;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            animation: hint-pulse 2.2s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @keyframes hint-pulse {
+            0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
+            50% { opacity: 0.9; transform: translateX(-50%) translateY(-3px); }
+        }
+
+        /* ===== SIGNUP FORM SCENE ===== */
+        .signup-scene {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+            background: var(--form-bg);
+        }
+
+        .signup-scene.active {
+            opacity: 1;
+            pointer-events: all;
+            transition: opacity 0.6s ease 0.1s;
+        }
+
+        /* Ambient glows behind form */
+        .ambient-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-a {
+            width: 400px;
+            height: 400px;
+            background: var(--form-accent);
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        .glow-b {
+            width: 350px;
+            height: 350px;
+            background: #6b3a1f;
+            opacity: 0;
+            transition: opacity 2s ease 0.3s;
+        }
+
+        .signup-scene.active .glow-a { opacity: 0.06; }
+        .signup-scene.active .glow-b { opacity: 0.05; }
+
+        .signup-card {
+            width: min(430px, 90vw);
+            background: var(--form-card);
+            border: 1px solid var(--form-border);
+            border-radius: 16px;
+            padding: 48px 38px 40px;
+            position: relative;
+            z-index: 2;
+            transform: translateY(40px) scale(0.97);
+            transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+        }
+
+        .signup-scene.active .signup-card {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Decorative top bar on card */
+        .signup-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 40px;
+            right: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--form-accent), transparent);
+            border-radius: 0 0 2px 2px;
+        }
+
+        .form-masthead {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 30px;
+            color: var(--form-text);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .form-subtitle {
+            font-size: 14px;
+            color: var(--form-muted);
+            text-align: center;
+            margin-bottom: 34px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            color: var(--form-muted);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--form-bg);
+            border: 1px solid var(--form-border);
+            border-radius: 10px;
+            color: var(--form-text);
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: var(--form-accent);
+            box-shadow: 0 0 0 3px var(--form-accent-glow);
+        }
+
+        .form-input::placeholder { color: #333; }
+
+        .form-input.error {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(184, 50, 24, 0.15);
+        }
+
+        .form-error {
+            font-size: 12px;
+            color: var(--red);
+            margin-top: 6px;
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .form-error.visible { display: flex; }
+
+        .form-error i { font-size: 10px; }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 39px;
+            background: none;
+            border: none;
+            color: var(--form-muted);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .password-toggle:hover { color: var(--form-text); }
+
+        /* Password strength meter */
+        .strength-meter {
+            display: flex;
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .strength-bar {
+            flex: 1;
+            height: 3px;
+            background: var(--form-border);
+            border-radius: 2px;
+            transition: background 0.3s;
+        }
+
+        .strength-label {
+            font-size: 11px;
+            margin-top: 5px;
+            color: var(--form-muted);
+            transition: color 0.3s;
+            min-height: 16px;
+        }
+
+        /* Terms checkbox */
+        .form-terms {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            color: var(--form-muted);
+            line-height: 1.45;
+        }
+
+        .form-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            border: 1.5px solid var(--form-border);
+            border-radius: 4px;
+            background: var(--form-bg);
+            cursor: pointer;
+            position: relative;
+            margin-top: 1px;
+            transition: all 0.2s;
+        }
+
+        .form-checkbox:checked {
+            background: var(--form-accent);
+            border-color: var(--form-accent);
+        }
+
+        .form-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 2px;
+            width: 5px;
+            height: 9px;
+            border: solid var(--form-bg);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .form-checkbox:focus-visible {
+            box-shadow: 0 0 0 2px var(--form-accent);
+        }
+
+        .form-terms a {
+            color: var(--form-accent);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .form-terms a:hover { color: #e0b040; text-decoration: underline; }
+
+        /* Submit button */
+        .form-submit {
+            width: 100%;
+            padding: 16px;
+            background: var(--form-accent);
+            color: var(--form-bg);
+            border: none;
+            border-radius: 10px;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.3s, opacity 0.3s;
+        }
+
+        .form-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--form-accent-glow);
+        }
+
+        .form-submit:active:not(:disabled) { transform: translateY(0); }
+
+        .form-submit:focus-visible {
+            outline: 2px solid var(--form-accent);
+            outline-offset: 3px;
+        }
+
+        .form-submit:disabled {
+            cursor: not-allowed;
+        }
+
+        .btn-ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: scale(0);
+            animation: ripple 0.6s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
+        }
+
+        /* Divider */
+        .form-divider {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 24px 0;
+        }
+
+        .form-divider span {
+            font-size: 10px;
+            color: var(--form-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
+        }
+
+        .form-divider::before,
+        .form-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--form-border);
+        }
+
+        /* Social buttons */
+        .social-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px;
+            background: transparent;
+            border: 1px solid var(--form-border);
+            border-radius: 10px;
+            color: var(--form-text);
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
+        }
+
+        .social-btn:hover {
+            border-color: #444;
+            background: rgba(255,255,255,0.03);
+            transform: translateY(-1px);
+        }
+
+        .social-btn:focus-visible {
+            outline: 2px solid var(--form-accent);
+            outline-offset: 2px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            background: var(--form-card);
+            border: 1px solid var(--form-border);
+            border-radius: 12px;
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 200;
+            transform: translateX(calc(100% + 40px));
+            transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 12px 50px rgba(0,0,0,0.6);
+            max-width: 380px;
+        }
+
+        .toast.show { transform: translateX(0); }
+
+        .toast-icon {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .toast-icon.success {
+            background: rgba(76, 175, 80, 0.12);
+            color: #66bb6a;
+        }
+
+        .toast-icon.info {
+            background: rgba(201, 149, 44, 0.12);
+            color: var(--form-accent);
+        }
+
+        .toast-text {
+            font-size: 13px;
+            color: var(--form-text);
+            line-height: 1.4;
+        }
+
+        /* Floating particles */
+        .particles-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .signup-card { padding: 36px 22px 32px; }
+            .np-columns { grid-template-columns: 1fr; gap: 8px; }
+            .form-masthead { font-size: 24px; letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Particle canvas -->
+    <canvas class="particles-canvas" id="particlesCanvas"></canvas>
+
+    <!-- Ambient glows (behind form) -->
+    <div class="ambient-glow glow-a" id="glowA"></div>
+    <div class="ambient-glow glow-b" id="glowB"></div>
+
+    <!-- ===== NEWSPAPER SCENE ===== -->
+    <div class="newspaper-scene" id="newspaperScene" role="button" tabindex="0" aria-label="Click to unfold the newspaper">
+        <div class="newspaper" id="newspaper">
+
+            <!-- Bottom half — visible when folded -->
+            <div class="newspaper-half newspaper-bottom paper-texture" id="npBottom">
+                <div style="padding: 18px 26px;">
+                    <div class="np-section-label">World Affairs</div>
+                    <div class="np-headline">Global Summit Reaches Historic Agreement on Climate Framework After Marathon Talks</div>
+                    <div class="np-subhead">Delegates from 140 nations sign landmark accord stretching into the early hours of the morning</div>
+                    <div class="np-columns">
+                        <div>
+                            <div class="np-body">In what observers are calling a turning point for international environmental policy, representatives reached consensus on binding emissions targets that will reshape industrial policy across continents. The agreement establishes a tiered system of accountability with transparent monitoring mechanisms.</div>
+                            <div class="np-divider"></div>
+                            <div class="np-body">"This is not merely a document — it is a covenant with future generations," stated the summit chair during the closing ceremony. Financial markets responded positively to the announcement, with green energy indices surging.</div>
+                        </div>
+                        <div>
+                            <div class="np-quote">"The question was never whether we could afford to act, but whether we could afford not to."</div>
+                            <div class="np-divider"></div>
+                            <div class="np-body">Implementation will begin in the first quarter, with developing nations receiving dedicated support funds. Critics note enforcement remains unclear, but supporters argue political momentum is now irreversible.</div>
+                            <div class="np-ad-box">
+                                <div class="np-ad-title">Subscribe Today</div>
+                                <div class="np-ad-sub">Delivered to your door every morning</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Shadow cast by folding top panel -->
+                <div class="fold-cast-shadow" id="foldCastShadow"></div>
+            </div>
+
+            <!-- Top half — folds over bottom -->
+            <div class="newspaper-half newspaper-top paper-texture" id="npTop">
+                <div style="padding: 18px 26px;">
+                    <div class="np-header">
+                        <div class="np-masthead">The Daily Chronicle</div>
+                        <div class="np-date">Wednesday, June 18, 2025 &mdash; Vol. CXLII, No. 167 &mdash; Final Edition</div>
+                    </div>
+                    <div class="np-rule"></div>
+                    <div class="np-section-label">Breaking News</div>
+                    <div class="np-headline">Scientists Announce Breakthrough in Quantum Computing Stability</div>
+                    <div class="np-subhead">New error-correction method achieves 99.97% fidelity, opening the door to practical applications</div>
+                    <div class="np-columns">
+                        <div>
+                            <div class="np-body">A team of researchers at the Zurich Institute of Technology has demonstrated a novel approach to quantum error correction that could fundamentally alter the trajectory of computing. The technique, published in Nature this morning, leverages topological properties of entangled qubit arrays to maintain coherence.</div>
+                            <div class="np-divider"></div>
+                            <div class="np-body">Industry leaders have already expressed interest in licensing the technology, with several major firms describing it as the most significant advancement in the field this decade.</div>
+                        </div>
+                        <div>
+                            <div class="np-body">The breakthrough addresses what has long been considered the primary obstacle to practical quantum computing: decoherence. By encoding information in a way inherently resistant to environmental noise, the team achieved stability durations previously thought impossible at room temperature.</div>
+                            <div class="np-rule-thin"></div>
+                            <div class="np-footer-line">
+                                <span>Continued on Page A4</span>
+                                <span>See EDITORIAL, Page A12</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Fold crease shadow -->
+                <div class="fold-crease" id="foldCrease"></div>
+            </div>
+
+            <!-- Hint to click -->
+            <div class="unfold-hint" id="unfoldHint">
+                <i class="fas fa-hand-pointer"></i> Click to unfold
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SIGNUP FORM SCENE ===== -->
+    <section class="signup-scene" id="signupScene" aria-label="Create your account">
+        <div class="signup-card">
+            <div class="form-masthead">Subscribe</div>
+            <div class="form-subtitle">Join thousands of readers who start their morning informed.</div>
+
+            <form id="signupForm" novalidate autocomplete="off">
+                <!-- Full Name -->
+                <div class="form-group">
+                    <label class="form-label" for="fullName">Full Name</label>
+                    <input class="form-input" type="text" id="fullName" placeholder="Alexander Hamilton" autocomplete="name" aria-required="true">
+                    <div class="form-error" id="nameError"><i class="fas fa-exclamation-circle"></i> Please enter your full name</div>
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input class="form-input" type="email" id="email" placeholder="alex@chronicle.com" autocomplete="email" aria-required="true">
+                    <div class="form-error" id="emailError"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address</div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-input" type="password" id="password" placeholder="Minimum 8 characters" autocomplete="new-password" aria-required="true" style="padding-right: 46px;">
+                    <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <div class="strength-meter" id="strengthMeter">
+                        <div class="strength-bar"></div>
+                        <div class="strength-bar"></div>
+                        <div class="strength-bar"></div>
+                        <div class="strength-bar"></div>
+                    </div>
+                    <div class="strength-label" id="strengthLabel"></div>
+                    <div class="form-error" id="passwordError"><i class="fas fa-exclamation-circle"></i> Password must be at least 8 characters</div>
+                </div>
+
+                <!-- Terms -->
+                <div class="form-terms">
+                    <input type="checkbox" class="form-checkbox" id="terms" aria-required="true">
+                    <label for="terms">I agree to the <a href="#" onclick="event.preventDefault()">Terms of Service</a> and <a href="#" onclick="event.preventDefault()">Privacy Policy</a></label>
+                </div>
+                <div class="form-error" id="termsError" style="margin-top: -14px; margin-bottom: 16px;"><i class="fas fa-exclamation-circle"></i> You must agree to the terms</div>
+
+                <!-- Submit -->
+                <button type="submit" class="form-submit" id="submitBtn">Create Account</button>
+            </form>
+
+            <div class="form-divider"><span>or continue with</span></div>
+
+            <div class="social-buttons">
+                <button class="social-btn" type="button" id="googleBtn" aria-label="Sign up with Google">
+                    <i class="fab fa-google"></i> Google
+                </button>
+                <button class="social-btn" type="button" id="githubBtn" aria-label="Sign up with GitHub">
+                    <i class="fab fa-github"></i> GitHub
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="alert" aria-live="polite">
+        <div class="toast-icon success" id="toastIcon"><i class="fas fa-check"></i></div>
+        <div class="toast-text" id="toastText">Welcome aboard!</div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        /* ===== Particle system on canvas ===== */
+        const canvas = document.getElementById('particlesCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const PARTICLE_COUNT = 50;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initialize particles
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: -0.15 - Math.random() * 0.35,
+                size: 1 + Math.random() * 1.5,
+                alpha: Math.random() * 0.4,
+                alphaDir: (Math.random() > 0.5 ? 1 : -1) * (0.002 + Math.random() * 0.004)
+            });
+        }
+
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const p of particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha += p.alphaDir;
+                if (p.alpha <= 0.02 || p.alpha >= 0.45) p.alphaDir *= -1;
+                p.alpha = Math.max(0, Math.min(0.45, p.alpha));
+
+                // Wrap around
+                if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+                if (p.x < -10) p.x = canvas.width + 10;
+                if (p.x > canvas.width + 10) p.x = -10;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(0.5, p.size), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(201, 149, 44, ${p.alpha})`;
+                ctx.fill();
+            }
+            requestAnimationFrame(drawParticles);
+        }
+        drawParticles();
+
+        /* ===== Ambient glow drift ===== */
+        const glowA = document.getElementById('glowA');
+        const glowB = document.getElementById('glowB');
+        let glowTime = 0;
+
+        function animateGlows() {
+            glowTime += 0.004;
+            glowA.style.left = (45 + Math.sin(glowTime) * 12) + '%';
+            glowA.style.top = (20 + Math.cos(glowTime * 0.7) * 10) + '%';
+            glowB.style.left = (55 + Math.cos(glowTime * 0.8) * 15) + '%';
+            glowB.style.top = (65 + Math.sin(glowTime * 0.5) * 12) + '%';
+            requestAnimationFrame(animateGlows);
+        }
+        animateGlows();
+
+        /* ===== NEWSPAPER FOLD ANIMATION ===== */
+        const newspaperScene = document.getElementById('newspaperScene');
+        const newspaper = document.getElementById('newspaper');
+        const npTop = document.getElementById('npTop');
+        const foldCrease = document.getElementById('foldCrease');
+        const foldCastShadow = document.getElementById('foldCastShadow');
+        const unfoldHint = document.getElementById('unfoldHint');
+        const signupScene = document.getElementById('signupScene');
+
+        let isUnfolding = false;
+        let hasUnfolded = false;
+
+        // Parallax tilt before clicking
+        newspaperScene.addEventListener('mousemove', (e) => {
+            if (isUnfolding || hasUnfolded) return;
+            const rect = newspaperScene.getBoundingClientRect();
+            const dx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+            const dy = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+            newspaper.style.transform = `rotateY(${dx * 6}deg) rotateX(${-dy * 4}deg)`;
+        });
+
+        newspaperScene.addEventListener('mouseleave', () => {
+            if (isUnfolding || hasUnfolded) return;
+            newspaper.style.transform = '';
+        });
+
+        // Trigger unfold on click or keyboard
+        function triggerUnfold() {
+            if (isUnfolding || hasUnfolded) return;
+            isUnfolding = true;
+            unfoldHint.style.transition = 'opacity 0.3s';
+            unfoldHint.style.opacity = '0';
+            newspaper.style.transform = '';
+            newspaper.style.cursor = 'default';
+            startUnfoldAnimation();
+        }
+
+        newspaperScene.addEventListener('click', triggerUnfold);
+        newspaperScene.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerUnfold(); }
+        });
+
+        // Auto-unfold after 4.5 seconds if user hasn't clicked
+        setTimeout(() => { if (!hasUnfolded && !isUnfolding) triggerUnfold(); }, 4500);
+
+        function startUnfoldAnimation() {
+            const duration = 1300;
+            const start = performance.now();
+
+            function tick(now) {
+                const t = Math.min((now - start) / duration, 1);
+                // Ease-out quart for a satisfying deceleration
+                const eased = 1 - Math.pow(1 - t, 4);
+                const angle = -180 + 180 * eased;
+
+                npTop.style.transform = `rotateX(${angle}deg)`;
+
+                // Crease shadow on the folding panel — peaks mid-fold
+                const creaseIntensity = Math.sin(t * Math.PI);
+                foldCrease.style.opacity = creaseIntensity * 0.9;
+
+                // Cast shadow on the panel underneath — peaks early-mid
+                const castIntensity = Math.sin(t * Math.PI * 0.8);
+                foldCastShadow.style.opacity = castIntensity * 0.6;
+
+                // Dynamic shadow on bottom panel grows as top opens
+                const shadowSpread = 8 + eased * 25;
+                const shadowBlur = 20 + eased * 40;
+                npBottom.style.boxShadow = `0 ${shadowSpread}px ${shadowBlur}px rgba(0,0,0,${0.5 + eased * 0.15})`;
+
+                if (t < 1) {
+                    requestAnimationFrame(tick);
+                } else {
+                    // Fully unfolded — pause then lift away
+                    foldCrease.style.opacity = '0';
+                    foldCastShadow.style.opacity = '0';
+                    setTimeout(liftAway, 600);
+                }
+            }
+
+            requestAnimationFrame(tick);
+        }
+
+        function liftAway() {
+            const duration = 900;
+            const start = performance.now();
+
+            function tick(now) {
+                const t = Math.min((now - start) / duration, 1);
+                // Ease-in-out cubic
+                const eased = t < 0.5
+                    ? 4 * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+                const y = -100 * eased;
+                const s = 1 - 0.06 * eased;
+                const o = 1 - eased;
+                const rx = -12 * eased;
+
+                newspaper.style.transform = `translateY(${y}px) scale(${s}) rotateX(${rx}deg)`;
+                newspaper.style.opacity = o;
+                newspaper.style.filter = `blur(${eased * 3}px)`;
+
+                if (t < 1) {
+                    requestAnimationFrame(tick);
+                } else {
+                    newspaperScene.style.display = 'none';
+                    hasUnfolded = true;
+                    revealForm();
+                }
+            }
+
+            requestAnimationFrame(tick);
+        }
+
+        function revealForm() {
+            signupScene.classList.add('active');
+            setTimeout(() => {
+                document.getElementById('fullName').focus();
+            }, 900);
+        }
+
+        /* ===== PASSWORD TOGGLE ===== */
+        const passwordInput = document.getElementById('password');
+        const passwordToggle = document.getElementById('passwordToggle');
+
+        passwordToggle.addEventListener('click', () => {
+            const show = passwordInput.type === 'password';
+            passwordInput.type = show ? 'text' : 'password';
+            passwordToggle.innerHTML = show ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        });
+
+        /* ===== PASSWORD STRENGTH ===== */
+        const strengthBars = document.querySelectorAll('.strength-bar');
+        const strengthLabel = document.getElementById('strengthLabel');
+
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (val.length >= 12) score++;
+            if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+            if (/\d/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+            score = Math.min(score, 4);
+
+            const colors = ['#c23616', '#e67e22', '#c9952c', '#4caf50'];
+            const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+
+            strengthBars.forEach((bar, i) => {
+                bar.style.background = i < score ? colors[score - 1] : 'var(--form-border)';
+            });
+
+            if (val.length > 0 && score > 0) {
+                strengthLabel.textContent = labels[score - 1];
+                strengthLabel.style.color = colors[score - 1];
+            } else if (val.length > 0) {
+                strengthLabel.textContent = 'Too short';
+                strengthLabel.style.color = 'var(--form-muted)';
+            } else {
+                strengthLabel.textContent = '';
+            }
+        });
+
+        /* ===== FORM VALIDATION ===== */
+        const form = document.getElementById('signupForm');
+        const fullNameInput = document.getElementById('fullName');
+        const emailInput = document.getElementById('email');
+        const termsCheckbox = document.getElementById('terms');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Clear errors on input
+        [fullNameInput, emailInput, passwordInput].forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                const err = input.closest('.form-group').querySelector('.form-error');
+                if (err) err.classList.remove('visible');
+            });
+        });
+
+        termsCheckbox.addEventListener('change', () => {
+            document.getElementById('termsError').classList.remove('visible');
+        });
+
+        // Ripple on submit button
+        submitBtn.addEventListener('mousedown', (e) => {
+            const rect = submitBtn.getBoundingClientRect();
+            const ripple = document.createElement('span');
+            ripple.className = 'btn-ripple';
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+            submitBtn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 650);
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let valid = true;
+
+            // Name
+            if (fullNameInput.value.trim().length < 2) {
+                fullNameInput.classList.add('error');
+                document.getElementById('nameError').classList.add('visible');
+                valid = false;
+            }
+
+            // Email
+            const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRe.test(emailInput.value.trim())) {
+                emailInput.classList.add('error');
+                document.getElementById('emailError').classList.add('visible');
+                valid = false;
+            }
+
+            // Password
+            if (passwordInput.value.length < 8) {
+                passwordInput.classList.add('error');
+                document.getElementById('passwordError').classList.add('visible');
+                valid = false;
+            }
+
+            // Terms
+            if (!termsCheckbox.checked) {
+                document.getElementById('termsError').classList.add('visible');
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            // Simulate submission
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+
+            setTimeout(() => {
+                const firstName = fullNameInput.value.trim().split(' ')[0];
+                submitBtn.textContent = 'Create Account';
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                showToast('success', `Welcome, ${firstName}! Your account has been created.`);
+                form.reset();
+                strengthBars.forEach(b => b.style.background = 'var(--form-border)');
+                strengthLabel.textContent = '';
+            }, 1600);
+        });
+
+        /* ===== SOCIAL BUTTONS ===== */
+        document.getElementById('googleBtn').addEventListener('click', () => {
+            showToast('info', 'Google authentication initiated');
+        });
+        document.getElementById('githubBtn').addEventListener('click', () => {
+            showToast('info', 'GitHub authentication initiated');
+        });
+
+        /* ===== TOAST ===== */
+        const toast = document.getElementById('toast');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastText = document.getElementById('toastText');
+        let toastTimer = null;
+
+        function showToast(type, message) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toastText.textContent = message;
+            toastIcon.className = 'toast-icon ' + type;
+            toastIcon.innerHTML = type === 'success'
+                ? '<i class="fas fa-check"></i>'
+                : '<i class="fas fa-info"></i>';
+            toast.classList.add('show');
+            toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 3800);
+        }
+
+    })();
+    </script>
+</body>
+</html>
