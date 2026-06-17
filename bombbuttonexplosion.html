@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bomb Button Explosion</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --fg: #f0e6d3;
+    --muted: #4a4035;
+    --accent: #e63926;
+    --accent-glow: #ff4d35;
+    --card: #151210;
+    --border: #2a2320;
+    --fire-1: #fff7e0;
+    --fire-2: #ffcc33;
+    --fire-3: #ff8800;
+    --fire-4: #e63926;
+    --smoke: #3a3530;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: default;
+  }
+
+  .atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, rgba(230,57,38,0.03) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 80% at 20% 80%, rgba(40,20,10,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 80% at 80% 20%, rgba(40,20,10,0.3) 0%, transparent 60%);
+  }
+
+  .grid-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  #explosionCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .flash-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .flash-overlay.active {
+    animation: flashBang 0.6s ease-out forwards;
+  }
+
+  @keyframes flashBang {
+    0% { opacity: 0.95; }
+    10% { opacity: 0.8; }
+    30% { opacity: 0.3; }
+    100% { opacity: 0; }
+  }
+
+  .shockwave {
+    position: fixed;
+    z-index: 8;
+    border-radius: 50%;
+    border: 3px solid rgba(255,200,100,0.6);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+  }
+
+  .shockwave.active {
+    animation: shockExpand 0.8s ease-out forwards;
+  }
+
+  @keyframes shockExpand {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; border-width: 6px; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; border-width: 1px; }
+  }
+
+  .scene {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    transition: transform 0.05s ease;
+  }
+
+  .scene.shake {
+    animation: screenShake 0.5s ease-out;
+  }
+
+  @keyframes screenShake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-12px, 8px) rotate(-0.5deg); }
+    20% { transform: translate(10px, -12px) rotate(0.5deg); }
+    30% { transform: translate(-8px, 6px) rotate(-0.3deg); }
+    40% { transform: translate(6px, -4px) rotate(0.2deg); }
+    50% { transform: translate(-4px, 2px) rotate(-0.1deg); }
+    60% { transform: translate(2px, -1px) rotate(0.05deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+
+  .scene.heavy-shake {
+    animation: heavyShake 0.8s ease-out;
+  }
+
+  @keyframes heavyShake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    5% { transform: translate(-25px, 18px) rotate(-1.2deg); }
+    10% { transform: translate(22px, -20px) rotate(1deg); }
+    15% { transform: translate(-18px, 15px) rotate(-0.8deg); }
+    20% { transform: translate(15px, -12px) rotate(0.6deg); }
+    30% { transform: translate(-10px, 8px) rotate(-0.4deg); }
+    40% { transform: translate(8px, -6px) rotate(0.3deg); }
+    50% { transform: translate(-5px, 3px) rotate(-0.2deg); }
+    60% { transform: translate(3px, -2px) rotate(0.1deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+
+  .title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    letter-spacing: 0.15em;
+    color: var(--fg);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    opacity: 0.9;
+    user-select: none;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    font-weight: 300;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  .bomb-btn-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bomb-btn-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(230,57,38,0.15) 0%, transparent 70%);
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.3); opacity: 1; }
+  }
+
+  .orbit-ring {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 2px dashed rgba(230,57,38,0.2);
+    animation: orbitSpin 8s linear infinite;
+    pointer-events: none;
+  }
+
+  .orbit-ring::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  @keyframes orbitSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  .bomb-btn {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: none;
+    background: radial-gradient(circle at 35% 35%, #ff5544, var(--accent) 50%, #8b1a10 100%);
+    box-shadow:
+      0 0 30px rgba(230,57,38,0.4),
+      0 0 60px rgba(230,57,38,0.15),
+      inset 0 -6px 12px rgba(0,0,0,0.4),
+      inset 0 4px 8px rgba(255,255,255,0.1);
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bomb-btn:hover {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 50px rgba(230,57,38,0.6),
+      0 0 100px rgba(230,57,38,0.2),
+      inset 0 -6px 12px rgba(0,0,0,0.4),
+      inset 0 4px 8px rgba(255,255,255,0.15);
+  }
+
+  .bomb-btn:active {
+    transform: scale(0.95);
+  }
+
+  .bomb-btn .icon {
+    font-size: 3.2rem;
+    color: var(--fire-1);
+    filter: drop-shadow(0 0 8px rgba(255,200,100,0.6));
+    transition: transform 0.2s ease;
+  }
+
+  .bomb-btn:hover .icon {
+    transform: scale(1.1);
+  }
+
+  .bomb-btn.counting {
+    animation: countPulse 0.3s ease-in-out infinite alternate;
+    background: radial-gradient(circle at 35% 35%, #ff6644, #cc2200 50%, #661100 100%);
+  }
+
+  @keyframes countPulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
+  }
+
+  .countdown-text {
+    position: absolute;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: white;
+    text-shadow: 0 0 20px rgba(255,100,50,0.8);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .countdown-text.visible {
+    opacity: 1;
+    animation: countFade 0.3s ease-out;
+  }
+
+  @keyframes countFade {
+    from { transform: scale(1.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .stats-bar {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    gap: 2.5rem;
+    padding: 0.8rem 2rem;
+    background: rgba(15,12,10,0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .hint {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    user-select: none;
+  }
+
+  .smoke-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(40,30,20,0.6) 0%, transparent 60%);
+    transition: opacity 2s ease;
+  }
+
+  .smoke-layer.active {
+    opacity: 1;
+  }
+
+  .ember {
+    position: fixed;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--fire-3);
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0;
+    box-shadow: 0 0 4px var(--fire-2);
+  }
+
+
+  .hidden { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .stats-bar { gap: 1.5rem; padding: 0.6rem 1.5rem; }
+    .orbit-ring { width: 170px; height: 170px; }
+    .bomb-btn { width: 120px; height: 120px; }
+    .bomb-btn .icon { font-size: 2.6rem; }
+    .bomb-btn-wrapper::before { width: 180px; height: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="grid-overlay"></div>
+<canvas id="explosionCanvas"></canvas>
+<div class="flash-overlay" id="flashOverlay"></div>
+<div class="shockwave" id="shockwave"></div>
+<div class="smoke-layer" id="smokeLayer"></div>
+
+<div class="scene" id="scene">
+  <p class="hint">Do not press the button</p>
+  <h1 class="title">Detonator</h1>
+  <p class="subtitle">Proceed with extreme caution</p>
+
+  <div class="bomb-btn-wrapper" id="btnWrapper">
+    <div class="orbit-ring" id="orbitRing"></div>
+    <button class="bomb-btn" id="bombBtn" aria-label="Detonate the bomb">
+      <i class="fa-solid fa-bomb icon" id="btnIcon"></i>
+    </button>
+    <span class="countdown-text" id="countdownText"></span>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-value" id="statDetonations">0</span>
+    <span class="stat-label">Detonations</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value" id="statParticles">0</span>
+    <span class="stat-label">Particles</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value" id="statMaxIntensity">0</span>
+    <span class="stat-label">Max Intensity</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-value" id="statChain">0</span>
+    <span class="stat-label">Chain</span>
+  </div>
+</div>
+
+<script>
+  const state = {
+    detonations: 0,
+    totalParticles: 0,
+    maxIntensity: 0,
+    chain: 0,
+    isExploding: false,
+    chainTimer: null
+  };
+
+  const canvas = document.getElementById('explosionCanvas');
+  const ctx = canvas.getContext('2d');
+  const scene = document.getElementById('scene');
+  const bombBtn = document.getElementById('bombBtn');
+  const btnIcon = document.getElementById('btnIcon');
+  const btnWrapper = document.getElementById('btnWrapper');
+  const orbitRing = document.getElementById('orbitRing');
+  const flashOverlay = document.getElementById('flashOverlay');
+  const shockwave = document.getElementById('shockwave');
+  const smokeLayer = document.getElementById('smokeLayer');
+  const countdownText = document.getElementById('countdownText');
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  let particles = [];
+  let animFrameId = null;
+
+  class Particle {
+    constructor(x, y, type) {
+      this.x = x;
+      this.y = y;
+      this.type = type;
+      this.life = 1;
+      this.maxLife = 1;
+
+      switch (type) {
+        case 'fire':
+          this.maxLife = 0.6 + Math.random() * 0.8;
+          this.life = this.maxLife;
+          const fireAngle = Math.random() * Math.PI * 2;
+          const fireSpeed = 80 + Math.random() * 250;
+          this.vx = Math.cos(fireAngle) * fireSpeed;
+          this.vy = Math.sin(fireAngle) * fireSpeed - 40;
+          this.size = 8 + Math.random() * 20;
+          this.friction = 0.96;
+          this.gravity = -20;
+          this.color = this.fireColor();
+          break;
+
+        case 'spark':
+          this.maxLife = 0.4 + Math.random() * 1.0;
+          this.life = this.maxLife;
+          const sparkAngle = Math.random() * Math.PI * 2;
+          const sparkSpeed = 200 + Math.random() * 600;
+          this.vx = Math.cos(sparkAngle) * sparkSpeed;
+          this.vy = Math.sin(sparkAngle) * sparkSpeed;
+          this.size = 1.5 + Math.random() * 3;
+          this.friction = 0.97;
+          this.gravity = 200;
+          this.trail = [];
+          this.maxTrail = 6 + Math.floor(Math.random() * 6);
+          break;
+
+        case 'debris':
+          this.maxLife = 0.8 + Math.random() * 1.2;
+          this.life = this.maxLife;
+          const debrisAngle = Math.random() * Math.PI * 2;
+          const debrisSpeed = 100 + Math.random() * 350;
+          this.vx = Math.cos(debrisAngle) * debrisSpeed;
+          this.vy = Math.sin(debrisAngle) * debrisSpeed - 100;
+          this.size = 3 + Math.random() * 8;
+          this.friction = 0.98;
+          this.gravity = 400;
+          this.rotation = Math.random() * Math.PI * 2;
+          this.rotSpeed = (Math.random() - 0.5) * 15;
+          this.aspectRatio = 0.4 + Math.random() * 0.6;
+          break;
+
+        case 'smoke':
+          this.maxLife = 1.5 + Math.random() * 2.5;
+          this.life = this.maxLife;
+          const smokeAngle = Math.random() * Math.PI * 2;
+          const smokeSpeed = 20 + Math.random() * 80;
+          this.vx = Math.cos(smokeAngle) * smokeSpeed;
+          this.vy = Math.sin(smokeAngle) * smokeSpeed - 30 - Math.random() * 40;
+          this.size = 30 + Math.random() * 60;
+          this.friction = 0.99;
+          this.gravity = -15;
+          this.growRate = 15 + Math.random() * 25;
+          break;
+
+        case 'glow':
+          this.maxLife = 0.3 + Math.random() * 0.3;
+          this.life = this.maxLife;
+          this.vx = 0;
+          this.vy = 0;
+          this.size = 100 + Math.random() * 200;
+          this.friction = 1;
+          this.gravity = 0;
+          break;
+      }
+    }
+
+    fireColor() {
+      const r = Math.random();
+      if (r < 0.3) return { r: 255, g: 247, b: 224 }; // 白黄
+      if (r < 0.6) return { r: 255, g: 200, b: 50 };  // 黄
+      if (r < 0.85) return { r: 255, g: 136, b: 0 };   // 橙
+      return { r: 230, g: 57, b: 38 };                   // 红
+    }
+
+    update(dt) {
+      this.life -= dt;
+      if (this.type === 'spark' && this.trail) {
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > this.maxTrail) this.trail.shift();
+      }
+      this.vx *= this.friction;
+      this.vy *= this.friction;
+      this.vy += this.gravity * dt;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      if (this.type === 'debris') {
+        this.rotation += this.rotSpeed * dt;
+      }
+      if (this.type === 'smoke') {
+        this.size += this.growRate * dt;
+      }
+      return this.life > 0;
+    }
+
+    draw(ctx) {
+      const alpha = Math.max(0, this.life / this.maxLife);
+
+      switch (this.type) {
+        case 'fire': {
+          const c = this.color;
+          const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, this.size * alpha));
+          gradient.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${alpha * 0.9})`);
+          gradient.addColorStop(0.4, `rgba(${c.r},${Math.floor(c.g * 0.7)},${Math.floor(c.b * 0.3)},${alpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(${Math.floor(c.r * 0.5)},${Math.floor(c.g * 0.2)},0,0)`);
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, Math.max(1, this.size * alpha), 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          break;
+        }
+
+        case 'spark': {
+
+          if (this.trail && this.trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(this.trail[0].x, this.trail[0].y);
+            for (let i = 1; i < this.trail.length; i++) {
+              ctx.lineTo(this.trail[i].x, this.trail[i].y);
+            }
+            ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = `rgba(255,220,100,${alpha * 0.6})`;
+            ctx.lineWidth = Math.max(0.5, this.size * 0.5 * alpha);
+            ctx.stroke();
+          }
+          
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, Math.max(0.5, this.size * alpha), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,220,${alpha})`;
+          ctx.fill();
+          break;
+        }
+
+        case 'debris': {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.rotation);
+          const w = Math.max(1, this.size);
+          const h = Math.max(1, this.size * this.aspectRatio);
+          ctx.fillStyle = `rgba(80,50,30,${alpha * 0.9})`;
+          ctx.fillRect(-w / 2, -h / 2, w, h);
+          // 热边
+          ctx.strokeStyle = `rgba(255,150,50,${alpha * 0.5})`;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-w / 2, -h / 2, w, h);
+          ctx.restore();
+          break;
+        }
+
+        case 'smoke': {
+          const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, this.size));
+          gradient.addColorStop(0, `rgba(50,40,35,${alpha * 0.25})`);
+          gradient.addColorStop(0.5, `rgba(40,32,28,${alpha * 0.12})`);
+          gradient.addColorStop(1, `rgba(30,25,20,0)`);
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, Math.max(1, this.size), 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          break;
+        }
+
+        case 'glow': {
+          const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, this.size));
+          gradient.addColorStop(0, `rgba(255,240,200,${alpha * 0.6})`);
+          gradient.addColorStop(0.3, `rgba(255,180,80,${alpha * 0.3})`);
+          gradient.addColorStop(0.7, `rgba(230,57,38,${alpha * 0.1})`);
+          gradient.addColorStop(1, `rgba(230,57,38,0)`);
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, Math.max(1, this.size), 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          break;
+        }
+      }
+    }
+  }
+
+  let lastTime = performance.now();
+
+  function animate(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.05); // 限制dt防止跳帧
+    lastTime = now;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  
+    ctx.globalCompositeOperation = 'lighter';
+
+    particles = particles.filter(p => {
+      const alive = p.update(dt);
+      if (alive) p.draw(ctx);
+      return alive;
+    });
+
+    
+    ctx.globalCompositeOperation = 'source-over';
+    particles.filter(p => p.type === 'smoke').forEach(p => p.draw(ctx));
+
+    ctx.globalCompositeOperation = 'source-over';
+
+    document.getElementById('statParticles').textContent = particles.length;
+
+    if (particles.length > 0) {
+      animFrameId = requestAnimationFrame(animate);
+    } else {
+      animFrameId = null;
+   
+      setTimeout(restoreButton, 800);
+    }
+  }
+
+  function startAnimation() {
+    if (!animFrameId) {
+      lastTime = performance.now();
+      animFrameId = requestAnimationFrame(animate);
+    }
+  }
+
+  function triggerExplosion() {
+    if (state.isExploding) return;
+    state.isExploding = true;
+
+    const rect = bombBtn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    bombBtn.style.visibility = 'hidden';
+    orbitRing.style.visibility = 'hidden';
+
+    clearTimeout(state.chainTimer);
+    state.chain++;
+    document.getElementById('statChain').textContent = state.chain;
+    state.chainTimer = setTimeout(() => {
+      state.chain = 0;
+      document.getElementById('statChain').textContent = '0';
+    }, 3000);
+
+    const intensityMultiplier = 1 + (state.chain - 1) * 0.3;
+    const intensity = Math.min(intensityMultiplier, 3);
+
+    state.detonations++;
+    document.getElementById('statDetonations').textContent = state.detonations;
+    if (intensity > state.maxIntensity) {
+      state.maxIntensity = intensity;
+      document.getElementById('statMaxIntensity').textContent = intensity.toFixed(1) + 'x';
+    }
+
+    flashOverlay.classList.remove('active');
+    void flashOverlay.offsetWidth;
+    flashOverlay.classList.add('active');
+
+    scene.classList.remove('shake', 'heavy-shake');
+    void scene.offsetWidth;
+    scene.classList.add(intensity > 2 ? 'heavy-shake' : 'shake');
+
+    const swSize = Math.min(window.innerWidth, window.innerHeight) * 1.4;
+    shockwave.style.left = cx + 'px';
+    shockwave.style.top = cy + 'px';
+    shockwave.style.width = swSize + 'px';
+    shockwave.style.height = swSize + 'px';
+    shockwave.classList.remove('active');
+    void shockwave.offsetWidth;
+    shockwave.classList.add('active');
+
+    smokeLayer.classList.add('active');
+
+    const baseFire = Math.floor(40 * intensity);
+    const baseSpark = Math.floor(60 * intensity);
+    const baseDebris = Math.floor(20 * intensity);
+    const baseSmoke = Math.floor(15 * intensity);
+
+    for (let i = 0; i < 3; i++) {
+      particles.push(new Particle(cx, cy, 'glow'));
+    }
+
+    for (let i = 0; i < baseFire; i++) {
+      particles.push(new Particle(cx, cy, 'fire'));
+    }
+
+    for (let i = 0; i < baseSpark; i++) {
+      particles.push(new Particle(cx, cy, 'spark'));
+    }
+
+    for (let i = 0; i < baseDebris; i++) {
+      particles.push(new Particle(cx, cy, 'debris'));
+    }
+
+    for (let i = 0; i < baseSmoke; i++) {
+      setTimeout(() => {
+        particles.push(new Particle(
+          cx + (Math.random() - 0.5) * 60,
+          cy + (Math.random() - 0.5) * 60,
+          'smoke'
+        ));
+      }, 200 + Math.random() * 500);
+    }
+
+    setTimeout(() => {
+      for (let i = 0; i < Math.floor(20 * intensity); i++) {
+        particles.push(new Particle(cx, cy, 'spark'));
+      }
+    }, 100);
+
+    spawnEmbers(cx, cy, intensity);
+
+    setTimeout(() => {
+      flashOverlay.classList.remove('active');
+      scene.classList.remove('shake', 'heavy-shake');
+      shockwave.classList.remove('active');
+    }, 1000);
+
+    setTimeout(() => {
+      smokeLayer.classList.remove('active');
+    }, 2500);
+
+    state.totalParticles += baseFire + baseSpark + baseDebris + baseSmoke + 3 + Math.floor(20 * intensity);
+
+    startAnimation();
+  }
+
+  function spawnEmbers(cx, cy, intensity) {
+    const count = Math.floor(12 * intensity);
+    for (let i = 0; i < count; i++) {
+      const ember = document.createElement('div');
+      ember.className = 'ember';
+      const startX = cx + (Math.random() - 0.5) * 300;
+      const startY = cy + (Math.random() - 0.5) * 200;
+      ember.style.left = startX + 'px';
+      ember.style.top = startY + 'px';
+
+      const hue = Math.random() > 0.5 ? `var(--fire-2)` : `var(--fire-3)`;
+      ember.style.background = hue;
+      ember.style.width = (2 + Math.random() * 3) + 'px';
+      ember.style.height = (2 + Math.random() * 3) + 'px';
+
+      document.body.appendChild(ember);
+
+      const dx = (Math.random() - 0.5) * 200;
+      const dy = Math.random() * 300 + 100;
+      const duration = 1500 + Math.random() * 2000;
+      const delay = Math.random() * 500;
+
+      ember.animate([
+        { opacity: 0.9, transform: 'translate(0, 0) scale(1)' },
+        { opacity: 0.6, transform: `translate(${dx * 0.5}px, ${dy * 0.4}px) scale(0.8)`, offset: 0.5 },
+        { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(0.2)` }
+      ], {
+        duration: duration,
+        delay: delay,
+        easing: 'ease-out',
+        fill: 'forwards'
+      }).onfinish = () => ember.remove();
+    }
+  }
+
+  function restoreButton() {
+    state.isExploding = false;
+    bombBtn.style.visibility = 'visible';
+    orbitRing.style.visibility = 'visible';
+    bombBtn.classList.remove('counting');
+    btnIcon.className = 'fa-solid fa-bomb icon';
+    btnIcon.style.display = '';
+    countdownText.classList.remove('visible');
+    countdownText.textContent = '';
+  }
+
+  let countdownActive = false;
+
+  bombBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (state.isExploding || countdownActive) return;
+
+    countdownActive = true;
+    bombBtn.classList.add('counting');
+    btnIcon.style.display = 'none';
+
+    let count = 3;
+    countdownText.textContent = count;
+    countdownText.classList.remove('visible');
+    void countdownText.offsetWidth;
+    countdownText.classList.add('visible');
+
+    const interval = setInterval(() => {
+      count--;
+      if (count > 0) {
+        countdownText.textContent = count;
+        countdownText.classList.remove('visible');
+        void countdownText.offsetWidth;
+        countdownText.classList.add('visible');
+      } else {
+        clearInterval(interval);
+        countdownText.textContent = 'BOOM';
+        countdownText.classList.remove('visible');
+        void countdownText.offsetWidth;
+        countdownText.classList.add('visible');
+        countdownActive = false;
+        setTimeout(triggerExplosion, 150);
+      }
+    }, 400);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !countdownActive && !state.isExploding) {
+      e.preventDefault();
+      bombBtn.click();
+    }
+  });
+
+
+  const bgCanvas = document.createElement('canvas');
+  bgCanvas.style.cssText = 'position:fixed;inset:0;z-index:1;pointer-events:none;';
+  document.body.insertBefore(bgCanvas, document.body.firstChild);
+  const bgCtx = bgCanvas.getContext('2d');
+
+  function resizeBg() {
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+  }
+  resizeBg();
+  window.addEventListener('resize', resizeBg);
+
+ 
+  const dustParticles = [];
+  for (let i = 0; i < 50; i++) {
+    dustParticles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      size: 0.5 + Math.random() * 1.5,
+      speedX: (Math.random() - 0.5) * 8,
+      speedY: -5 - Math.random() * 10,
+      opacity: 0.1 + Math.random() * 0.2,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  let bgTime = 0;
+  function animateBg(now) {
+    bgTime = now / 1000;
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+    dustParticles.forEach(d => {
+      d.x += d.speedX * 0.016 + Math.sin(bgTime + d.phase) * 0.3;
+      d.y += d.speedY * 0.016;
+
+      // 循环
+      if (d.y < -10) { d.y = bgCanvas.height + 10; d.x = Math.random() * bgCanvas.width; }
+      if (d.x < -10) d.x = bgCanvas.width + 10;
+      if (d.x > bgCanvas.width + 10) d.x = -10;
+
+      const flicker = 0.7 + 0.3 * Math.sin(bgTime * 2 + d.phase);
+      bgCtx.beginPath();
+      bgCtx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+      bgCtx.fillStyle = `rgba(230,180,130,${d.opacity * flicker})`;
+      bgCtx.fill();
+    });
+
+    requestAnimationFrame(animateBg);
+  }
+  requestAnimationFrame(animateBg);
+
+  const mouseGlow = document.createElement('div');
+  mouseGlow.style.cssText = `
+    position: fixed; width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(230,57,38,0.04) 0%, transparent 70%);
+    pointer-events: none; z-index: 1; transform: translate(-50%, -50%);
+    transition: left 0.1s ease-out, top 0.1s ease-out;
+  `;
+  document.body.appendChild(mouseGlow);
+
+  document.addEventListener('mousemove', (e) => {
+    mouseGlow.style.left = e.clientX + 'px';
+    mouseGlow.style.top = e.clientY + 'px';
+  });
+</script>
+</body>
+</html>

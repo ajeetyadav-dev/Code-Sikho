@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Fill Button</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #071520;
+    --bg-deep: #040e18;
+    --fg: #e8f4f8;
+    --muted: #4a7a8a;
+    --water-top: #00c9db;
+    --water-mid: #0097a7;
+    --water-deep: #006978;
+    --accent: #00e5ff;
+    --glow: rgba(0, 229, 255, 0.25);
+    --card: rgba(10, 30, 50, 0.7);
+    --border: rgba(0, 200, 220, 0.15);
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Atmospheric background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -30%; left: -20%;
+    width: 70vw; height: 70vw;
+    background: radial-gradient(circle, rgba(0,150,167,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -20%; right: -15%;
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(0,229,255,0.08) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .bg-particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .bg-particles span {
+    position: absolute;
+    width: 3px; height: 3px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(100vh) scale(0.5); }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.3; }
+    100% { opacity: 0; transform: translateY(-10vh) scale(1.2); }
+  }
+
+  .page-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 60px;
+    padding: 40px 20px;
+    max-width: 800px;
+    width: 100%;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+  }
+  .header h1 {
+    font-size: clamp(2.4rem, 6vw, 3.8rem);
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #e8f4f8 30%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    margin-top: 14px;
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: var(--muted);
+    max-width: 420px;
+    margin-inline: auto;
+    line-height: 1.6;
+  }
+
+  /* ===== MAIN WATER BUTTON ===== */
+  .water-btn-wrapper {
+    position: relative;
+  }
+
+  .water-btn {
+    position: relative;
+    width: 280px;
+    height: 80px;
+    border-radius: 40px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid var(--border);
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .water-btn:hover {
+    border-color: rgba(0, 229, 255, 0.4);
+    box-shadow: 0 0 40px var(--glow), 0 0 80px rgba(0,200,220,0.1);
+  }
+  .water-btn:active {
+    transform: scale(0.96);
+  }
+  .water-btn.filled {
+    border-color: var(--accent);
+    box-shadow: 0 0 50px var(--glow), 0 4px 30px rgba(0,200,220,0.15);
+  }
+
+  /* Water fill layer */
+  .water-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 0%;
+    background: linear-gradient(to top, var(--water-deep), var(--water-mid) 60%, var(--water-top));
+    transition: height 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 1;
+  }
+  .water-btn:hover .water-fill,
+  .water-btn.filled .water-fill {
+    height: 100%;
+  }
+
+  /* SVG Wave on top of water */
+  .wave-container {
+    position: absolute;
+    top: -14px;
+    left: -10%;
+    width: 120%;
+    height: 18px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.5s 0.2s;
+  }
+  .water-btn:hover .wave-container,
+  .water-btn.filled .wave-container {
+    opacity: 1;
+  }
+  .wave-container svg {
+    width: 100%;
+    height: 100%;
+  }
+  .wave1 { animation: waveShift 2.5s ease-in-out infinite alternate; }
+  .wave2 { animation: waveShift 3.2s ease-in-out infinite alternate-reverse; margin-top: -3px; }
+  @keyframes waveShift {
+    0% { transform: translateX(-8%); }
+    100% { transform: translateX(8%); }
+  }
+
+  /* Bubble canvas inside button */
+  .bubble-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* Button text */
+  .water-btn-text {
+    position: relative;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 100%;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--fg);
+    transition: color 0.4s, text-shadow 0.4s;
+  }
+  .water-btn.filled .water-btn-text {
+    color: #fff;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.3);
+  }
+  .water-btn-text i {
+    font-size: 1rem;
+    transition: transform 0.4s;
+  }
+  .water-btn.filled .water-btn-text i {
+    transform: rotate(180deg);
+  }
+
+  /* Ripple on click */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    transform: scale(0);
+    animation: rippleAnim 0.6s ease-out forwards;
+    z-index: 5;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* Splash particles on click */
+  .splash-drop {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    z-index: 10;
+    pointer-events: none;
+    animation: splashAnim 0.7s ease-out forwards;
+  }
+  @keyframes splashAnim {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(0.2); }
+  }
+
+  /* ===== VARIANT BUTTONS ===== */
+  .variants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+  }
+
+  /* Pill variant */
+  .water-btn-pill {
+    position: relative;
+    width: 180px;
+    height: 52px;
+    border-radius: 26px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .water-btn-pill:hover { border-color: rgba(0,229,255,0.35); box-shadow: 0 0 25px var(--glow); }
+  .water-btn-pill:active { transform: scale(0.95); }
+  .water-btn-pill .water-fill { transition: height 0.6s cubic-bezier(0.23,1,0.32,1); }
+  .water-btn-pill:hover .water-fill { height: 100%; }
+  .water-btn-pill .wave-container { top: -12px; }
+  .water-btn-pill .water-btn-text { font-size: 0.9rem; font-weight: 500; }
+
+  /* Rounded square variant */
+  .water-btn-square {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .water-btn-square:hover { border-color: rgba(0,229,255,0.35); box-shadow: 0 0 25px var(--glow); }
+  .water-btn-square:active { transform: scale(0.95); }
+  .water-btn-square .water-fill { transition: height 0.6s cubic-bezier(0.23,1,0.32,1); }
+  .water-btn-square:hover .water-fill { height: 100%; }
+  .water-btn-square .wave-container { top: -12px; }
+  .water-btn-square .water-btn-text {
+    font-size: 0.78rem;
+    font-weight: 500;
+    flex-direction: column;
+  }
+  .water-btn-square .water-btn-text i { font-size: 1.4rem; }
+
+  /* Circular variant */
+  .water-btn-circle {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .water-btn-circle:hover { border-color: rgba(0,229,255,0.35); box-shadow: 0 0 25px var(--glow); }
+  .water-btn-circle:active { transform: scale(0.93); }
+  .water-btn-circle .water-fill { transition: height 0.6s cubic-bezier(0.23,1,0.32,1); }
+  .water-btn-circle:hover .water-fill { height: 100%; }
+  .water-btn-circle .wave-container { top: -12px; }
+  .water-btn-circle .water-btn-text { font-size: 1.3rem; }
+
+  /* Color variants */
+  .water-fill.coral {
+    background: linear-gradient(to top, #c0392b, #e74c3c 60%, #ff6b6b);
+  }
+  .water-fill.emerald {
+    background: linear-gradient(to top, #1a7a4c, #27ae60 60%, #6dd5a0);
+  }
+  .water-fill.amber {
+    background: linear-gradient(to top, #b7791f, #f59e0b 60%, #fbbf24);
+  }
+  .water-fill.violet {
+    background: linear-gradient(to top, #6d28d9, #8b5cf6 60%, #c4b5fd);
+  }
+
+  /* Status label */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.4s;
+  }
+  .status-bar.active {
+    color: var(--accent);
+    border-color: rgba(0,229,255,0.3);
+    box-shadow: 0 0 20px rgba(0,229,255,0.08);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  .status-bar.active .status-dot {
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 6px var(--accent); }
+    50% { box-shadow: 0 0 16px var(--accent); }
+  }
+
+  /* Section labels */
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  /* Footer hint */
+  .hint {
+    font-size: 0.82rem;
+    color: var(--muted);
+    opacity: 0.5;
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    padding: 12px 28px;
+    border-radius: 12px;
+    background: rgba(0, 200, 220, 0.15);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    backdrop-filter: blur(16px);
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 100;
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.23,1,0.32,1), opacity 0.5s;
+    pointer-events: none;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Reduce motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .water-btn { width: 240px; height: 70px; }
+    .variants { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background floating particles -->
+<div class="bg-particles" id="bgParticles"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<div class="page-wrapper">
+
+  <!-- Header -->
+  <header class="header">
+    <h1>Water Fill Button</h1>
+    <p>Hover to fill with fluid. Click to trigger a splash. Each variant carries its own current.</p>
+  </header>
+
+  <!-- Main Button -->
+  <div class="water-btn-wrapper">
+    <button class="water-btn" id="mainBtn" aria-label="Submit action">
+      <div class="water-fill" id="mainFill"></div>
+      <div class="wave-container">
+        <svg class="wave1" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,10 C100,0 150,18 300,10 C450,2 500,16 600,10 L600,18 L0,18 Z" fill="var(--water-top)" fill-opacity="0.5"/>
+        </svg>
+        <svg class="wave2" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,12 C120,4 200,18 350,8 C500,0 540,14 600,10 L600,18 L0,18 Z" fill="var(--water-top)" fill-opacity="0.3"/>
+        </svg>
+      </div>
+      <canvas class="bubble-canvas" id="mainBubbles"></canvas>
+      <span class="water-btn-text"><i class="fa-solid fa-droplet"></i> Dive In</span>
+    </button>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">
+    <span class="status-dot"></span>
+    <span id="statusText">Hover the button to fill</span>
+  </div>
+
+  <!-- Variant label -->
+  <span class="section-label">Shape Variants</span>
+
+  <!-- Variant Buttons -->
+  <div class="variants">
+    <!-- Pill -->
+    <button class="water-btn-pill" aria-label="Download">
+      <div class="water-fill coral"></div>
+      <div class="wave-container">
+        <svg class="wave1" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,10 C100,0 150,18 300,10 C450,2 500,16 600,10 L600,18 L0,18 Z" fill="#ff6b6b" fill-opacity="0.5"/>
+        </svg>
+        <svg class="wave2" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,12 C120,4 200,18 350,8 C500,0 540,14 600,10 L600,18 L0,18 Z" fill="#ff6b6b" fill-opacity="0.3"/>
+        </svg>
+      </div>
+      <span class="water-btn-text"><i class="fa-solid fa-download"></i> Download</span>
+    </button>
+
+    <!-- Pill 2 -->
+    <button class="water-btn-pill" aria-label="Subscribe">
+      <div class="water-fill emerald"></div>
+      <div class="wave-container">
+        <svg class="wave1" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,10 C100,0 150,18 300,10 C450,2 500,16 600,10 L600,18 L0,18 Z" fill="#6dd5a0" fill-opacity="0.5"/>
+        </svg>
+        <svg class="wave2" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,12 C120,4 200,18 350,8 C500,0 540,14 600,10 L600,18 L0,18 Z" fill="#6dd5a0" fill-opacity="0.3"/>
+        </svg>
+      </div>
+      <span class="water-btn-text"><i class="fa-solid fa-check"></i> Subscribe</span>
+    </button>
+
+    <!-- Square -->
+    <button class="water-btn-square" aria-label="Settings">
+      <div class="water-fill amber"></div>
+      <div class="wave-container">
+        <svg class="wave1" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,10 C100,0 150,18 300,10 C450,2 500,16 600,10 L600,18 L0,18 Z" fill="#fbbf24" fill-opacity="0.5"/>
+        </svg>
+        <svg class="wave2" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,12 C120,4 200,18 350,8 C500,0 540,14 600,10 L600,18 L0,18 Z" fill="#fbbf24" fill-opacity="0.3"/>
+        </svg>
+      </div>
+      <span class="water-btn-text"><i class="fa-solid fa-gear"></i><span>Settings</span></span>
+    </button>
+
+    <!-- Circle -->
+    <button class="water-btn-circle" aria-label="Play">
+      <div class="water-fill violet"></div>
+      <div class="wave-container">
+        <svg class="wave1" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,10 C100,0 150,18 300,10 C450,2 500,16 600,10 L600,18 L0,18 Z" fill="#c4b5fd" fill-opacity="0.5"/>
+        </svg>
+        <svg class="wave2" viewBox="0 0 600 18" preserveAspectRatio="none">
+          <path d="M0,12 C120,4 200,18 350,8 C500,0 540,14 600,10 L600,18 L0,18 Z" fill="#c4b5fd" fill-opacity="0.3"/>
+        </svg>
+      </div>
+      <span class="water-btn-text"><i class="fa-solid fa-play"></i></span>
+    </button>
+  </div>
+
+  <p class="hint">Hover any button to see it fill with water.<br>Click to create a splash ripple effect.</p>
+
+</div>
+
+<script>
+  // ===== Background Particles =====
+  (function initBgParticles() {
+    const container = document.getElementById('bgParticles');
+    for (let i = 0; i < 30; i++) {
+      const span = document.createElement('span');
+      span.style.left = Math.random() * 100 + '%';
+      span.style.animationDuration = (6 + Math.random() * 10) + 's';
+      span.style.animationDelay = (Math.random() * 8) + 's';
+      span.style.width = span.style.height = (2 + Math.random() * 3) + 'px';
+      container.appendChild(span);
+    }
+  })();
+
+  // ===== Bubble System for Main Button =====
+  const mainBtn = document.getElementById('mainBtn');
+  const mainCanvas = document.getElementById('mainBubbles');
+  const ctx = mainCanvas.getContext('2d');
+  let bubbles = [];
+  let isHovering = false;
+  let animFrameId = null;
+
+  function resizeCanvas() {
+    const rect = mainBtn.getBoundingClientRect();
+    mainCanvas.width = rect.width * 2;
+    mainCanvas.height = rect.height * 2;
+    mainCanvas.style.width = rect.width + 'px';
+    mainCanvas.style.height = rect.height + 'px';
+    ctx.scale(2, 2);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Bubble {
+    constructor(w, h) {
+      this.reset(w, h, true);
+    }
+    reset(w, h, initial = false) {
+      this.x = 10 + Math.random() * (w - 20);
+      this.y = initial ? Math.random() * h : h + 5;
+      this.r = 1.5 + Math.random() * 3;
+      this.speed = 0.3 + Math.random() * 0.8;
+      this.wobbleAmp = 0.3 + Math.random() * 0.6;
+      this.wobbleFreq = 0.02 + Math.random() * 0.03;
+      this.phase = Math.random() * Math.PI * 2;
+      this.opacity = 0.2 + Math.random() * 0.4;
+      this.w = w;
+      this.h = h;
+    }
+    update() {
+      this.y -= this.speed;
+      this.phase += this.wobbleFreq;
+      this.x += Math.sin(this.phase) * this.wobbleAmp;
+      if (this.y < -10) this.reset(this.w, this.h);
+    }
+    draw(c) {
+      c.beginPath();
+      c.arc(this.x, this.y, Math.max(0.5, this.r), 0, Math.PI * 2);
+      c.fillStyle = `rgba(200, 245, 255, ${this.opacity})`;
+      c.fill();
+      // Highlight
+      c.beginPath();
+      c.arc(this.x - this.r * 0.3, this.y - this.r * 0.3, Math.max(0.3, this.r * 0.35), 0, Math.PI * 2);
+      c.fillStyle = `rgba(255, 255, 255, ${this.opacity * 0.8})`;
+      c.fill();
+    }
+  }
+
+  // Init bubbles
+  const rect = mainBtn.getBoundingClientRect();
+  for (let i = 0; i < 18; i++) {
+    bubbles.push(new Bubble(rect.width, rect.height));
+  }
+
+  function animateBubbles() {
+    const w = mainCanvas.width / 2;
+    const h = mainCanvas.height / 2;
+    ctx.clearRect(0, 0, w, h);
+    if (isHovering) {
+      bubbles.forEach(b => {
+        b.w = w;
+        b.h = h;
+        b.update();
+        b.draw(ctx);
+      });
+    }
+    animFrameId = requestAnimationFrame(animateBubbles);
+  }
+  animateBubbles();
+
+  // ===== Hover / Click for Main Button =====
+  const statusBar = document.getElementById('statusBar');
+  const statusText = document.getElementById('statusText');
+
+  mainBtn.addEventListener('mouseenter', () => {
+    isHovering = true;
+    statusBar.classList.add('active');
+    statusText.textContent = 'Water level rising...';
+  });
+  mainBtn.addEventListener('mouseleave', () => {
+    isHovering = false;
+    mainBtn.classList.remove('filled');
+    statusBar.classList.remove('active');
+    statusText.textContent = 'Hover the button to fill';
+  });
+  mainBtn.addEventListener('click', (e) => {
+    mainBtn.classList.add('filled');
+    statusText.textContent = 'Splash! Action triggered.';
+    createRipple(e, mainBtn);
+    createSplash(e, mainBtn);
+    showToast('Action completed successfully');
+  });
+
+  // ===== Ripple Effect =====
+  function createRipple(e, btn) {
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    btn.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  }
+
+  // ===== Splash Drops =====
+  function createSplash(e, btn) {
+    const rect = btn.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    for (let i = 0; i < 12; i++) {
+      const drop = document.createElement('span');
+      drop.className = 'splash-drop';
+      const angle = (Math.PI * 2 / 12) * i + (Math.random() - 0.5) * 0.5;
+      const dist = 30 + Math.random() * 50;
+      drop.style.setProperty('--sx', Math.cos(angle) * dist + 'px');
+      drop.style.setProperty('--sy', Math.sin(angle) * dist + 'px');
+      drop.style.left = cx + 'px';
+      drop.style.top = cy + 'px';
+      drop.style.width = drop.style.height = (3 + Math.random() * 5) + 'px';
+      btn.appendChild(drop);
+      drop.addEventListener('animationend', () => drop.remove());
+    }
+  }
+
+  // ===== Toast =====
+  let toastTimer = null;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // ===== Wire up all variant buttons =====
+  document.querySelectorAll('.water-btn-pill, .water-btn-square, .water-btn-circle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      createRipple(e, btn);
+      createSplash(e, btn);
+      const label = btn.getAttribute('aria-label') || 'Button';
+      showToast(`${label} activated`);
+    });
+  });
+
+  // ===== Touch support for hover-like behavior =====
+  document.querySelectorAll('.water-btn, .water-btn-pill, .water-btn-square, .water-btn-circle').forEach(btn => {
+    btn.addEventListener('touchstart', () => {
+      isHovering = btn === mainBtn;
+      btn.style.transition = 'none';
+      const fill = btn.querySelector('.water-fill');
+      if (fill) fill.style.transition = 'none';
+      requestAnimationFrame(() => {
+        btn.style.transition = '';
+        if (fill) fill.style.transition = '';
+      });
+    }, { passive: true });
+  });
+</script>
+</body>
+</html>
