@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Precision Laser Cut Button</title>
+    <style>
+        /* --- RESET & BASE STYLES --- */
+        :root {
+            --bg-color: #0f1014;
+            --panel-color: #1a1c23;
+            --plate-color: #2a2d35;
+            --button-face: #4a4e5a;
+            --laser-core: #ffffff;
+            --laser-glow: #ff004c;
+            --sparks-color: #ffcc00;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: var(--font-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* --- UI CONTAINER --- */
+        .control-deck {
+            background: var(--panel-color);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 
+                0 20px 50px rgba(0,0,0,0.5),
+                inset 0 1px 1px rgba(255,255,255,0.1);
+            text-align: center;
+            position: relative;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid #333;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #888;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        /* --- THE STAGE (LASER AREA) --- */
+        .stage {
+            position: relative;
+            width: 300px;
+            height: 160px; /* Space for button to fall slightly */
+            margin: 0 auto 2rem auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* The Metal Plate */
+        .metal-plate {
+            position: absolute;
+            top: 20px;
+            width: 240px;
+            height: 80px;
+            background: linear-gradient(135deg, #3e424e, #2a2d35);
+            border-radius: 6px;
+            box-shadow: 
+                0 4px 6px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            /* Clip path to create the "hole" effect after cut? 
+               We will simulate the hole by removing the piece visually. */
+            z-index: 1;
+        }
+
+        /* The Button Piece (The one to be cut) */
+        .cut-piece {
+            position: absolute;
+            top: 30px; /* Centered within plate */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 60px;
+            background: linear-gradient(to bottom, #5a5e6a, #454852);
+            border-radius: 30px; /* Pill shape */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #ccc;
+            font-size: 0.9rem;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 2;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .cut-piece::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 10px;
+            right: 10px;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+        }
+
+        /* Burn Mark State (Applies to the plate) */
+        .metal-plate.burnt {
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            transition: box-shadow 0.5s;
+        }
+
+        /* Animation: The Drop */
+        .cut-piece.dropped {
+            animation: fallAway 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fallAway {
+            0% {
+                transform: translateX(-50%) translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-50%) translateY(150px) rotate(15deg);
+                opacity: 0;
+            }
+        }
+
+        /* --- LASER GRAPHICS --- */
+        .svg-layer {
+            position: absolute;
+            top: 30px; /* Matches cut-piece top */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 60px;
+            pointer-events: none;
+            z-index: 10;
+            overflow: visible;
+        }
+
+        .laser-path {
+            fill: none;
+            stroke: var(--laser-glow);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-dasharray: 600; /* Approx perimeter */
+            stroke-dashoffset: 600; /* Start hidden */
+            filter: drop-shadow(0 0 4px var(--laser-glow)) drop-shadow(0 0 8px var(--laser-glow));
+            opacity: 0;
+        }
+
+        .laser-head {
+            fill: white;
+            filter: drop-shadow(0 0 5px var(--laser-glow));
+            opacity: 0;
+        }
+
+        /* --- CONTROLS --- */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #aaa;
+            padding: 10px 24px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .btn:hover {
+            border-color: #666;
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .btn-primary {
+            border-color: var(--laser-glow);
+            color: var(--laser-glow);
+            box-shadow: 0 0 5px rgba(255, 0, 76, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: rgba(255, 0, 76, 0.1);
+            box-shadow: 0 0 15px rgba(255, 0, 76, 0.4);
+            text-shadow: 0 0 5px var(--laser-glow);
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* --- PARTICLES (Sparks) --- */
+        .spark {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 20;
+            box-shadow: 0 0 4px var(--sparks-color);
+        }
+        
+        /* Smoke particles */
+        .smoke {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(100,100,100,0.4);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            filter: blur(2px);
+        }
+
+        /* Status Indicator */
+        .status-light {
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .status-light.active {
+            background: #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+        .status-light.cutting {
+            background: var(--laser-glow);
+            box-shadow: 0 0 8px var(--laser-glow);
+        }
+
+        .status-text {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="control-deck">
+        <h1>Cutter Interface</h1>
+
+        <div class="stage" id="stage">
+            <!-- The static background plate -->
+            <div class="metal-plate" id="plate"></div>
+            
+            <!-- The piece to be cut -->
+            <div class="cut-piece" id="targetPiece">
+                CUT ME
+            </div>
+
+            <!-- SVG for the Laser Animation -->
+            <!-- ViewBox matches the dimensions of the cut-piece (220x60) -->
+            <svg class="svg-layer" viewBox="0 0 220 60">
+                <!-- 
+                    Path traces the button perimeter. 
+                    30px radius on each side.
+                    M(Start Top Left Arc) L(Line) A(Arc) ...
+                -->
+                <path id="laserPath" class="laser-path" 
+                      d="M 30,0 
+                         L 190,0 
+                         A 30,30 0 0 1 220,30 
+                         L 220,30 
+                         A 30,30 0 0 1 190,60 
+                         L 30,60 
+                         A 30,30 0 0 1 0,30 
+                         A 30,30 0 0 1 30,0 Z" />
+                <circle id="laserHead" class="laser-head" r="3" cx="0" cy="0" />
+            </svg>
+        </div>
+
+        <div class="status-text">
+            <span class="status-light" id="statusLight"></span>
+            <span id="statusMsg">System Ready</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="cutBtn">Initiate Cut</button>
+            <button class="btn" id="resetBtn" disabled>Reset Plate</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Laser Cut Animation Controller
+         * Handles SVG path tracing, particle generation, and physics simulation.
+         */
+
+        // --- Elements ---
+        const cutBtn = document.getElementById('cutBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const targetPiece = document.getElementById('targetPiece');
+        const plate = document.getElementById('plate');
+        const laserPath = document.getElementById('laserPath');
+        const laserHead = document.getElementById('laserHead');
+        const stage = document.getElementById('stage');
+        const statusLight = document.getElementById('statusLight');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // --- Configuration ---
+        const config = {
+            duration: 2000,    // Time to cut in ms
+            pathLength: laserPath.getTotalLength(),
+        };
+
+        // Initialize SVG for dashoffset animation
+        laserPath.style.strokeDasharray = config.pathLength;
+        laserPath.style.strokeDashoffset = config.pathLength;
+
+        let isCutting = false;
+        let isCut = false;
+        let animationFrameId;
+
+        // --- Main Functions ---
+
+        function initiateCut() {
+            if (isCutting || isCut) return;
+            
+            isCutting = true;
+            updateStatus('cutting', 'Cutting in progress...');
+            cutBtn.disabled = true;
+
+            // 1. Reveal Laser
+            laserPath.style.opacity = '1';
+            laserHead.style.opacity = '1';
+
+            // 2. Animate SVG Stroke
+            // Force a reflow to ensure transition starts
+            laserPath.getBoundingClientRect();
+            
+            laserPath.style.transition = `stroke-dashoffset ${config.duration}ms linear`;
+            laserPath.style.strokeDashoffset = '0';
+
+            // 3. Start Particle Loop synced with animation
+            const startTime = performance.now();
+            
+            function animateLoop(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / config.duration, 1);
+
+                // Calculate current point on path
+                const point = laserPath.getPointAtLength(progress * config.pathLength);
+                
+                // Update Laser Head position
+                laserHead.setAttribute('cx', point.x);
+                laserHead.setAttribute('cy', point.y);
+
+                // Spawn particles randomly based on speed/progress
+                if (Math.random() > 0.3) {
+                    createSparks(point.x, point.y);
+                    createSmoke(point.x, point.y);
+                }
+
+                if (progress < 1) {
+                    animationFrameId = requestAnimationFrame(animateLoop);
+                } else {
+                    finishCut();
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(animateLoop);
+        }
+
+        function finishCut() {
+            // Cleanup Laser visuals
+            laserPath.style.opacity = '0';
+            laserHead.style.opacity = '0';
+            
+            // Apply "Cut" physics
+            targetPiece.classList.add('dropped');
+            plate.classList.add('burnt'); // Add burn mark to plate
+            
+            // UI Updates
+            isCutting = false;
+            isCut = true;
+            updateStatus('active', 'Segment Removed');
+            resetBtn.disabled = false;
+            resetBtn.focus();
+
+            // Final burst of sparks at the end
+            const endPoint = laserPath.getPointAtLength(config.pathLength);
+            for(let i=0; i<10; i++) createSparks(endPoint.x, endPoint.y, true);
+        }
+
+        function resetSystem() {
+            // Reset CSS transitions
+            laserPath.style.transition = 'none';
+            laserPath.style.strokeDashoffset = config.pathLength;
+            
+            // Remove classes
+            targetPiece.classList.remove('dropped');
+            plate.classList.remove('burnt');
+
+            // UI Updates
+            isCut = false;
+            cutBtn.disabled = false;
+            resetBtn.disabled = true;
+            updateStatus('default', 'System Ready');
+            cutBtn.focus();
+
+            // Force reflow so the class removal takes effect immediately visually
+            void targetPiece.offsetWidth; 
+        }
+
+        function updateStatus(state, text) {
+            statusLight.className = 'status-light'; // reset
+            if (state === 'cutting') statusLight.classList.add('cutting');
+            if (state === 'active') statusLight.classList.add('active');
+            statusMsg.textContent = text;
+        }
+
+        // --- Particle System ---
+
+        function createSparks(x, y, burst = false) {
+            const count = burst ? 15 : 2;
+            
+            for (let i = 0; i < count; i++) {
+                const spark = document.createElement('div');
+                spark.classList.add('spark');
+                stage.appendChild(spark);
+
+                // Convert SVG coordinates to CSS absolute position within stage
+                // The SVG is 220x60 centered in stage (300x160). 
+                // Stage center is 150,80. SVG top-left is (150-110, 80-30) = 40, 50
+                const stageX = 40 + x;
+                const stageY = 50 + y;
+
+                spark.style.left = `${stageX}px`;
+                spark.style.top = `${stageY}px`;
+
+                // Physics
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = burst ? Math.random() * 5 + 2 : Math.random() * 2 + 1;
+                
+                let velX = Math.cos(angle) * velocity;
+                let velY = Math.sin(angle) * velocity;
+                let life = 1.0;
+                const decay = Math.random() * 0.05 + 0.02;
+
+                function updateSpark() {
+                    velY += 0.2; // Gravity
+                    life -= decay;
+                    
+                    const currentLeft = parseFloat(spark.style.left);
+                    const currentTop = parseFloat(spark.style.top);
+
+                    spark.style.left = `${currentLeft + velX}px`;
+                    spark.style.top = `${currentTop + velY}px`;
+                    spark.style.opacity = life;
+
+                    if (life > 0) {
+                        requestAnimationFrame(updateSpark);
+                    } else {
+                        spark.remove();
+                    }
+                }
+                requestAnimationFrame(updateSpark);
+            }
+        }
+
+        function createSmoke(x, y) {
+            if (Math.random() > 0.5) return; // Less smoke than sparks
+
+            const smoke = document.createElement('div');
+            smoke.classList.add('smoke');
+            stage.appendChild(smoke);
+
+            const stageX = 40 + x;
+            const stageY = 50 + y;
+
+            smoke.style.left = `${stageX + (Math.random()*10 - 5)}px`;
+            smoke.style.top = `${stageY}px`;
+
+            let life = 1.0;
+            let size = 4;
+            
+            function updateSmoke() {
+                life -= 0.01;
+                size += 0.1;
+                const top = parseFloat(smoke.style.top);
+                
+                smoke.style.top = `${top - 0.5}px`; // Rise up
+                smoke.style.width = `${size}px`;
+                smoke.style.height = `${size}px`;
+                smoke.style.opacity = life * 0.5;
+
+                if (life > 0) {
+                    requestAnimationFrame(updateSmoke);
+                } else {
+                    smoke.remove();
+                }
+            }
+            requestAnimationFrame(updateSmoke);
+        }
+
+        // --- Event Listeners ---
+        cutBtn.addEventListener('click', initiateCut);
+        resetBtn.addEventListener('click', resetSystem);
+        
+        // Allow clicking the piece itself to trigger cut if not already cut
+        targetPiece.addEventListener('click', () => {
+            if(!isCut && !isCutting) initiateCut();
+        });
+
+        // Add hover sound effect simulation (visual shake)
+        cutBtn.addEventListener('mouseenter', () => {
+            if(!cutBtn.disabled) {
+                cutBtn.style.transform = "scale(1.05)";
+            }
+        });
+        cutBtn.addEventListener('mouseleave', () => {
+            cutBtn.style.transform = "scale(1)";
+        });
+
+    </script>
+</body>
+</html>

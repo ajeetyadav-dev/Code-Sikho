@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sword Slash Button</title>
+    <style>
+        /* Body styling to center the button */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a; /* Dark background */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* The Sword Slash Button Styling */
+        .sword-slash-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 16px 32px;
+            border: 2px solid #555;
+            border-radius: 12px;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            z-index: 10; /* Ensure button is above canvas */
+        }
+
+        .sword-icon {
+            width: 28px;
+            height: 28px;
+            stroke: #a8a8a8;
+            transition: all 0.3s ease;
+        }
+
+        /* Hover State */
+        .sword-slash-btn:hover {
+            background-color: #3d3d3d;
+            border-color: #777;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            transform: translateY(-3px);
+        }
+
+        .sword-slash-btn:hover .sword-icon {
+            stroke: #ffffff;
+            transform: rotate(-25deg) scale(1.1);
+        }
+
+        /* Active/Click State */
+        .sword-slash-btn:active {
+            transform: translateY(1px) scale(0.96);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .sword-slash-btn:active .sword-icon {
+            stroke: #ffcc00; /* Gold flash */
+            transform: rotate(25deg); /* Slash action */
+        }
+    </style>
+</head>
+<body>
+   
+    <!-- The Button Element -->
+    <button class="sword-slash-btn" aria-label="Perform a sword slash attack">
+        <svg class="sword-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+            <path d="m13 19l6-6"/>
+            <path d="m16 16l4 4"/>
+            <path d="m19 21l2-2"/>
+            <path d="m14.5 17.5 3-3"/>
+            <path d="m3 3 7.586 7.586"/>
+            <circle cx="4" cy="4" r="1.5" transform="rotate(-45 4 4)"/>
+        </svg>
+        <span>Slash Attack</span>
+    </button>
+
+    <canvas id="particleCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+
+<script>
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  // Ensure canvas size matches window size
+  function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas(); // Initial call
+
+  function createParticles(x, y) {
+    // Create more particles for a bigger effect
+    for (let i = 0; i < 30; i++) {
+      particles.push({
+        x: x,
+        y: y,
+        // Random velocity
+        vx: (Math.random() - 0.5) * 15,
+        vy: (Math.random() - 0.5) * 15,
+        life: 1, // Full opacity
+        // Color range: Cyan to Blue/Purple
+        color: `hsl(${Math.random() * 60 + 180}, 100%, 60%)`,
+        size: Math.random() * 5 + 2
+      });
+    }
+  }
+
+  function updateParticles() {
+    // Clear the entire canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    for (let i = 0; i < particles.length; i++) {
+      let p = particles[i];
+      
+      // Move particle
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      // Fade out
+      p.life -= 0.03;
+      p.size *= 0.95; // Shrink slightly
+      
+      // Draw particle
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+      
+      // Remove dead particles
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        i--;
+      }
+    }
+    
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(updateParticles);
+  }
+  
+  // Start the animation loop
+  updateParticles();
+
+  // Add event listener to the button
+  const btn = document.querySelector('.sword-slash-btn');
+  btn.addEventListener('click', (e) => {
+    // Get button position
+    const rect = btn.getBoundingClientRect();
+    // Calculate center of button
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    createParticles(centerX, centerY);
+  });
+</script>
+</body>
+</html>
