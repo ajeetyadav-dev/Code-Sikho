@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNA Morphing Button</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #060d0a;
+            --fg: #d8efe2;
+            --muted: #2a3d32;
+            --primary: #00ff88;
+            --secondary: #00ccaa;
+            --accent: #ffb800;
+            --danger: #ff6b6b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Vignette + subtle scan lines */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,136,0.008) 3px, rgba(0,255,136,0.008) 4px);
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+        #backCanvas { z-index: 1; }
+        #frontCanvas { z-index: 3; pointer-events: none; }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 36px;
+            animation: entryFade 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes entryFade {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .state-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .state-name {
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 7px;
+            text-transform: uppercase;
+            color: var(--primary);
+            transition: color 0.6s ease;
+        }
+        .state-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 3px;
+        }
+
+        .button-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 220px;
+            min-height: 130px;
+        }
+
+        .dna-btn {
+            position: relative;
+            padding: 18px 52px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--primary);
+            background: rgba(0, 255, 136, 0.03);
+            border: 2px solid var(--primary);
+            border-radius: 50px;
+            cursor: pointer;
+            outline: none;
+            transition:
+                all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-color 0.6s ease,
+                color 0.6s ease,
+                box-shadow 0.6s ease,
+                width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+                height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+                padding 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+            -webkit-tap-highlight-color: transparent;
+            animation: breathe 3s ease-in-out infinite;
+        }
+
+        .dna-btn:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 6px;
+        }
+
+        /* Breathing glow (state 0, 1, 2) */
+        @keyframes breathe {
+            0%, 100% { filter: brightness(1); }
+            50%      { filter: brightness(1.15); }
+        }
+
+        /* State 0: Pill */
+        .dna-btn.state-0 {
+            border-radius: 50px;
+            box-shadow:
+                0 0 20px rgba(0,255,136,0.2),
+                0 0 50px rgba(0,255,136,0.08),
+                inset 0 0 20px rgba(0,255,136,0.04);
+        }
+
+        /* State 1: Rounded rectangle */
+        .dna-btn.state-1 {
+            border-radius: 14px;
+            padding: 18px 60px;
+            border-color: var(--secondary);
+            color: var(--secondary);
+            background: rgba(0,204,170,0.03);
+            box-shadow:
+                0 0 22px rgba(0,204,170,0.22),
+                0 0 50px rgba(0,204,170,0.08),
+                inset 0 0 22px rgba(0,204,170,0.04);
+        }
+
+        /* State 2: Circle */
+        .dna-btn.state-2 {
+            border-radius: 50%;
+            width: 112px;
+            height: 112px;
+            padding: 0;
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255,184,0,0.03);
+            font-size: 11px;
+            letter-spacing: 2px;
+            box-shadow:
+                0 0 22px rgba(255,184,0,0.22),
+                0 0 50px rgba(255,184,0,0.08),
+                inset 0 0 22px rgba(255,184,0,0.04);
+        }
+
+        /* State 3: Organic blob */
+        .dna-btn.state-3 {
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            padding: 20px 54px;
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(255,107,107,0.03);
+            box-shadow:
+                0 0 22px rgba(255,107,107,0.22),
+                0 0 50px rgba(255,107,107,0.08),
+                inset 0 0 22px rgba(255,107,107,0.04);
+            animation: blob 5s ease-in-out infinite;
+        }
+
+        @keyframes blob {
+            0%, 100% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+            25%      { border-radius: 58% 42% 36% 64% / 53% 67% 33% 47%; }
+            50%      { border-radius: 50% 50% 34% 66% / 56% 68% 32% 44%; }
+            75%      { border-radius: 42% 58% 64% 36% / 45% 32% 68% 55%; }
+        }
+
+        /* Hover effects per state */
+        .dna-btn:hover.state-0 {
+            animation: none;
+            transform: scale(1.06);
+            box-shadow:
+                0 0 35px rgba(0,255,136,0.4),
+                0 0 80px rgba(0,255,136,0.15),
+                inset 0 0 35px rgba(0,255,136,0.08);
+        }
+        .dna-btn:hover.state-1 {
+            animation: none;
+            transform: scale(1.06);
+            box-shadow:
+                0 0 35px rgba(0,204,170,0.4),
+                0 0 80px rgba(0,204,170,0.15),
+                inset 0 0 35px rgba(0,204,170,0.08);
+        }
+        .dna-btn:hover.state-2 {
+            animation: none;
+            transform: scale(1.06);
+            box-shadow:
+                0 0 35px rgba(255,184,0,0.4),
+                0 0 80px rgba(255,184,0,0.15),
+                inset 0 0 35px rgba(255,184,0,0.08);
+        }
+        .dna-btn:hover.state-3 {
+            transform: scale(1.06);
+            box-shadow:
+                0 0 35px rgba(255,107,107,0.4),
+                0 0 80px rgba(255,107,107,0.15),
+                inset 0 0 35px rgba(255,107,107,0.08);
+        }
+
+        .dna-btn:active {
+            transform: scale(0.96) !important;
+            transition-duration: 0.1s !important;
+        }
+
+        .sequence-readout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 3px;
+            opacity: 0.4;
+            transition: opacity 0.4s;
+        }
+        .sequence-readout:hover { opacity: 0.75; }
+        .seq-line { white-space: nowrap; overflow: hidden; max-width: 380px; }
+        .seq-5 { color: var(--primary); transition: color 0.6s; }
+        .seq-3 { color: var(--secondary); transition: color 0.6s; }
+
+        .info-text {
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .dna-btn, .dna-btn.state-3 { animation: none !important; }
+            *, *::before, *::after { transition-duration: 0.01s !important; animation-duration: 0.01s !important; }
+        }
+
+        @media (max-width: 520px) {
+            .dna-btn.state-0 { padding: 15px 38px; font-size: 14px; letter-spacing: 4px; }
+            .dna-btn.state-1 { padding: 15px 44px; font-size: 13px; letter-spacing: 3px; }
+            .dna-btn.state-2 { width: 92px; height: 92px; font-size: 10px; }
+            .dna-btn.state-3 { padding: 16px 42px; font-size: 12px; letter-spacing: 3px; }
+            .sequence-readout { font-size: 9px; max-width: 260px; letter-spacing: 2px; }
+            .button-wrapper { min-width: 160px; min-height: 110px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="backCanvas"></canvas>
+
+    <main class="container">
+        <div class="state-label">
+            <span class="state-name" id="stateName">MORPH</span>
+            <span class="state-number" id="stateNumber">01 / 04</span>
+        </div>
+
+        <div class="button-wrapper">
+            <button id="dnaButton" class="dna-btn state-0" aria-label="DNA Morphing Button - click to change form">
+                <span class="btn-text">MORPH</span>
+            </button>
+        </div>
+
+        <div class="sequence-readout" aria-hidden="true">
+            <div class="seq-line seq-5">5' — <span id="seq5"></span> — 3'</div>
+            <div class="seq-line seq-3">3' — <span id="seq3"></span> — 5'</div>
+        </div>
+
+        <p class="info-text">Click to trigger morphing sequence</p>
+    </main>
+
+    <canvas id="frontCanvas"></canvas>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* ====== Configuration ====== */
+        const STATES = [
+            { name: 'MORPH',      text: 'MORPH',      hex: '#00ff88', rgb: [0, 255, 136]   },
+            { name: 'REPLICATE',  text: 'REPLICATE',   hex: '#00ccaa', rgb: [0, 204, 170]   },
+            { name: 'TRANSCRIBE', text: 'TRANSCRIBE',  hex: '#ffb800', rgb: [255, 184, 0]   },
+            { name: 'MUTATE',     text: 'MUTATE',      hex: '#ff6b6b', rgb: [255, 107, 107] }
+        ];
+
+        const HELIX = {
+            baseAmplitude: 82,
+            unzipBoost: 28,
+            turns: 2.6,
+            nodesPerTurn: 42,
+            extAbove: 85,
+            extBelow: 85,
+            bpInterval: 6,      // draw base pair every N nodes
+            strandWidth: 2.6,
+            nodeRadius: 3.2,
+            rotSpeed: 0.0016,
+            hoverMul: 2.8
+        };
+
+        /* ====== DOM refs ====== */
+        const backC  = document.getElementById('backCanvas');
+        const frontC = document.getElementById('frontCanvas');
+        const bCtx   = backC.getContext('2d');
+        const fCtx   = frontC.getContext('2d');
+        const btn    = document.getElementById('dnaButton');
+        const btnTxt = btn.querySelector('.btn-text');
+        const elName = document.getElementById('stateName');
+        const elNum  = document.getElementById('stateNumber');
+        const elSeq5 = document.getElementById('seq5');
+        const elSeq3 = document.getElementById('seq3');
+
+        /* ====== State ====== */
+        let curState   = 0;
+        let time       = 0;
+        let hovered    = false;
+        let morphing   = false;
+        let morphStart = 0;
+        let morphT     = 0;
+        let entryT     = 0;       // 0→1 page entry
+        let W, H, dpr;
+
+        let particles  = [];
+        let signals    = [];
+        let ripples    = [];
+        let bursts     = [];
+        let seqData    = genSeq(80);
+        let seqOff     = 0;
+
+        /* ====== Canvas sizing ====== */
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            [backC, frontC].forEach(c => {
+                c.width  = W * dpr;
+                c.height = H * dpr;
+                c.style.width  = W + 'px';
+                c.style.height = H + 'px';
+                c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+            });
+        }
+
+        /* ====== Particles ====== */
+        function mkParticle() {
+            const bases = ['A','T','G','C'];
+            return {
+                x: Math.random() * W,
+                y: Math.random() * H,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                sz: 0.8 + Math.random() * 2.2,
+                a: 0.08 + Math.random() * 0.22,
+                letter: Math.random() < 0.12 ? bases[Math.random() * 4 | 0] : null
+            };
+        }
+        function initParticles() {
+            particles = [];
+            const n = W < 520 ? 28 : 55;
+            for (let i = 0; i < n; i++) particles.push(mkParticle());
+        }
+        function tickParticles() {
+            particles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < -30) p.x += W + 60;
+                if (p.x > W + 30) p.x -= W + 60;
+                if (p.y < -30) p.y += H + 60;
+                if (p.y > H + 30) p.y -= H + 60;
+            });
+        }
+        function drawParticles(ctx) {
+            const c = STATES[curState].rgb;
+            particles.forEach(p => {
+                if (p.letter) {
+                    ctx.font = `${p.sz * 4.5}px 'JetBrains Mono',monospace`;
+                    ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${p.a * 0.45})`;
+                    ctx.fillText(p.letter, p.x, p.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, Math.max(0.4, p.sz), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${p.a})`;
+                    ctx.fill();
+                }
+            });
+        }
+
+        /* ====== Signals (traveling dots) ====== */
+        function initSignals() {
+            signals = [];
+            for (let i = 0; i < 5; i++) {
+                signals.push({
+                    strand: i % 2,
+                    prog: i / 5,
+                    spd: 0.0025 + Math.random() * 0.002
+                });
+            }
+        }
+
+        /* ====== Ripples ====== */
+        function addRipple() {
+            const r = btn.getBoundingClientRect();
+            ripples.push({
+                x: r.left + r.width / 2,
+                y: r.top + r.height / 2,
+                rad: 8, maxR: 220, a: 0.55, spd: 2.8
+            });
+        }
+        function tickRipples() {
+            ripples = ripples.filter(r => {
+                r.rad += r.spd;
+                r.a *= 0.965;
+                return r.a > 0.008;
+            });
+        }
+        function drawRipples(ctx) {
+            const c = STATES[curState].rgb;
+            ripples.forEach(r => {
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, Math.max(1, r.rad), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${r.a})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+
+        /* ====== Burst particles ====== */
+        function addBurst() {
+            const r = btn.getBoundingClientRect();
+            const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+            const c = STATES[curState].rgb;
+            for (let i = 0; i < 36; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 1.2 + Math.random() * 4.5;
+                bursts.push({
+                    x: cx, y: cy,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    sz: 1 + Math.random() * 3,
+                    a: 0.85,
+                    rgb: c
+                });
+            }
+        }
+        function tickBursts() {
+            bursts = bursts.filter(p => {
+                p.x += p.vx; p.y += p.vy;
+                p.vx *= 0.975; p.vy *= 0.975;
+                p.a *= 0.955;
+                return p.a > 0.008;
+            });
+        }
+        function drawBursts(ctx) {
+            bursts.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(0.4, p.sz), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${p.rgb[0]},${p.rgb[1]},${p.rgb[2]},${p.a})`;
+                ctx.fill();
+            });
+        }
+
+        /* ====== DNA Helix ====== */
+        function buildNodes() {
+            const r = btn.getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            const cy = r.top + r.height / 2;
+            const hH = r.height + HELIX.extAbove + HELIX.extBelow;
+            const sY = cy - hH / 2;
+
+            // Entry animation: grow amplitude from 0
+            const entry = Math.min(1, entryT);
+            const entryEase = 1 - Math.pow(1 - entry, 3); // ease-out cubic
+
+            // Heartbeat
+            const beat = 1 + Math.sin(time * 2.8) * 0.018;
+
+            // Unzip during morph
+            const unzip = morphing ? Math.sin(morphT * Math.PI) * HELIX.unzipBoost : 0;
+            const amp = HELIX.baseAmplitude * beat * entryEase + unzip;
+
+            const total = Math.floor(HELIX.turns * HELIX.nodesPerTurn);
+            const nodes = [];
+
+            for (let i = 0; i <= total; i++) {
+                const t = i / total;
+                const y = sY + t * hH;
+                const ang = t * HELIX.turns * Math.PI * 2 + time;
+                nodes.push({
+                    y, t,
+                    s1: { x: cx + amp * Math.sin(ang), z: Math.cos(ang) },
+                    s2: { x: cx + amp * Math.sin(ang + Math.PI), z: Math.cos(ang + Math.PI) }
+                });
+            }
+            return nodes;
+        }
+
+        /* Draw one half of the helix (front or back) */
+        function drawHelix(nodes, ctx, front) {
+            const c1 = STATES[curState].rgb;
+            const c2 = STATES[(curState + 1) % 4].rgb;
+
+            /* --- Strand paths --- */
+            for (let si = 0; si < 2; si++) {
+                const key = si === 0 ? 's1' : 's2';
+                const sc = si === 0 ? c1 : c2;
+
+                for (let i = 1; i < nodes.length; i++) {
+                    const prev = nodes[i - 1][key];
+                    const curr = nodes[i][key];
+                    const z = curr.z;
+                    if ((z >= 0) !== front) continue;
+
+                    // Vertical fade at ends
+                    const vFade = Math.max(0, 1 - Math.abs(nodes[i].t - 0.5) * 1.6);
+                    const depth = front ? (0.35 + 0.65 * z) : (0.06 + 0.1 * (1 + z));
+                    const alpha = depth * vFade;
+                    const w = front ? HELIX.strandWidth * (0.65 + 0.35 * z) : HELIX.strandWidth * 0.55;
+
+                    ctx.beginPath();
+                    ctx.moveTo(prev.x, nodes[i - 1].y);
+                    ctx.lineTo(curr.x, nodes[i].y);
+                    ctx.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${alpha.toFixed(3)})`;
+                    ctx.lineWidth = Math.max(0.4, w);
+                    ctx.lineCap = 'round';
+
+                    if (front && z > 0.4) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `rgba(${sc[0]},${sc[1]},${sc[2]},0.45)`;
+                    } else {
+                        ctx.shadowBlur = 0;
+                    }
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+
+            /* --- Base pairs --- */
+            for (let i = 0; i < nodes.length; i += HELIX.bpInterval) {
+                const nd = nodes[i];
+                const midX = (nd.s1.x + nd.s2.x) / 2;
+                const s1Front = nd.s1.z >= nd.s2.z;
+                const fNode = s1Front ? nd.s1 : nd.s2;
+                const bNode = s1Front ? nd.s2 : nd.s1;
+                const vFade = Math.max(0, 1 - Math.abs(nd.t - 0.5) * 1.6);
+                const bpIdx = (i / HELIX.bpInterval) | 0;
+                const bpC = bpIdx % 2 === 0 ? c1 : c2;
+
+                if (front) {
+                    const a = (0.18 + 0.28 * Math.abs(fNode.z)) * vFade;
+                    ctx.beginPath();
+                    ctx.moveTo(fNode.x, nd.y);
+                    ctx.lineTo(midX, nd.y);
+                    ctx.strokeStyle = `rgba(${bpC[0]},${bpC[1]},${bpC[2]},${a.toFixed(3)})`;
+                    ctx.lineWidth = 1.4;
+                    ctx.stroke();
+                    // midpoint dot
+                    ctx.beginPath();
+                    ctx.arc(midX, nd.y, 1.4, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${bpC[0]},${bpC[1]},${bpC[2]},${(a * 0.7).toFixed(3)})`;
+                    ctx.fill();
+                } else {
+                    const a = (0.03 + 0.07 * (1 + bNode.z)) * vFade;
+                    ctx.beginPath();
+                    ctx.moveTo(midX, nd.y);
+                    ctx.lineTo(bNode.x, nd.y);
+                    ctx.strokeStyle = `rgba(${bpC[0]},${bpC[1]},${bpC[2]},${a.toFixed(3)})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            /* --- Strand nodes (dots) --- */
+            for (let si = 0; si < 2; si++) {
+                const key = si === 0 ? 's1' : 's2';
+                const sc = si === 0 ? c1 : c2;
+                for (let i = 0; i < nodes.length; i += 3) {
+                    const nd = nodes[i][key];
+                    if ((nd.z >= 0) !== front) continue;
+                    const vFade = Math.max(0, 1 - Math.abs(nodes[i].t - 0.5) * 1.6);
+                    const depth = front ? (0.35 + 0.65 * nd.z) : (0.04 + 0.08 * (1 + nd.z));
+                    const a = depth * vFade;
+                    const sz = HELIX.nodeRadius * (front ? (0.45 + 0.55 * nd.z) : 0.35);
+
+                    ctx.beginPath();
+                    ctx.arc(nd.x, nodes[i].y, Math.max(0.4, sz), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${a.toFixed(3)})`;
+                    if (front && nd.z > 0.25) {
+                        ctx.shadowBlur = 7;
+                        ctx.shadowColor = `rgba(${sc[0]},${sc[1]},${sc[2]},0.5)`;
+                    }
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            /* --- Traveling signals (front only) --- */
+            if (front) {
+                signals.forEach(sig => {
+                    sig.prog += sig.spd * (hovered ? 2.2 : 1);
+                    if (sig.prog > 1) sig.prog -= 1;
+
+                    const idx = Math.floor(sig.prog * (nodes.length - 1));
+                    const nxt = Math.min(idx + 1, nodes.length - 1);
+                    const f = sig.prog * (nodes.length - 1) - idx;
+                    const key = sig.strand === 0 ? 's1' : 's2';
+                    const sc = sig.strand === 0 ? c1 : c2;
+
+                    const x = nodes[idx][key].x + (nodes[nxt][key].x - nodes[idx][key].x) * f;
+                    const y = nodes[idx].y + (nodes[nxt].y - nodes[idx].y) * f;
+                    const z = nodes[idx][key].z + (nodes[nxt][key].z - nodes[idx][key].z) * f;
+                    if (z < -0.05) return;
+
+                    const vFade = Math.max(0, 1 - Math.abs((nodes[idx].t + (nodes[nxt].t - nodes[idx].t) * f) - 0.5) * 1.6);
+                    const a = (0.55 + 0.45 * z) * vFade;
+                    const sz = 4.5 * (0.55 + 0.45 * z);
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, Math.max(1, sz), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
+                    ctx.shadowBlur = 18;
+                    ctx.shadowColor = `rgba(${sc[0]},${sc[1]},${sc[2]},0.85)`;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+            }
+        }
+
+        /* ====== Background glow ====== */
+        function drawBgGlow(ctx) {
+            const r = btn.getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            const cy = r.top + r.height / 2;
+            const c = STATES[curState].rgb;
+            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 380);
+            g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0.045)`);
+            g.addColorStop(0.4, `rgba(${c[0]},${c[1]},${c[2]},0.018)`);
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        /* ====== DNA Sequence readout ====== */
+        function genSeq(len) {
+            const b = 'ATGC';
+            const comp = { A:'T', T:'A', G:'C', C:'G' };
+            let s5 = '';
+            for (let i = 0; i < len; i++) s5 += b[Math.random() * 4 | 0];
+            let s3 = '';
+            for (let i = 0; i < s5.length; i++) s3 += comp[s5[i]];
+            return { s5, s3 };
+        }
+        function tickSeq() {
+            seqOff = (seqOff + 0.25) % 25;
+            const s = Math.floor(seqOff);
+            elSeq5.textContent = seqData.s5.substring(s, s + 32);
+            elSeq3.textContent = seqData.s3.substring(s, s + 32);
+        }
+
+        /* ====== Morph trigger ====== */
+        function morph() {
+            if (morphing) return;
+            morphing = true;
+            morphStart = performance.now();
+
+            curState = (curState + 1) % STATES.length;
+            const st = STATES[curState];
+
+            btn.className = 'dna-btn state-' + curState;
+            btnTxt.textContent = st.text;
+            elName.textContent = st.name;
+            elName.style.color = st.hex;
+            elNum.textContent = '0' + (curState + 1) + ' / 04';
+
+            // Update sequence readout colors
+            document.querySelector('.seq-5').style.color = st.hex;
+
+            addRipple();
+            addBurst();
+            seqData = genSeq(80);
+        }
+
+        /* ====== Events ====== */
+        btn.addEventListener('click', morph);
+        btn.addEventListener('mouseenter', () => { hovered = true; });
+        btn.addEventListener('mouseleave', () => { hovered = false; });
+        window.addEventListener('resize', () => { resize(); initParticles(); });
+
+        // Keyboard accessibility
+        btn.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); morph(); }
+        });
+
+        /* ====== Main loop ====== */
+        let prevTs = 0;
+
+        function loop(ts) {
+            const dt = Math.min(50, ts - prevTs) / 1000; // seconds, clamped
+            prevTs = ts;
+
+            // Entry ramp (first 2 seconds)
+            if (entryT < 1) entryT = Math.min(1, entryT + dt * 0.6);
+
+            // Time (rotation angle)
+            const speed = HELIX.rotSpeed * (hovered ? HELIX.hoverMul : 1);
+            time += speed * dt * 60; // normalize to ~60fps feel
+
+            // Morph phase
+            if (morphing) {
+                morphT = Math.min(1, (ts - morphStart) / 700);
+                if (morphT >= 1) { morphing = false; morphT = 0; }
+            }
+
+            // Clear
+            bCtx.clearRect(0, 0, W, H);
+            fCtx.clearRect(0, 0, W, H);
+
+            // Build helix nodes once
+            const nodes = buildNodes();
+
+            // Back layer
+            drawBgGlow(bCtx);
+            tickParticles();
+            drawParticles(bCtx);
+            drawHelix(nodes, bCtx, false);
+
+            // Front layer
+            drawHelix(nodes, fCtx, true);
+            tickRipples();
+            drawRipples(fCtx);
+            tickBursts();
+            drawBursts(fCtx);
+
+            // Sequence
+            tickSeq();
+
+            requestAnimationFrame(loop);
+        }
+
+        /* ====== Init ====== */
+        resize();
+        initParticles();
+        initSignals();
+        requestAnimationFrame(loop);
+    })();
+    </script>
+</body>
+</html>

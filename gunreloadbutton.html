@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gun Reload Button</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --fg: #e8e6e1;
+    --muted: #4a4840;
+    --accent: #ff6a00;
+    --accent-glow: #ff8c33;
+    --card: #131315;
+    --border: #2a2822;
+    --danger: #ff2a2a;
+    --ready: #00ff6a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,106,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,106,0,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,106,0,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .scene {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .ammo-display {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    user-select: none;
+  }
+
+  .ammo-current {
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    transition: color 0.3s, transform 0.15s;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  .ammo-current.empty { color: var(--danger); }
+  .ammo-current.full { color: var(--ready); }
+
+  .ammo-separator {
+    font-size: 36px;
+    color: var(--muted);
+    margin: 0 4px;
+  }
+
+  .ammo-max {
+    font-size: 36px;
+    color: var(--muted);
+  }
+
+  .ammo-label {
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .ammo-bar-container {
+    width: 240px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: -16px;
+  }
+
+  .ammo-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s;
+    width: 0%;
+  }
+
+  .ammo-bar.full { background: var(--ready); }
+  .ammo-bar.empty { background: var(--danger); }
+
+  .btn-wrapper {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .progress-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    pointer-events: none;
+  }
+
+  .progress-ring__bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 3;
+  }
+
+  .progress-ring__fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 565.48;
+    stroke-dashoffset: 565.48;
+    transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
+    filter: drop-shadow(0 0 6px rgba(255,106,0,0.4));
+  }
+
+  .progress-ring__fill.complete {
+    stroke: var(--ready);
+    filter: drop-shadow(0 0 8px rgba(0,255,106,0.5));
+  }
+
+  .outer-deco {
+    position: absolute;
+    inset: -12px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .outer-deco::before,
+  .outer-deco::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  .outer-deco::before { top: -3px; left: 50%; transform: translateX(-50%); }
+  .outer-deco::after { bottom: -3px; left: 50%; transform: translateX(-50%); }
+
+  .crosshair {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.15;
+  }
+
+  .crosshair-line {
+    position: absolute;
+    background: var(--fg);
+  }
+
+  .crosshair-line.h {
+    width: 100%;
+    height: 1px;
+    top: 50%;
+    left: 0;
+  }
+
+  .crosshair-line.v {
+    width: 1px;
+    height: 100%;
+    left: 50%;
+    top: 0;
+  }
+
+  .reload-btn {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: radial-gradient(circle at 40% 35%, #1e1a14, #0e0d0a);
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.15s, border-color 0.3s, box-shadow 0.3s;
+    box-shadow:
+      0 0 20px rgba(255,106,0,0.15),
+      inset 0 0 30px rgba(0,0,0,0.5);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .reload-btn:hover:not(.reloading):not(.disabled) {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 40px rgba(255,106,0,0.3),
+      inset 0 0 30px rgba(0,0,0,0.5);
+    border-color: var(--accent-glow);
+  }
+
+  .reload-btn:active:not(.reloading):not(.disabled) {
+    transform: scale(0.96);
+  }
+
+  .reload-btn.reloading {
+    cursor: default;
+    border-color: var(--accent);
+    animation: btnPulse 1.2s ease-in-out infinite;
+  }
+
+  .reload-btn.disabled {
+    cursor: default;
+    border-color: var(--muted);
+    opacity: 0.5;
+  }
+
+  .reload-btn.complete {
+    border-color: var(--ready);
+    box-shadow:
+      0 0 50px rgba(0,255,106,0.3),
+      inset 0 0 30px rgba(0,0,0,0.3);
+    animation: completeFlash 0.5s ease-out;
+  }
+
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,106,0,0.15), inset 0 0 30px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 35px rgba(255,106,0,0.3), inset 0 0 30px rgba(0,0,0,0.4); }
+  }
+
+  @keyframes completeFlash {
+    0% { box-shadow: 0 0 80px rgba(0,255,106,0.6), inset 0 0 40px rgba(0,255,106,0.1); transform: scale(1.08); }
+    100% { box-shadow: 0 0 30px rgba(0,255,106,0.2), inset 0 0 30px rgba(0,0,0,0.3); transform: scale(1); }
+  }
+
+  .gun-icon {
+    width: 48px;
+    height: 48px;
+    transition: transform 0.3s, opacity 0.3s;
+  }
+
+  .gun-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 0.3s;
+  }
+
+  .reload-btn.complete .gun-icon svg { stroke: var(--ready); }
+
+  .gun-icon.kick {
+    animation: gunKick 0.3s ease-out;
+  }
+
+  @keyframes gunKick {
+    0% { transform: translateY(0) rotate(0); }
+    30% { transform: translateY(-8px) rotate(-15deg); }
+    60% { transform: translateY(2px) rotate(3deg); }
+    100% { transform: translateY(0) rotate(0); }
+  }
+
+  .btn-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    transition: color 0.3s, opacity 0.2s;
+  }
+
+  .reload-btn.complete .btn-text { color: var(--ready); }
+
+  .stage-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    min-height: 22px;
+    text-align: center;
+    transition: opacity 0.2s;
+  }
+
+  .stage-text.complete { color: var(--ready); }
+
+
+  #particleCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    animation: rippleOut 0.8s ease-out forwards;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  @keyframes rippleOut {
+    0% { width: 160px; height: 160px; opacity: 0.6; }
+    100% { width: 360px; height: 360px; opacity: 0; }
+  }
+
+  .hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    animation: hintBlink 2s ease-in-out infinite;
+  }
+
+  @keyframes hintBlink {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .casing {
+    position: absolute;
+    width: 6px;
+    height: 14px;
+    background: linear-gradient(to bottom, #d4a843, #8a6d2b);
+    border-radius: 2px 2px 1px 1px;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .flash-line {
+    position: absolute;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    z-index: 4;
+    pointer-events: none;
+    animation: flashLine 0.4s ease-out forwards;
+  }
+
+  @keyframes flashLine {
+    0% { opacity: 1; transform: scaleX(0); }
+    50% { opacity: 1; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(1.5); }
+  }
+
+  .shake {
+    animation: screenShake 0.15s ease-out;
+  }
+
+  @keyframes screenShake {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-3px, 2px); }
+    50% { transform: translate(3px, -2px); }
+    75% { transform: translate(-1px, 1px); }
+    100% { transform: translate(0, 0); }
+  }
+
+  .status-dots {
+    display: flex;
+    gap: 8px;
+    margin-top: -8px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .status-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(255,106,0,0.6);
+  }
+
+  .status-dot.done {
+    background: var(--ready);
+    box-shadow: 0 0 8px rgba(0,255,106,0.6);
+  }
+
+  @media (max-width: 480px) {
+    .ammo-current { font-size: 56px; }
+    .ammo-max { font-size: 28px; }
+    .btn-wrapper { width: 170px; height: 170px; }
+    .reload-btn { width: 135px; height: 135px; }
+    .gun-icon { width: 38px; height: 38px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<main class="scene" id="scene">
+
+  <div>
+    <div class="ammo-display">
+      <span class="ammo-current empty" id="ammoCurrent">0</span>
+      <span class="ammo-separator">/</span>
+      <span class="ammo-max">30</span>
+    </div>
+    <div class="ammo-label">Rounds</div>
+    <div class="ammo-bar-container">
+      <div class="ammo-bar empty" id="ammoBar"></div>
+    </div>
+  </div>
+
+  <div class="status-dots" id="statusDots">
+    <div class="status-dot" data-stage="0"></div>
+    <div class="status-dot" data-stage="1"></div>
+    <div class="status-dot" data-stage="2"></div>
+    <div class="status-dot" data-stage="3"></div>
+  </div>
+
+  <div class="btn-wrapper" id="btnWrapper">
+    <div class="outer-deco"></div>
+    <div class="crosshair">
+      <div class="crosshair-line h"></div>
+      <div class="crosshair-line v"></div>
+    </div>
+    <svg class="progress-ring" viewBox="0 0 200 200">
+      <circle class="progress-ring__bg" cx="100" cy="100" r="90" />
+      <circle class="progress-ring__fill" id="progressFill" cx="100" cy="100" r="90" />
+    </svg>
+    <button class="reload-btn disabled" id="reloadBtn" aria-label="Reload weapon">
+      <div class="gun-icon" id="gunIcon">
+        <svg viewBox="0 0 48 48">
+        
+          <path d="M8 18 L8 14 L16 14 L18 10 L28 10 L28 14 L34 14 L34 18 L30 18 L30 22 L26 22 L26 26 L34 26 L36 30 L36 36 L32 36 L30 32 L18 32 L16 36 L12 36 L12 26 L8 26 L8 22 L12 22 L12 18 Z" />
+          <line x1="28" y1="10" x2="32" y2="6" stroke-width="2.5" />
+        </svg>
+      </div>
+      <span class="btn-text" id="btnText">Empty</span>
+    </button>
+  </div>
+
+  <div class="stage-text" id="stageText"></div>
+
+  <div class="hint" id="hint">Press R to reload</div>
+</main>
+
+<script>
+  const MAX_AMMO = 30;
+  const RELOAD_STAGES = [
+    { name: 'Mag Out',   duration: 600 },
+    { name: 'New Mag',   duration: 800 },
+    { name: 'Chamber',   duration: 400 },
+    { name: 'Ready',     duration: 200 }
+  ];
+  const TOTAL_RELOAD_TIME = RELOAD_STAGES.reduce((s, st) => s + st.duration, 0);
+  const CIRCUMFERENCE = 2 * Math.PI * 90;
+
+  // ====== DOM 引用 ======
+  const ammoCurrentEl = document.getElementById('ammoCurrent');
+  const ammoBarEl     = document.getElementById('ammoBar');
+  const reloadBtn     = document.getElementById('reloadBtn');
+  const btnText       = document.getElementById('btnText');
+  const gunIcon       = document.getElementById('gunIcon');
+  const stageText     = document.getElementById('stageText');
+  const progressFill  = document.getElementById('progressFill');
+  const btnWrapper    = document.getElementById('btnWrapper');
+  const statusDots    = document.querySelectorAll('.status-dot');
+  const hint          = document.getElementById('hint');
+  const scene         = document.getElementById('scene');
+  const canvas        = document.getElementById('particleCanvas');
+  const ctx           = canvas.getContext('2d');
+
+  let ammo = 0;
+  let isReloading = false;
+  let reloadStartTime = 0;
+  let currentStage = -1;
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  progressFill.style.strokeDasharray = CIRCUMFERENCE;
+  progressFill.style.strokeDashoffset = CIRCUMFERENCE;
+
+  function updateAmmoUI() {
+    ammoCurrentEl.textContent = ammo;
+    const pct = (ammo / MAX_AMMO) * 100;
+    ammoBarEl.style.width = pct + '%';
+
+    ammoCurrentEl.classList.remove('empty', 'full');
+    ammoBarEl.classList.remove('empty', 'full');
+
+    if (ammo === 0) {
+      ammoCurrentEl.classList.add('empty');
+      ammoBarEl.classList.add('empty');
+    } else if (ammo >= MAX_AMMO) {
+      ammoCurrentEl.classList.add('full');
+      ammoBarEl.classList.add('full');
+    }
+  }
+
+  function shoot() {
+    if (ammo <= 0 || isReloading) return;
+    ammo--;
+    updateAmmoUI();
+
+    gunIcon.classList.remove('kick');
+    void gunIcon.offsetWidth; 
+    gunIcon.classList.add('kick');
+
+    scene.classList.remove('shake');
+    void scene.offsetWidth;
+    scene.classList.add('shake');
+
+    spawnCasing();
+
+    if (ammo === 0) {
+      reloadBtn.classList.remove('disabled');
+      btnText.textContent = 'Reload';
+      hint.textContent = 'Press R to reload';
+    }
+  }
+
+  function spawnCasing() {
+    const casing = document.createElement('div');
+    casing.className = 'casing';
+    const rect = btnWrapper.getBoundingClientRect();
+    casing.style.left = (rect.left + rect.width * 0.65) + 'px';
+    casing.style.top = (rect.top + rect.height * 0.3) + 'px';
+    document.body.appendChild(casing);
+
+    const vx = 80 + Math.random() * 60;
+    const vy = -(120 + Math.random() * 80);
+    const vr = (Math.random() - 0.5) * 15;
+    let x = 0, y = 0, rot = 0, opacity = 1;
+    const gravity = 400;
+
+    function animateCasing(ts) {
+      const dt = 1 / 60;
+      x += vx * dt;
+      vy + gravity * dt;
+      y += vy * dt;
+      rot += vr;
+      opacity -= 0.012;
+
+      casing.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+      casing.style.opacity = Math.max(0, opacity);
+
+      if (opacity > 0 && y < window.innerHeight) {
+        requestAnimationFrame(animateCasing);
+      } else {
+        casing.remove();
+      }
+    }
+    requestAnimationFrame(animateCasing);
+  }
+
+  function startReload() {
+    if (isReloading || ammo >= MAX_AMMO) return;
+    isReloading = true;
+    reloadStartTime = performance.now();
+    currentStage = 0;
+
+    reloadBtn.classList.add('reloading');
+    reloadBtn.classList.remove('disabled', 'complete');
+    btnText.textContent = 'Reloading';
+    stageText.classList.remove('complete');
+    hint.style.opacity = '0';
+
+    updateStageDots();
+    requestAnimationFrame(reloadLoop);
+  }
+
+  function reloadLoop(now) {
+    const elapsed = now - reloadStartTime;
+    const progress = Math.min(elapsed / TOTAL_RELOAD_TIME, 1);
+
+    const offset = CIRCUMFERENCE * (1 - progress);
+    progressFill.style.strokeDashoffset = offset;
+
+    let acc = 0;
+    let stage = 0;
+    for (let i = 0; i < RELOAD_STAGES.length; i++) {
+      acc += RELOAD_STAGES[i].duration;
+      if (elapsed < acc) { stage = i; break; }
+      if (i === RELOAD_STAGES.length - 1) stage = i;
+    }
+
+    if (stage !== currentStage) {
+      currentStage = stage;
+      stageText.textContent = RELOAD_STAGES[stage].name;
+      updateStageDots();
+
+      if (stage < RELOAD_STAGES.length - 1) {
+        spawnRipple();
+        spawnFlashLine();
+      }
+    }
+
+    if (progress < 1) {
+      requestAnimationFrame(reloadLoop);
+    } else {
+      completeReload();
+    }
+  }
+  function reloadComplete() {
+    ammo = MAX_AMMO;
+    isReloading = false;
+    currentStage = -1;
+
+    reloadBtn.classList.remove('reloading');
+    reloadBtn.classList.add('complete');
+    progressFill.classList.add('complete');
+    btnText.textContent = 'Full';
+    stageText.textContent = 'Reloaded';
+    stageText.classList.add('complete');
+    updateAmmoUI();
+    updateStageDots(true);
+
+    
+    spawnParticleBurst();
+
+  
+    setTimeout(() => {
+      reloadBtn.classList.remove('complete');
+      progressFill.classList.remove('complete');
+      progressFill.style.strokeDashoffset = CIRCUMFERENCE;
+      stageText.textContent = '';
+      stageText.classList.remove('complete');
+      btnText.textContent = 'Fire';
+      reloadBtn.classList.remove('disabled');
+      hint.style.opacity = '';
+      hint.textContent = 'Click button or press Space to fire';
+      statusDots.forEach(d => { d.classList.remove('active', 'done'); });
+    }, 1200);
+  }
+
+  function completeReload() {
+    reloadComplete();
+  }
+
+  function updateStageDots(allDone) {
+    statusDots.forEach((dot, i) => {
+      dot.classList.remove('active', 'done');
+      if (allDone) {
+        dot.classList.add('done');
+      } else if (i < currentStage) {
+        dot.classList.add('done');
+      } else if (i === currentStage) {
+        dot.classList.add('active');
+      }
+    });
+  }
+
+  function spawnRipple() {
+    const ripple = document.createElement('div');
+    ripple.className = 'ripple';
+    const rect = btnWrapper.getBoundingClientRect();
+    ripple.style.left = (rect.left + rect.width / 2 - 80) + 'px';
+    ripple.style.top = (rect.top + rect.height / 2 - 80) + 'px';
+    document.body.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  }
+
+  function spawnFlashLine() {
+    const line = document.createElement('div');
+    line.className = 'flash-line';
+    const rect = btnWrapper.getBoundingClientRect();
+    const w = 60 + Math.random() * 80;
+    line.style.width = w + 'px';
+    line.style.left = (rect.left + rect.width / 2 - w / 2) + 'px';
+    line.style.top = (rect.top + rect.height / 2 + (Math.random() - 0.5) * 40) + 'px';
+    document.body.appendChild(line);
+    line.addEventListener('animationend', () => line.remove());
+  }
+
+  function spawnParticleBurst() {
+    const rect = btnWrapper.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    for (let i = 0; i < 60; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 100 + Math.random() * 300;
+      const size = 2 + Math.random() * 4;
+      const life = 0.6 + Math.random() * 0.8;
+      const isGreen = Math.random() > 0.3;
+
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size,
+        life,
+        maxLife: life,
+        color: isGreen
+          ? `rgba(0, ${180 + Math.random() * 75}, ${60 + Math.random() * 60}, `
+          : `rgba(255, ${140 + Math.random() * 60}, 0, `,
+        decay: 0.97
+      });
+    }
+  }
+
+  let lastTime = performance.now();
+
+  function particleLoop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= p.decay;
+      p.vy *= p.decay;
+      p.vy += 120 * dt; 
+
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, p.size * alpha), 0, Math.PI * 2);
+      ctx.fillStyle = p.color + alpha + ')';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1, p.size * alpha * 2.5), 0, Math.PI * 2);
+      ctx.fillStyle = p.color + (alpha * 0.2) + ')';
+      ctx.fill();
+    }
+
+    requestAnimationFrame(particleLoop);
+  }
+  requestAnimationFrame(particleLoop);
+
+  reloadBtn.addEventListener('click', () => {
+    if (isReloading) return;
+    if (ammo === 0) {
+      startReload();
+    } else if (ammo > 0) {
+      shoot();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      if (!isReloading && ammo < MAX_AMMO) {
+        startReload();
+      }
+    }
+    if (e.key === ' ' || e.key === 'Space') {
+      e.preventDefault();
+      if (!isReloading && ammo > 0) {
+        shoot();
+      } else if (!isReloading && ammo === 0) {
+        startReload();
+      }
+    }
+  });
+
+  updateAmmoUI();
+  setTimeout(() => {
+    startReload();
+  }, 800);
+</script>
+
+</body>
+</html>
