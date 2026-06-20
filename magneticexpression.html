@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnet Attraction Button</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --fg: #e8e0d4;
+      --muted: #6b6358;
+      --accent: #d4853b;
+      --copper: #b87333;
+      --copper-light: #d4955a;
+      --cyan: #4dd9e8;
+      --border-speed: 4s;
+      --border-opacity: 0.35;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 50% 50%, #111118 0%, #0a0a0f 65%, #060609 100%);
+      font-family: 'Space Grotesk', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;
+    }
+
+    /* Canvas behind everything */
+    canvas#fieldCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Custom cursor */
+    .cursor-dot {
+      position: fixed;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+      transition: background 0.25s, transform 0.25s;
+      mix-blend-mode: screen;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid var(--accent);
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+      transition: width 0.35s cubic-bezier(.22,1,.36,1),
+                  height 0.35s cubic-bezier(.22,1,.36,1),
+                  border-color 0.25s,
+                  opacity 0.25s;
+      opacity: 0.6;
+    }
+    .cursor-ring.near {
+      width: 56px; height: 56px;
+      border-color: var(--cyan);
+      opacity: 0.9;
+    }
+    .cursor-dot.near {
+      background: var(--cyan);
+      transform: translate(-50%, -50%) scale(1.5);
+    }
+
+    /* Button wrapper */
+    .btn-wrapper {
+      position: relative;
+      z-index: 10;
+      will-change: transform;
+    }
+
+    #magnetBtn {
+      position: relative;
+      z-index: 2;
+      padding: 22px 60px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      color: var(--fg);
+      background: linear-gradient(145deg, #16161e, #1e1e28);
+      border: none;
+      border-radius: 60px;
+      cursor: none;
+      outline: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow:
+        0 0 0 1px rgba(184,115,51,0.15),
+        0 4px 24px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+      transition: box-shadow 0.4s;
+    }
+
+    #magnetBtn:focus-visible {
+      box-shadow:
+        0 0 0 2px var(--cyan),
+        0 0 30px rgba(77,217,232,0.3);
+    }
+
+    /* Rotating conic-gradient border */
+    #magnetBtn::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 63px;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0%,
+        var(--copper) 20%,
+        transparent 40%,
+        var(--copper-light) 60%,
+        transparent 80%,
+        var(--copper) 100%
+      );
+      z-index: -1;
+      opacity: var(--border-opacity);
+      animation: spin-border var(--border-speed) linear infinite;
+      filter: blur(0.5px);
+    }
+
+    @keyframes spin-border {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Inner subtle shine */
+    #magnetBtn::after {
+      content: '';
+      position: absolute;
+      top: 1px; left: 20%;
+      width: 60%; height: 40%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.03), transparent);
+      pointer-events: none;
+    }
+
+    .btn-subtitle {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+    .btn-subtitle.active {
+      color: var(--cyan);
+      opacity: 1;
+    }
+
+    /* Snap text animation */
+    #btnText {
+      display: inline-block;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+    #btnText.snapped {
+      transform: scale(0.7);
+      opacity: 0;
+    }
+
+    /* Entry animation */
+    .btn-wrapper {
+      animation: btn-enter 1.2s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes btn-enter {
+      0% { opacity: 0; transform: translateY(30px) scale(0.9); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #magnetBtn::before { animation: none; }
+      .btn-wrapper { animation: none; }
+      .cursor-dot, .cursor-ring { transition: none; }
+    }
+
+    @media (max-width: 600px) {
+      #magnetBtn {
+        padding: 18px 44px;
+        font-size: 14px;
+        letter-spacing: 3px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <canvas id="fieldCanvas"></canvas>
+
+  <div class="btn-wrapper" id="btnWrapper">
+    <button id="magnetBtn" aria-label="Magnetic attraction button, click to snap">
+      <span id="btnText">ATTRACT</span>
+    </button>
+    <span class="btn-subtitle" id="btnSub">MOVE CURSOR NEAR TO ACTIVATE</span>
+  </div>
+
+  <script>
+    /* ─── Constants ─── */
+    const ATTRACTION_RADIUS = 260;
+    const MAX_PULL = 28;
+    const FILING_COUNT = 110;
+    const SPARK_COUNT = 35;
+    const FIELD_LINE_COUNT = 14;
+    const EPS = 0.001;
+
+    /* ─── DOM refs ─── */
+    const canvas = document.getElementById('fieldCanvas');
+    const ctx = canvas.getContext('2d');
+    const btnWrapper = document.getElementById('btnWrapper');
+    const btn = document.getElementById('magnetBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSub = document.getElementById('btnSub');
+    const cursorDot = document.getElementById('cursorDot');
+    const cursorRing = document.getElementById('cursorRing');
+
+    /* ─── State ─── */
+    let W, H, baseX, baseY;
+    let mouseX = null, mouseY = null;
+    let ringX = null, ringY = null; // Smoothed cursor for ring
+    let btnCurrX = 0, btnCurrY = 0;
+    let btnTargetX = 0, btnTargetY = 0;
+    let btnScaleX = 1, btnScaleY = 1;
+    let btnTargetSX = 1, btnTargetSY = 1;
+    let mouseProximity = 0; // 0-1
+    let snapState = 'idle'; // idle | imploding | exploding | settling
+    let snapTimer = 0;
+    let flashAlpha = 0;
+    let shockwaves = [];
+    let filings = [];
+    let sparks = [];
+
+    /* ─── Resize ─── */
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+      baseX = W / 2;
+      baseY = H / 2;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    /* ─── Input handling ─── */
+    function handleMove(x, y) {
+      mouseX = x;
+      mouseY = y;
+      cursorDot.style.left = x + 'px';
+      cursorDot.style.top = y + 'px';
+    }
+
+    document.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+    document.addEventListener('mouseleave', () => { mouseX = null; mouseY = null; });
+
+    document.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      handleMove(t.clientX, t.clientY);
+    }, { passive: false });
+    document.addEventListener('touchend', () => { mouseX = null; mouseY = null; });
+
+    /* ─── Iron Filing class ─── */
+    class IronFiling {
+      constructor() { this.init(); }
+
+      init() {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 55 + Math.random() * 320;
+        this.x = baseX + Math.cos(angle) * dist;
+        this.y = baseY + Math.sin(angle) * dist;
+        this.vx = 0;
+        this.vy = 0;
+        this.angle = Math.random() * Math.PI;
+        this.len = 3 + Math.random() * 5;
+        this.brightness = 0.25 + Math.random() * 0.55;
+        this.warmth = Math.random(); // 0 = more copper, 1 = more silver
+      }
+
+      /* Calculate field direction at this point */
+      fieldAngle() {
+        const vx = baseX + btnCurrX;
+        const vy = baseY + btnCurrY;
+        let dx = this.x - vx;
+        let dy = this.y - vy;
+        let dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+
+        // Tangential (circular) field component
+        let tx = -dy / dist;
+        let ty = dx / dist;
+        let tStrength = Math.min(1.5, 180 / (dist + 40));
+        let fx = tx * tStrength;
+        let fy = ty * tStrength;
+
+        // Cursor influence (radial toward cursor)
+        if (mouseX !== null) {
+          let cdx = mouseX - this.x;
+          let cdy = mouseY - this.y;
+          let cdist = Math.max(Math.sqrt(cdx * cdx + cdy * cdy), EPS);
+
+          if (cdist < ATTRACTION_RADIUS * 1.4) {
+            let cStr = Math.max(0, 1 - cdist / (ATTRACTION_RADIUS * 1.4));
+            cStr = cStr * cStr * 2.5;
+            fx += (cdx / cdist) * cStr;
+            fy += (cdy / cdist) * cStr;
+          }
+        }
+
+        return Math.atan2(fy, fx);
+      }
+
+      update() {
+        const vx = baseX + btnCurrX;
+        const vy = baseY + btnCurrY;
+
+        // Attraction to button center
+        let dx = vx - this.x;
+        let dy = vy - this.y;
+        let dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+
+        if (dist > 48) {
+          let force = 18 / (dist + 60);
+          this.vx += (dx / dist) * force;
+          this.vy += (dy / dist) * force;
+        }
+
+        // Repulsion from button body
+        if (dist < 55) {
+          let repel = (55 - dist) * 0.06;
+          this.vx -= (dx / dist) * repel;
+          this.vy -= (dy / dist) * repel;
+        }
+
+        // Mouse attraction
+        if (mouseX !== null) {
+          dx = mouseX - this.x;
+          dy = mouseY - this.y;
+          dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+
+          if (dist < ATTRACTION_RADIUS && dist > 3) {
+            let str = 1 - dist / ATTRACTION_RADIUS;
+            this.vx += (dx / dist) * str * 1.8;
+            this.vy += (dy / dist) * str * 1.8;
+          }
+        }
+
+        // Snap behaviors
+        if (snapState === 'imploding') {
+          dx = vx - this.x;
+          dy = vy - this.y;
+          dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+          this.vx += (dx / dist) * 6;
+          this.vy += (dy / dist) * 6;
+        } else if (snapState === 'exploding') {
+          dx = this.x - vx;
+          dy = this.y - vy;
+          dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+          this.vx += (dx / dist) * 10;
+          this.vy += (dy / dist) * 10;
+        }
+
+        this.vx *= 0.92;
+        this.vy *= 0.92;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Align with field
+        let target = this.fieldAngle();
+        let diff = target - this.angle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.angle += diff * 0.1;
+
+        // Bounds
+        if (this.x < -80 || this.x > W + 80 || this.y < -80 || this.y > H + 80) {
+          this.init();
+        }
+      }
+
+      draw() {
+        const r = Math.round(140 + this.warmth * 60);
+        const g = Math.round(110 + this.warmth * 40);
+        const b = Math.round(70 + this.warmth * 50);
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${this.brightness})`;
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-this.len / 2, 0);
+        ctx.lineTo(this.len / 2, 0);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    /* ─── Spark class ─── */
+    class Spark {
+      constructor() { this.init(); }
+
+      init() {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 40 + Math.random() * 280;
+        this.x = baseX + Math.cos(angle) * dist;
+        this.y = baseY + Math.sin(angle) * dist;
+        this.vx = (Math.random() - 0.5) * 1.2;
+        this.vy = (Math.random() - 0.5) * 1.2;
+        this.size = 1 + Math.random() * 2;
+        this.brightness = 0.4 + Math.random() * 0.6;
+        this.isCyan = Math.random() > 0.6;
+        this.trail = [];
+        this.maxTrail = 5 + Math.floor(Math.random() * 4);
+      }
+
+      update() {
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > this.maxTrail) this.trail.shift();
+
+        const vx = baseX + btnCurrX;
+        const vy = baseY + btnCurrY;
+        let dx = vx - this.x;
+        let dy = vy - this.y;
+        let dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+
+        // Gentle orbit around button
+        if (dist > 40) {
+          let force = 12 / (dist + 50);
+          this.vx += (dx / dist) * force;
+          this.vy += (dy / dist) * force;
+        }
+        // Tangential kick for orbiting
+        this.vx += (-dy / dist) * 0.15;
+        this.vy += (dx / dist) * 0.15;
+
+        // Mouse pull
+        if (mouseX !== null) {
+          dx = mouseX - this.x;
+          dy = mouseY - this.y;
+          dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+          if (dist < ATTRACTION_RADIUS && dist > 3) {
+            let str = 1 - dist / ATTRACTION_RADIUS;
+            this.vx += (dx / dist) * str * 2.5;
+            this.vy += (dy / dist) * str * 2.5;
+          }
+        }
+
+        // Snap
+        if (snapState === 'imploding') {
+          dx = vx - this.x;
+          dy = vy - this.y;
+          dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+          this.vx += (dx / dist) * 8;
+          this.vy += (dy / dist) * 8;
+        } else if (snapState === 'exploding') {
+          dx = this.x - vx;
+          dy = this.y - vy;
+          dist = Math.max(Math.sqrt(dx * dx + dy * dy), EPS);
+          this.vx += (dx / dist) * 14;
+          this.vy += (dy / dist) * 14;
+        }
+
+        this.vx *= 0.93;
+        this.vy *= 0.93;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < -100 || this.x > W + 100 || this.y < -100 || this.y > H + 100) {
+          this.init();
+        }
+      }
+
+      draw() {
+        // Trail
+        for (let i = 0; i < this.trail.length; i++) {
+          const a = (i / this.trail.length) * 0.25 * this.brightness;
+          const s = this.size * (i / this.trail.length) * 0.7;
+          ctx.fillStyle = this.isCyan
+            ? `rgba(77,217,232,${a})`
+            : `rgba(212,149,90,${a})`;
+          ctx.beginPath();
+          ctx.arc(this.trail[i].x, this.trail[i].y, Math.max(s, EPS), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Head
+        ctx.fillStyle = this.isCyan
+          ? `rgba(77,217,232,${this.brightness})`
+          : `rgba(212,149,90,${this.brightness})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.max(this.size, EPS), 0, Math.PI * 2);
+        ctx.fill();
+        // Glow on head
+        if (this.brightness > 0.7) {
+          ctx.fillStyle = this.isCyan
+            ? `rgba(77,217,232,${this.brightness * 0.15})`
+            : `rgba(212,149,90,${this.brightness * 0.15})`;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, Math.max(this.size * 3, EPS), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    /* ─── Init particles ─── */
+    for (let i = 0; i < FILING_COUNT; i++) filings.push(new IronFiling());
+    for (let i = 0; i < SPARK_COUNT; i++) sparks.push(new Spark());
+
+    /* ─── Field lines ─── */
+    function drawFieldLines(time) {
+      const cx = baseX + btnCurrX;
+      const cy = baseY + btnCurrY;
+
+      for (let i = 0; i < FIELD_LINE_COUNT; i++) {
+        const baseAngle = (i / FIELD_LINE_COUNT) * Math.PI * 2;
+        const len = 110 + Math.sin(time * 1.3 + i * 0.8) * 28;
+
+        const endX = cx + Math.cos(baseAngle) * len;
+        const endY = cy + Math.sin(baseAngle) * len;
+
+        // Control point
+        let cpX = cx + Math.cos(baseAngle) * len * 0.55;
+        let cpY = cy + Math.sin(baseAngle) * len * 0.55;
+
+        // Bend toward cursor
+        if (mouseX !== null) {
+          const dx = mouseX - cpX;
+          const dy = mouseY - cpY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < ATTRACTION_RADIUS * 1.8) {
+            const str = Math.max(0, 1 - dist / (ATTRACTION_RADIUS * 1.8));
+            const pull = str * str * 0.65;
+            cpX += dx * pull;
+            cpY += dy * pull;
+          }
+        }
+
+        const alpha = 0.1 + Math.sin(time * 2 + i * 0.6) * 0.04;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        ctx.strokeStyle = `rgba(184,115,51,${alpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+    }
+
+    /* ─── Button glow ─── */
+    function drawButtonGlow() {
+      const cx = baseX + btnCurrX;
+      const cy = baseY + btnCurrY;
+      const baseAlpha = 0.04 + mouseProximity * 0.18;
+      const radius = 70 + mouseProximity * 50;
+
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(radius, EPS));
+      grad.addColorStop(0, `rgba(184,115,51,${baseAlpha})`);
+      grad.addColorStop(0.4, `rgba(184,115,51,${baseAlpha * 0.35})`);
+      grad.addColorStop(1, 'rgba(184,115,51,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(radius, EPS), 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cyan secondary glow when near
+      if (mouseProximity > 0.1) {
+        const cAlpha = (mouseProximity - 0.1) * 0.12;
+        const cRad = 50 + mouseProximity * 30;
+        const cGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(cRad, EPS));
+        cGrad.addColorStop(0, `rgba(77,217,232,${cAlpha})`);
+        cGrad.addColorStop(1, 'rgba(77,217,232,0)');
+        ctx.fillStyle = cGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(cRad, EPS), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* ─── Flash effect ─── */
+    function drawFlash() {
+      if (flashAlpha < 0.005) return;
+      const cx = baseX + btnCurrX;
+      const cy = baseY + btnCurrY;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+      grad.addColorStop(0, `rgba(255,255,255,${flashAlpha})`);
+      grad.addColorStop(0.3, `rgba(77,217,232,${flashAlpha * 0.5})`);
+      grad.addColorStop(1, 'rgba(77,217,232,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 80, 0, Math.PI * 2);
+      ctx.fill();
+      flashAlpha *= 0.88;
+    }
+
+    /* ─── Shockwaves ─── */
+    function addShockwave(x, y) {
+      shockwaves.push({ x, y, r: 0, maxR: 350, alpha: 0.8, speed: 7, width: 2.5, cyan: true });
+      shockwaves.push({ x, y, r: 0, maxR: 250, alpha: 0.5, speed: 4.5, width: 1.5, cyan: false });
+      shockwaves.push({ x, y, r: 0, maxR: 180, alpha: 0.3, speed: 3, width: 1, cyan: true });
+    }
+
+    function drawShockwaves() {
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.r += sw.speed;
+        sw.alpha = Math.max(0, 1 - sw.r / sw.maxR);
+        if (sw.r >= sw.maxR) { shockwaves.splice(i, 1); continue; }
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, Math.max(sw.r, EPS), 0, Math.PI * 2);
+        ctx.strokeStyle = sw.cyan
+          ? `rgba(77,217,232,${sw.alpha * 0.5})`
+          : `rgba(184,115,51,${sw.alpha * 0.4})`;
+        ctx.lineWidth = sw.width * sw.alpha;
+        ctx.stroke();
+      }
+    }
+
+    /* ─── Button magnetic pull ─── */
+    function updateButtonPull() {
+      if (snapState !== 'idle') return; // Don't pull during snap animation
+
+      if (mouseX === null) {
+        btnTargetX = 0; btnTargetY = 0;
+        btnTargetSX = 1; btnTargetSY = 1;
+        mouseProximity = 0;
+      } else {
+        let dx = mouseX - baseX;
+        let dy = mouseY - baseY;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < ATTRACTION_RADIUS && dist > EPS) {
+          let str = 1 - dist / ATTRACTION_RADIUS;
+          str = str * str; // Ease in quadratic
+          mouseProximity = str;
+
+          btnTargetX = (dx / dist) * MAX_PULL * str;
+          btnTargetY = (dy / dist) * MAX_PULL * str;
+
+          // Slight asymmetric scale toward cursor
+          const angle = Math.atan2(dy, dx);
+          btnTargetSX = 1 + 0.06 * str * Math.abs(Math.cos(angle));
+          btnTargetSY = 1 + 0.06 * str * Math.abs(Math.sin(angle));
+        } else {
+          btnTargetX = 0; btnTargetY = 0;
+          btnTargetSX = 1; btnTargetSY = 1;
+          mouseProximity = 0;
+        }
+      }
+
+      // Smooth lerp
+      const lerpSpeed = 0.09;
+      btnCurrX += (btnTargetX - btnCurrX) * lerpSpeed;
+      btnCurrY += (btnTargetY - btnCurrY) * lerpSpeed;
+      btnScaleX += (btnTargetSX - btnScaleX) * lerpSpeed;
+      btnScaleY += (btnTargetSY - btnScaleY) * lerpSpeed;
+
+      btnWrapper.style.transform =
+        `translate(${btnCurrX}px, ${btnCurrY}px) scale(${btnScaleX}, ${btnScaleY})`;
+
+      // Update CSS custom properties for border
+      const borderSpeed = Math.max(0.8, 4 - mouseProximity * 3.2);
+      const borderOp = 0.3 + mouseProximity * 0.55;
+      btn.style.setProperty('--border-speed', borderSpeed + 's');
+      btn.style.setProperty('--border-opacity', borderOp);
+
+      // Cursor class
+      if (mouseProximity > 0.01) {
+        cursorDot.classList.add('near');
+        cursorRing.classList.add('near');
+        btnSub.classList.add('active');
+        btnSub.textContent = 'MAGNETIC FIELD ACTIVE';
+      } else {
+        cursorDot.classList.remove('near');
+        cursorRing.classList.remove('near');
+        btnSub.classList.remove('active');
+        btnSub.textContent = 'MOVE CURSOR NEAR TO ACTIVATE';
+      }
+    }
+
+    /* ─── Smooth cursor ring follow ─── */
+    function updateCursorRing() {
+      if (mouseX === null) return;
+      if (ringX === null) { ringX = mouseX; ringY = mouseY; }
+      ringX += (mouseX - ringX) * 0.12;
+      ringY += (mouseY - ringY) * 0.12;
+      cursorRing.style.left = ringX + 'px';
+      cursorRing.style.top = ringY + 'px';
+    }
+
+    /* ─── Snap (click) handler ─── */
+    btn.addEventListener('click', () => {
+      if (snapState !== 'idle') return;
+
+      snapState = 'imploding';
+      flashAlpha = 0;
+
+      // Button compress
+      btnWrapper.style.transition = 'transform 0.12s cubic-bezier(.4,0,1,1)';
+      btnWrapper.style.transform = 'translate(0px, 0px) scale(0.82)';
+
+      // Text change
+      btnText.classList.add('snapped');
+
+      setTimeout(() => {
+        snapState = 'exploding';
+        flashAlpha = 1;
+
+        // Button bounce back
+        btnWrapper.style.transition = 'transform 0.6s cubic-bezier(.34,1.56,.64,1)';
+        btnWrapper.style.transform = 'translate(0px, 0px) scale(1)';
+
+        // Shockwaves
+        addShockwave(baseX, baseY);
+
+        // Update text
+        btnText.textContent = 'SNAPPED';
+        btnText.classList.remove('snapped');
+      }, 130);
+
+      setTimeout(() => {
+        snapState = 'settling';
+      }, 400);
+
+      setTimeout(() => {
+        snapState = 'idle';
+        btnWrapper.style.transition = '';
+        btnText.textContent = 'ATTRACT';
+      }, 1800);
+    });
+
+    // Touch support for snap
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      handleMove(t.clientX, t.clientY);
+      btn.click();
+    }, { passive: false });
+
+    /* ─── Vignette overlay ─── */
+    function drawVignette() {
+      const grad = ctx.createRadialGradient(W / 2, H / 2, W * 0.25, W / 2, H / 2, W * 0.75);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* ─── Subtle background grid ─── */
+    function drawGrid(time) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+      ctx.lineWidth = 0.5;
+      const spacing = 60;
+      const offsetX = (time * 3) % spacing;
+      const offsetY = (time * 2) % spacing;
+
+      for (let x = -spacing + offsetX; x < W + spacing; x += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+      for (let y = -spacing + offsetY; y < H + spacing; y += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+    }
+
+    /* ─── Main loop ─── */
+    function animate() {
+      const time = performance.now() * 0.001;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Background layers
+      drawGrid(time);
+      drawVignette();
+
+      // Magnetic effects
+      drawButtonGlow();
+      drawFieldLines(time);
+
+      // Iron filings
+      for (const f of filings) { f.update(); f.draw(); }
+
+      // Sparks
+      for (const s of sparks) { s.update(); s.draw(); }
+
+      // Flash & shockwaves
+      drawFlash();
+      drawShockwaves();
+
+      // Button physics
+      updateButtonPull();
+      updateCursorRing();
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

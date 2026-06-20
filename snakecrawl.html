@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Crawl Button</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #060b06;
+            --fg: #dceede;
+            --muted: #4a6348;
+            --accent: #00ff6a;
+            --card: #0e170e;
+            --border: #1a2c1a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .display-font { font-family: 'Syne', sans-serif; }
+
+        /* Atmospheric background layers */
+        .bg-atmosphere {
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 50% 35% at 25% 15%, rgba(0,255,106,0.035), transparent),
+                radial-gradient(ellipse 45% 45% at 75% 85%, rgba(0,160,60,0.025), transparent),
+                radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,30,8,0.6), transparent);
+            pointer-events: none; z-index: 0;
+        }
+
+        .bg-grid {
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(0,255,106,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,255,106,0.015) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* Snake button wrapper — padding gives room for the snake wave */
+        .snake-button-wrapper {
+            position: relative;
+            display: inline-block;
+            padding: 18px;
+        }
+
+        .snake-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .snake-btn {
+            position: relative; z-index: 1;
+            padding: 16px 44px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--card);
+            color: var(--fg);
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+            transition: background 0.3s ease, border-color 0.3s ease, transform 0.15s ease;
+            outline: none;
+            white-space: nowrap;
+        }
+        .snake-btn:hover {
+            background: #142014;
+            border-color: var(--muted);
+        }
+        .snake-btn:active { transform: scale(0.96); }
+        .snake-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+
+        /* Toast notification */
+        .toast {
+            position: fixed; bottom: 32px; left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--fg); padding: 14px 28px; border-radius: 12px;
+            font-size: 14px; z-index: 1000; opacity: 0;
+            transition: all 0.45s cubic-bezier(0.34,1.56,0.64,1);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Firefly particles */
+        .firefly {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none; z-index: 0;
+            opacity: 0;
+        }
+
+        @keyframes firefly-drift {
+            0%   { opacity: 0; transform: translate(0, 0) scale(1); }
+            15%  { opacity: 0.7; }
+            50%  { opacity: 0.2; transform: translate(var(--dx), var(--dy)) scale(0.8); }
+            85%  { opacity: 0.6; }
+            100% { opacity: 0; transform: translate(var(--dx2), var(--dy2)) scale(1); }
+        }
+
+        /* Info card hover lift */
+        .info-card {
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .info-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--muted) !important;
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .firefly { animation: none !important; display: none; }
+            .snake-btn, .info-card, .toast { transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-atmosphere"></div>
+    <div class="bg-grid"></div>
+
+    <main class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-20">
+        <!-- Header -->
+        <header class="text-center mb-20">
+            <p class="display-font text-sm font-600 tracking-widest uppercase mb-4" style="color: var(--accent); opacity:0.7;">Interactive Component</p>
+            <h1 class="display-font text-5xl md:text-7xl font-extrabold tracking-tight mb-5" style="line-height:1.05;">
+                Snake Crawl<br>Button
+            </h1>
+            <p class="text-base md:text-lg max-w-md mx-auto leading-relaxed" style="color: var(--muted);">
+                Living snakes slither along button borders. Hover to speed them up. Click to make them strike.
+            </p>
+        </header>
+
+        <!-- Snake Buttons -->
+        <section class="flex flex-wrap items-center justify-center gap-10 md:gap-14 mb-24" aria-label="Snake crawl button demos">
+            <div class="snake-button-wrapper" id="wrapper1">
+                <canvas class="snake-canvas" id="canvas1"></canvas>
+                <button class="snake-btn" data-msg="The green serpent awakens!">Get Started</button>
+            </div>
+            <div class="snake-button-wrapper" id="wrapper2">
+                <canvas class="snake-canvas" id="canvas2"></canvas>
+                <button class="snake-btn" data-msg="The viper has struck!">Danger Zone</button>
+            </div>
+            <div class="snake-button-wrapper" id="wrapper3">
+                <canvas class="snake-canvas" id="canvas3"></canvas>
+                <button class="snake-btn" data-msg="The golden king approves.">Premium Access</button>
+            </div>
+        </section>
+
+        <!-- Feature cards -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-3xl w-full" aria-label="Features">
+            <article class="info-card rounded-xl p-6" style="background:var(--card);border:1px solid var(--border);">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(0,255,106,0.08);">
+                    <i class="fa-solid fa-bolt" style="color:var(--accent);font-size:16px;"></i>
+                </div>
+                <h3 class="display-font font-bold text-sm mb-2">Alive and Reactive</h3>
+                <p class="text-xs leading-relaxed" style="color:var(--muted);">Each snake responds to cursor proximity with realistic slithering dynamics and variable speed.</p>
+            </article>
+            <article class="info-card rounded-xl p-6" style="background:var(--card);border:1px solid var(--border);">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(255,68,68,0.08);">
+                    <i class="fa-solid fa-crosshairs" style="color:#ff4444;font-size:16px;"></i>
+                </div>
+                <h3 class="display-font font-bold text-sm mb-2">Strike on Click</h3>
+                <p class="text-xs leading-relaxed" style="color:var(--muted);">Click triggers a rapid lunge forward with a flicking forked tongue — pure canvas 2D animation.</p>
+            </article>
+            <article class="info-card rounded-xl p-6" style="background:var(--card);border:1px solid var(--border);">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style="background:rgba(255,215,0,0.08);">
+                    <i class="fa-solid fa-microchip" style="color:#ffd700;font-size:16px;"></i>
+                </div>
+                <h3 class="display-font font-bold text-sm mb-2">Rounded Path Math</h3>
+                <p class="text-xs leading-relaxed" style="color:var(--muted);">Snakes follow rounded-rectangle paths with smooth corner arcs computed per-frame at 60 fps.</p>
+            </article>
+        </section>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    /* =========================================================
+       Snake Crawl Button — Canvas 2D Animation Engine
+       ========================================================= */
+
+    // Color themes for each snake
+    const THEMES = {
+        green: {
+            body: '#00cc55', bodyDark: '#006e2e', belly: '#88ffaa',
+            eye: '#ffee00', pupil: '#111', tongue: '#ff3333',
+            glow: 'rgba(0,204,85,0.25)', glowHover: 'rgba(0,255,106,0.45)'
+        },
+        red: {
+            body: '#d42a00', bodyDark: '#7a1500', belly: '#ff8866',
+            eye: '#ffee00', pupil: '#111', tongue: '#ff0000',
+            glow: 'rgba(212,42,0,0.25)', glowHover: 'rgba(255,68,34,0.45)'
+        },
+        gold: {
+            body: '#d4a000', bodyDark: '#7a5c00', belly: '#ffe066',
+            eye: '#ff5500', pupil: '#111', tongue: '#ff2200',
+            glow: 'rgba(212,160,0,0.25)', glowHover: 'rgba(255,215,0,0.45)'
+        }
+    };
+
+    // Parse hex color to [r,g,b]
+    function hexRGB(hex) {
+        return [
+            parseInt(hex.slice(1,3),16),
+            parseInt(hex.slice(3,5),16),
+            parseInt(hex.slice(5,7),16)
+        ];
+    }
+
+    // Lerp between two hex colors
+    function lerpColor(hex1, hex2, t) {
+        const [r1,g1,b1] = hexRGB(hex1);
+        const [r2,g2,b2] = hexRGB(hex2);
+        const r = Math.round(r1 + (r2-r1)*t);
+        const g = Math.round(g1 + (g2-g1)*t);
+        const b = Math.round(b1 + (b2-b1)*t);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    class SnakeCrawler {
+        constructor(canvasId, wrapperId, themeName, direction) {
+            this.canvas = document.getElementById(canvasId);
+            this.ctx = this.canvas.getContext('2d');
+            this.wrapper = document.getElementById(wrapperId);
+            this.button = this.wrapper.querySelector('.snake-btn');
+            this.theme = THEMES[themeName];
+            this.dir = direction; // 1 = clockwise, -1 = counter-clockwise
+
+            // Snake state
+            this.headT = Math.random();
+            this.baseSpeed = 0.0012;
+            this.speed = this.baseSpeed;
+            this.segmentCount = 40;
+            this.pixelSpacing = 2.8;
+            this.waveAmp = 7;
+            this.waveFreq = 0.45;
+            this.phase = Math.random() * Math.PI * 2;
+            this.maxR = 5.5;
+
+            // Interaction state
+            this.hovered = false;
+            this.striking = false;
+            this.strikeTime = 0;
+            this.strikeDur = 0.35;
+            this.tongueExt = 0;
+
+            // Sizing
+            this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+            this.btnRect = null;
+            this.totalPerim = 0;
+            this.tSpacing = 0;
+            this.cornerR = 14;
+
+            this._resize();
+            this.button.addEventListener('mouseenter', () => this.hovered = true);
+            this.button.addEventListener('mouseleave', () => this.hovered = false);
+            this.button.addEventListener('click', () => this.strike());
+            window.addEventListener('resize', () => this._resize());
+        }
+
+        _resize() {
+            const wr = this.wrapper.getBoundingClientRect();
+            this.canvas.width = wr.width * this.dpr;
+            this.canvas.height = wr.height * this.dpr;
+            this.canvas.style.width = wr.width + 'px';
+            this.canvas.style.height = wr.height + 'px';
+            this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+            const br = this.button.getBoundingClientRect();
+            this.btnRect = {
+                x: br.left - wr.left,
+                y: br.top - wr.top,
+                w: br.width,
+                h: br.height
+            };
+
+            // Compute perimeter with rounded corners
+            const cr = Math.min(this.cornerR, this.btnRect.w/2, this.btnRect.h/2);
+            this.cornerR = cr;
+            const sw = this.btnRect.w - 2*cr;
+            const sh = this.btnRect.h - 2*cr;
+            this.totalPerim = 2*(sw+sh) + 2*Math.PI*cr;
+            this.tSpacing = this.pixelSpacing / this.totalPerim;
+        }
+
+        strike() {
+            if (!this.striking) {
+                this.striking = true;
+                this.strikeTime = 0;
+                this.tongueExt = 1.2;
+            }
+        }
+
+        // Position & travel angle on the rounded-rectangle perimeter
+        // t: 0..1, direction handled externally
+        perimeterPos(t) {
+            const r = this.btnRect;
+            const cr = this.cornerR;
+            const sw = r.w - 2*cr;
+            const sh = r.h - 2*cr;
+            const arcLen = (Math.PI/2) * cr;
+
+            // 8 segments: straight, arc, straight, arc, straight, arc, straight, arc
+            const lens = [sw, arcLen, sh, arcLen, sw, arcLen, sh, arcLen];
+            let d = (((t % 1) + 1) % 1) * this.totalPerim;
+
+            // Top straight →
+            if (d < lens[0]) return { x: r.x+cr+d, y: r.y, a: 0 };
+            d -= lens[0];
+            // Top-right arc
+            if (d < lens[1]) {
+                const ang = -Math.PI/2 + d/cr;
+                return { x: r.x+r.w-cr+Math.cos(ang)*cr, y: r.y+cr+Math.sin(ang)*cr, a: ang+Math.PI/2 };
+            }
+            d -= lens[1];
+            // Right straight ↓
+            if (d < lens[2]) return { x: r.x+r.w, y: r.y+cr+d, a: Math.PI/2 };
+            d -= lens[2];
+            // Bottom-right arc
+            if (d < lens[3]) {
+                const ang = d/cr;
+                return { x: r.x+r.w-cr+Math.cos(ang)*cr, y: r.y+r.h-cr+Math.sin(ang)*cr, a: ang+Math.PI/2 };
+            }
+            d -= lens[3];
+            // Bottom straight ←
+            if (d < lens[4]) return { x: r.x+r.w-cr-d, y: r.y+r.h, a: Math.PI };
+            d -= lens[4];
+            // Bottom-left arc
+            if (d < lens[5]) {
+                const ang = Math.PI/2 + d/cr;
+                return { x: r.x+cr+Math.cos(ang)*cr, y: r.y+r.h-cr+Math.sin(ang)*cr, a: ang+Math.PI/2 };
+            }
+            d -= lens[5];
+            // Left straight ↑
+            if (d < lens[6]) return { x: r.x, y: r.y+r.h-cr-d, a: -Math.PI/2 };
+            d -= lens[6];
+            // Top-left arc
+            const ang = Math.PI + d/cr;
+            return { x: r.x+cr+Math.cos(ang)*cr, y: r.y+cr+Math.sin(ang)*cr, a: ang+Math.PI/2 };
+        }
+
+        update(dt) {
+            // Speed ramp
+            const target = this.hovered ? this.baseSpeed * 3.5 : this.baseSpeed;
+            this.speed += (target - this.speed) * 0.06;
+
+            // Strike burst
+            if (this.striking) {
+                this.strikeTime += dt;
+                if (this.strikeTime < this.strikeDur * 0.25) {
+                    this.speed = this.baseSpeed * 10;
+                } else if (this.strikeTime < this.strikeDur * 0.6) {
+                    this.speed = this.baseSpeed * 0.3;
+                } else {
+                    this.striking = false;
+                }
+            }
+
+            this.headT += this.speed * this.dir;
+            this.headT = ((this.headT % 1) + 1) % 1;
+
+            // Wave phase advances
+            this.phase += dt * (this.hovered ? 14 : 6);
+
+            // Tongue decay
+            if (this.tongueExt > 0) {
+                this.tongueExt -= dt * 2.8;
+                if (this.tongueExt < 0) this.tongueExt = 0;
+            }
+            // Random tongue flicks
+            if (Math.random() < dt * 0.6 && !this.striking) {
+                this.tongueExt = 0.5 + Math.random() * 0.5;
+            }
+        }
+
+        draw() {
+            const ctx = this.ctx;
+            const cw = this.canvas.width / this.dpr;
+            const ch = this.canvas.height / this.dpr;
+            ctx.clearRect(0, 0, cw, ch);
+
+            // Build segment array
+            const segs = [];
+            for (let i = 0; i < this.segmentCount; i++) {
+                const t = this.headT - i * this.tSpacing * this.dir;
+                const pos = this.perimeterPos(t);
+                const ni = i / (this.segmentCount - 1); // 0 = head, 1 = tail
+
+                // Width profile: taper head & tail
+                let wm;
+                if (ni < 0.08) wm = 0.45 + ni * 6.875;
+                else if (ni > 0.82) wm = (1 - ni) * 5.556;
+                else wm = 1;
+
+                // Slithering perpendicular wave
+                const wave = Math.sin(this.phase + i * this.waveFreq) * this.waveAmp * wm;
+                const px = -Math.sin(pos.a);
+                const py = Math.cos(pos.a);
+
+                segs.push({
+                    x: pos.x + px * wave,
+                    y: pos.y + py * wave,
+                    a: pos.a,
+                    r: Math.max(0.8, this.maxR * wm),
+                    ni: ni
+                });
+            }
+
+            this._drawGlow(segs);
+            this._drawBody(segs);
+            this._drawBelly(segs);
+            this._drawScales(segs);
+            this._drawHead(segs);
+            if (this.tongueExt > 0.08) this._drawTongue(segs);
+        }
+
+        _drawGlow(segs) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.filter = 'blur(10px)';
+            ctx.globalAlpha = this.hovered ? 0.55 : 0.18;
+            ctx.strokeStyle = this.hovered ? this.theme.glowHover : this.theme.glow;
+            ctx.lineWidth = this.maxR * 3.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(segs[0].x, segs[0].y);
+            for (let i = 1; i < segs.length; i++) ctx.lineTo(segs[i].x, segs[i].y);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        _drawBody(segs) {
+            const ctx = this.ctx;
+            // Draw overlapping circles from tail to head so head paints on top
+            for (let i = segs.length - 1; i >= 0; i--) {
+                const s = segs[i];
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+                ctx.fillStyle = lerpColor(this.theme.body, this.theme.bodyDark, s.ni);
+                ctx.fill();
+            }
+        }
+
+        _drawBelly(segs) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.globalAlpha = 0.2;
+            ctx.strokeStyle = this.theme.belly;
+            ctx.lineWidth = this.maxR * 0.55;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(segs[1].x, segs[1].y);
+            for (let i = 2; i < segs.length - 2; i++) ctx.lineTo(segs[i].x, segs[i].y);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        _drawScales(segs) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.globalAlpha = 0.1;
+            ctx.strokeStyle = this.theme.belly;
+            ctx.lineWidth = 0.6;
+            for (let i = 3; i < segs.length - 3; i += 2) {
+                const s = segs[i];
+                const next = segs[i+1];
+                const ang = Math.atan2(next.y - s.y, next.x - s.x);
+                const px = -Math.sin(ang);
+                const py = Math.cos(ang);
+                const rr = s.r * 0.75;
+                ctx.beginPath();
+                ctx.moveTo(s.x + px*rr, s.y + py*rr);
+                ctx.lineTo(s.x - px*rr, s.y - py*rr);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        _drawHead(segs) {
+            const ctx = this.ctx;
+            const head = segs[0];
+            const neck = segs[1];
+            const dx = head.x - neck.x;
+            const dy = head.y - neck.y;
+            const dirA = Math.atan2(dy, dx);
+
+            ctx.save();
+            ctx.translate(head.x, head.y);
+            ctx.rotate(dirA);
+
+            const hw = this.maxR * 1.35;
+            const hh = this.maxR * 1.0;
+
+            // Head ellipse
+            ctx.beginPath();
+            ctx.ellipse(0, 0, hh, hw, 0, 0, Math.PI*2);
+            ctx.fillStyle = this.theme.body;
+            ctx.fill();
+
+            // Nostrils
+            ctx.fillStyle = this.theme.bodyDark;
+            ctx.beginPath(); ctx.arc(hh*0.6, -hw*0.2, 1, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(hh*0.6,  hw*0.2, 1, 0, Math.PI*2); ctx.fill();
+
+            // Eyes
+            const ey = hw * 0.42;
+            const ex = hh * 0.15;
+            const er = 2.2;
+
+            [-1, 1].forEach(side => {
+                // Sclera
+                ctx.beginPath();
+                ctx.arc(ex, side*ey, er, 0, Math.PI*2);
+                ctx.fillStyle = this.theme.eye;
+                ctx.fill();
+                // Pupil (vertical slit)
+                ctx.beginPath();
+                ctx.ellipse(ex + 0.3, side*ey, 0.7, 1.6, 0, 0, Math.PI*2);
+                ctx.fillStyle = this.theme.pupil;
+                ctx.fill();
+            });
+
+            // Eye glow on hover
+            if (this.hovered) {
+                ctx.globalAlpha = 0.35;
+                [-1, 1].forEach(side => {
+                    ctx.beginPath();
+                    ctx.arc(ex, side*ey, er*2.2, 0, Math.PI*2);
+                    ctx.fillStyle = this.theme.eye;
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+            }
+
+            ctx.restore();
+        }
+
+        _drawTongue(segs) {
+            const ctx = this.ctx;
+            const head = segs[0];
+            const neck = segs[1];
+            const dx = head.x - neck.x;
+            const dy = head.y - neck.y;
+            const len = Math.sqrt(dx*dx+dy*dy) || 1;
+            const ux = dx/len, uy = dy/len;
+            const ang = Math.atan2(uy, ux);
+
+            const tLen = 14 * Math.min(this.tongueExt, 1);
+            const forkLen = 6 * Math.min(this.tongueExt, 1);
+            const forkAng = 0.35;
+            const startX = head.x + ux * (head.r * 0.8);
+            const startY = head.y + uy * (head.r * 0.8);
+            const tipX = startX + ux * tLen;
+            const tipY = startY + uy * tLen;
+
+            ctx.save();
+            ctx.strokeStyle = this.theme.tongue;
+            ctx.lineWidth = 1.4;
+            ctx.lineCap = 'round';
+
+            // Main shaft
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+
+            // Forks
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX + Math.cos(ang-forkAng)*forkLen, tipY + Math.sin(ang-forkAng)*forkLen);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX + Math.cos(ang+forkAng)*forkLen, tipY + Math.sin(ang+forkAng)*forkLen);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
+    /* =========================================================
+       Toast System
+       ========================================================= */
+    let toastTimer = null;
+    function showToast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    /* =========================================================
+       Firefly Particles
+       ========================================================= */
+    function createFireflies(count) {
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'firefly';
+            const size = 2 + Math.random() * 3;
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const dur = 6 + Math.random() * 10;
+            const dx = (Math.random() - 0.5) * 200;
+            const dy = (Math.random() - 0.5) * 200;
+            const dx2 = (Math.random() - 0.5) * 300;
+            const dy2 = (Math.random() - 0.5) * 300;
+            const hue = 100 + Math.random() * 40; // green range
+            el.style.cssText = `
+                width:${size}px;height:${size}px;
+                left:${x}%;top:${y}%;
+                background:hsl(${hue},100%,65%);
+                box-shadow:0 0 ${size*3}px hsl(${hue},100%,50%);
+                --dx:${dx}px;--dy:${dy}px;--dx2:${dx2}px;--dy2:${dy2}px;
+                animation:firefly-drift ${dur}s ${Math.random()*dur}s linear infinite;
+            `;
+            frag.appendChild(el);
+        }
+        document.body.appendChild(frag);
+    }
+
+    /* =========================================================
+       Initialize Everything
+       ========================================================= */
+    // Create fireflies
+    createFireflies(18);
+
+    // Create snake crawlers with different themes and directions
+    const snakes = [
+        new SnakeCrawler('canvas1', 'wrapper1', 'green', 1),
+        new SnakeCrawler('canvas2', 'wrapper2', 'red', -1),
+        new SnakeCrawler('canvas3', 'wrapper3', 'gold', 1)
+    ];
+
+    // Wire up button clicks to toast
+    document.querySelectorAll('.snake-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            showToast(btn.getAttribute('data-msg'));
+        });
+    });
+
+    // Animation loop
+    let lastTime = performance.now();
+    function loop(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.05); // cap delta to prevent jumps
+        lastTime = now;
+
+        for (const snake of snakes) {
+            snake.update(dt);
+            snake.draw();
+        }
+
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
