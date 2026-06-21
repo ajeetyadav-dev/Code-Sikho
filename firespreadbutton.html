@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fire Spread Button</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0604;
+    --fg: #f5e6d0;
+    --muted: #5a3e28;
+    --accent: #ff5722;
+    --card: #1a0f08;
+    --border: #2a1a0e;
+    --ember: #ff9800;
+    --flame-core: #fff3e0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Subtle ground texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 100%, rgba(40,20,5,0.6) 0%, transparent 70%),
+      radial-gradient(circle at 20% 80%, rgba(30,10,0,0.3) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(30,10,0,0.3) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scorch canvas - stays behind everything */
+  #scorchCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Fire particle canvas */
+  #fireCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* Heat distortion overlay */
+  #heatOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    backdrop-filter: blur(0px);
+    transition: backdrop-filter 0.3s;
+  }
+
+  /* UI layer */
+  .ui-layer {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  /* Title */
+  .title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    letter-spacing: 0.15em;
+    color: var(--fg);
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1;
+    opacity: 0.85;
+    transition: color 0.4s, text-shadow 0.4s;
+  }
+
+  .title.burning {
+    color: var(--ember);
+    text-shadow: 0 0 30px rgba(255,87,34,0.5), 0 0 60px rgba(255,152,0,0.2);
+  }
+
+  /* The button */
+  .fire-btn-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Glow ring behind button */
+  .glow-ring {
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,87,34,0.15) 0%, transparent 70%);
+    animation: pulseGlow 2s ease-in-out infinite;
+    transition: transform 0.3s, opacity 0.3s;
+  }
+
+  .glow-ring.intense {
+    width: 240px;
+    height: 240px;
+    background: radial-gradient(circle, rgba(255,87,34,0.35) 0%, rgba(255,152,0,0.1) 50%, transparent 70%);
+    animation: pulseGlowIntense 0.8s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  @keyframes pulseGlowIntense {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.15); opacity: 1; }
+  }
+
+  .fire-btn {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: radial-gradient(circle at 40% 35%, #3a1a08 0%, #1a0a02 100%);
+    color: var(--flame-core);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.15s, border-color 0.3s, box-shadow 0.3s;
+    box-shadow:
+      0 0 20px rgba(255,87,34,0.2),
+      inset 0 0 30px rgba(255,87,34,0.05);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .fire-btn:hover {
+    border-color: var(--ember);
+    box-shadow:
+      0 0 35px rgba(255,87,34,0.4),
+      0 0 70px rgba(255,152,0,0.15),
+      inset 0 0 40px rgba(255,87,34,0.1);
+    transform: scale(1.05);
+  }
+
+  .fire-btn:active {
+    transform: scale(0.92);
+  }
+
+  .fire-btn:focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 6px;
+  }
+
+  .fire-btn.active {
+    border-color: #ffeb3b;
+    box-shadow:
+      0 0 50px rgba(255,152,0,0.6),
+      0 0 100px rgba(255,87,34,0.3),
+      inset 0 0 50px rgba(255,152,0,0.15);
+  }
+
+  /* Ember dots floating around button */
+  .ember {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--ember);
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  /* Stats bar */
+  .stats {
+    display: flex;
+    gap: 2.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .stat-val {
+    color: var(--ember);
+    font-weight: 500;
+    margin-left: 0.4rem;
+    transition: color 0.3s;
+  }
+
+  .stat-val.hot {
+    color: #ffeb3b;
+    text-shadow: 0 0 8px rgba(255,235,59,0.4);
+  }
+
+  /* Intensity meter */
+  .intensity-bar {
+    width: 200px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .intensity-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--ember), #ffeb3b);
+    border-radius: 2px;
+    transition: width 0.4s ease-out;
+    box-shadow: 0 0 8px rgba(255,152,0,0.4);
+  }
+
+  /* Screen shake */
+  .shake {
+    animation: shake 0.15s ease-out;
+  }
+
+  @keyframes shake {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-3px, 2px); }
+    50% { transform: translate(4px, -2px); }
+    75% { transform: translate(-2px, 3px); }
+    100% { transform: translate(0, 0); }
+  }
+
+  /* Screen flash */
+  .flash {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%), rgba(255,152,0,0.25) 0%, transparent 60%);
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  .flash.active {
+    opacity: 1;
+    transition: opacity 0s;
+  }
+
+  /* Reset link */
+  .reset-link {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 20;
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    background: var(--card);
+    transition: color 0.3s, border-color 0.3s;
+    text-decoration: none;
+  }
+
+  .reset-link:hover {
+    color: var(--fg);
+    border-color: var(--muted);
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(-60px);
+    z-index: 50;
+    background: var(--card);
+    border: 1px solid var(--accent);
+    color: var(--flame-core);
+    font-size: 0.8rem;
+    padding: 0.6rem 1.4rem;
+    border-radius: 6px;
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .fire-btn { width: 110px; height: 110px; font-size: 1.1rem; }
+    .glow-ring { width: 150px; height: 150px; }
+    .stats { gap: 1.2rem; font-size: 0.65rem; }
+    .intensity-bar { width: 160px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="scorchCanvas"></canvas>
+<div id="heatOverlay"></div>
+<canvas id="fireCanvas"></canvas>
+<div class="flash" id="flash"></div>
+
+<div class="ui-layer" id="uiLayer">
+  <div class="title" id="title">Ignite the Void</div>
+
+  <div class="fire-btn-wrap">
+    <div class="glow-ring" id="glowRing"></div>
+    <button class="fire-btn" id="fireBtn" aria-label="Trigger fire spread">IGNITE</button>
+  </div>
+
+  <div class="intensity-bar">
+    <div class="intensity-fill" id="intensityFill"></div>
+  </div>
+
+  <div class="stats">
+    <span>Sparks <span class="stat-val" id="sparkCount">0</span></span>
+    <span>Spread <span class="stat-val" id="spreadCount">0</span></span>
+    <span>Temp <span class="stat-val" id="tempVal">21°</span></span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<a class="reset-link" id="resetLink" role="button" tabindex="0">Extinguish</a>
+
+<script>
+  /* ============================================
+     Fire Spread Button — Full Implementation
+     ============================================ */
+
+  const fireBtn = document.getElementById('fireBtn');
+  const glowRing = document.getElementById('glowRing');
+  const title = document.getElementById('title');
+  const uiLayer = document.getElementById('uiLayer');
+  const flash = document.getElementById('flash');
+  const heatOverlay = document.getElementById('heatOverlay');
+  const intensityFill = document.getElementById('intensityFill');
+  const sparkCountEl = document.getElementById('sparkCount');
+  const spreadCountEl = document.getElementById('spreadCount');
+  const tempValEl = document.getElementById('tempVal');
+  const toastEl = document.getElementById('toast');
+  const resetLink = document.getElementById('resetLink');
+
+  // Canvas setup
+  const scorchCanvas = document.getElementById('scorchCanvas');
+  const scorchCtx = scorchCanvas.getContext('2d');
+  const fireCanvas = document.getElementById('fireCanvas');
+  const fireCtx = fireCanvas.getContext('2d');
+
+  let W, H;
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    fireCanvas.width = scorchCanvas.width = W;
+    fireCanvas.height = scorchCanvas.height = H;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // State
+  let clickCount = 0;
+  let totalSparks = 0;
+  let spreadPoints = 0;
+  let temperature = 21;
+  let particles = [];
+  let embers = []; // ambient button embers
+  let fireSources = []; // persistent fire spots
+  let toastTimeout = null;
+
+  // Toast system
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toastEl.classList.remove('show'), 2000);
+  }
+
+  // Noise function (simple value noise)
+  function pseudoNoise(x, y) {
+    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  // Smooth noise
+  function smoothNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const fx = x - ix, fy = y - iy;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    const a = pseudoNoise(ix, iy);
+    const b = pseudoNoise(ix + 1, iy);
+    const c = pseudoNoise(ix, iy + 1);
+    const d = pseudoNoise(ix + 1, iy + 1);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  }
+
+  // Color helpers
+  function fireColor(life, maxLife) {
+    const t = life / maxLife;
+    if (t > 0.8) {
+      // White-yellow core
+      const s = (t - 0.8) / 0.2;
+      return { r: 255, g: 240 + 15 * s, b: 180 + 75 * s, a: t };
+    } else if (t > 0.5) {
+      // Yellow to orange
+      const s = (t - 0.5) / 0.3;
+      return { r: 255, g: 160 + 80 * s, b: 30 * s, a: t };
+    } else if (t > 0.2) {
+      // Orange to red
+      const s = (t - 0.2) / 0.3;
+      return { r: 200 + 55 * s, g: 40 + 120 * s, b: 0, a: t * 0.9 };
+    } else {
+      // Dark red fadeout
+      const s = t / 0.2;
+      return { r: 80 + 120 * s, g: 10 + 30 * s, b: 0, a: t * 0.7 };
+    }
+  }
+
+  // Particle class
+  class Particle {
+    constructor(x, y, opts = {}) {
+      this.x = x;
+      this.y = y;
+      this.vx = opts.vx || (Math.random() - 0.5) * 4;
+      this.vy = opts.vy || -Math.random() * 5 - 2;
+      this.life = opts.life || 1;
+      this.maxLife = this.life;
+      this.size = opts.size || Math.random() * 6 + 2;
+      this.type = opts.type || 'flame'; // flame, spark, ember
+      this.gravity = opts.gravity !== undefined ? opts.gravity : -0.03;
+      this.drag = opts.drag || 0.98;
+      this.wind = opts.wind || 0;
+      this.noiseOffset = Math.random() * 1000;
+      this.noiseSpeed = Math.random() * 2 + 1;
+    }
+
+    update(dt) {
+      // Noise-based turbulence
+      const nx = smoothNoise(this.x * 0.005 + this.noiseOffset, performance.now() * 0.0003 * this.noiseSpeed);
+      const ny = smoothNoise(this.y * 0.005, performance.now() * 0.0003 * this.noiseSpeed + 50);
+
+      this.vx += (nx - 0.5) * 0.3 + this.wind;
+      this.vy += this.gravity;
+      this.vx *= this.drag;
+      this.vy *= this.drag;
+
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life -= dt;
+
+      if (this.type === 'spark') {
+        this.vy += 0.15; // sparks fall
+        this.size *= 0.995;
+      }
+    }
+
+    draw(ctx) {
+      if (this.life <= 0) return;
+      const c = fireColor(this.life, this.maxLife);
+      const sz = Math.max(0.5, this.size * (this.life / this.maxLife));
+
+      if (this.type === 'spark') {
+        // Bright dot with trail
+        ctx.globalAlpha = c.a * 0.9;
+        ctx.fillStyle = `rgb(${c.r},${c.g},${Math.min(255, c.b + 80)})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.max(0.5, sz * 0.4), 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Soft flame blob
+        ctx.globalAlpha = c.a * 0.6;
+        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, sz));
+        grad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0.8)`);
+        grad.addColorStop(0.5, `rgba(${c.r},${Math.max(0, c.g - 40)},${c.b},0.3)`);
+        grad.addColorStop(1, `rgba(${c.r},${Math.max(0, c.g - 80)},0,0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.max(1, sz), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Fire source — a persistent spot that emits particles
+  class FireSource {
+    constructor(x, y, intensity) {
+      this.x = x;
+      this.y = y;
+      this.intensity = intensity; // 0-1
+      this.life = 8 + Math.random() * 12; // seconds
+      this.maxLife = this.life;
+      this.radius = 20 + intensity * 40;
+      this.emitTimer = 0;
+    }
+
+    update(dt) {
+      this.life -= dt;
+      // Fade intensity near end of life
+      const lifeRatio = Math.min(1, this.life / (this.maxLife * 0.3));
+      this.currentIntensity = this.intensity * lifeRatio;
+    }
+
+    emit() {
+      if (this.life <= 0 || this.currentIntensity <= 0.01) return [];
+      const count = Math.floor(this.currentIntensity * 4);
+      const out = [];
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * this.radius * 0.5;
+        out.push(new Particle(
+          this.x + Math.cos(angle) * dist,
+          this.y + Math.sin(angle) * dist,
+          {
+            vx: (Math.random() - 0.5) * 2 * this.currentIntensity,
+            vy: -Math.random() * 3 * this.currentIntensity - 1,
+            life: 0.6 + Math.random() * 1.2 * this.currentIntensity,
+            size: 4 + Math.random() * 10 * this.currentIntensity,
+            type: 'flame',
+            gravity: -0.05 * this.currentIntensity
+          }
+        ));
+      }
+      // Occasional spark
+      if (Math.random() < 0.15 * this.currentIntensity) {
+        out.push(new Particle(this.x, this.y, {
+          vx: (Math.random() - 0.5) * 8 * this.currentIntensity,
+          vy: -Math.random() * 6 * this.currentIntensity - 2,
+          life: 0.8 + Math.random() * 1.5,
+          size: 2 + Math.random() * 2,
+          type: 'spark',
+          gravity: 0.12
+        }));
+      }
+      return out;
+    }
+
+    drawScorch(ctx) {
+      // Draw scorch mark
+      const alpha = Math.min(0.4, this.intensity * 0.3);
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, this.radius * 1.5));
+      grad.addColorStop(0, `rgba(15,8,2,${alpha})`);
+      grad.addColorStop(0.5, `rgba(20,10,3,${alpha * 0.5})`);
+      grad.addColorStop(1, `rgba(10,5,0,0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(1, this.radius * 1.5), 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner burn
+      const grad2 = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, this.radius * 0.6));
+      grad2.addColorStop(0, `rgba(30,12,0,${alpha * 1.2})`);
+      grad2.addColorStop(1, `rgba(15,6,0,0)`);
+      ctx.fillStyle = grad2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(1, this.radius * 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Get button center in viewport coordinates
+  function getBtnCenter() {
+    const rect = fireBtn.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  // Spread fire from a point
+  function spreadFire(originX, originY, intensity) {
+    const count = 2 + Math.floor(intensity * 5);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * (150 + intensity * 200);
+      const tx = originX + Math.cos(angle) * dist;
+      const ty = originY + Math.sin(angle) * dist;
+
+      // Create fire source at target
+      const src = new FireSource(tx, ty, intensity * (0.3 + Math.random() * 0.7));
+      fireSources.push(src);
+      spreadPoints++;
+
+      // Draw scorch mark immediately
+      src.drawScorch(scorchCtx);
+
+      // Delayed burst particles traveling to target
+      const travelTime = 0.2 + Math.random() * 0.3;
+      const dx = tx - originX;
+      const dy = ty - originY;
+      for (let j = 0; j < 5; j++) {
+        const t = j * 0.15;
+        setTimeout(() => {
+          if (t > travelTime) return;
+          particles.push(new Particle(
+            originX + dx * (t / travelTime),
+            originY + dy * (t / travelTime),
+            {
+              vx: dx / travelTime * 0.3 + (Math.random() - 0.5) * 2,
+              vy: dy / travelTime * 0.3 + (Math.random() - 0.5) * 2 - 1,
+              life: 0.4 + Math.random() * 0.4,
+              size: 3 + Math.random() * 4,
+              type: 'spark',
+              gravity: 0.05
+            }
+          ));
+          totalSparks++;
+        }, t * 1000);
+      }
+    }
+  }
+
+  // Initial burst from button
+  function burstFromButton(intensity) {
+    const center = getBtnCenter();
+    const count = 30 + Math.floor(intensity * 60);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 6 * intensity;
+      const type = Math.random() < 0.3 ? 'spark' : 'flame';
+      particles.push(new Particle(center.x, center.y, {
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        life: 0.5 + Math.random() * 1.5 * intensity,
+        size: type === 'spark' ? 1.5 + Math.random() * 2 : 5 + Math.random() * 12 * intensity,
+        type: type,
+        gravity: type === 'spark' ? 0.1 : -0.04 * intensity,
+        drag: type === 'spark' ? 0.97 : 0.98
+      }));
+      totalSparks++;
+    }
+  }
+
+  // Screen flash
+  function triggerFlash() {
+    const center = getBtnCenter();
+    flash.style.setProperty('--fx', (center.x / W * 100) + '%');
+    flash.style.setProperty('--fy', (center.y / H * 100) + '%');
+    flash.classList.add('active');
+    setTimeout(() => flash.classList.remove('active'), 100);
+  }
+
+  // Screen shake
+  function triggerShake(intensity) {
+    const duration = 0.1 + intensity * 0.1;
+    uiLayer.style.animation = 'none';
+    uiLayer.offsetHeight; // reflow
+    uiLayer.style.animation = `shake ${duration}s ease-out`;
+    setTimeout(() => uiLayer.style.animation = 'none', duration * 1000);
+  }
+
+  // Update UI
+  function updateUI() {
+    sparkCountEl.textContent = totalSparks;
+    spreadCountEl.textContent = spreadPoints;
+    temperature = Math.min(2400, 21 + clickCount * 180 + spreadPoints * 12);
+    tempValEl.textContent = temperature + '°';
+
+    const intensity = Math.min(1, clickCount / 12);
+    intensityFill.style.width = (intensity * 100) + '%';
+
+    if (intensity > 0.5) {
+      tempValEl.classList.add('hot');
+      glowRing.classList.add('intense');
+      title.classList.add('burning');
+    } else {
+      tempValEl.classList.remove('hot');
+      glowRing.classList.remove('intense');
+      title.classList.remove('burning');
+    }
+
+    // Heat distortion
+    const blur = intensity * 2;
+    heatOverlay.style.backdropFilter = `blur(${blur}px)`;
+  }
+
+  // Milestone toasts
+  const milestones = [
+    { at: 1, msg: 'The first spark catches...' },
+    { at: 3, msg: 'Flames are spreading' },
+    { at: 5, msg: 'The ground is scorched' },
+    { at: 8, msg: 'Heat distortion rising' },
+    { at: 12, msg: 'INFERNO — Maximum intensity reached' },
+  ];
+  let lastMilestone = 0;
+
+  // Main click handler
+  fireBtn.addEventListener('click', () => {
+    clickCount++;
+    const intensity = Math.min(1, clickCount / 12);
+
+    // Visual feedback
+    triggerFlash();
+    triggerShake(intensity);
+    fireBtn.classList.add('active');
+    setTimeout(() => fireBtn.classList.remove('active'), 200);
+
+    // Emit particles from button
+    burstFromButton(intensity);
+
+    // Spread fire to new locations
+    spreadFire(getBtnCenter().x, getBtnCenter().y, intensity);
+
+    // Update stats
+    updateUI();
+
+    // Check milestones
+    for (const m of milestones) {
+      if (clickCount === m.at && m.at > lastMilestone) {
+        lastMilestone = m.at;
+        showToast(m.msg);
+      }
+    }
+  });
+
+  // Ambient embers around button (always active, intensify with clicks)
+  function emitAmbientEmber() {
+    const center = getBtnCenter();
+    const intensity = Math.min(1, clickCount / 10);
+    if (Math.random() < 0.1 + intensity * 0.4) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 40 + Math.random() * 30;
+      embers.push(new Particle(
+        center.x + Math.cos(angle) * dist,
+        center.y + Math.sin(angle) * dist,
+        {
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: -0.3 - Math.random() * 0.8,
+          life: 1 + Math.random() * 2,
+          size: 1 + Math.random() * 2,
+          type: 'spark',
+          gravity: -0.01,
+          drag: 0.99
+        }
+      ));
+    }
+  }
+
+  // Reset
+  function resetAll() {
+    clickCount = 0;
+    totalSparks = 0;
+    spreadPoints = 0;
+    temperature = 21;
+    particles = [];
+    embers = [];
+    fireSources = [];
+    lastMilestone = 0;
+    scorchCtx.clearRect(0, 0, W, H);
+    updateUI();
+    title.classList.remove('burning');
+    glowRing.classList.remove('intense');
+    heatOverlay.style.backdropFilter = 'blur(0px)';
+    showToast('All flames extinguished');
+  }
+
+  resetLink.addEventListener('click', resetAll);
+  resetLink.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); resetAll(); }
+  });
+
+  // Animation loop
+  let lastTime = performance.now();
+
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    // Clear fire canvas
+    fireCtx.clearRect(0, 0, W, H);
+
+    // Additive blending for fire glow
+    fireCtx.globalCompositeOperation = 'lighter';
+
+    // Emit ambient embers
+    emitAmbientEmber();
+
+    // Update and draw fire sources
+    for (let i = fireSources.length - 1; i >= 0; i--) {
+      const src = fireSources[i];
+      src.update(dt);
+      const newParticles = src.emit();
+      particles.push(...newParticles);
+      if (src.life <= 0) {
+        fireSources.splice(i, 1);
+      }
+    }
+
+    // Update and draw particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      particles[i].update(dt);
+      if (particles[i].life <= 0) {
+        particles.splice(i, 1);
+      } else {
+        particles[i].draw(fireCtx);
+      }
+    }
+
+    // Update and draw ambient embers
+    for (let i = embers.length - 1; i >= 0; i--) {
+      embers[i].update(dt);
+      if (embers[i].life <= 0) {
+        embers.splice(i, 1);
+      } else {
+        embers[i].draw(fireCtx);
+      }
+    }
+
+    fireCtx.globalCompositeOperation = 'source-over';
+
+    // Slowly fade scorch marks (very slow decay)
+    if (clickCount > 0) {
+      scorchCtx.fillStyle = 'rgba(10,6,4,0.002)';
+      scorchCtx.globalCompositeOperation = 'destination-out';
+      scorchCtx.fillRect(0, 0, W, H);
+      scorchCtx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  requestAnimationFrame(animate);
+</script>
+</body>
+</html>
