@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hologram Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --card-bg: #12121c;
+    --accent-cyan: #00f0ff;
+    --accent-magenta: #ff00e5;
+    --accent-gold: #ffd700;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    color: var(--text);
+  }
+
+  /* Background atmosphere */
+  .bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridScroll 20s linear infinite;
+  }
+
+  @keyframes gridScroll {
+    to { transform: translate(60px, 60px); }
+  }
+
+  .bg-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(150px);
+    opacity: 0.15;
+    animation: glowPulse 6s ease-in-out infinite alternate;
+  }
+
+  .bg-glow--1 {
+    top: -200px;
+    left: -100px;
+    background: var(--accent-cyan);
+  }
+
+  .bg-glow--2 {
+    bottom: -200px;
+    right: -100px;
+    background: var(--accent-magenta);
+    animation-delay: -3s;
+  }
+
+  @keyframes glowPulse {
+    0% { opacity: 0.1; transform: scale(0.8); }
+    100% { opacity: 0.2; transform: scale(1.2); }
+  }
+
+  /* Floating particles canvas */
+  #particles {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Card scene */
+  .card-scene {
+    position: relative;
+    z-index: 10;
+    perspective: 1200px;
+  }
+
+  /* The hologram card */
+  .holo-card {
+    width: 380px;
+    height: 540px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.08s ease-out;
+    cursor: pointer;
+    border-radius: 20px;
+  }
+
+  .holo-card__base {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow:
+      0 0 0 1px rgba(0,240,255,0.05),
+      0 30px 80px -20px rgba(0,0,0,0.7),
+      0 0 60px -10px rgba(0,240,255,0.1);
+    overflow: hidden;
+  }
+
+  /* Holographic rainbow layer */
+  .holo-card__rainbow {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    mix-blend-mode: color-dodge;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .holo-card:hover .holo-card__rainbow {
+    opacity: 1;
+  }
+
+  /* Scan lines */
+  .holo-card__scanlines {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0.5;
+  }
+
+  /* Moving scan beam */
+  .holo-card__scanbeam {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgba(0,240,255,0.06),
+      rgba(0,240,255,0.12),
+      rgba(0,240,255,0.06),
+      transparent
+    );
+    z-index: 7;
+    pointer-events: none;
+    animation: scanBeam 4s ease-in-out infinite;
+    border-radius: 20px;
+  }
+
+  @keyframes scanBeam {
+    0%, 100% { top: -80px; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: calc(100% + 80px); opacity: 0; }
+  }
+
+  /* Light reflection spot */
+  .holo-card__light {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 8;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: overlay;
+  }
+
+  .holo-card:hover .holo-card__light {
+    opacity: 1;
+  }
+
+  /* Edge glow */
+  .holo-card__edge-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 9;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .holo-card:hover .holo-card__edge-glow {
+    opacity: 1;
+  }
+
+  /* Card content */
+  .holo-card__content {
+    position: relative;
+    z-index: 4;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 28px;
+  }
+
+  /* Top bar */
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .card-top__id {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px rgba(0,240,255,0.4);
+  }
+
+  .card-top__type {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* Robot visual area */
+  .robot-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 10px 0;
+  }
+
+  .robot-ring {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,240,255,0.15);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: ringRotate 10s linear infinite;
+  }
+
+  .robot-ring::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    border: 1px dashed rgba(255,0,229,0.2);
+    animation: ringRotate 7s linear infinite reverse;
+  }
+
+  .robot-ring::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    border-top-color: var(--accent-cyan);
+    border-right-color: var(--accent-magenta);
+    animation: ringRotate 3s linear infinite;
+  }
+
+  @keyframes ringRotate {
+    to { transform: rotate(360deg); }
+  }
+
+  .robot-icon {
+    font-size: 64px;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 0 20px rgba(0,240,255,0.4));
+    animation: robotFloat 3s ease-in-out infinite;
+  }
+
+  @keyframes robotFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* Orbit dots */
+  .orbit-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+  }
+
+  .orbit-dot:nth-child(1) { top: -3px; left: 50%; animation: orbitPulse 2s ease-in-out infinite; }
+  .orbit-dot:nth-child(2) { bottom: -3px; left: 50%; background: var(--accent-magenta); box-shadow: 0 0 8px var(--accent-magenta); animation: orbitPulse 2s ease-in-out 0.5s infinite; }
+  .orbit-dot:nth-child(3) { left: -3px; top: 50%; background: var(--accent-gold); box-shadow: 0 0 8px var(--accent-gold); animation: orbitPulse 2s ease-in-out 1s infinite; }
+  .orbit-dot:nth-child(4) { right: -3px; top: 50%; animation: orbitPulse 2s ease-in-out 1.5s infinite; }
+
+  @keyframes orbitPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.8); opacity: 0.4; }
+  }
+
+  /* Card name */
+  .card-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 26px;
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--accent-cyan), #fff, var(--accent-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+
+  .card-subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Stats */
+  .card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .stat__value {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 12px rgba(0,240,255,0.3);
+  }
+
+  .stat__label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Bottom bar */
+  .card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-bottom__rarity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+  }
+
+  .card-bottom__rarity i {
+    font-size: 14px;
+  }
+
+  .card-bottom__serial {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Hologram badge */
+  .holo-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    z-index: 10;
+  }
+
+  .holo-badge svg {
+    width: 100%;
+    height: 100%;
+    animation: badgeSpin 6s linear infinite;
+  }
+
+  @keyframes badgeSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Corner accents */
+  .corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .corner--tl { top: 12px; left: 12px; border-top: 2px solid rgba(0,240,255,0.3); border-left: 2px solid rgba(0,240,255,0.3); }
+  .corner--tr { top: 12px; right: 12px; border-top: 2px solid rgba(255,0,229,0.3); border-right: 2px solid rgba(255,0,229,0.3); }
+  .corner--bl { bottom: 12px; left: 12px; border-bottom: 2px solid rgba(255,215,0,0.3); border-left: 2px solid rgba(255,215,0,0.3); }
+  .corner--br { bottom: 12px; right: 12px; border-bottom: 2px solid rgba(0,240,255,0.3); border-right: 2px solid rgba(0,240,255,0.3); }
+
+  /* Click flash effect */
+  .holo-card__flash {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%), rgba(255,255,255,0.4), transparent 60%);
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  .holo-card__flash.active {
+    opacity: 1;
+    transition: opacity 0s;
+  }
+
+  /* Glitch text effect on hover */
+  .holo-card:hover .card-name {
+    animation: glitchText 3s ease-in-out infinite;
+  }
+
+  @keyframes glitchText {
+    0%, 92%, 100% { transform: translate(0); filter: none; }
+    93% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+    94% { transform: translate(2px, -1px); filter: hue-rotate(-90deg); }
+    95% { transform: translate(-1px, -1px); filter: hue-rotate(45deg); }
+    96% { transform: translate(1px, 1px); filter: none; }
+  }
+
+  /* Info tooltip */
+  .info-hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: hintFade 3s ease-in-out infinite;
+  }
+
+  .info-hint i {
+    color: var(--accent-cyan);
+    font-size: 16px;
+  }
+
+  @keyframes hintFade {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .holo-card {
+      width: 320px;
+      height: 460px;
+    }
+    .card-name { font-size: 20px; }
+    .robot-ring { width: 140px; height: 140px; }
+    .robot-icon { font-size: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="bg-layer">
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow--1"></div>
+  <div class="bg-glow bg-glow--2"></div>
+</div>
+
+<!-- Floating particles -->
+<canvas id="particles"></canvas>
+
+<!-- Card -->
+<div class="card-scene">
+  <div class="holo-card" id="holoCard">
+    <!-- Base -->
+    <div class="holo-card__base"></div>
+
+    <!-- Holographic rainbow -->
+    <div class="holo-card__rainbow" id="holoRainbow"></div>
+
+    <!-- Scan lines -->
+    <div class="holo-card__scanlines"></div>
+
+    <!-- Scan beam -->
+    <div class="holo-card__scanbeam"></div>
+
+    <!-- Light spot -->
+    <div class="holo-card__light" id="holoLight"></div>
+
+    <!-- Edge glow -->
+    <div class="holo-card__edge-glow" id="holoEdge"></div>
+
+    <!-- Click flash -->
+    <div class="holo-card__flash" id="holoFlash"></div>
+
+    <!-- Corner accents -->
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
+
+    <!-- Hologram badge -->
+    <div class="holo-badge">
+      <svg viewBox="0 0 100 100" fill="none">
+        <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" stroke="rgba(0,240,255,0.5)" stroke-width="1.5" fill="none"/>
+        <polygon points="50,18 82,34 82,66 50,82 18,66 18,34" stroke="rgba(255,0,229,0.4)" stroke-width="1" fill="none"/>
+        <polygon points="50,31 69,41 69,59 50,69 31,59 31,41" stroke="rgba(255,215,0,0.4)" stroke-width="1" fill="none"/>
+        <circle cx="50" cy="50" r="4" fill="rgba(0,240,255,0.6)"/>
+      </svg>
+    </div>
+
+    <!-- Content -->
+    <div class="holo-card__content">
+      <div class="card-top">
+        <span class="card-top__id">NEX-0771</span>
+        <span class="card-top__type">Synthetic</span>
+      </div>
+
+      <div class="robot-area">
+        <div class="robot-ring">
+          <div class="orbit-dot"></div>
+          <div class="orbit-dot"></div>
+          <div class="orbit-dot"></div>
+          <div class="orbit-dot"></div>
+          <div class="robot-icon">
+            <i class="fa-solid fa-robot" style="color: var(--accent-cyan);"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-name">NEXUS-7</div>
+      <div class="card-subtitle">Sentinel Protocol</div>
+
+      <div class="card-stats">
+        <div class="stat">
+          <div class="stat__value" data-target="9750" data-suffix="">0</div>
+          <div class="stat__label">Power</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value" data-target="420" data-suffix="">0</div>
+          <div class="stat__label">Speed</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value" data-target="88" data-suffix="%">0</div>
+          <div class="stat__label">Shield</div>
+        </div>
+      </div>
+
+      <div class="card-bottom">
+        <div class="card-bottom__rarity">
+          <i class="fa-solid fa-gem"></i>
+          Legendary
+        </div>
+        <div class="card-bottom__serial">#00771 / 9999</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hint -->
+<div class="info-hint">
+  <i class="fa-solid fa-hand-pointer"></i>
+  Hover & move to see hologram effect
+</div>
+
+<script>
+  // === Elements ===
+  const card = document.getElementById('holoCard');
+  const rainbow = document.getElementById('holoRainbow');
+  const light = document.getElementById('holoLight');
+  const edge = document.getElementById('holoEdge');
+  const flash = document.getElementById('holoFlash');
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+
+  // === Holographic rainbow gradient ===
+  // Generate a multi-stop rainbow that we can rotate based on mouse position
+  function updateRainbow(angle) {
+    const a = angle * 180 / Math.PI;
+    rainbow.style.background = `
+      conic-gradient(
+        from ${a}deg at 50% 50%,
+        rgba(255,0,100,0.35),
+        rgba(255,160,0,0.3),
+        rgba(255,255,0,0.25),
+        rgba(0,255,100,0.3),
+        rgba(0,200,255,0.35),
+        rgba(100,0,255,0.3),
+        rgba(255,0,200,0.3),
+        rgba(255,0,100,0.35)
+      )
+    `;
+  }
+
+  // === Edge glow gradient ===
+  function updateEdge(x, y) {
+    edge.style.background = `
+      radial-gradient(
+        ellipse at ${x}% ${y}%,
+        rgba(0,240,255,0.25) 0%,
+        rgba(255,0,229,0.15) 40%,
+        transparent 70%
+      )
+    `;
+  }
+
+  // === Mouse tracking for 3D tilt + hologram ===
+  let isHovering = false;
+  let targetRotateX = 0;
+  let targetRotateY = 0;
+  let currentRotateX = 0;
+  let currentRotateY = 0;
+
+  card.addEventListener('mouseenter', () => { isHovering = true; });
+  card.addEventListener('mouseleave', () => {
+    isHovering = false;
+    targetRotateX = 0;
+    targetRotateY = 0;
+  });
+
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    // Normalized -1 to 1
+    const nx = (x - centerX) / centerX;
+    const ny = (y - centerY) / centerY;
+
+    // Tilt angles (max ±20 degrees)
+    targetRotateY = nx * 20;
+    targetRotateX = -ny * 20;
+
+    // Light spot position
+    const px = (x / rect.width) * 100;
+    const py = (y / rect.height) * 100;
+    light.style.left = px + '%';
+    light.style.top = py + '%';
+
+    // Rainbow angle based on mouse position
+    const angle = Math.atan2(ny, nx);
+    updateRainbow(angle);
+
+    // Edge glow
+    updateEdge(px, py);
+  });
+
+  // === Click flash ===
+  card.addEventListener('mousedown', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    flash.style.setProperty('--fx', x + '%');
+    flash.style.setProperty('--fy', y + '%');
+    flash.classList.add('active');
+    // Trigger a quick scale pop
+    card.style.transition = 'transform 0.08s ease-out';
+  });
+
+  card.addEventListener('mouseup', () => {
+    flash.classList.remove('active');
+  });
+
+  // === Smooth tilt animation loop ===
+  function animateCard() {
+    const ease = 0.1;
+    currentRotateX += (targetRotateX - currentRotateX) * ease;
+    currentRotateY += (targetRotateY - currentRotateY) * ease;
+
+    // Add subtle idle breathing when not hovering
+    const breathe = isHovering ? 0 : Math.sin(Date.now() * 0.002) * 2;
+
+    card.style.transform = `
+      rotateX(${currentRotateX + breathe}deg)
+      rotateY(${currentRotateY}deg)
+      scale(${isHovering ? 1.04 : 1})
+    `;
+
+    requestAnimationFrame(animateCard);
+  }
+  animateCard();
+
+  // === Stat counter animation ===
+  function animateCounters() {
+    document.querySelectorAll('.stat__value').forEach(el => {
+      const target = parseInt(el.dataset.target);
+      const suffix = el.dataset.suffix || '';
+      const duration = 2000;
+      const startTime = performance.now();
+
+      function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(eased * target);
+        el.textContent = current.toLocaleString() + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+      }
+
+      requestAnimationFrame(update);
+    });
+  }
+
+  // Trigger counters after a short delay
+  setTimeout(animateCounters, 500);
+
+  // === Particle system ===
+  let particles = [];
+  const PARTICLE_COUNT = 60;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2 + 0.5;
+      this.speedX = (Math.random() - 0.5) * 0.4;
+      this.speedY = (Math.random() - 0.5) * 0.4;
+      this.opacity = Math.random() * 0.5 + 0.1;
+      this.pulse = Math.random() * Math.PI * 2;
+      this.pulseSpeed = Math.random() * 0.02 + 0.01;
+
+      // Color variety
+      const colors = [
+        '0, 240, 255',   // cyan
+        '255, 0, 229',   // magenta
+        '255, 215, 0',   // gold
+        '100, 255, 200', // mint
+      ];
+      this.color = colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+      this.pulse += this.pulseSpeed;
+
+      // Wrap around
+      if (this.x < -10) this.x = canvas.width + 10;
+      if (this.x > canvas.width + 10) this.x = -10;
+      if (this.y < -10) this.y = canvas.height + 10;
+      if (this.y > canvas.height + 10) this.y = -10;
+    }
+
+    draw() {
+      const dynamicOpacity = this.opacity * (0.6 + 0.4 * Math.sin(this.pulse));
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${this.color}, ${dynamicOpacity})`;
+      ctx.fill();
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${this.color}, ${dynamicOpacity * 0.15})`;
+      ctx.fill();
+    }
+  }
+
+  // Initialize particles
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  // Draw connections between nearby particles
+  function drawConnections() {
+    const maxDist = 120;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < maxDist) {
+          const opacity = (1 - dist / maxDist) * 0.08;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0, 240, 255, ${opacity})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+
+    drawConnections();
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // === Touch support ===
+  card.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = card.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const nx = (x - centerX) / centerX;
+    const ny = (y - centerY) / centerY;
+
+    isHovering = true;
+    targetRotateY = nx * 20;
+    targetRotateX = -ny * 20;
+
+    const px = (x / rect.width) * 100;
+    const py = (y / rect.height) * 100;
+    light.style.left = px + '%';
+    light.style.top = py + '%';
+
+    const angle = Math.atan2(ny, nx);
+    updateRainbow(angle);
+    updateEdge(px, py);
+  }, { passive: false });
+
+  card.addEventListener('touchend', () => {
+    isHovering = false;
+    targetRotateX = 0;
+    targetRotateY = 0;
+  });
+</script>
+</body>
+</html>
