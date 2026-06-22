@@ -1614,81 +1614,102 @@
       ENCRYPTED
     </footer>
 
-    <script>
-      {
-        const container = document.getElementById('particles');
-        const count = 30;
-        for (let i = 0; i < count; i++) {
-          const p = document.createElement('div');
-          p.className = 'particle';
-          p.style.left = Math.random() * 100 + '%';
-          p.style.animationDuration = (8 + Math.random() * 12) + 's';
-          p.style.animationDelay = (Math.random() * 10) + 's';
-          p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
-          container.appendChild(p);
-        }
-      })();
-{
-        const el = document.getElementById('clock');
-        function update() {
-          const now = new Date();
-          el.textContent = now.toTimeString().slice(0, 8);
-        }
-        update();
-        setInterval(update, 1000);
-      })();
-{
-        const cards = document.querySelectorAll('.xray-card');
+   <script>
+  // Particles
+  (() => {
+    const container = document.getElementById('particles');
+    const count = 30;
 
-        cards.forEach(card => {
-          const glow = card.querySelector('.cursor-glow');
-          const viewport = card.querySelector('.xray-viewport');
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDuration = (8 + Math.random() * 12) + 's';
+      p.style.animationDelay = (Math.random() * 10) + 's';
+      p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+      container.appendChild(p);
+    }
+  })();
 
-          card.addEventListener('mousemove', (e) => {
-            const rect = viewport.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+  // Clock
+  (() => {
+    const el = document.getElementById('clock');
 
-            glow.style.left = x + 'px';
-            glow.style.top = y + 'px';
+    function update() {
+      const now = new Date();
+      el.textContent = now.toTimeString().slice(0, 8);
+    }
 
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const rotateX = ((y - centerY) / centerY) * -4;
-            const rotateY = ((x - centerX) / centerX) * 4;
-            card.style.transform = `translateY(-6px) scale(1.02) perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-          });
+    update();
+    setInterval(update, 1000);
+  })();
 
-          card.addEventListener('mouseleave', () => {
-            card.style.transform = '';
-            glow.style.left = '50%';
-            glow.style.top = '50%';
-          });
+  // Card hover effect
+  (() => {
+    const cards = document.querySelectorAll('.xray-card');
+
+    cards.forEach(card => {
+      const glow = card.querySelector('.cursor-glow');
+      const viewport = card.querySelector('.xray-viewport');
+
+      card.addEventListener('mousemove', (e) => {
+        const rect = viewport.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        glow.style.left = x + 'px';
+        glow.style.top = y + 'px';
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        const rotateX = ((y - centerY) / centerY) * -4;
+        const rotateY = ((x - centerX) / centerX) * 4;
+
+        card.style.transform =
+          `translateY(-6px) scale(1.02) perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+        glow.style.left = '50%';
+        glow.style.top = '50%';
+      });
+    });
+  })();
+
+  // Scroll reveal animation
+  (() => {
+    const cards = document.querySelectorAll('.xray-card');
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const card = entry.target;
+            const index = Array.from(cards).indexOf(card);
+
+            setTimeout(() => {
+              card.style.opacity = '1';
+              card.style.transform = 'translateY(0)';
+            }, index * 120);
+
+            observer.unobserve(card);
+          }
         });
-      })();
-{
-        const cards = document.querySelectorAll('.xray-card');
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach((entry, i) => {
-            if (entry.isIntersecting) {
-              const card = entry.target;
-              const index = Array.from(cards).indexOf(card);
-              setTimeout(() => {
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-              }, index * 120);
-              observer.unobserve(card);
-            }
-          });
-        }, { threshold: 0.1 });
+      },
+      { threshold: 0.1 }
+    );
 
-        cards.forEach(card => {
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(30px)';
-          card.style.transition = 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
-          observer.observe(card);
-        });
-      })();
-    </script>
+    cards.forEach(card => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(30px)';
+      card.style.transition =
+        'opacity 0.6s ease, transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+
+      observer.observe(card);
+    });
+  })();
+</script>
   </body>
 </html>
