@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iron Man HUD Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #FF2020;
+    --red-dim: rgba(255, 32, 32, 0.3);
+    --gold: #FFB800;
+    --gold-dim: rgba(255, 184, 0, 0.25);
+    --cyan: #00E5FF;
+    --cyan-dim: rgba(0, 229, 255, 0.2);
+    --bg: #0A0A0F;
+    --card-bg: rgba(10, 10, 18, 0.85);
+    --border: rgba(255, 32, 32, 0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    color: #ccc;
+    overflow: hidden;
+  }
+
+  /* Background grid */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,32,32,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,32,32,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+  }
+
+  /* Background radial glow */
+  .bg-glow {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 50% 50%, rgba(255,32,32,0.08), transparent),
+      radial-gradient(ellipse 300px 300px at 30% 60%, rgba(0,229,255,0.04), transparent),
+      radial-gradient(ellipse 300px 300px at 70% 40%, rgba(255,184,0,0.04), transparent);
+    z-index: 0;
+  }
+
+  /* Scan line */
+  .scanline {
+    position: fixed;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.15;
+    z-index: 100;
+    animation: scanDown 4s linear infinite;
+  }
+
+  @keyframes scanDown {
+    0% { top: -2px; }
+    100% { top: 100vh; }
+  }
+
+  /* HUD Card Container */
+  .hud-container {
+    position: relative;
+    z-index: 10;
+    width: 480px;
+    max-width: 95vw;
+  }
+
+  /* Corner brackets */
+  .bracket {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    z-index: 20;
+  }
+  .bracket::before, .bracket::after {
+    content: '';
+    position: absolute;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red), 0 0 12px var(--red-dim);
+  }
+  .bracket-tl { top: -2px; left: -2px; }
+  .bracket-tl::before { top: 0; left: 0; width: 30px; height: 2px; }
+  .bracket-tl::after { top: 0; left: 0; width: 2px; height: 30px; }
+
+  .bracket-tr { top: -2px; right: -2px; }
+  .bracket-tr::before { top: 0; right: 0; width: 30px; height: 2px; }
+  .bracket-tr::after { top: 0; right: 0; width: 2px; height: 30px; }
+
+  .bracket-bl { bottom: -2px; left: -2px; }
+  .bracket-bl::before { bottom: 0; left: 0; width: 30px; height: 2px; }
+  .bracket-bl::after { bottom: 0; left: 0; width: 2px; height: 30px; }
+
+  .bracket-br { bottom: -2px; right: -2px; }
+  .bracket-br::before { bottom: 0; right: 0; width: 30px; height: 2px; }
+  .bracket-br::after { bottom: 0; right: 0; width: 2px; height: 30px; }
+
+  /* Extended corner lines */
+  .ext-line {
+    position: absolute;
+    background: var(--red);
+    opacity: 0.4;
+    box-shadow: 0 0 4px var(--red-dim);
+  }
+  .ext-line-tl-h { top: -2px; left: 32px; width: 50px; height: 1px; }
+  .ext-line-tl-v { top: 32px; left: -2px; width: 1px; height: 40px; }
+  .ext-line-tr-h { top: -2px; right: 32px; width: 50px; height: 1px; }
+  .ext-line-tr-v { top: 32px; right: -2px; width: 1px; height: 40px; }
+  .ext-line-bl-h { bottom: -2px; left: 32px; width: 50px; height: 1px; }
+  .ext-line-bl-v { bottom: 32px; left: -2px; width: 1px; height: 40px; }
+  .ext-line-br-h { bottom: -2px; right: 32px; width: 50px; height: 1px; }
+  .ext-line-br-v { bottom: 32px; right: -2px; width: 1px; height: 40px; }
+
+  /* Main card */
+  .hud-card {
+    position: relative;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 0;
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+  }
+
+  .hud-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,32,32,0.015) 2px,
+        rgba(255,32,32,0.015) 4px
+      );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Top bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid rgba(255,32,32,0.12);
+    position: relative;
+    z-index: 2;
+  }
+
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .stark-indicator {
+    width: 8px;
+    height: 8px;
+    background: var(--red);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--red), 0 0 16px var(--red-dim);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .top-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--red);
+    text-shadow: 0 0 10px var(--red-dim);
+  }
+
+  .top-bar-right {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 2px;
+  }
+
+  /* Card body */
+  .card-body {
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 20px;
+  }
+
+  /* Arc Reactor Section */
+  .reactor-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .reactor-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+
+  /* Outer ring */
+  .reactor-ring-outer {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--cyan-dim);
+    border-radius: 50%;
+    animation: spin-cw 8s linear infinite;
+  }
+
+  .reactor-ring-outer::before {
+    content: '';
+    position: absolute;
+    top: -3px; left: 50%;
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--cyan);
+    transform: translateX(-50%);
+  }
+
+  /* Middle ring */
+  .reactor-ring-mid {
+    position: absolute;
+    inset: 12px;
+    border: 1.5px solid var(--gold-dim);
+    border-radius: 50%;
+    animation: spin-ccw 5s linear infinite;
+  }
+
+  .reactor-ring-mid::before {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 50%;
+    width: 4px; height: 4px;
+    background: var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--gold);
+    transform: translateX(-50%);
+  }
+
+  /* Inner ring */
+  .reactor-ring-inner {
+    position: absolute;
+    inset: 24px;
+    border: 1px solid rgba(255,32,32,0.3);
+    border-radius: 50%;
+    animation: spin-cw 3s linear infinite;
+  }
+
+  /* Core */
+  .reactor-core {
+    position: absolute;
+    inset: 36px;
+    background: radial-gradient(circle, var(--cyan) 0%, rgba(0,229,255,0.4) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: core-pulse 2s ease-in-out infinite;
+  }
+
+  .reactor-core::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    background: radial-gradient(circle, #fff 0%, var(--cyan) 50%, transparent 80%);
+    border-radius: 50%;
+  }
+
+  @keyframes spin-cw { to { transform: rotate(360deg); } }
+  @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+  @keyframes core-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 30px var(--cyan), 0 0 60px var(--cyan-dim); }
+    50% { opacity: 0.7; box-shadow: 0 0 15px var(--cyan), 0 0 30px var(--cyan-dim); }
+  }
+
+  /* Triangular frame overlay */
+  .reactor-tri {
+    position: absolute;
+    inset: 8px;
+    animation: spin-cw 12s linear infinite;
+  }
+
+  .reactor-tri svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .power-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-dim);
+    text-align: center;
+  }
+
+  .power-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan-dim);
+  }
+
+  /* Data Section */
+  .data-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .suit-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    line-height: 1.2;
+  }
+
+  .suit-name span {
+    color: var(--red);
+    text-shadow: 0 0 12px var(--red-dim);
+  }
+
+  .suit-model {
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* Stat rows */
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.4);
+    width: 52px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .stat-bar-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    position: relative;
+    transition: width 1.5s ease;
+    width: 0;
+  }
+
+  .stat-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -1px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: inherit;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .stat-bar-fill.red { background: var(--red); color: var(--red); }
+  .stat-bar-fill.gold { background: var(--gold); color: var(--gold); }
+  .stat-bar-fill.cyan { background: var(--cyan); color: var(--cyan); }
+
+  .stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .stat-val.red { color: var(--red); }
+  .stat-val.gold { color: var(--gold); }
+  .stat-val.cyan { color: var(--cyan); }
+
+  /* Bottom section */
+  .bottom-section {
+    padding: 14px 20px 16px;
+    border-top: 1px solid rgba(255,32,32,0.12);
+    position: relative;
+    z-index: 2;
+  }
+
+  .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .sys-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sys-title {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+  }
+
+  .sys-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .sys-tag {
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border: 1px solid;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .sys-tag.online {
+    color: var(--cyan);
+    border-color: rgba(0,229,255,0.3);
+    background: rgba(0,229,255,0.05);
+  }
+
+  .sys-tag.active {
+    color: var(--gold);
+    border-color: rgba(255,184,0,0.3);
+    background: rgba(255,184,0,0.05);
+  }
+
+  .sys-tag .tag-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 4px currentColor;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  /* Threat level */
+  .threat-block {
+    text-align: right;
+  }
+
+  .threat-label {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .threat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--red);
+    text-shadow: 0 0 16px var(--red-dim);
+    animation: threat-flicker 3s ease-in-out infinite;
+  }
+
+  @keyframes threat-flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.3; }
+    97% { opacity: 1; }
+    98% { opacity: 0.4; }
+  }
+
+  /* Diagonal decorative lines */
+  .deco-line {
+    position: absolute;
+    background: var(--red);
+    opacity: 0.1;
+    z-index: 1;
+  }
+
+  .deco-1 { width: 1px; height: 60px; top: 50px; right: 8px; transform: rotate(25deg); }
+  .deco-2 { width: 1px; height: 40px; bottom: 60px; left: 8px; transform: rotate(-20deg); }
+
+  /* Floating particles canvas */
+  #particles {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Data stream text */
+  .data-stream {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 8px;
+    color: rgba(255,32,32,0.2);
+    letter-spacing: 1px;
+    z-index: 2;
+    line-height: 1.6;
+    text-align: right;
+    animation: stream-fade 4s ease-in-out infinite;
+  }
+
+  @keyframes stream-fade {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.5; }
+  }
+
+  /* HUD markers around card */
+  .hud-marker {
+    position: absolute;
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: rgba(255,32,32,0.25);
+    font-family: 'Share Tech Mono', monospace;
+    z-index: 5;
+    white-space: nowrap;
+  }
+
+  .marker-top { top: -22px; left: 50%; transform: translateX(-50%); }
+  .marker-bottom { bottom: -22px; left: 50%; transform: translateX(-50%); }
+  .marker-left { left: -70px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+  .marker-right { right: -70px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+
+  /* Mini bars decoration */
+  .mini-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 20px;
+  }
+
+  .mini-bar {
+    width: 3px;
+    background: var(--red);
+    opacity: 0.4;
+    border-radius: 1px;
+    animation: mini-bar-dance 1.2s ease-in-out infinite;
+  }
+
+  @keyframes mini-bar-dance {
+    0%, 100% { height: 4px; }
+    50% { height: 18px; }
+  }
+
+  /* Responsive */
+  @media (max-width: 520px) {
+    .card-body {
+      flex-direction: column;
+      align-items: center;
+    }
+    .data-section { align-items: center; }
+    .stat-row { width: 100%; }
+    .hud-marker { display: none; }
+    .reactor-wrapper { width: 100px; height: 100px; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Entry animation */
+  .hud-container {
+    animation: card-enter 1s ease-out forwards;
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+
+  @keyframes card-enter {
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Glitch effect on hover */
+  .hud-card:hover .suit-name {
+    animation: glitch-text 0.3s ease;
+  }
+
+  @keyframes glitch-text {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 1px); filter: hue-rotate(40deg); }
+    40% { transform: translate(2px, -1px); filter: hue-rotate(-40deg); }
+    60% { transform: translate(-1px, -1px); }
+    80% { transform: translate(1px, 1px); filter: hue-rotate(20deg); }
+    100% { transform: translate(0); filter: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="scanline"></div>
+<canvas id="particles"></canvas>
+
+<div class="hud-container" role="article" aria-label="Iron Man HUD Card">
+  <!-- HUD markers -->
+  <div class="hud-marker marker-top">LAT 40.7128 / LONG -74.0060</div>
+  <div class="hud-marker marker-bottom">STARK INDUSTRIES // SECURE CHANNEL</div>
+  <div class="hud-marker marker-left">MK-L SUIT DIAGNOSTICS</div>
+  <div class="hud-marker marker-right">J.A.R.V.I.S. V7.2 ACTIVE</div>
+
+  <!-- Corner brackets -->
+  <div class="bracket bracket-tl"></div>
+  <div class="bracket bracket-tr"></div>
+  <div class="bracket bracket-bl"></div>
+  <div class="bracket bracket-br"></div>
+
+  <!-- Extended lines -->
+  <div class="ext-line ext-line-tl-h"></div>
+  <div class="ext-line ext-line-tl-v"></div>
+  <div class="ext-line ext-line-tr-h"></div>
+  <div class="ext-line ext-line-tr-v"></div>
+  <div class="ext-line ext-line-bl-h"></div>
+  <div class="ext-line ext-line-bl-v"></div>
+  <div class="ext-line ext-line-br-h"></div>
+  <div class="ext-line ext-line-br-v"></div>
+
+  <!-- Main card -->
+  <div class="hud-card">
+    <!-- Decorative lines -->
+    <div class="deco-line deco-1"></div>
+    <div class="deco-line deco-2"></div>
+
+    <!-- Data stream -->
+    <div class="data-stream" aria-hidden="true">
+      0x4A52<br>
+      SYN:OK<br>
+      FREQ:2.4GHz<br>
+      ENC:AES-512
+    </div>
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="stark-indicator" aria-hidden="true"></div>
+        <div class="top-label">STARK INDUSTRIES</div>
+      </div>
+      <div class="top-bar-right">
+        <div class="mini-bars" aria-hidden="true">
+          <div class="mini-bar" style="animation-delay:0s"></div>
+          <div class="mini-bar" style="animation-delay:0.15s"></div>
+          <div class="mini-bar" style="animation-delay:0.3s"></div>
+          <div class="mini-bar" style="animation-delay:0.45s"></div>
+          <div class="mini-bar" style="animation-delay:0.6s"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="card-body">
+      <!-- Arc Reactor -->
+      <div class="reactor-section">
+        <div class="reactor-wrapper" aria-label="Arc Reactor">
+          <div class="reactor-ring-outer"></div>
+          <div class="reactor-ring-mid"></div>
+          <div class="reactor-ring-inner"></div>
+          <div class="reactor-tri">
+            <svg viewBox="0 0 100 100" fill="none">
+              <polygon points="50,5 95,85 5,85" stroke="rgba(0,229,255,0.15)" stroke-width="0.8" fill="none"/>
+              <polygon points="50,15 88,80 12,80" stroke="rgba(255,184,0,0.1)" stroke-width="0.5" fill="none"/>
+              <!-- Segment marks -->
+              <line x1="50" y1="5" x2="50" y2="12" stroke="rgba(0,229,255,0.3)" stroke-width="0.8"/>
+              <line x1="95" y1="85" x2="89" y2="81" stroke="rgba(0,229,255,0.3)" stroke-width="0.8"/>
+              <line x1="5" y1="85" x2="11" y2="81" stroke="rgba(0,229,255,0.3)" stroke-width="0.8"/>
+            </svg>
+          </div>
+          <div class="reactor-core"></div>
+        </div>
+        <div class="power-label">ARC REACTOR</div>
+        <div class="power-value" id="powerValue">100%</div>
+      </div>
+
+      <!-- Data -->
+      <div class="data-section">
+        <div>
+          <div class="suit-name">IRON <span>MAN</span></div>
+          <div class="suit-model">MARK L — MODEL 51 // NANO-ARMOR</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Armor</div>
+          <div class="stat-bar-track">
+            <div class="stat-bar-fill red" data-width="92"></div>
+          </div>
+          <div class="stat-val red">92%</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Weapon</div>
+          <div class="stat-bar-track">
+            <div class="stat-bar-fill gold" data-width="87"></div>
+          </div>
+          <div class="stat-val gold">87%</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Shield</div>
+          <div class="stat-bar-track">
+            <div class="stat-bar-fill cyan" data-width="78"></div>
+          </div>
+          <div class="stat-val cyan">78%</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-label">Speed</div>
+          <div class="stat-bar-track">
+            <div class="stat-bar-fill red" data-width="95"></div>
+          </div>
+          <div class="stat-val red">95%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom -->
+    <div class="bottom-section">
+      <div class="bottom-row">
+        <div class="sys-block">
+          <div class="sys-title">SYSTEMS</div>
+          <div class="sys-tags">
+            <div class="sys-tag online"><div class="tag-dot"></div>JARVIS</div>
+            <div class="sys-tag online"><div class="tag-dot"></div>REPULSOR</div>
+            <div class="sys-tag active"><div class="tag-dot"></div>UNIBEAM</div>
+            <div class="sys-tag online"><div class="tag-dot"></div>FLIGHT</div>
+          </div>
+        </div>
+        <div class="threat-block">
+          <div class="threat-label">THREAT LVL</div>
+          <div class="threat-value" id="threatValue">LOW</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Animate stat bars on load
+  document.addEventListener('DOMContentLoaded', () => {
+    const fills = document.querySelectorAll('.stat-bar-fill');
+    fills.forEach((fill, i) => {
+      setTimeout(() => {
+        fill.style.width = fill.dataset.width + '%';
+      }, 400 + i * 200);
+    });
+
+    // Fluctuate power value
+    const powerEl = document.getElementById('powerValue');
+    setInterval(() => {
+      const base = 100;
+      const fluctuation = Math.random() * 2 - 0.5;
+      const val = Math.max(96, Math.min(100, base + fluctuation));
+      powerEl.textContent = val.toFixed(1) + '%';
+    }, 2000);
+
+    // Cycle threat level
+    const threatEl = document.getElementById('threatValue');
+    const threats = ['LOW', 'LOW', 'MED', 'LOW', 'HIGH', 'MED', 'LOW'];
+    let tIdx = 0;
+    setInterval(() => {
+      tIdx = (tIdx + 1) % threats.length;
+      const t = threats[tIdx];
+      threatEl.textContent = t;
+      if (t === 'HIGH') {
+        threatEl.style.color = '#FF2020';
+      } else if (t === 'MED') {
+        threatEl.style.color = '#FFB800';
+      } else {
+        threatEl.style.color = '#FF2020';
+      }
+    }, 5000);
+
+    // Update stat bars slightly over time
+    setInterval(() => {
+      fills.forEach(fill => {
+        const base = parseFloat(fill.dataset.width);
+        const newVal = base + (Math.random() * 6 - 3);
+        const clamped = Math.max(50, Math.min(100, newVal));
+        fill.style.width = clamped + '%';
+        const valEl = fill.parentElement.nextElementSibling;
+        if (valEl) valEl.textContent = Math.round(clamped) + '%';
+      });
+    }, 4000);
+  });
+
+  // Particle system
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const particles = [];
+  const PARTICLE_COUNT = 60;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Create particles
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.4 + 0.1,
+      color: ['255,32,32', '0,229,255', '255,184,0'][Math.floor(Math.random() * 3)],
+      pulse: Math.random() * Math.PI * 2,
+      pulseSpeed: Math.random() * 0.02 + 0.005,
+    });
+  }
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, W, H);
+
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.pulse += p.pulseSpeed;
+
+      // Wrap around
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) p.y = H + 10;
+      if (p.y > H + 10) p.y = -10;
+
+      const a = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+      const r = Math.max(0.5, p.size);
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${p.color},${a})`;
+      ctx.fill();
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${p.color},${a * 0.15})`;
+      ctx.fill();
+    }
+
+    // Draw faint connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          const alpha = (1 - dist / 120) * 0.06;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(255,32,32,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    requestAnimationFrame(drawParticles);
+  }
+
+  drawParticles();
+
+  // Mouse interaction — subtle parallax on card
+  const container = document.querySelector('.hud-container');
+  document.addEventListener('mousemove', (e) => {
+    const cx = W / 2;
+    const cy = H / 2;
+    const dx = (e.clientX - cx) / cx;
+    const dy = (e.clientY - cy) / cy;
+    container.style.transform = `perspective(800px) rotateY(${dx * 2}deg) rotateX(${-dy * 2}deg)`;
+  });
+
+  document.addEventListener('mouseleave', () => {
+    container.style.transform = 'perspective(800px) rotateY(0deg) rotateX(0deg)';
+    container.style.transition = 'transform 0.6s ease';
+    setTimeout(() => { container.style.transition = ''; }, 600);
+  });
+</script>
+
+</body>
+</html>

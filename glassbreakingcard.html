@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass Breaking Card</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #080d0b;
+            --fg: #e8f0ec;
+            --muted: #5a7a6d;
+            --accent: #00e89d;
+            --accent2: #f0c040;
+            --card: rgba(255,255,255,0.04);
+            --card-border: rgba(255,255,255,0.1);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient background canvas */
+        #ambientCanvas {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* Atmospheric blobs */
+        .blob {
+            position: fixed; border-radius: 50%;
+            filter: blur(100px); pointer-events: none; z-index: 0;
+        }
+        .blob-1 {
+            width: 500px; height: 500px;
+            background: rgba(0,232,157,0.07);
+            top: -150px; left: -150px;
+            animation: blobFloat 25s ease-in-out infinite;
+        }
+        .blob-2 {
+            width: 400px; height: 400px;
+            background: rgba(240,192,64,0.05);
+            bottom: -120px; right: -120px;
+            animation: blobFloat 20s ease-in-out infinite reverse;
+        }
+        .blob-3 {
+            width: 300px; height: 300px;
+            background: rgba(0,232,157,0.04);
+            top: 50%; left: 60%;
+            animation: blobFloat 30s ease-in-out infinite 5s;
+        }
+        @keyframes blobFloat {
+            0%, 100% { transform: translate(0,0) scale(1); }
+            25% { transform: translate(50px,-30px) scale(1.1); }
+            50% { transform: translate(-20px,40px) scale(0.95); }
+            75% { transform: translate(30px,20px) scale(1.05); }
+        }
+
+        /* Noise texture overlay */
+        .noise {
+            position: fixed; inset: 0; pointer-events: none;
+            z-index: 0; opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat; background-size: 256px;
+        }
+
+        /* Flash overlay on shatter */
+        .flash-overlay {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 100;
+            opacity: 0; transition: opacity 0.4s ease-out;
+        }
+        .flash-overlay.active { opacity: 1; transition: opacity 0s; }
+
+        /* Main layout */
+        main {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 24px;
+            padding: 20px;
+        }
+        .title-area { text-align: center; }
+        .title-area h1 {
+            font-size: clamp(26px, 5vw, 42px);
+            font-weight: 900; letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--fg) 30%, var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .title-area .counter {
+            font-size: 14px; font-weight: 200;
+            color: var(--muted); margin-top: 4px;
+        }
+        .title-area .counter span {
+            color: var(--accent); font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Card container — click target */
+        .card-container {
+            position: relative; cursor: pointer;
+            perspective: 800px;
+            outline: none;
+        }
+        .card-container:focus-visible .glass-card {
+            box-shadow: 0 0 0 3px rgba(0,232,157,0.4), 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        /* Glass card */
+        .glass-card {
+            width: 380px; max-width: 90vw;
+            border-radius: 20px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            padding: 32px 28px;
+            position: relative; overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow:
+                0 8px 32px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        /* Top-left highlight */
+        .glass-card::before {
+            content: ''; position: absolute; inset: 0;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
+            pointer-events: none;
+        }
+        /* Moving reflection streak */
+        .glass-card::after {
+            content: ''; position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(105deg,
+                transparent 38%, rgba(255,255,255,0.03) 43%,
+                rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 57%, transparent 62%);
+            animation: reflectionMove 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes reflectionMove {
+            0%   { transform: translateX(-30%) translateY(-30%); }
+            50%  { transform: translateX(30%) translateY(30%); }
+            100% { transform: translateX(-30%) translateY(-30%); }
+        }
+
+        .card-container:hover .glass-card {
+            transform: translateY(-4px) rotateX(2deg);
+            box-shadow:
+                0 14px 48px rgba(0,0,0,0.4),
+                0 0 60px rgba(0,232,157,0.05),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        /* Card inner content */
+        .card-header {
+            display: flex; align-items: center;
+            gap: 16px; margin-bottom: 20px;
+        }
+        .avatar {
+            width: 64px; height: 64px; border-radius: 16px;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+        .card-header-text h2 {
+            font-size: 20px; font-weight: 700; letter-spacing: -0.5px;
+        }
+        .card-header-text p {
+            font-size: 13px; color: var(--muted); font-weight: 400;
+        }
+        .badge {
+            display: inline-block; margin-top: 4px;
+            padding: 2px 8px; border-radius: 6px;
+            background: rgba(0,232,157,0.1);
+            color: var(--accent); font-size: 11px; font-weight: 700;
+        }
+        .card-bio {
+            font-size: 14px; line-height: 1.7;
+            color: rgba(232,240,236,0.55); margin-bottom: 20px; font-weight: 200;
+        }
+        .card-stats {
+            display: flex; justify-content: space-between;
+            padding: 16px 0;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 20px;
+        }
+        .stat { text-align: center; flex: 1; }
+        .stat-value { font-size: 22px; font-weight: 900; }
+        .stat-label {
+            font-size: 10px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1.2px; margin-top: 2px;
+        }
+        .card-social { display: flex; gap: 10px; }
+        .social-btn {
+            flex: 1; padding: 10px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: var(--muted); font-size: 16px;
+            cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+            font-family: inherit;
+        }
+        .social-btn:hover {
+            background: rgba(0,232,157,0.1);
+            border-color: rgba(0,232,157,0.3);
+            color: var(--accent); transform: translateY(-1px);
+        }
+        .social-btn:focus-visible {
+            outline: 2px solid var(--accent); outline-offset: 2px;
+        }
+
+        /* Shatter canvas overlay */
+        #shatterCanvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+
+        /* Hint text */
+        .hint {
+            font-size: 13px; color: var(--muted);
+            font-weight: 200; animation: hintPulse 3s ease-in-out infinite;
+        }
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        /* Reform button */
+        .reform-btn {
+            padding: 14px 36px; border-radius: 14px;
+            border: 1px solid rgba(0,232,157,0.3);
+            background: rgba(0,232,157,0.08);
+            color: var(--accent); font-family: 'Outfit', sans-serif;
+            font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+        .reform-btn:hover {
+            background: rgba(0,232,157,0.15);
+            border-color: rgba(0,232,157,0.5);
+            box-shadow: 0 0 30px rgba(0,232,157,0.12);
+            transform: translateY(-2px);
+        }
+        .reform-btn:active { transform: translateY(0); }
+        .reform-btn:focus-visible {
+            outline: 2px solid var(--accent); outline-offset: 3px;
+        }
+        .hidden { display: none !important; }
+
+        /* Toast notification */
+        .toast {
+            position: fixed; bottom: 32px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            padding: 12px 24px; border-radius: 12px;
+            background: rgba(0,232,157,0.12);
+            border: 1px solid rgba(0,232,157,0.25);
+            backdrop-filter: blur(16px);
+            color: var(--accent); font-size: 13px; font-weight: 400;
+            opacity: 0; transition: all 0.4s ease;
+            pointer-events: none; z-index: 200;
+            white-space: nowrap;
+        }
+        .toast.show {
+            opacity: 1; transform: translateX(-50%) translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blob, .glass-card::after { animation: none !important; }
+            .hint { animation: none !important; opacity: 0.7; }
+        }
+        @media (max-width: 480px) {
+            .glass-card { padding: 24px 20px; }
+            .stat-value { font-size: 18px; }
+            .card-bio { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background layers -->
+    <canvas id="ambientCanvas"></canvas>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="noise"></div>
+    <div class="flash-overlay" id="flashOverlay"></div>
+
+    <main>
+        <div class="title-area">
+            <h1>Glass Breaking Card</h1>
+            <p class="counter">Shattered <span id="shatterCount">0</span> times</p>
+        </div>
+
+        <div class="card-container" id="cardContainer" tabindex="0" role="button" aria-label="Glass card — click or press Enter to shatter">
+            <div class="glass-card" id="glassCard">
+                <div class="card-header">
+                    <img src="https://picsum.photos/seed/glassprofile/128/128.jpg" alt="Alexis Chen avatar" class="avatar">
+                    <div class="card-header-text">
+                        <h2>Alexis Chen</h2>
+                        <p>Creative Director</p>
+                        <span class="badge">PRO MEMBER</span>
+                    </div>
+                </div>
+                <p class="card-bio">
+                    Crafting digital experiences at the intersection of design and technology.
+                    Passionate about motion, glassmorphism, and pushing the boundaries of web interfaces.
+                </p>
+                <div class="card-stats">
+                    <div class="stat">
+                        <div class="stat-value">142</div>
+                        <div class="stat-label">Projects</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">28K</div>
+                        <div class="stat-label">Followers</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">37</div>
+                        <div class="stat-label">Awards</div>
+                    </div>
+                </div>
+                <div class="card-social">
+                    <button class="social-btn" aria-label="Twitter"><i class="fab fa-twitter"></i></button>
+                    <button class="social-btn" aria-label="Dribbble"><i class="fab fa-dribbble"></i></button>
+                    <button class="social-btn" aria-label="GitHub"><i class="fab fa-github"></i></button>
+                    <button class="social-btn" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></button>
+                </div>
+            </div>
+            <canvas id="shatterCanvas"></canvas>
+        </div>
+
+        <p class="hint" id="hintText">Click the card to shatter it</p>
+        <button class="reform-btn hidden" id="reformBtn" aria-label="Reform the glass card">Reform Glass</button>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    (() => {
+        /* ── Element references ── */
+        const cardContainer = document.getElementById('cardContainer');
+        const glassCard     = document.getElementById('glassCard');
+        const canvas        = document.getElementById('shatterCanvas');
+        const reformBtn     = document.getElementById('reformBtn');
+        const hintText      = document.getElementById('hintText');
+        const flashOverlay  = document.getElementById('flashOverlay');
+        const countEl       = document.getElementById('shatterCount');
+        const toastEl       = document.getElementById('toast');
+        const ambCanvas     = document.getElementById('ambientCanvas');
+
+        /* ── State ── */
+        let state = 'IDLE'; // IDLE | SHATTERING | SHATTERED
+        let shards = [], sparks = [], shockwave = null;
+        let animFrameId = null, shatterCount = 0;
+        let dpr = 1, canvasW = 0, canvasH = 0;
+        let lastCrackX = -999, lastCrackY = -999, crackData = [];
+        let ctx = null;
+
+        /* ── Toast helper ── */
+        let toastTimer = null;
+        function showToast(msg) {
+            clearTimeout(toastTimer);
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+        }
+
+        /* ── Canvas setup (shatter overlay) ── */
+        function setupCanvas() {
+            dpr = window.devicePixelRatio || 1;
+            const r = cardContainer.getBoundingClientRect();
+            canvasW = r.width; canvasH = r.height;
+            canvas.width  = canvasW * dpr;
+            canvas.height = canvasH * dpr;
+            canvas.style.width  = canvasW + 'px';
+            canvas.style.height = canvasH + 'px';
+            ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        setupCanvas();
+        window.addEventListener('resize', () => { if (state === 'IDLE') setupCanvas(); });
+
+        /* ══════════════════════════════════════
+           AMBIENT PARTICLES (background)
+           ══════════════════════════════════════ */
+        const actx = ambCanvas.getContext('2d');
+        let ambParts = [];
+
+        function setupAmbient() {
+            const d = window.devicePixelRatio || 1;
+            ambCanvas.width  = innerWidth * d;
+            ambCanvas.height = innerHeight * d;
+            ambCanvas.style.width  = innerWidth + 'px';
+            ambCanvas.style.height = innerHeight + 'px';
+            actx.setTransform(d, 0, 0, d, 0, 0);
+            ambParts = [];
+            for (let i = 0; i < 35; i++) {
+                ambParts.push({
+                    x: Math.random() * innerWidth,
+                    y: Math.random() * innerHeight,
+                    r: 0.5 + Math.random() * 1.5,
+                    sx: (Math.random() - 0.5) * 0.25,
+                    sy: -0.08 - Math.random() * 0.25,
+                    a: 0.08 + Math.random() * 0.22,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        function tickAmbient() {
+            actx.clearRect(0, 0, innerWidth, innerHeight);
+            for (const p of ambParts) {
+                p.x += p.sx; p.y += p.sy; p.phase += 0.015;
+                if (p.y < -10) { p.y = innerHeight + 10; p.x = Math.random() * innerWidth; }
+                if (p.x < -10) p.x = innerWidth + 10;
+                if (p.x > innerWidth + 10) p.x = -10;
+                const alpha = p.a * (0.5 + 0.5 * Math.sin(p.phase));
+                actx.beginPath();
+                actx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
+                actx.fillStyle = `rgba(0,232,157,${alpha.toFixed(3)})`;
+                actx.fill();
+            }
+            requestAnimationFrame(tickAmbient);
+        }
+        setupAmbient(); tickAmbient();
+        window.addEventListener('resize', setupAmbient);
+
+        /* ══════════════════════════════════════
+           HOVER CRACK EFFECT
+           ══════════════════════════════════════ */
+        function generateCracks(mx, my) {
+            crackData = [];
+            const n = 7;
+            for (let i = 0; i < n; i++) {
+                const base = (i / n) * Math.PI * 2;
+                let x = mx, y = my;
+                const pts = [{ x, y }];
+                const segs = 2 + Math.floor(Math.random() * 3);
+                for (let s = 0; s < segs; s++) {
+                    const len = 12 + Math.random() * 30;
+                    const a = base + (Math.random() - 0.5) * 1.1;
+                    x += Math.cos(a) * len;
+                    y += Math.sin(a) * len;
+                    pts.push({ x, y });
+                }
+                crackData.push(pts);
+            }
+        }
+        function drawCracks() {
+            ctx.clearRect(0, 0, canvasW, canvasH);
+            for (const c of crackData) {
+                ctx.beginPath();
+                ctx.moveTo(c[0].x, c[0].y);
+                for (let i = 1; i < c.length; i++) ctx.lineTo(c[i].x, c[i].y);
+                ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+                ctx.lineWidth = 0.6;
+                ctx.stroke();
+            }
+        }
+
+        cardContainer.addEventListener('mousemove', e => {
+            if (state !== 'IDLE') return;
+            const r = canvas.getBoundingClientRect();
+            const mx = e.clientX - r.left, my = e.clientY - r.top;
+            const dx = mx - lastCrackX, dy = my - lastCrackY;
+            if (dx * dx + dy * dy > 180) {
+                lastCrackX = mx; lastCrackY = my;
+                generateCracks(mx, my);
+                drawCracks();
+            }
+        });
+        cardContainer.addEventListener('mouseleave', () => {
+            if (state !== 'IDLE') return;
+            ctx.clearRect(0, 0, canvasW, canvasH);
+            lastCrackX = -999; lastCrackY = -999;
+        });
+
+        /* ══════════════════════════════════════
+           SHARD GRID GENERATION
+           ══════════════════════════════════════ */
+        function makeGrid(x, y, w, h, cols, rows, jitter) {
+            const pts = [];
+            for (let r = 0; r <= rows; r++) {
+                for (let c = 0; c <= cols; c++) {
+                    let px = x + (c / cols) * w;
+                    let py = y + (r / rows) * h;
+                    if (r > 0 && r < rows && c > 0 && c < cols) {
+                        px += (Math.random() - 0.5) * jitter;
+                        py += (Math.random() - 0.5) * jitter;
+                    }
+                    pts.push({ x: px, y: py });
+                }
+            }
+            return pts;
+        }
+        function triangulate(pts, cols, rows) {
+            const tris = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const i = r * (cols + 1) + c;
+                    tris.push([pts[i], pts[i + 1], pts[i + cols + 1]]);
+                    tris.push([pts[i + 1], pts[i + cols + 2], pts[i + cols + 1]]);
+                }
+            }
+            return tris;
+        }
+
+        /* ══════════════════════════════════════
+           SCREEN SHAKE
+           ══════════════════════════════════════ */
+        function screenShake() {
+            const keys = [
+                { x: -3, y: 2, t: 0 },
+                { x: 4, y: -1, t: 40 },
+                { x: -2, y: 3, t: 80 },
+                { x: 1, y: -2, t: 120 },
+                { x: 0, y: 0, t: 180 }
+            ];
+            keys.forEach(k => {
+                setTimeout(() => { document.body.style.transform = `translate(${k.x}px,${k.y}px)`; }, k.t);
+            });
+        }
+
+        /* ══════════════════════════════════════
+           INITIATE SHATTER
+           ══════════════════════════════════════ */
+        function initiateShatter(e) {
+            if (state !== 'IDLE') return;
+            state = 'SHATTERING';
+
+            const cr = canvas.getBoundingClientRect();
+            const cx = (e.clientX || e.pageX) - cr.left;
+            const cy = (e.clientY || e.pageY) - cr.top;
+
+            // Flash
+            flashOverlay.style.background =
+                `radial-gradient(circle at ${e.clientX || innerWidth/2}px ${e.clientY || innerHeight/2}px, rgba(0,232,157,0.14), transparent 55%)`;
+            flashOverlay.classList.add('active');
+            setTimeout(() => flashOverlay.classList.remove('active'), 60);
+
+            screenShake();
+
+            // Hide DOM card
+            glassCard.style.visibility = 'hidden';
+
+            // Build shards
+            const cols = 9, rows = 12, jitter = 20;
+            const pts  = makeGrid(0, 0, canvasW, canvasH, cols, rows, jitter);
+            const tris = triangulate(pts, cols, rows);
+
+            shards = tris.map(tri => {
+                const ocx = (tri[0].x + tri[1].x + tri[2].x) / 3;
+                const ocy = (tri[0].y + tri[1].y + tri[2].y) / 3;
+                const dx = ocx - cx, dy = ocy - cy;
+                const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+                const speed = Math.min(650 / dist, 22) + Math.random() * 4;
+                const angle = Math.atan2(dy, dx);
+                return {
+                    pts: tri.map(p => ({ x: p.x, y: p.y })),
+                    ocx, ocy,
+                    cx: ocx, cy: ocy,
+                    vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 2.5,
+                    vy: Math.sin(angle) * speed + (Math.random() - 0.5) * 2.5 - 3,
+                    rot: 0,
+                    rv: (Math.random() - 0.5) * 0.14,
+                    alpha: 0.85 + Math.random() * 0.15,
+                    bri: 0.4 + Math.random() * 0.6
+                };
+            });
+
+            // Sparks
+            sparks = [];
+            for (let i = 0; i < 55; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const sp = 2 + Math.random() * 11;
+                sparks.push({
+                    x: cx, y: cy,
+                    vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2.5,
+                    alpha: 1, size: 0.8 + Math.random() * 2.5,
+                    maxLife: 35 + Math.random() * 45, life: 0,
+                    white: Math.random() > 0.65
+                });
+            }
+
+            // Shockwave
+            shockwave = { x: cx, y: cy, r: 0, alpha: 0.75 };
+
+            // Counter & UI
+            shatterCount++;
+            countEl.textContent = shatterCount;
+            hintText.classList.add('hidden');
+
+            if (shatterCount === 1) showToast('Glass shattered!');
+            else if (shatterCount === 5) showToast('You really enjoy breaking things');
+            else if (shatterCount === 10) showToast('Glassbreaker achievement unlocked');
+            else if (shatterCount % 25 === 0) showToast(`${shatterCount} shatters — unstoppable`);
+
+            animateShatter();
+        }
+
+        /* ══════════════════════════════════════
+           SHATTER ANIMATION LOOP
+           ══════════════════════════════════════ */
+        function animateShatter() {
+            ctx.clearRect(0, 0, canvasW, canvasH);
+            const G = 0.13;
+            let alive = false;
+
+            // Shockwave ring
+            if (shockwave && shockwave.alpha > 0.008) {
+                alive = true;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(shockwave.x, shockwave.y, Math.max(0.1, shockwave.r), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0,232,157,${shockwave.alpha.toFixed(3)})`;
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = `rgba(0,232,157,${(shockwave.alpha * 0.5).toFixed(3)})`;
+                ctx.shadowBlur = 30;
+                ctx.stroke();
+                ctx.restore();
+                shockwave.r += 7;
+                shockwave.alpha *= 0.955;
+            } else { shockwave = null; }
+
+            // Shards
+            for (const s of shards) {
+                if (s.alpha < 0.008) continue;
+                alive = true;
+                ctx.save();
+                ctx.globalAlpha = s.alpha;
+                ctx.translate(s.cx, s.cy);
+                ctx.rotate(s.rot);
+
+                const p0 = s.pts[0], p1 = s.pts[1], p2 = s.pts[2];
+                const ox = s.ocx, oy = s.ocy;
+
+                // Fill
+                ctx.beginPath();
+                ctx.moveTo(p0.x - ox, p0.y - oy);
+                ctx.lineTo(p1.x - ox, p1.y - oy);
+                ctx.lineTo(p2.x - ox, p2.y - oy);
+                ctx.closePath();
+                const b = s.bri;
+                ctx.fillStyle = `rgba(${140 + b * 60 | 0},${225 + b * 30 | 0},${205 + b * 40 | 0},0.055)`;
+                ctx.fill();
+
+                // Edges
+                ctx.strokeStyle = `rgba(200,255,240,${(s.alpha * 0.3 * b).toFixed(3)})`;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+
+                // Bright highlight on one edge
+                ctx.beginPath();
+                ctx.moveTo(p0.x - ox, p0.y - oy);
+                ctx.lineTo(p1.x - ox, p1.y - oy);
+                ctx.strokeStyle = `rgba(255,255,255,${(s.alpha * 0.18 * b).toFixed(3)})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.restore();
+
+                // Physics
+                s.cx += s.vx; s.cy += s.vy;
+                s.vy += G; s.vx *= 0.996;
+                s.rot += s.rv;
+                s.alpha -= 0.005;
+            }
+
+            // Sparks
+            for (const sp of sparks) {
+                if (sp.alpha < 0.008) continue;
+                alive = true;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(sp.x, sp.y, Math.max(0.1, sp.size), 0, Math.PI * 2);
+                if (sp.white) {
+                    ctx.fillStyle = `rgba(255,255,255,${sp.alpha.toFixed(3)})`;
+                    ctx.shadowColor = `rgba(255,255,255,${(sp.alpha * 0.6).toFixed(3)})`;
+                } else {
+                    ctx.fillStyle = `rgba(0,232,157,${sp.alpha.toFixed(3)})`;
+                    ctx.shadowColor = `rgba(0,232,157,${(sp.alpha * 0.7).toFixed(3)})`;
+                }
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.restore();
+
+                sp.x += sp.vx; sp.y += sp.vy;
+                sp.vy += 0.09; sp.vx *= 0.98;
+                sp.life++;
+                sp.alpha = Math.max(0, 1 - sp.life / sp.maxLife);
+                sp.size *= 0.97;
+            }
+
+            if (!alive) {
+                state = 'SHATTERED';
+                ctx.clearRect(0, 0, canvasW, canvasH);
+                reformBtn.classList.remove('hidden');
+                reformBtn.focus();
+                return;
+            }
+            animFrameId = requestAnimationFrame(animateShatter);
+        }
+
+        /* ══════════════════════════════════════
+           REFORM GLASS
+           ══════════════════════════════════════ */
+        function reformGlass() {
+            if (state !== 'SHATTERED') return;
+            state = 'IDLE';
+            reformBtn.classList.add('hidden');
+
+            // Center flash
+            const r = cardContainer.getBoundingClientRect();
+            const mx = r.left + r.width / 2, my = r.top + r.height / 2;
+            flashOverlay.style.background =
+                `radial-gradient(circle at ${mx}px ${my}px, rgba(0,232,157,0.1), transparent 45%)`;
+            flashOverlay.classList.add('active');
+            setTimeout(() => flashOverlay.classList.remove('active'), 120);
+
+            // Animate card in
+            glassCard.style.visibility = 'visible';
+            glassCard.style.opacity = '0';
+            glassCard.style.transform = 'scale(0.92)';
+            glassCard.style.transition = 'opacity 0.55s ease, transform 0.55s cubic-bezier(0.22,1,0.36,1)';
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    glassCard.style.opacity = '1';
+                    glassCard.style.transform = 'scale(1)';
+                });
+            });
+
+            setTimeout(() => {
+                glassCard.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+                glassCard.style.transform = '';
+            }, 600);
+
+            ctx.clearRect(0, 0, canvasW, canvasH);
+            hintText.classList.remove('hidden');
+            shards = []; sparks = []; shockwave = null;
+            lastCrackX = -999; lastCrackY = -999;
+        }
+
+        /* ══════════════════════════════════════
+           EVENT LISTENERS
+           ══════════════════════════════════════ */
+        cardContainer.addEventListener('click', initiateShatter);
+
+        // Keyboard support
+        cardContainer.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const r = cardContainer.getBoundingClientRect();
+                initiateShatter({
+                    clientX: r.left + r.width / 2 + (Math.random() - 0.5) * 60,
+                    clientY: r.top + r.height / 2 + (Math.random() - 0.5) * 40
+                });
+            }
+        });
+
+        reformBtn.addEventListener('click', reformGlass);
+
+        // Prevent social buttons from bubbling to shatter
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            btn.addEventListener('click', e => e.stopPropagation());
+            btn.addEventListener('keydown', e => e.stopPropagation());
+        });
+    })();
+    </script>
+</body>
+</html>
