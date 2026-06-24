@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foldable Paper Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --pw:240px;--ph:340px;
+  --paper:#faf3e8;--paper-edge:#e8dcc8;
+  --gold:#c9943a;--gold-light:#ddbe6a;--gold-dim:#9a7428;
+  --burgundy:#8b2252;--burgundy-dark:#5c1636;
+  --text:#2d1b12;--text-muted:#8a7464;
+  --bg:#161210;
+}
+body{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:var(--bg);overflow:hidden;
+  font-family:'Lora',serif;cursor:default;
+  -webkit-font-smoothing:antialiased;
+}
+/* Mouse-following glow */
+.bg-glow{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(600px ellipse at 50% 45%,rgba(201,148,58,0.05) 0%,transparent 70%);
+  transition:background 0.3s ease;
+}
+
+/* Dust particles */
+.dust{
+  position:fixed;border-radius:50%;pointer-events:none;z-index:1;
+  background:rgba(201,148,58,0.12);
+  animation:dust-float linear infinite;
+}
+@keyframes dust-float{
+  0%{transform:translateY(100vh) translateX(0);opacity:0}
+  8%{opacity:1}88%{opacity:1}
+  100%{transform:translateY(-30px) translateX(var(--dx));opacity:0}
+}
+
+/* Scene */
+.scene{
+  perspective:1800px;perspective-origin:50% 50%;
+  position:relative;z-index:10;
+}
+.scene::after{
+  content:'';position:absolute;bottom:-22px;left:50%;
+  width:var(--pw);height:28px;
+  background:radial-gradient(ellipse,rgba(0,0,0,0.25) 0%,transparent 70%);
+  transform:translateX(-50%);pointer-events:none;z-index:-1;
+  transition:width 1.2s cubic-bezier(0.4,0,0.2,1),opacity 0.6s;
+  opacity:1;
+}
+.scene.open-shadow::after{width:calc(var(--pw)*2.8);opacity:0.7}
+.scene:not(.open-shadow):hover::after{width:calc(var(--pw)*1.15);bottom:-26px}
+
+/* Card */
+.card{
+  position:relative;width:calc(var(--pw)*3);height:var(--ph);
+  transform-style:preserve-3d;
+  transform:translateX(var(--pw));
+  transition:transform 1.2s cubic-bezier(0.4,0,0.2,1);
+  cursor:pointer;
+}
+.card.open{transform:translateX(0)}
+
+/* Panels */
+.panel{
+  position:absolute;top:0;width:var(--pw);height:var(--ph);
+  transform-style:preserve-3d;
+}
+.panel-1{left:0}
+.panel-2{left:0}
+.panel-3{left:0}
+
+/* Faces */
+.face{
+  position:absolute;inset:0;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:var(--paper);overflow:hidden;
+}
+.face.back-face{transform:rotateY(180deg)}
+
+/* Fold groups */
+.fold-group{
+  position:absolute;top:0;height:var(--ph);
+  transform-style:preserve-3d;
+}
+#fold1{
+  left:var(--pw);width:calc(var(--pw)*2);
+  transform-origin:left center;
+  transform:rotateY(-180deg);
+  transition:transform 0.85s cubic-bezier(0.645,0.045,0.355,1);
+  transition-delay:0s;
+}
+#fold2{
+  left:var(--pw);width:var(--pw);
+  transform-origin:left center;
+  transform:rotateY(-180deg);
+  transition:transform 0.85s cubic-bezier(0.645,0.045,0.355,1);
+  transition-delay:0.38s;
+}
+.card.open #fold1{transform:rotateY(0deg);transition-delay:0.38s}
+.card.open #fold2{transform:rotateY(0deg);transition-delay:0s}
+
+/* Crease shadows */
+#fold1::before,#fold2::before{
+  content:'';position:absolute;left:0;top:0;width:14px;height:100%;
+  pointer-events:none;transform:translateZ(0.5px);z-index:10;
+}
+#fold1::before{background:linear-gradient(to right,rgba(0,0,0,0.09),transparent)}
+#fold2::before{background:linear-gradient(to right,rgba(0,0,0,0.07),transparent)}
+
+/* ===== COVER FACE ===== */
+.cover-face{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid var(--gold-dim);border-radius:3px;
+  transition:box-shadow 0.5s ease;position:relative;
+}
+.card:not(.open):hover .cover-face{
+  box-shadow:0 0 30px rgba(201,148,58,0.12),0 8px 24px rgba(0,0,0,0.15);
+}
+/* Inner border */
+.cover-face::before{
+  content:'';position:absolute;
+  top:12px;left:12px;right:12px;bottom:12px;
+  border:1px solid var(--gold);opacity:0.45;pointer-events:none;
+  border-radius:1px;
+}
+/* Paper texture hint */
+.cover-face::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 3px,rgba(0,0,0,0.008) 3px,rgba(0,0,0,0.008) 4px
+  );
+}
+
+/* Corner brackets */
+.corner{position:absolute;width:18px;height:18px;border-color:var(--gold);border-style:solid;opacity:0.4}
+.corner-tl{top:20px;left:20px;border-width:1px 0 0 1px}
+.corner-tr{top:20px;right:20px;border-width:1px 1px 0 0}
+.corner-bl{bottom:20px;left:20px;border-width:0 0 1px 1px}
+.corner-br{bottom:20px;right:20px;border-width:0 1px 1px 0}
+
+/* Cover ornament */
+.cover-ornament{margin-bottom:16px;opacity:0.7}
+
+/* Cover title */
+.cover-title{
+  font-family:'Playfair Display',serif;font-weight:400;font-style:italic;
+  font-size:30px;color:var(--burgundy);letter-spacing:3px;margin:0;
+}
+
+/* Wax seal */
+.seal{
+  width:48px;height:48px;border-radius:50%;margin-top:22px;
+  background:radial-gradient(circle at 38% 32%,#c43a4a,#8b1a2b 55%,#5c1018);
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,0.85);font-size:15px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.35),inset 0 1px 3px rgba(255,255,255,0.15),inset 0 -2px 5px rgba(0,0,0,0.25);
+  position:relative;
+}
+.seal::before{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,#c43a4a,#8b1a2b 55%,#5c1018);
+  filter:blur(2px);opacity:0.25;z-index:-1;
+}
+.seal::after{
+  content:'';position:absolute;inset:3px;border-radius:50%;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+/* Hint on cover */
+.cover-hint{
+  position:absolute;bottom:16px;
+  font-size:9px;color:var(--text-muted);opacity:0.4;
+  letter-spacing:2px;text-transform:uppercase;
+  font-family:'Lora',serif;transition:opacity 0.4s;
+}
+.card:not(.open):hover .cover-hint{opacity:0.7}
+.card.open .cover-hint{opacity:0;pointer-events:none}
+
+/* ===== INSIDE FACES ===== */
+.inside-face{
+  padding:30px 26px;display:flex;flex-direction:column;
+  background:var(--paper);position:relative;
+}
+.inside-face::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 3px,rgba(0,0,0,0.006) 3px,rgba(0,0,0,0.006) 4px
+  );
+}
+.deco-line{width:36px;height:1px;background:var(--gold);margin-bottom:18px;opacity:0.6}
+.deco-line.center{margin-left:auto;margin-right:auto}
+.inside-face p{
+  font-size:12.5px;line-height:1.9;color:var(--text);margin:0 0 14px;
+  position:relative;z-index:1;
+}
+.inside-face .highlight{
+  color:var(--burgundy);font-style:italic;
+  font-family:'Playfair Display',serif;font-size:14px;
+}
+.inside-face .divider{
+  width:100%;display:flex;align-items:center;gap:10px;
+  margin:8px 0 14px;position:relative;z-index:1;
+}
+.inside-face .divider span{
+  flex:1;height:1px;background:linear-gradient(to right,transparent,var(--gold-dim),transparent);opacity:0.4;
+}
+.inside-face .divider i{color:var(--gold);font-size:6px;opacity:0.5}
+
+/* Inside right — signature */
+.signature-area{
+  margin-top:auto;text-align:center;position:relative;z-index:1;
+}
+.signature-area .sig-line{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:13px;color:var(--text-muted);margin-bottom:6px;
+}
+.signature-area .sig-name{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:18px;color:var(--burgundy);letter-spacing:1px;
+}
+.signature-area .sig-ornament{margin-top:14px;opacity:0.4}
+
+/* Inside middle — centered poem */
+.inside-center{
+  padding:30px 22px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  background:var(--paper);position:relative;
+}
+.inside-center::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 3px,rgba(0,0,0,0.006) 3px,rgba(0,0,0,0.006) 4px
+  );
+}
+.inside-center p{
+  font-size:12px;line-height:2;color:var(--text);margin:0 0 10px;
+  position:relative;z-index:1;
+}
+.inside-center .em{
+  color:var(--burgundy);font-style:italic;
+  font-family:'Playfair Display',serif;font-size:13px;
+}
+
+/* Hidden faces (never fully visible) */
+.hidden-face{background:var(--paper-edge)}
+
+/* Back of card */
+.card-back-face{
+  background:var(--paper-edge);display:flex;align-items:center;justify-content:center;
+}
+.card-back-face .back-pattern{
+  width:60px;height:60px;opacity:0.08;
+  border:2px solid var(--text);
+  border-radius:50%;
+  position:relative;
+}
+.card-back-face .back-pattern::before{
+  content:'';position:absolute;inset:8px;
+  border:1px solid var(--text);border-radius:50%;
+}
+
+/* Petals */
+.petal{
+  position:fixed;border-radius:50% 0 50% 0;
+  opacity:0;pointer-events:none;z-index:100;
+  animation:petal-float var(--dur) ease-out forwards;
+}
+@keyframes petal-float{
+  0%{opacity:0.85;transform:translate(0,0) rotate(var(--r0)) scale(1)}
+  100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r1)) scale(0.2)}
+}
+
+/* Bottom instruction */
+.instruction{
+  position:fixed;bottom:28px;z-index:20;
+  font-family:'Lora',serif;font-size:12px;
+  color:rgba(201,148,58,0.3);letter-spacing:2px;
+  transition:opacity 0.6s;
+}
+.instruction.hidden{opacity:0;pointer-events:none}
+
+/* Reduced motion */
+@media (prefers-reduced-motion:reduce){
+  .dust,.petal{animation:none!important;display:none}
+  .card,#fold1,#fold2,.scene::after{transition-duration:0.01s!important}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow" id="bgGlow"></div>
+
+<div class="scene" id="scene">
+  <div class="card" id="card" role="button" tabindex="0" aria-label="Foldable paper card, click to open or close">
+
+    <!-- Panel 1: Inside Left / Card Back -->
+    <div class="panel panel-1">
+      <div class="face front inside-face">
+        <div class="deco-line"></div>
+        <p>Some moments are too precious to keep to yourself. This small fold of paper carries more than ink — it carries <span class="highlight">intention, warmth,</span> and a piece of someone's heart.</p>
+        <p>There is a kind of magic in the act of writing by hand, in choosing each word slowly, knowing it will be held and read by someone who matters.</p>
+        <div class="divider"><span></span><i class="fas fa-diamond"></i><span></span></div>
+        <p style="font-size:11px;color:var(--text-muted);margin:0;position:relative;z-index:1;">Folded with care, sealed with thought.</p>
+      </div>
+      <div class="face back-face card-back-face">
+        <div class="back-pattern"></div>
+      </div>
+    </div>
+
+    <!-- Fold Group 1: Contains Panel 2 + Fold Group 2 -->
+    <div class="fold-group" id="fold1">
+
+      <!-- Panel 2: Hidden Front / Inside Middle -->
+      <div class="panel panel-2">
+        <div class="face front hidden-face"></div>
+        <div class="face back-face inside-center">
+          <div class="deco-line center"></div>
+          <p>In the quiet spaces between words, in the gentle creases of this page, lies everything that matters most.</p>
+          <p><span class="em">The unspoken, the tender, the true.</span></p>
+          <div style="margin-top:16px;opacity:0.35">
+            <svg width="50" height="20" viewBox="0 0 50 20">
+              <path d="M5,10 Q15,2 25,10 Q35,18 45,10" fill="none" stroke="var(--gold)" stroke-width="0.7"/>
+              <circle cx="25" cy="10" r="1.5" fill="var(--gold)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fold Group 2: Contains Panel 3 -->
+      <div class="fold-group" id="fold2">
+
+        <!-- Panel 3: Cover / Inside Right -->
+        <div class="panel panel-3">
+          <div class="face front cover-face">
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+
+            <svg class="cover-ornament" viewBox="0 0 140 24" width="110" height="18">
+              <line x1="0" y1="12" x2="48" y2="12" stroke="var(--gold-dim)" stroke-width="0.5"/>
+              <line x1="92" y1="12" x2="140" y2="12" stroke="var(--gold-dim)" stroke-width="0.5"/>
+              <path d="M52,12 C55,5 60,3 70,3 C80,3 85,5 88,12 C85,19 80,21 70,21 C60,21 55,19 52,12Z"
+                    fill="none" stroke="var(--gold)" stroke-width="0.6"/>
+              <circle cx="70" cy="12" r="2" fill="var(--gold)"/>
+            </svg>
+
+            <h2 class="cover-title">For You</h2>
+
+            <div class="seal"><i class="fas fa-heart"></i></div>
+
+            <span class="cover-hint">click to open</span>
+          </div>
+
+          <div class="face back-face inside-face" style="justify-content:flex-end;">
+            <div class="signature-area">
+              <div class="sig-ornament">
+                <svg width="40" height="14" viewBox="0 0 40 14">
+                  <path d="M2,7 Q10,1 20,7 Q30,13 38,7" fill="none" stroke="var(--gold-dim)" stroke-width="0.6"/>
+                </svg>
+              </div>
+              <div class="sig-line">With warmth and affection,</div>
+              <div class="sig-name">Yours, always</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /fold2 -->
+    </div><!-- /fold1 -->
+  </div><!-- /card -->
+</div><!-- /scene -->
+
+<div class="instruction" id="instruction">Click the card to open</div>
+
+<script>
+/* === State === */
+const card = document.getElementById('card');
+const scene = document.getElementById('scene');
+const instruction = document.getElementById('instruction');
+const bgGlow = document.getElementById('bgGlow');
+let isOpen = false;
+
+/* === Toggle card === */
+function toggle() {
+  isOpen = !isOpen;
+  card.classList.toggle('open', isOpen);
+  scene.classList.toggle('open-shadow', isOpen);
+  instruction.classList.toggle('hidden', isOpen);
+  if (isOpen) setTimeout(spawnPetals, 420);
+}
+
+card.addEventListener('click', toggle);
+card.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+});
+
+/* === Responsive scaling === */
+function updateScale() {
+  const cw = 240 * 3 + 40;
+  const ch = 340 + 60;
+  const sx = (window.innerWidth - 40) / cw;
+  const sy = (window.innerHeight - 80) / ch;
+  const s = Math.min(1, sx, sy);
+  scene.style.transform = `scale(${s})`;
+}
+window.addEventListener('resize', updateScale);
+updateScale();
+
+/* === Mouse glow === */
+document.addEventListener('mousemove', e => {
+  const x = (e.clientX / window.innerWidth * 100).toFixed(1);
+  const y = (e.clientY / window.innerHeight * 100).toFixed(1);
+  bgGlow.style.background =
+    `radial-gradient(650px ellipse at ${x}% ${y}%, rgba(201,148,58,0.06) 0%, transparent 70%)`;
+});
+
+/* === Dust particles === */
+(function createDust() {
+  const count = 18;
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement('div');
+    d.className = 'dust';
+    const size = 1.5 + Math.random() * 2;
+    d.style.width = size + 'px';
+    d.style.height = size + 'px';
+    d.style.left = Math.random() * 100 + 'vw';
+    d.style.setProperty('--dx', ((Math.random() - 0.5) * 80) + 'px');
+    d.style.animationDuration = (12 + Math.random() * 18) + 's';
+    d.style.animationDelay = -(Math.random() * 20) + 's';
+    document.body.appendChild(d);
+  }
+})();
+
+/* === Petals on open === */
+function spawnPetals() {
+  const rect = card.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const colors = ['#c9943a','#ddbe6a','#e8c8a0','#d4a0a0','#f0d8c8','#c43a4a'];
+  const count = 28;
+
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    const w = 6 + Math.random() * 7;
+    const h = 8 + Math.random() * 9;
+    p.style.width = w + 'px';
+    p.style.height = h + 'px';
+    p.style.left = (cx + (Math.random() - 0.5) * 260) + 'px';
+    p.style.top = (cy + (Math.random() - 0.5) * 120) + 'px';
+    p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    p.style.setProperty('--dur', (2.2 + Math.random() * 2.2) + 's');
+    p.style.setProperty('--dx', ((Math.random() - 0.5) * 140) + 'px');
+    p.style.setProperty('--dy', (-80 - Math.random() * 220) + 'px');
+    p.style.setProperty('--r0', (Math.random() * 360) + 'deg');
+    p.style.setProperty('--r1', (Math.random() * 720 - 360) + 'deg');
+    p.style.animationDelay = (Math.random() * 0.6) + 's';
+    document.body.appendChild(p);
+    p.addEventListener('animationend', () => p.remove());
+  }
+}
+</script>
+</body>
+</html>
