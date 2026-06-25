@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravity Card</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #050510;
+            --card-bg: rgba(12, 14, 26, 0.72);
+            --fg: #E0E4EC;
+            --muted: #5A6078;
+            --accent: #FFB547;
+            --accent-deep: #FF8C1A;
+            --cyan: #4AEADC;
+            --border: rgba(255, 181, 71, 0.1);
+            --card-w: 390px;
+            --card-h: 530px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--fg);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Atmospheric background */
+        .bg-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(130px);
+            opacity: 0.13;
+            pointer-events: none;
+            will-change: transform;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .bg-glow--warm { background: var(--accent); top: -220px; left: -120px; }
+        .bg-glow--cool { background: var(--cyan); bottom: -220px; right: -120px; }
+
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,181,71,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,181,71,0.025) 1px, transparent 1px);
+            background-size: 64px 64px;
+            pointer-events: none;
+        }
+
+        /* Entrance */
+        .scene {
+            animation: scene-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes scene-in {
+            from { opacity: 0; transform: scale(0.92) translateY(36px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Card wrapper provides perspective */
+        .card-wrap {
+            perspective: 900px;
+            cursor: default;
+        }
+
+        /* The card */
+        .card {
+            position: relative;
+            width: var(--card-w);
+            height: var(--card-h);
+            border-radius: 26px;
+            background: var(--card-bg);
+            backdrop-filter: blur(48px) saturate(1.3);
+            -webkit-backdrop-filter: blur(48px) saturate(1.3);
+            border: 1px solid var(--border);
+            transform-style: preserve-3d;
+            will-change: transform;
+            overflow: hidden;
+            box-shadow:
+                0 4px 24px rgba(0,0,0,0.35),
+                0 0 0 0 rgba(255,181,71,0);
+            transition: box-shadow 0.4s ease;
+        }
+        .card:hover {
+            box-shadow:
+                0 30px 70px rgba(0,0,0,0.55),
+                0 0 100px rgba(255,181,71,0.04);
+        }
+
+        /* Overlays */
+        .card-glare {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+        .card-wrap:hover .card-glare { opacity: 1; }
+
+        .card-edge {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Ripple layer */
+        .card-ripple {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            pointer-events: none;
+            z-index: 8;
+            overflow: hidden;
+        }
+        .ripple-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1.5px solid var(--accent);
+            opacity: 0;
+            transform: scale(0);
+            pointer-events: none;
+        }
+        .ripple-ring.active {
+            animation: ripple-expand 0.8s ease-out forwards;
+        }
+        @keyframes ripple-expand {
+            0%   { transform: scale(0); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        /* Particle canvas */
+        .particles-canvas {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Card content */
+        .card-inner {
+            position: relative;
+            z-index: 3;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 34px 30px 28px;
+            transform-style: preserve-3d;
+        }
+
+        /* Header */
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transform: translateZ(35px);
+        }
+        .card-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 26px;
+            letter-spacing: 7px;
+            color: var(--fg);
+            user-select: none;
+        }
+        .card-badge {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(255,181,71,0.08);
+            border: 1px solid rgba(255,181,71,0.18);
+            padding: 5px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: badge-blink 2s ease-in-out infinite;
+        }
+        @keyframes badge-blink {
+            0%,100% { opacity: 1; }
+            50%     { opacity: 0.3; }
+        }
+
+        /* Orb area */
+        .orb-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transform: translateZ(55px);
+        }
+
+        /* Orbital rings */
+        .orbit {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(255,181,71,0.12);
+            pointer-events: none;
+        }
+        .orbit--1 {
+            width: 180px; height: 180px;
+            animation: orbit-spin 7s linear infinite;
+        }
+        .orbit--2 {
+            width: 240px; height: 240px;
+            border-color: rgba(74,234,220,0.08);
+            animation: orbit-spin 11s linear infinite reverse;
+        }
+        .orbit--3 {
+            width: 300px; height: 300px;
+            border-color: rgba(255,181,71,0.05);
+            animation: orbit-spin 16s linear infinite;
+        }
+        @keyframes orbit-spin {
+            from { transform: rotateX(68deg) rotateZ(0deg); }
+            to   { transform: rotateX(68deg) rotateZ(360deg); }
+        }
+
+        .orbit-dot {
+            position: absolute;
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            top: -2.5px; left: 50%;
+            transform: translateX(-50%);
+        }
+        .orbit--2 .orbit-dot {
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan);
+            width: 4px; height: 4px;
+            top: -2px;
+        }
+
+        /* Orb shadow (on the "floor") */
+        .orb-shadow {
+            position: absolute;
+            width: 90px; height: 22px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.35), transparent 70%);
+            filter: blur(6px);
+            pointer-events: none;
+            will-change: transform, opacity;
+        }
+
+        /* The orb */
+        .orb {
+            width: 110px; height: 110px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 36% 34%, #FFE8A8, #FFB547 38%, #FF8C1A 68%, #CC5500);
+            box-shadow:
+                0 0 50px rgba(255,181,71,0.28),
+                0 0 110px rgba(255,140,26,0.12),
+                inset 0 -8px 20px rgba(180,80,0,0.3),
+                inset 0 4px 12px rgba(255,255,255,0.12);
+            position: relative;
+            will-change: transform;
+            z-index: 1;
+        }
+        .orb::before {
+            content: '';
+            position: absolute;
+            top: 14%; left: 24%;
+            width: 32%; height: 22%;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent);
+            border-radius: 50%;
+            transform: rotate(-22deg);
+        }
+        .orb::after {
+            content: '';
+            position: absolute;
+            bottom: 18%; right: 18%;
+            width: 16%; height: 10%;
+            background: radial-gradient(ellipse, rgba(255,200,100,0.25), transparent);
+            border-radius: 50%;
+        }
+
+        /* Stats row */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            transform: translateZ(22px);
+        }
+        .stat {
+            text-align: center;
+            padding: 14px 6px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.018);
+            border: 1px solid rgba(255,255,255,0.035);
+            transition: border-color 0.3s, background 0.3s;
+        }
+        .stat:hover {
+            border-color: rgba(255,181,71,0.12);
+            background: rgba(255,181,71,0.03);
+        }
+        .stat-val {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--fg);
+            line-height: 1;
+        }
+        .stat-lbl {
+            font-size: 9.5px;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        /* CTA row */
+        .card-cta {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transform: translateZ(16px);
+        }
+        .cta-hint {
+            font-size: 12.5px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .cta-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,181,71,0.25);
+            background: rgba(255,181,71,0.06);
+            color: var(--accent);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: all 0.28s ease;
+            outline: none;
+        }
+        .cta-btn:hover, .cta-btn:focus-visible {
+            background: rgba(255,181,71,0.14);
+            border-color: rgba(255,181,71,0.45);
+            box-shadow: 0 0 24px rgba(255,181,71,0.08);
+        }
+        .cta-btn:active {
+            transform: scale(0.96);
+        }
+        .cta-btn i {
+            font-size: 11px;
+            transition: transform 0.28s ease;
+        }
+        .cta-btn:hover i { transform: translateX(3px); }
+
+        /* Bottom instruction */
+        .hint {
+            position: fixed;
+            bottom: 36px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            animation: hint-pulse 3.5s ease-in-out infinite;
+            user-select: none;
+        }
+        @keyframes hint-pulse {
+            0%,100% { opacity: 0.25; }
+            50%     { opacity: 0.6; }
+        }
+
+        /* Responsive */
+        @media (max-width: 440px) {
+            :root { --card-w: 310px; --card-h: 470px; }
+            .card-title { font-size: 21px; letter-spacing: 5px; }
+            .orb { width: 85px; height: 85px; }
+            .orb-shadow { width: 68px; height: 16px; }
+            .orbit--1 { width: 140px; height: 140px; }
+            .orbit--2 { width: 185px; height: 185px; }
+            .orbit--3 { width: 235px; height: 235px; }
+            .card-inner { padding: 26px 22px 22px; }
+            .stat-val { font-size: 17px; }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .orbit, .badge-dot, .hint { animation: none !important; }
+            .card { transition: none !important; }
+            .scene { animation: none !important; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background atmosphere -->
+    <div class="bg-glow bg-glow--warm" id="glowWarm"></div>
+    <div class="bg-glow bg-glow--cool" id="glowCool"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Card scene -->
+    <div class="scene">
+        <div class="card-wrap" id="cardWrap">
+            <div class="card" id="card">
+                <canvas class="particles-canvas" id="pCanvas"></canvas>
+                <div class="card-glare" id="glare"></div>
+                <div class="card-edge" id="edge"></div>
+                <div class="card-ripple" id="rippleLayer"></div>
+
+                <div class="card-inner">
+                    <header class="card-header">
+                        <span class="card-title">GRAVITY</span>
+                        <span class="card-badge"><span class="badge-dot"></span>Live</span>
+                    </header>
+
+                    <div class="orb-area" id="orbArea">
+                        <div class="orbit orbit--3"></div>
+                        <div class="orbit orbit--2"><span class="orbit-dot"></span></div>
+                        <div class="orbit orbit--1"><span class="orbit-dot"></span></div>
+                        <div class="orb-shadow" id="orbShadow"></div>
+                        <div class="orb" id="orb"></div>
+                    </div>
+
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-val" id="sMass">9.81</div>
+                            <div class="stat-lbl">Mass</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-val" id="sForce">42.7</div>
+                            <div class="stat-lbl">Force</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-val" id="sPull">&infin;</div>
+                            <div class="stat-lbl">Pull</div>
+                        </div>
+                    </div>
+
+                    <div class="card-cta">
+                        <span class="cta-hint">Simulate gravity fields</span>
+                        <button class="cta-btn" id="ctaBtn" aria-label="Trigger gravity pulse">
+                            Pulse <i class="fas fa-bolt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hint">Move cursor to interact</div>
+
+    <script>
+    (() => {
+        /* ── Elements ── */
+        const card     = document.getElementById('card');
+        const wrap     = document.getElementById('cardWrap');
+        const orb      = document.getElementById('orb');
+        const shadow   = document.getElementById('orbShadow');
+        const glare    = document.getElementById('glare');
+        const edge     = document.getElementById('edge');
+        const rippleL  = document.getElementById('rippleLayer');
+        const ctaBtn   = document.getElementById('ctaBtn');
+        const canvas   = document.getElementById('pCanvas');
+        const ctx      = canvas.getContext('2d');
+        const glowW    = document.getElementById('glowWarm');
+        const glowC    = document.getElementById('glowCool');
+        const sMass    = document.getElementById('sMass');
+        const sForce   = document.getElementById('sForce');
+
+        /* ── Spring state ── */
+        let curRX = 0, curRY = 0;       // current rotation
+        let tgtRX = 0, tgtRY = 0;       // target rotation
+        let velRX = 0, velRY = 0;       // velocity
+        const STIFF = 0.055;
+        const DAMP  = 0.82;
+        const MAX_TILT = 18;            // max degrees
+
+        let hovering = false;
+        let mxNorm = 0.5, myNorm = 0.5; // normalised mouse position on card
+
+        /* ── Orb pulse state ── */
+        let pulseScale = 1;
+        let pulseVel   = 0;
+
+        /* ── Mouse / Touch ── */
+        function setTarget(cx, cy) {
+            const r = wrap.getBoundingClientRect();
+            mxNorm = (cx - r.left) / r.width;
+            myNorm = (cy - r.top)  / r.height;
+            tgtRY =  (mxNorm - 0.5) * MAX_TILT * 2;
+            tgtRX = -(myNorm - 0.5) * MAX_TILT * 2;
+        }
+
+        wrap.addEventListener('mouseenter', () => { hovering = true; });
+        wrap.addEventListener('mouseleave', () => {
+            hovering = false;
+            tgtRX = 0; tgtRY = 0;
+        });
+        wrap.addEventListener('mousemove', e => setTarget(e.clientX, e.clientY));
+
+        wrap.addEventListener('touchstart', e => { hovering = true; }, { passive: true });
+        wrap.addEventListener('touchmove', e => {
+            e.preventDefault();
+            setTarget(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+        wrap.addEventListener('touchend', () => {
+            hovering = false;
+            tgtRX = 0; tgtRY = 0;
+        });
+
+        /* ── Background glow parallax ── */
+        document.addEventListener('mousemove', e => {
+            const dx = (e.clientX / window.innerWidth  - 0.5) * 36;
+            const dy = (e.clientY / window.innerHeight - 0.5) * 36;
+            glowW.style.transform = `translate(${dx}px, ${dy}px)`;
+            glowC.style.transform = `translate(${-dx}px, ${-dy}px)`;
+        });
+
+        /* ── Particles ── */
+        const particles = [];
+        const P_COUNT = 45;
+
+        function sizeCanvas() {
+            const w = card.offsetWidth;
+            const h = card.offsetHeight;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width  = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width  = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { w, h };
+        }
+
+        function initParticles() {
+            const { w, h } = sizeCanvas();
+            particles.length = 0;
+            for (let i = 0; i < P_COUNT; i++) {
+                const isCyan = Math.random() < 0.25;
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: Math.random() * 1.4 + 0.4,
+                    vx: (Math.random() - 0.5) * 0.25,
+                    vy: (Math.random() - 0.5) * 0.25,
+                    o: Math.random() * 0.45 + 0.08,
+                    cyan: isCyan
+                });
+            }
+        }
+        initParticles();
+        window.addEventListener('resize', initParticles);
+
+        /* ── Pulse (CTA click) ── */
+        function triggerPulse() {
+            pulseVel = -0.28;
+            const { w, h } = { w: card.offsetWidth, h: card.offsetHeight };
+            particles.forEach(p => {
+                const dx = p.x - w / 2;
+                const dy = p.y - h / 2;
+                const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+                p.vx += (dx / dist) * 2.8;
+                p.vy += (dy / dist) * 2.8;
+            });
+            spawnRipple();
+        }
+        ctaBtn.addEventListener('click', triggerPulse);
+
+        /* Ripple rings */
+        function spawnRipple() {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const ring = document.createElement('div');
+                    ring.className = 'ripple-ring';
+                    const size = 200 + i * 120;
+                    ring.style.width  = size + 'px';
+                    ring.style.height = size + 'px';
+                    ring.style.left = `calc(50% - ${size / 2}px)`;
+                    ring.style.top  = `calc(50% - ${size / 2}px)`;
+                    rippleL.appendChild(ring);
+                    requestAnimationFrame(() => ring.classList.add('active'));
+                    ring.addEventListener('animationend', () => ring.remove());
+                }, i * 120);
+            }
+        }
+
+        /* ── Main loop ── */
+        const now = () => performance.now();
+
+        function tick() {
+            const t = now();
+
+            /* Spring physics for tilt */
+            velRX = (velRX + (tgtRX - curRX) * STIFF) * DAMP;
+            velRY = (velRY + (tgtRY - curRY) * STIFF) * DAMP;
+            curRX += velRX;
+            curRY += velRY;
+
+            /* Apply card 3D transform */
+            card.style.transform =
+                `rotateX(${curRX}deg) rotateY(${curRY}deg)`;
+
+            /* Orb gravity shift */
+            const orbX = curRY * 1.6;
+            const floatY = hovering ? 0 : Math.sin(t * 0.0018) * 9;
+            const orbY = -curRX * 1.6 + floatY;
+
+            /* Orb pulse spring */
+            pulseVel += (1 - pulseScale) * 0.14;
+            pulseVel *= 0.78;
+            pulseScale += pulseVel;
+
+            orb.style.transform =
+                `translate(${orbX}px, ${orbY}px) scale(${pulseScale})`;
+
+            /* Orb shadow */
+            const tiltMag = Math.sqrt(curRX * curRX + curRY * curRY);
+            const shX = orbX * 0.35;
+            const shY = 55 + orbY * 0.25;
+            const shScale = Math.max(0.55, 1 - tiltMag * 0.012);
+            const shOp = Math.max(0.1, 0.35 - tiltMag * 0.008);
+            shadow.style.transform = `translate(${shX}px, ${shY}px) scale(${shScale})`;
+            shadow.style.opacity = shOp;
+
+            /* Glare */
+            if (hovering) {
+                const gx = mxNorm * 100;
+                const gy = myNorm * 100;
+                glare.style.background =
+                    `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,0.1), transparent 55%)`;
+            }
+
+            /* Edge light */
+            const eAngle = Math.atan2(curRY, curRX) * (180 / Math.PI) + 90;
+            edge.style.background =
+                `linear-gradient(${eAngle}deg, rgba(255,181,71,0.07) 0%, transparent 35%, transparent 65%, rgba(74,234,220,0.04) 100%)`;
+
+            /* Stats */
+            const force = (42.7 + tiltMag * 0.85).toFixed(1);
+            const mass  = (9.81 + Math.abs(curRX) * 0.04).toFixed(2);
+            sForce.textContent = force;
+            sMass.textContent  = mass;
+
+            /* Particles */
+            const w = card.offsetWidth;
+            const h = card.offsetHeight;
+            ctx.clearRect(0, 0, w, h);
+
+            const gx = curRY * 0.018;
+            const gy = -curRX * 0.018;
+
+            for (const p of particles) {
+                p.vx += gx;
+                p.vy += gy;
+                p.vx *= 0.985;
+                p.vy *= 0.985;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < -4) p.x = w + 4;
+                if (p.x > w + 4) p.x = -4;
+                if (p.y < -4) p.y = h + 4;
+                if (p.y > h + 4) p.y = -4;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
+                ctx.fillStyle = p.cyan
+                    ? `rgba(74,234,220,${p.o})`
+                    : `rgba(255,181,71,${p.o})`;
+                ctx.fill();
+            }
+
+            requestAnimationFrame(tick);
+        }
+
+        tick();
+
+        /* Hide hint after 5s */
+        setTimeout(() => {
+            const hint = document.querySelector('.hint');
+            if (hint) {
+                hint.style.transition = 'opacity 1.2s ease';
+                hint.style.opacity = '0';
+                setTimeout(() => hint.remove(), 1300);
+            }
+        }, 5000);
+    })();
+    </script>
+</body>
+</html>
