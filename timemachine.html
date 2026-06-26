@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Machine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --accent: #d4a843;
+            --accent-glow: rgba(212, 168, 67, 0.35);
+            --card-bg: rgba(20, 18, 15, 0.88);
+            --card-border: rgba(180, 140, 90, 0.22);
+            --text-primary: #e8e0d4;
+            --text-secondary: #8a7e6e;
+            --text-dim: #5a5248;
+            --brass: #b48c5a;
+            --brass-light: #d4b07a;
+            --brass-dark: #7a6040;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at 50% 40%, #16140f 0%, #0a0908 100%);
+            font-family: 'Space Mono', monospace;
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #particleCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Card ── */
+        .time-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 2.2rem 2rem 1.8rem;
+            border-radius: 1.25rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            box-shadow:
+                0 4px 60px rgba(0,0,0,0.55),
+                0 0 80px rgba(180,140,90,0.04),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+            transition: box-shadow 0.6s ease, border-color 0.6s ease, filter 0.4s ease;
+        }
+
+        .time-card.traveling {
+            border-color: var(--accent-glow);
+            box-shadow:
+                0 4px 60px rgba(0,0,0,0.55),
+                0 0 50px var(--accent-glow),
+                0 0 120px var(--accent-glow),
+                inset 0 0 30px rgba(0,0,0,0.3);
+            filter: blur(1px);
+        }
+        .time-card.arriving {
+            filter: blur(0);
+        }
+
+        /* Flash overlay on arrival */
+        .time-card.flash::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--accent);
+            opacity: 0.25;
+            animation: flashOut 0.6s ease-out forwards;
+            pointer-events: none;
+            z-index: 50;
+        }
+        @keyframes flashOut { to { opacity: 0; } }
+
+        /* ── Screws ── */
+        .screw {
+            position: absolute;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, var(--brass-light), var(--brass-dark));
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.18), 0 1px 3px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .screw::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 22%; right: 22%;
+            height: 1.5px;
+            background: rgba(0,0,0,0.35);
+            transform: translateY(-50%) rotate(40deg);
+            border-radius: 1px;
+        }
+        .screw-tl { top: 10px; left: 10px; }
+        .screw-tr { top: 10px; right: 10px; }
+        .screw-bl { bottom: 10px; left: 10px; }
+        .screw-br { bottom: 10px; right: 10px; }
+
+        /* ── Header ── */
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.9rem;
+            margin-bottom: 1.6rem;
+        }
+        .card-header h1 {
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            font-size: 1.15rem;
+            letter-spacing: 0.35em;
+            color: var(--brass-light);
+            text-shadow: 0 0 20px rgba(180,140,90,0.15);
+        }
+        .deco-line {
+            width: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--brass), transparent);
+        }
+
+        /* ── Dial ── */
+        .dial-area {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+        }
+
+        .dial-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 220px; height: 220px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 2px solid rgba(180,140,90,0.18);
+            box-shadow: 0 0 30px rgba(180,140,90,0.06), inset 0 0 30px rgba(180,140,90,0.03);
+        }
+
+        .dial-escapement {
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 1.5px dashed rgba(180,140,90,0.1);
+            animation: rotateSlow 40s linear infinite;
+        }
+        @keyframes rotateSlow { to { transform: rotate(360deg); } }
+
+        .dial-inner-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100px; height: 100px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid rgba(180,140,90,0.12);
+            background: rgba(180,140,90,0.03);
+        }
+
+        /* Tick marks on ring */
+        .dial-ticks {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+        }
+        .dial-tick {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 1px;
+            height: 8px;
+            background: rgba(180,140,90,0.25);
+            transform-origin: 0 0;
+        }
+
+        /* ── Markers ── */
+        .marker {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            cursor: pointer;
+            z-index: 5;
+        }
+        .marker-dot {
+            position: absolute;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: rgba(30, 27, 22, 0.9);
+            border: 2px solid var(--text-dim);
+            transform: translate(-50%, -50%);
+            transition: all 0.4s ease;
+            box-shadow: 0 0 0 0 transparent;
+        }
+        .marker-dot.active {
+            border-color: var(--accent);
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow), 0 0 24px var(--accent-glow);
+        }
+        .marker-dot.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            animation: markerPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes markerPulse {
+            0%, 100% { box-shadow: 0 0 6px var(--accent-glow); }
+            50% { box-shadow: 0 0 16px var(--accent-glow), 0 0 30px var(--accent-glow); }
+        }
+        .marker-label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            transition: color 0.4s ease;
+            pointer-events: none;
+            letter-spacing: 0.05em;
+        }
+        .marker-label.active { color: var(--accent); }
+        .marker-label.selected { color: var(--text-secondary); }
+
+        .marker:hover .marker-dot { border-color: var(--brass); }
+        .marker:hover .marker-label { color: var(--text-secondary); }
+
+        /* ── Needle ── */
+        .needle-container {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            z-index: 8;
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .needle-container.spinning {
+            transition: none;
+        }
+        .needle {
+            position: absolute;
+            bottom: 0;
+            left: -1.5px;
+            width: 3px;
+            height: 98px;
+            border-radius: 2px;
+            background: linear-gradient(to top, var(--accent), transparent 95%);
+            transform: translateY(-100%);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+        .needle-pivot {
+            position: absolute;
+            top: -7px; left: -7px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow), 0 0 24px var(--accent-glow);
+            z-index: 9;
+        }
+
+        /* ── Travel Button ── */
+        .travel-btn {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            border: 2px solid var(--brass);
+            background: rgba(20,18,15,0.95);
+            color: var(--brass-light);
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 12;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .travel-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+            transform: translate(-50%, -50%) scale(1.08);
+        }
+        .travel-btn:active:not(:disabled) {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+        .travel-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .travel-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        /* ── Info Section ── */
+        .info-section {
+            text-align: center;
+            margin-top: 1.4rem;
+            min-height: 110px;
+            transition: opacity 0.4s ease;
+        }
+        .info-section.fading { opacity: 0; }
+
+        .era-year {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.2em;
+            margin-bottom: 0.4rem;
+            transition: color 0.6s ease;
+        }
+        .era-name {
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            font-size: 1.6rem;
+            line-height: 1.2;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            transition: color 0.6s ease;
+        }
+        .era-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            max-width: 300px;
+            margin: 0 auto;
+            transition: color 0.6s ease;
+        }
+
+        /* ── Nav Section ── */
+        .nav-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2rem;
+            margin-top: 1.3rem;
+        }
+        .nav-btn {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            border: 1px solid rgba(180,140,90,0.25);
+            background: transparent;
+            color: var(--brass);
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover {
+            border-color: var(--brass-light);
+            color: var(--brass-light);
+            background: rgba(180,140,90,0.08);
+        }
+        .nav-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .era-dots {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .era-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--text-dim);
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+        .era-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            width: 9px; height: 9px;
+        }
+        .era-dot.target {
+            border: 1.5px solid var(--accent);
+            background: transparent;
+        }
+
+        /* ── Footer ── */
+        .card-footer {
+            text-align: center;
+            margin-top: 1.1rem;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            letter-spacing: 0.08em;
+        }
+
+        /* ── Status indicator ── */
+        .status-bar {
+            margin-top: 0.8rem;
+            height: 2px;
+            border-radius: 2px;
+            background: rgba(180,140,90,0.08);
+            overflow: hidden;
+        }
+        .status-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s ease, background 0.6s ease;
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* ── Reduced motion ── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 460px) {
+            .time-card { padding: 1.6rem 1.2rem 1.4rem; }
+            .dial-area { width: 250px; height: 250px; }
+            .dial-ring { width: 196px; height: 196px; }
+            .needle { height: 86px; }
+            .era-name { font-size: 1.35rem; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas" aria-hidden="true"></canvas>
+
+    <main class="time-card" id="card" role="region" aria-label="Time Machine Card">
+        <!-- Corner screws -->
+        <div class="screw screw-tl"></div>
+        <div class="screw screw-tr"></div>
+        <div class="screw screw-bl"></div>
+        <div class="screw screw-br"></div>
+
+        <!-- Header -->
+        <header class="card-header">
+            <div class="deco-line"></div>
+            <h1>TIME MACHINE</h1>
+            <div class="deco-line"></div>
+        </header>
+
+        <!-- Dial -->
+        <div class="dial-area" id="dialArea">
+            <div class="dial-ring">
+                <div class="dial-escapement"></div>
+                <div class="dial-ticks" id="dialTicks"></div>
+            </div>
+            <div class="dial-inner-ring"></div>
+            <div id="markersContainer"></div>
+            <div class="needle-container" id="needleContainer">
+                <div class="needle"></div>
+                <div class="needle-pivot"></div>
+            </div>
+            <button class="travel-btn" id="travelBtn" aria-label="Travel to selected era" disabled>
+                <i class="fas fa-bolt"></i>
+            </button>
+        </div>
+
+        <!-- Era Info -->
+        <section class="info-section" id="infoSection">
+            <div class="era-year" id="eraYear"></div>
+            <h2 class="era-name" id="eraName"></h2>
+            <p class="era-desc" id="eraDesc"></p>
+        </section>
+
+        <!-- Navigation -->
+        <nav class="nav-section" aria-label="Era navigation">
+            <button class="nav-btn" id="prevBtn" aria-label="Previous era">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="era-dots" id="eraDots" role="tablist"></div>
+            <button class="nav-btn" id="nextBtn" aria-label="Next era">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </nav>
+
+        <!-- Status bar -->
+        <div class="status-bar"><div class="status-fill" id="statusFill"></div></div>
+
+        <!-- Footer -->
+        <footer class="card-footer">Select era &middot; Press TRAVEL &middot; Observe the shift</footer>
+    </main>
+
+    <script>
+        /* ══════════════════════════════════════
+           Era Data
+           ══════════════════════════════════════ */
+        const eras = [
+            {
+                name: "Ancient Egypt",
+                year: "3000 BC",
+                desc: "Pyramids rise from golden sands as pharaohs command the Nile's eternal flow.",
+                accent: "#d4a843",
+                accentGlow: "rgba(212,168,67,0.35)",
+                particleType: "sand"
+            },
+            {
+                name: "Medieval Era",
+                year: "1200 AD",
+                desc: "Stone castles pierce the mist. Knights ride through shadowed, ancient forests.",
+                accent: "#c45c3c",
+                accentGlow: "rgba(196,92,60,0.35)",
+                particleType: "firefly"
+            },
+            {
+                name: "Renaissance",
+                year: "1500 AD",
+                desc: "Art and science awaken. Da Vinci sketches the future by candlelight.",
+                accent: "#c4873b",
+                accentGlow: "rgba(196,135,59,0.35)",
+                particleType: "dust"
+            },
+            {
+                name: "Industrial Age",
+                year: "1800 AD",
+                desc: "Steam and iron reshape the world. Machines roar to life in vast iron halls.",
+                accent: "#b87333",
+                accentGlow: "rgba(184,115,51,0.35)",
+                particleType: "steam"
+            },
+            {
+                name: "Digital Age",
+                year: "2024 AD",
+                desc: "Information flows at light speed. Humanity's knowledge fits in a pocket.",
+                accent: "#00d4aa",
+                accentGlow: "rgba(0,212,170,0.35)",
+                particleType: "data"
+            },
+            {
+                name: "Deep Future",
+                year: "3000 AD",
+                desc: "Consciousness transcends form. Stars are no longer distant — they are home.",
+                accent: "#4dc9f6",
+                accentGlow: "rgba(77,201,246,0.35)",
+                particleType: "star"
+            }
+        ];
+
+        /* ══════════════════════════════════════
+           State
+           ══════════════════════════════════════ */
+        let currentIndex = 0;
+        let targetIndex = 0;
+        let isTraveling = false;
+        let needleAngleDeg = 0; // current visual angle of needle
+        let particles = [];
+        let vortexStrength = 0;
+        let particleOpacity = 1;
+
+        /* ══════════════════════════════════════
+           DOM References
+           ══════════════════════════════════════ */
+        const card = document.getElementById('card');
+        const needleContainer = document.getElementById('needleContainer');
+        const travelBtn = document.getElementById('travelBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const infoSection = document.getElementById('infoSection');
+        const eraYearEl = document.getElementById('eraYear');
+        const eraNameEl = document.getElementById('eraName');
+        const eraDescEl = document.getElementById('eraDesc');
+        const markersContainer = document.getElementById('markersContainer');
+        const eraDotsContainer = document.getElementById('eraDots');
+        const statusFill = document.getElementById('statusFill');
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        /* ══════════════════════════════════════
+           Canvas Setup
+           ══════════════════════════════════════ */
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H;
+
+        function resizeCanvas() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        /* ══════════════════════════════════════
+           Build Dial Markers
+           ══════════════════════════════════════ */
+        const dialRadius = window.innerWidth <= 460 ? 88 : 110;
+        const labelRadius = window.innerWidth <= 460 ? 108 : 132;
+        const markerElements = [];
+
+        eras.forEach((era, i) => {
+            const angle = (i * 60 - 90) * Math.PI / 180;
+            const mx = Math.cos(angle) * dialRadius;
+            const my = Math.sin(angle) * dialRadius;
+            const lx = Math.cos(angle) * labelRadius;
+            const ly = Math.sin(angle) * labelRadius;
+
+            const marker = document.createElement('div');
+            marker.className = 'marker';
+            marker.setAttribute('role', 'button');
+            marker.setAttribute('aria-label', era.name);
+            marker.setAttribute('tabindex', '0');
+
+            const dot = document.createElement('div');
+            dot.className = 'marker-dot active';
+            dot.style.transform = `translate(${mx - 7}px, ${my - 7}px)`;
+
+            const label = document.createElement('span');
+            label.className = 'marker-label active';
+            label.textContent = era.year;
+            label.style.transform = `translate(${lx}px, ${ly}px)`;
+
+            marker.appendChild(dot);
+            marker.appendChild(label);
+            markersContainer.appendChild(marker);
+            markerElements.push({ marker, dot, label });
+
+            marker.addEventListener('click', () => selectEra(i));
+            marker.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectEra(i); }
+            });
+        });
+
+        /* ══════════════════════════════════════
+           Build Dial Ticks
+           ══════════════════════════════════════ */
+        const ticksContainer = document.getElementById('dialTicks');
+        for (let i = 0; i < 60; i++) {
+            const tick = document.createElement('div');
+            tick.className = 'dial-tick';
+            const angle = (i * 6) * Math.PI / 180;
+            const isMajor = i % 10 === 0;
+            const len = isMajor ? 10 : 5;
+            const r = window.innerWidth <= 460 ? 88 : 110;
+            tick.style.height = len + 'px';
+            tick.style.opacity = isMajor ? '0.4' : '0.15';
+            tick.style.transform = `rotate(${i * 6}deg) translateY(-${r}px)`;
+            ticksContainer.appendChild(tick);
+        }
+
+        /* ══════════════════════════════════════
+           Build Era Dots
+           ══════════════════════════════════════ */
+        const dotElements = [];
+        eras.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'era-dot active';
+            dot.setAttribute('role', 'tab');
+            dot.setAttribute('aria-label', eras[i].name);
+            dot.addEventListener('click', () => selectEra(i));
+            eraDotsContainer.appendChild(dot);
+            dotElements.push(dot);
+        });
+
+        /* ══════════════════════════════════════
+           Update Visuals
+           ══════════════════════════════════════ */
+        function applyAccent(era) {
+            document.documentElement.style.setProperty('--accent', era.accent);
+            document.documentElement.style.setProperty('--accent-glow', era.accentGlow);
+        }
+
+        function updateInfo(index) {
+            const era = eras[index];
+            eraYearEl.textContent = era.year;
+            eraNameEl.textContent = era.name;
+            eraDescEl.textContent = era.desc;
+        }
+
+        function updateMarkerStates() {
+            markerElements.forEach((m, i) => {
+                m.dot.classList.remove('active', 'selected');
+                m.label.classList.remove('active', 'selected');
+                if (i === currentIndex) {
+                    m.dot.classList.add('active');
+                    m.label.classList.add('active');
+                } else if (i === targetIndex && i !== currentIndex) {
+                    m.dot.classList.add('selected');
+                    m.label.classList.add('selected');
+                }
+            });
+            dotElements.forEach((d, i) => {
+                d.classList.remove('active', 'target');
+                if (i === currentIndex) d.classList.add('active');
+                else if (i === targetIndex && i !== currentIndex) d.classList.add('target');
+            });
+        }
+
+        function updateNeedle(angleDeg) {
+            needleContainer.style.transform = `rotate(${angleDeg}deg)`;
+        }
+
+        function updateTravelBtn() {
+            travelBtn.disabled = (targetIndex === currentIndex) || isTraveling;
+        }
+
+        function updateStatusBar() {
+            const progress = ((targetIndex - currentIndex + eras.length) % eras.length) / eras.length * 100;
+            statusFill.style.width = (targetIndex === currentIndex ? 0 : progress) + '%';
+        }
+
+        /* ══════════════════════════════════════
+           Select Era (move needle, don't travel yet)
+           ══════════════════════════════════════ */
+        function selectEra(index) {
+            if (isTraveling) return;
+            targetIndex = index;
+            const targetAngle = index * 60;
+            // Use CSS transition for smooth movement
+            needleContainer.classList.remove('spinning');
+            updateNeedle(targetAngle);
+            needleAngleDeg = targetAngle;
+            updateMarkerStates();
+            updateTravelBtn();
+            updateStatusBar();
+        }
+
+        /* ══════════════════════════════════════
+           Travel Animation
+           ══════════════════════════════════════ */
+        function delay(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+
+        // Custom easing: ease-out with slight overshoot
+        function easeOutBack(t) {
+            const c1 = 1.70158;
+            const c3 = c1 + 1;
+            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        }
+
+        function animateNeedleJS(fromDeg, toDeg, durationMs) {
+            return new Promise(resolve => {
+                const start = performance.now();
+                needleContainer.classList.add('spinning');
+
+                function tick(now) {
+                    const elapsed = now - start;
+                    const t = Math.min(elapsed / durationMs, 1);
+                    const eased = easeOutBack(t);
+                    const current = fromDeg + (toDeg - fromDeg) * eased;
+                    updateNeedle(current);
+                    needleAngleDeg = current;
+
+                    if (t < 1) {
+                        requestAnimationFrame(tick);
+                    } else {
+                        needleContainer.classList.remove('spinning');
+                        resolve();
+                    }
+                }
+                requestAnimationFrame(tick);
+            });
+        }
+
+        async function travel() {
+            if (isTraveling || targetIndex === currentIndex) return;
+            isTraveling = true;
+            updateTravelBtn();
+
+            // Phase 1: Activate — card glows
+            card.classList.add('traveling');
+            vortexStrength = 0;
+            await delay(400);
+
+            // Phase 2: Spin needle with multiple rotations
+            const targetAngle = targetIndex * 60;
+            const extraSpins = 2; // full rotations
+            const fromAngle = needleAngleDeg;
+            // Always spin forward
+            let toAngle = targetAngle;
+            while (toAngle <= fromAngle) toAngle += 360;
+            toAngle += 360 * extraSpins;
+
+            // Start vortex during spin
+            const spinDuration = 2200;
+            vortexStrength = 1;
+
+            // Fade out info
+            infoSection.classList.add('fading');
+            particleOpacity = 0.3;
+
+            await animateNeedleJS(fromAngle, toAngle, spinDuration);
+
+            // Phase 3: Arrival
+            vortexStrength = 0;
+            particleOpacity = 1;
+
+            // Switch era
+            currentIndex = targetIndex;
+            applyAccent(eras[currentIndex]);
+            updateInfo(currentIndex);
+            updateMarkerStates();
+            updateStatusBar();
+
+            // Regenerate particles for new era
+            createParticles(eras[currentIndex].particleType);
+
+            // Flash effect
+            card.classList.remove('traveling');
+            card.classList.add('arriving', 'flash');
+            await delay(100);
+
+            // Fade in info
+            infoSection.classList.remove('fading');
+            await delay(500);
+
+            card.classList.remove('arriving', 'flash');
+            updateTravelBtn();
+            isTraveling = false;
+        }
+
+        /* ══════════════════════════════════════
+           Particle System
+           ══════════════════════════════════════ */
+        function createParticles(type) {
+            particles = [];
+            const count = 100;
+            for (let i = 0; i < count; i++) {
+                particles.push(makeParticle(type, true));
+            }
+        }
+
+        function makeParticle(type, randomY) {
+            const p = {
+                x: Math.random() * W,
+                y: randomY ? Math.random() * H : -10,
+                vx: 0, vy: 0,
+                size: 2, opacity: 0.5,
+                baseOpacity: 0.5,
+                phase: Math.random() * Math.PI * 2,
+                speed: 0.5 + Math.random() * 1,
+                life: 1
+            };
+
+            switch (type) {
+                case 'sand':
+                    p.size = 1.5 + Math.random() * 2;
+                    p.vy = 0.3 + Math.random() * 0.6;
+                    p.vx = (Math.random() - 0.5) * 0.3;
+                    p.baseOpacity = 0.2 + Math.random() * 0.4;
+                    p.opacity = p.baseOpacity;
+                    break;
+                case 'firefly':
+                    p.size = 2 + Math.random() * 3;
+                    p.vx = (Math.random() - 0.5) * 0.4;
+                    p.vy = (Math.random() - 0.5) * 0.4;
+                    p.baseOpacity = 0.1 + Math.random() * 0.6;
+                    p.opacity = p.baseOpacity;
+                    p.speed = 0.3 + Math.random() * 0.5;
+                    break;
+                case 'dust':
+                    p.size = 1 + Math.random() * 1.5;
+                    p.vy = -(0.1 + Math.random() * 0.3);
+                    p.vx = (Math.random() - 0.5) * 0.15;
+                    p.baseOpacity = 0.15 + Math.random() * 0.25;
+                    p.opacity = p.baseOpacity;
+                    break;
+                case 'steam':
+                    p.size = 4 + Math.random() * 8;
+                    p.vy = -(0.4 + Math.random() * 0.8);
+                    p.vx = (Math.random() - 0.5) * 0.3;
+                    p.baseOpacity = 0.05 + Math.random() * 0.12;
+                    p.opacity = p.baseOpacity;
+                    p.y = randomY ? Math.random() * H : H + 10;
+                    break;
+                case 'data':
+                    p.size = 1 + Math.random() * 2;
+                    p.vy = 1.5 + Math.random() * 3;
+                    p.vx = (Math.random() - 0.5) * 0.2;
+                    p.baseOpacity = 0.2 + Math.random() * 0.5;
+                    p.opacity = p.baseOpacity;
+                    p.isRect = true;
+                    break;
+                case 'star':
+                    p.size = 0.8 + Math.random() * 2.5;
+                    p.vx = 0; p.vy = 0;
+                    p.baseOpacity = 0.2 + Math.random() * 0.6;
+                    p.opacity = p.baseOpacity;
+                    p.twinkleSpeed = 0.5 + Math.random() * 2;
+                    break;
+            }
+            return p;
+        }
+
+        function updateParticles() {
+            const type = eras[currentIndex].particleType;
+            const cx = W / 2, cy = H / 2;
+
+            particles.forEach(p => {
+                // Vortex effect during travel
+                if (vortexStrength > 0) {
+                    const dx = cx - p.x;
+                    const dy = cy - p.y;
+                    const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+                    const force = vortexStrength * 3 / dist;
+                    p.vx += (dx / dist) * force;
+                    p.vy += (dy / dist) * force;
+                    p.vx *= 0.96;
+                    p.vy *= 0.96;
+                } else {
+                    // Normal behavior per type
+                    switch (type) {
+                        case 'sand':
+                            p.x += p.vx + Math.sin(p.phase + performance.now() * 0.001) * 0.2;
+                            p.y += p.vy;
+                            break;
+                        case 'firefly':
+                            p.vx += (Math.random() - 0.5) * 0.08;
+                            p.vy += (Math.random() - 0.5) * 0.08;
+                            p.vx *= 0.98; p.vy *= 0.98;
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.opacity = p.baseOpacity * (0.4 + 0.6 * Math.sin(performance.now() * 0.002 * p.speed + p.phase) * 0.5 + 0.5);
+                            break;
+                        case 'dust':
+                            p.x += p.vx + Math.sin(p.phase + performance.now() * 0.0005) * 0.1;
+                            p.y += p.vy;
+                            break;
+                        case 'steam':
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.life -= 0.003;
+                            p.opacity = p.baseOpacity * Math.max(0, p.life);
+                            break;
+                        case 'data':
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            break;
+                        case 'star':
+                            p.opacity = p.baseOpacity * (0.3 + 0.7 * (Math.sin(performance.now() * 0.001 * p.twinkleSpeed + p.phase) * 0.5 + 0.5));
+                            break;
+                    }
+                }
+
+                // Wrap around
+                if (p.y > H + 20) { p.y = -20; p.x = Math.random() * W; p.life = 1; }
+                if (p.y < -20) { p.y = H + 20; p.x = Math.random() * W; }
+                if (p.x > W + 20) p.x = -20;
+                if (p.x < -20) p.x = W + 20;
+            });
+        }
+
+        function drawParticles() {
+            ctx.clearRect(0, 0, W, H);
+            const accent = eras[currentIndex].accent;
+            const alpha = particleOpacity;
+
+            particles.forEach(p => {
+                const op = Math.max(0, Math.min(1, p.opacity * alpha));
+                if (op < 0.01) return;
+
+                ctx.globalAlpha = op;
+
+                if (p.isRect) {
+                    ctx.fillStyle = accent;
+                    ctx.fillRect(p.x, p.y, p.size * 0.6, p.size * 2.5);
+                } else if (p.size > 5) {
+                    // Soft circle for steam
+                    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, Math.max(0.1, p.size));
+                    grad.addColorStop(0, 'rgba(200,190,175,0.4)');
+                    grad.addColorStop(1, 'rgba(200,190,175,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, Math.max(0.1, p.size), 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (eras[currentIndex].particleType === 'star' && p.size > 1.5) {
+                    // Glowing star
+                    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, Math.max(0.1, p.size * 2));
+                    grad.addColorStop(0, accent);
+                    grad.addColorStop(0.4, accent);
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, Math.max(0.1, p.size * 2), 0, Math.PI * 2);
+                    ctx.fill();
+                    // Core
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, Math.max(0.1, p.size * 0.5), 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = accent;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, Math.max(0.1, p.size), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            ctx.globalAlpha = 1;
+        }
+
+        /* ══════════════════════════════════════
+           Animation Loop
+           ══════════════════════════════════════ */
+        function animate() {
+            updateParticles();
+            drawParticles();
+            requestAnimationFrame(animate);
+        }
+
+        /* ══════════════════════════════════════
+           Event Listeners
+           ══════════════════════════════════════ */
+        travelBtn.addEventListener('click', travel);
+
+        prevBtn.addEventListener('click', () => {
+            const newIndex = (targetIndex - 1 + eras.length) % eras.length;
+            selectEra(newIndex);
+        });
+
+        nextBtn.addEventListener('click', () => {
+            const newIndex = (targetIndex + 1) % eras.length;
+            selectEra(newIndex);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', e => {
+            if (isTraveling) return;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                selectEra((targetIndex - 1 + eras.length) % eras.length);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                selectEra((targetIndex + 1) % eras.length);
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                if (document.activeElement === travelBtn) {
+                    e.preventDefault();
+                    travel();
+                }
+            }
+        });
+
+        /* ══════════════════════════════════════
+           Init
+           ══════════════════════════════════════ */
+        function init() {
+            applyAccent(eras[currentIndex]);
+            updateInfo(currentIndex);
+            updateNeedle(0);
+            updateMarkerStates();
+            updateTravelBtn();
+            updateStatusBar();
+            createParticles(eras[currentIndex].particleType);
+            animate();
+        }
+
+        init();
+    </script>
+</body>
+</html>

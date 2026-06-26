@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightsaber Cursor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --saber-core: #ffffff;
+            --saber-inner: #66ff88;
+            --saber-mid: #00ff44;
+            --saber-outer: #00cc33;
+            --saber-rgb: 0, 255, 68;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            overflow: hidden;
+            background: #06060c;
+            cursor: none;
+            font-family: 'Rajdhani', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        canvas#bg {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+        }
+
+        /* Flash overlay */
+        #flash {
+            position: fixed;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            background: var(--saber-mid);
+            transition: opacity 0.06s ease-out;
+        }
+        #flash.active { opacity: 0.35; }
+
+        /* Shockwave rings */
+        .shockwave {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 4;
+            border: 2px solid var(--saber-mid);
+            transform: translate(-50%, -50%) scale(0);
+            animation: sw-expand 0.7s ease-out forwards;
+        }
+        @keyframes sw-expand {
+            0% { width: 0; height: 0; opacity: 0.9; transform: translate(-50%, -50%) scale(0); }
+            100% { width: 280px; height: 280px; opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Lightsaber */
+        #lightsaber {
+            position: fixed;
+            z-index: 10;
+            pointer-events: none;
+            transform-origin: 50% 3px;
+            will-change: transform, left, top, opacity;
+            filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));
+            transition: opacity 0.3s;
+        }
+
+        .blade-wrap {
+            width: 16px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        .blade {
+            width: 5px;
+            height: 0;
+            border-radius: 3px 3px 1px 1px;
+            background: linear-gradient(180deg, var(--saber-core) 0%, var(--saber-inner) 12%, var(--saber-mid) 45%, var(--saber-outer) 100%);
+            box-shadow:
+                0 0 4px 2px var(--saber-inner),
+                0 0 14px 5px var(--saber-mid),
+                0 0 35px 10px var(--saber-outer),
+                0 0 70px 20px var(--saber-outer),
+                0 0 120px 40px rgba(var(--saber-rgb), 0.12);
+            transition: height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+        }
+        .blade.ignited { height: 185px; }
+
+        /* Flicker overlay */
+        .blade.ignited::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(180deg,
+                rgba(255,255,255,0.35) 0%,
+                transparent 25%,
+                rgba(255,255,255,0.08) 55%,
+                transparent 100%);
+            animation: flicker 0.08s infinite alternate;
+        }
+        /* Core hot-spot */
+        .blade.ignited::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            width: 2px; height: 100%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 60%);
+            border-radius: 1px;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.75; }
+            50% { opacity: 1; }
+            100% { opacity: 0.85; }
+        }
+
+        /* Hilt assembly */
+        .hilt {
+            width: 14px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Emitter */
+        .hilt-emitter {
+            height: 8px;
+            background: linear-gradient(180deg, #777 0%, #555 40%, #3a3a3a 100%);
+            border-radius: 2px 2px 0 0;
+            position: relative;
+        }
+        .hilt-emitter::before {
+            content: '';
+            position: absolute;
+            top: 1px; left: 1px; right: 1px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            border-radius: 1px;
+        }
+
+        /* Neck */
+        .hilt-neck {
+            height: 5px;
+            background: linear-gradient(180deg, #3a3a3a, #4a4a4a);
+        }
+
+        /* Body */
+        .hilt-body {
+            height: 28px;
+            background: linear-gradient(135deg, #2e2e2e 0%, #4a4a4a 25%, #333 50%, #555 75%, #2a2a2a 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .hilt-body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                #222 0px, #222 3px,
+                #444 3px, #444 5px,
+                #333 5px, #333 7px);
+            opacity: 0.7;
+        }
+        /* Metallic shine sweep */
+        .hilt-body::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+        }
+
+        /* Activation switch */
+        .hilt-switch {
+            position: absolute;
+            right: -3px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 5px;
+            height: 8px;
+            background: linear-gradient(180deg, #666, #444);
+            border-radius: 0 2px 2px 0;
+            z-index: 2;
+        }
+
+        /* Pommel */
+        .hilt-pommel {
+            height: 10px;
+            background: linear-gradient(180deg, #3a3a3a 0%, #222 50%, #1a1a1a 100%);
+            border-radius: 0 0 5px 5px;
+            position: relative;
+        }
+        .hilt-pommel::before {
+            content: '';
+            position: absolute;
+            top: 2px; left: 50%;
+            transform: translateX(-50%);
+            width: 6px; height: 2px;
+            background: #555;
+            border-radius: 1px;
+        }
+
+        /* Indicator LED */
+        .hilt-led {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #222;
+            transition: all 0.3s;
+            z-index: 2;
+        }
+        .hilt-led.on {
+            background: var(--saber-mid);
+            box-shadow: 0 0 4px var(--saber-mid), 0 0 8px var(--saber-outer);
+        }
+
+        /* Screen shake */
+        .shake {
+            animation: shake 0.15s ease-out;
+        }
+        @keyframes shake {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(-3px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-1px, 1px); }
+            100% { transform: translate(0,0); }
+        }
+
+        /* UI */
+        #ui {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        #instructions {
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            text-align: center;
+            line-height: 1.6;
+        }
+        #instructions.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        #color-picker {
+            display: flex;
+            gap: 10px;
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 40px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .color-swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: none;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
+        }
+        .color-swatch:hover { transform: scale(1.25); }
+        .color-swatch.active {
+            border-color: rgba(255,255,255,0.9);
+            box-shadow: 0 0 10px var(--sw-color), 0 0 20px var(--sw-color);
+        }
+
+        /* Title */
+        #brand {
+            position: fixed;
+            top: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.08);
+            pointer-events: none;
+        }
+
+        /* Vignette */
+        #vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blade.ignited::before { animation: none; }
+            .blade { transition: none; }
+            .shockwave { animation: none; display: none; }
+            .shake { animation: none; }
+        }
+
+        @media (max-width: 600px) {
+            #brand { font-size: 10px; letter-spacing: 6px; }
+            .color-swatch { width: 18px; height: 18px; }
+            #color-picker { gap: 8px; padding: 6px 14px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg"></canvas>
+    <div id="vignette"></div>
+    <div id="flash"></div>
+
+    <div id="lightsaber">
+        <div class="blade-wrap">
+            <div class="blade" id="blade"></div>
+        </div>
+        <div class="hilt">
+            <div class="hilt-emitter"></div>
+            <div class="hilt-neck"></div>
+            <div class="hilt-body">
+                <div class="hilt-switch"></div>
+            </div>
+            <div class="hilt-pommel">
+                <div class="hilt-led" id="hilt-led"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="brand">Lightsaber</div>
+
+    <div id="ui">
+        <div id="instructions">Click to ignite<br><span style="font-size:11px;opacity:0.6;letter-spacing:1px">Double-click for clash</span></div>
+        <div id="color-picker"></div>
+    </div>
+
+    <script>
+        /* ============================================
+           Configuration & Color Definitions
+        ============================================ */
+        const SABER_COLORS = {
+            green:  { core:'#ffffff', inner:'#66ff88', mid:'#00ff44', outer:'#00cc33', rgb:[0,255,68],   btn:'#00ff44', name:'Green' },
+            blue:   { core:'#ffffff', inner:'#88ccff', mid:'#0099ff', outer:'#0066cc', rgb:[0,153,255],  btn:'#0099ff', name:'Blue' },
+            red:    { core:'#ffffff', inner:'#ff7777', mid:'#ff0033', outer:'#cc0022', rgb:[255,0,51],   btn:'#ff0033', name:'Red' },
+            purple: { core:'#ffffff', inner:'#cc88ff', mid:'#aa00ff', outer:'#7700bb', rgb:[170,0,255],  btn:'#aa00ff', name:'Purple' },
+            white:  { core:'#ffffff', inner:'#eeeef8', mid:'#ccccee', outer:'#aaaacc', rgb:[200,200,230],btn:'#ccccee', name:'White' },
+            orange: { core:'#ffffff', inner:'#ffcc66', mid:'#ff8800', outer:'#cc6600', rgb:[255,136,0],  btn:'#ff8800', name:'Orange' },
+        };
+
+        const BLADE_LENGTH = 185;
+        const MAX_TRAIL = 35;
+        const MAX_PARTICLES = 200;
+        const EPS = 0.001;
+
+        /* ============================================
+           DOM References
+        ============================================ */
+        const canvas   = document.getElementById('bg');
+        const ctx      = canvas.getContext('2d');
+        const saberEl  = document.getElementById('lightsaber');
+        const bladeEl  = document.getElementById('blade');
+        const flashEl  = document.getElementById('flash');
+        const ledEl    = document.getElementById('hilt-led');
+        const instrEl  = document.getElementById('instructions');
+        const pickerEl = document.getElementById('color-picker');
+
+        let W, H;
+        function resize() {
+            W = canvas.width  = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        /* ============================================
+           State
+        ============================================ */
+        let currentColorKey = 'green';
+        let color = SABER_COLORS[currentColorKey];
+        let ignited = false;
+        let mouseX = -100, mouseY = -100;
+        let smoothX = -100, smoothY = -100;
+        let prevX = -100, prevY = -100;
+        let velocity = 0;
+        let targetAngle = 0;
+        let currentAngle = 0;
+        let mouseOnScreen = false;
+        let time = 0;
+
+        /* ============================================
+           Color Picker UI
+        ============================================ */
+        Object.keys(SABER_COLORS).forEach(key => {
+            const sw = document.createElement('div');
+            sw.className = 'color-swatch' + (key === currentColorKey ? ' active' : '');
+            sw.style.background = SABER_COLORS[key].btn;
+            sw.style.setProperty('--sw-color', SABER_COLORS[key].btn);
+            sw.setAttribute('aria-label', SABER_COLORS[key].name + ' saber');
+            sw.setAttribute('role', 'button');
+            sw.setAttribute('tabindex', '0');
+            sw.addEventListener('click', e => { e.stopPropagation(); switchColor(key); });
+            sw.addEventListener('keydown', e => { if(e.key==='Enter') { e.stopPropagation(); switchColor(key); }});
+            pickerEl.appendChild(sw);
+        });
+
+        function switchColor(key) {
+            currentColorKey = key;
+            color = SABER_COLORS[key];
+            const root = document.documentElement.style;
+            root.setProperty('--saber-core', color.core);
+            root.setProperty('--saber-inner', color.inner);
+            root.setProperty('--saber-mid', color.mid);
+            root.setProperty('--saber-outer', color.outer);
+            root.setProperty('--saber-rgb', color.rgb.join(', '));
+            updateBladeGlow();
+            document.querySelectorAll('.color-swatch').forEach((s, i) => {
+                s.classList.toggle('active', Object.keys(SABER_COLORS)[i] === key);
+            });
+        }
+
+        function updateBladeGlow() {
+            const r = color.rgb;
+            bladeEl.style.boxShadow = [
+                `0 0 4px 2px ${color.inner}`,
+                `0 0 14px 5px ${color.mid}`,
+                `0 0 35px 10px ${color.outer}`,
+                `0 0 70px 20px ${color.outer}`,
+                `0 0 120px 40px rgba(${r[0]},${r[1]},${r[2]},0.12)`,
+            ].join(',');
+        }
+        updateBladeGlow();
+
+        /* ============================================
+           Starfield
+        ============================================ */
+        const stars = Array.from({ length: 250 }, () => ({
+            x: Math.random() * 3000,
+            y: Math.random() * 3000,
+            size: Math.random() * 1.4 + 0.4,
+            brightness: Math.random() * 0.5 + 0.25,
+            speed: Math.random() * 0.015 + 0.005,
+            offset: Math.random() * Math.PI * 2,
+        }));
+
+        /* ============================================
+           Nebula blobs (painted once, recomposed)
+        ============================================ */
+        const nebulaCanvas = document.createElement('canvas');
+        const nCtx = nebulaCanvas.getContext('2d');
+        function paintNebula() {
+            nebulaCanvas.width = W;
+            nebulaCanvas.height = H;
+            const blobs = [
+                { x: W * 0.2, y: H * 0.3, r: 350, c: 'rgba(20,5,40,0.4)' },
+                { x: W * 0.8, y: H * 0.7, r: 400, c: 'rgba(5,15,35,0.35)' },
+                { x: W * 0.5, y: H * 0.1, r: 250, c: 'rgba(10,25,20,0.3)' },
+                { x: W * 0.9, y: H * 0.2, r: 200, c: 'rgba(30,10,15,0.25)' },
+            ];
+            blobs.forEach(b => {
+                const g = nCtx.createRadialGradient(b.x, b.y, 0, b.x, b.y, Math.max(EPS, b.r));
+                g.addColorStop(0, b.c);
+                g.addColorStop(1, 'rgba(0,0,0,0)');
+                nCtx.fillStyle = g;
+                nCtx.fillRect(0, 0, W, H);
+            });
+        }
+        paintNebula();
+        window.addEventListener('resize', paintNebula);
+
+        /* ============================================
+           Trail
+        ============================================ */
+        const trail = [];
+
+        /* ============================================
+           Particles
+        ============================================ */
+        const particles = [];
+
+        function spawnParticle(x, y, vx, vy, size, life) {
+            if (particles.length >= MAX_PARTICLES) return;
+            particles.push({ x, y, vx, vy, size, life, maxLife: life });
+        }
+
+        function spawnBurst(x, y, count, speedMul) {
+            for (let i = 0; i < count; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const sp = (Math.random() * 4 + 1) * (speedMul || 1);
+                spawnParticle(
+                    x + (Math.random() - 0.5) * 6,
+                    y + (Math.random() - 0.5) * 6,
+                    Math.cos(a) * sp,
+                    Math.sin(a) * sp,
+                    Math.random() * 2.2 + 0.6,
+                    25 + Math.random() * 25
+                );
+            }
+        }
+
+        /* ============================================
+           Shockwave effect
+        ============================================ */
+        function spawnShockwave(x, y) {
+            const el = document.createElement('div');
+            el.className = 'shockwave';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.borderColor = color.mid;
+            document.body.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
+
+        /* ============================================
+           Flash helper
+        ============================================ */
+        function flash(duration) {
+            flashEl.classList.add('active');
+            setTimeout(() => flashEl.classList.remove('active'), duration || 100);
+        }
+
+        /* ============================================
+           Ignite / Retract
+        ============================================ */
+        function toggleIgnite() {
+            if (!ignited) {
+                ignited = true;
+                bladeEl.classList.add('ignited');
+                ledEl.classList.add('on');
+                updateBladeGlow();
+                flash(120);
+                spawnShockwave(mouseX, mouseY);
+                setTimeout(() => spawnShockwave(mouseX, mouseY), 80);
+                spawnBurst(mouseX, mouseY, 35, 1);
+                instrEl.classList.add('hidden');
+            } else {
+                ignited = false;
+                bladeEl.classList.remove('ignited');
+                ledEl.classList.remove('on');
+                flash(80);
+                spawnBurst(mouseX, mouseY, 15, 0.6);
+            }
+        }
+
+        /* ============================================
+           Clash effect
+        ============================================ */
+        function clashEffect() {
+            if (!ignited) return;
+            flash(180);
+            spawnShockwave(mouseX, mouseY);
+            setTimeout(() => spawnShockwave(mouseX, mouseY), 60);
+            setTimeout(() => spawnShockwave(mouseX, mouseY), 130);
+            spawnBurst(mouseX, mouseY, 70, 2);
+            document.body.classList.add('shake');
+            setTimeout(() => document.body.classList.remove('shake'), 200);
+        }
+
+        /* ============================================
+           Input Events
+        ============================================ */
+        document.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (!mouseOnScreen) mouseOnScreen = true;
+        });
+        document.addEventListener('mouseleave', () => { mouseOnScreen = false; });
+        document.addEventListener('mouseenter', () => { mouseOnScreen = true; });
+
+        document.addEventListener('click', e => {
+            if (e.target.closest('#color-picker') || e.target.closest('#ui')) return;
+            toggleIgnite();
+        });
+        document.addEventListener('dblclick', e => {
+            if (e.target.closest('#color-picker') || e.target.closest('#ui')) return;
+            clashEffect();
+        });
+
+        /* Touch support */
+        document.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            mouseX = t.clientX;
+            mouseY = t.clientY;
+            smoothX = mouseX; smoothY = mouseY;
+            mouseOnScreen = true;
+            if (!e.target.closest('#color-picker') && !e.target.closest('#ui')) {
+                toggleIgnite();
+            }
+        }, { passive: true });
+        document.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            mouseX = t.clientX;
+            mouseY = t.clientY;
+        }, { passive: false });
+        document.addEventListener('touchend', () => { mouseOnScreen = false; });
+
+        /* ============================================
+           Ambient energy wisps around blade tip
+        ============================================ */
+        function spawnWisp() {
+            if (!ignited || !mouseOnScreen) return;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 15 + 5;
+            spawnParticle(
+                smoothX + Math.cos(angle) * dist,
+                smoothY + Math.sin(angle) * dist,
+                Math.cos(angle) * 0.3,
+                Math.sin(angle) * 0.3 - 0.3,
+                Math.random() * 1 + 0.3,
+                18 + Math.random() * 12
+            );
+        }
+
+        /* ============================================
+           Main Animation Loop
+        ============================================ */
+        function animate() {
+            requestAnimationFrame(animate);
+            time++;
+
+            /* Smooth position */
+            smoothX += (mouseX - smoothX) * 0.14;
+            smoothY += (mouseY - smoothY) * 0.14;
+
+            /* Velocity */
+            const dx = smoothX - prevX;
+            const dy = smoothY - prevY;
+            velocity = Math.sqrt(dx * dx + dy * dy);
+            prevX = smoothX;
+            prevY = smoothY;
+
+            /* Angle from movement direction */
+            if (velocity > 1.5) {
+                targetAngle = Math.atan2(dy, dx) - Math.PI * 0.5;
+            }
+            let angleDiff = targetAngle - currentAngle;
+            while (angleDiff > Math.PI)  angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            currentAngle += angleDiff * 0.07;
+
+            /* Position lightsaber DOM element */
+            saberEl.style.left = (smoothX - 8) + 'px';
+            saberEl.style.top  = (smoothY - 3) + 'px';
+            saberEl.style.transform = `rotate(${currentAngle}rad)`;
+            saberEl.style.opacity = mouseOnScreen ? '1' : '0';
+
+            /* Blade vibration when ignited */
+            if (ignited) {
+                const vibrate = (Math.random() - 0.5) * 0.4;
+                bladeEl.style.marginLeft = vibrate + 'px';
+            } else {
+                bladeEl.style.marginLeft = '0px';
+            }
+
+            /* Spawn movement particles */
+            if (ignited && velocity > 2.5) {
+                const count = Math.min(Math.floor(velocity / 2.5), 6);
+                for (let i = 0; i < count; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const sp = Math.random() * 1.8 + 0.4;
+                    spawnParticle(
+                        smoothX + (Math.random() - 0.5) * 12,
+                        smoothY + (Math.random() - 0.5) * 12,
+                        Math.cos(a) * sp,
+                        Math.sin(a) * sp,
+                        Math.random() * 1.6 + 0.4,
+                        18 + Math.random() * 14
+                    );
+                }
+            }
+
+            /* Ambient wisps */
+            if (time % 4 === 0) spawnWisp();
+
+            /* Trail */
+            if (ignited && velocity > 0.4) {
+                trail.push({ x: smoothX, y: smoothY, life: 1 });
+                if (trail.length > MAX_TRAIL) trail.shift();
+            }
+            for (let i = trail.length - 1; i >= 0; i--) {
+                trail[i].life -= 0.035;
+                if (trail[i].life <= 0) trail.splice(i, 1);
+            }
+
+            /* Update particles */
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.965;
+                p.vy *= 0.965;
+                p.vy += 0.015;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            /* ---- Canvas Drawing ---- */
+            ctx.clearRect(0, 0, W, H);
+
+            /* Nebula background */
+            ctx.drawImage(nebulaCanvas, 0, 0);
+
+            /* Stars */
+            for (const s of stars) {
+                const twinkle = Math.sin(time * s.speed + s.offset) * 0.3 + 0.7;
+                ctx.globalAlpha = s.brightness * twinkle;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(s.x % W, s.y % H, Math.max(EPS, s.size), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            /* Dynamic lighting from saber */
+            if (ignited && mouseOnScreen) {
+                const lr = 280 + velocity * 6;
+                const r = color.rgb;
+                const grad = ctx.createRadialGradient(smoothX, smoothY, 0, smoothX, smoothY, Math.max(EPS, lr));
+                grad.addColorStop(0, `rgba(${r[0]},${r[1]},${r[2]},0.07)`);
+                grad.addColorStop(0.4, `rgba(${r[0]},${r[1]},${r[2]},0.03)`);
+                grad.addColorStop(1, `rgba(${r[0]},${r[1]},${r[2]},0)`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            /* Trail glow */
+            if (trail.length > 1) {
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                for (let i = 1; i < trail.length; i++) {
+                    const t = trail[i];
+                    const tp = trail[i - 1];
+                    const alpha = t.life * 0.45;
+                    const width = Math.max(EPS, 4 * t.life);
+                    ctx.globalAlpha = alpha;
+                    ctx.strokeStyle = color.mid;
+                    ctx.lineWidth = width;
+                    ctx.shadowBlur = 12 * t.life;
+                    ctx.shadowColor = color.mid;
+                    ctx.beginPath();
+                    ctx.moveTo(tp.x, tp.y);
+                    ctx.lineTo(t.x, t.y);
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+            }
+
+            /* Particles */
+            for (const p of particles) {
+                const alpha = Math.max(0, p.life / p.maxLife);
+                const sz = Math.max(EPS, p.size * alpha);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = color.inner;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = color.mid;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+        }
+
+        animate();
+    </script>
+</body>
+</html>
