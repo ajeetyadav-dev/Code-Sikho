@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smoke Cursor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    overflow: hidden;
+    background: #0a0a0f;
+    cursor: none;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  canvas {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+
+  /* Subtle hint that fades out */
+  .hint {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.35);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 10;
+    animation: hintFade 4s ease-out forwards;
+  }
+
+  @keyframes hintFade {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    20% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Custom cursor dot */
+  .cursor-dot {
+    position: fixed;
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 180, 100, 0.9);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 100;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px rgba(255, 150, 50, 0.6), 0 0 20px rgba(255, 100, 30, 0.3);
+    transition: width 0.15s, height 0.15s, background 0.15s;
+  }
+
+  .cursor-dot.clicking {
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 220, 150, 1);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="smokeCanvas"></canvas>
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="hint">Move your mouse to conjure smoke &mdash; Click to burst</div>
+
+<script>
+// ─── Canvas Setup ───
+const canvas = document.getElementById('smokeCanvas');
+const ctx = canvas.getContext('2d');
+const cursorDot = document.getElementById('cursorDot');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Mouse State ───
+let mouse = { x: W / 2, y: H / 2, prevX: W / 2, prevY: H / 2, speed: 0, active: false };
+
+document.addEventListener('mousemove', (e) => {
+  mouse.prevX = mouse.x;
+  mouse.prevY = mouse.y;
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  mouse.speed = Math.hypot(mouse.x - mouse.prevX, mouse.y - mouse.prevY);
+  mouse.active = true;
+  cursorDot.style.left = e.clientX + 'px';
+  cursorDot.style.top = e.clientY + 'px';
+});
+
+document.addEventListener('mouseleave', () => { mouse.active = false; });
+document.addEventListener('mouseenter', () => { mouse.active = true; });
+
+document.addEventListener('mousedown', (e) => {
+  cursorDot.classList.add('clicking');
+  // Burst: spawn a cluster of particles
+  for (let i = 0; i < 35; i++) {
+    spawnSmokeBurst(e.clientX, e.clientY);
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  cursorDot.classList.remove('clicking');
+});
+
+// ─── Smoke Particle Pool ───
+const MAX_PARTICLES = 1200;
+const particles = [];
+
+// Pre-render smoke textures for performance
+const smokeTextures = [];
+const TEXTURE_SIZE = 128;
+
+function createSmokeTexture(baseR, baseG, baseB, alpha) {
+  const c = document.createElement('canvas');
+  c.width = TEXTURE_SIZE;
+  c.height = TEXTURE_SIZE;
+  const cx = c.getContext('2d');
+  const half = TEXTURE_SIZE / 2;
+
+  // Multi-layered radial gradient for soft smoke
+  const grad = cx.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0, `rgba(${baseR},${baseG},${baseB},${alpha})`);
+  grad.addColorStop(0.3, `rgba(${baseR},${baseG},${baseB},${alpha * 0.5})`);
+  grad.addColorStop(0.6, `rgba(${baseR},${baseG},${baseB},${alpha * 0.15})`);
+  grad.addColorStop(1, `rgba(${baseR},${baseG},${baseB},0)`);
+
+  cx.fillStyle = grad;
+  cx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+  return c;
+}
+
+// Warm smoke palette variations
+const smokeColors = [
+  [200, 190, 180],  // Light ash
+  [170, 160, 150],  // Medium gray
+  [140, 130, 120],  // Darker smoke
+  [220, 200, 170],  // Warm ember tint
+  [180, 170, 165],  // Cool smoke
+  [160, 140, 120],  // Brownish smoke
+  [100, 95, 90],    // Deep dark smoke
+  [230, 210, 190],  // Bright wispy
+];
+
+for (const [r, g, b] of smokeColors) {
+  smokeTextures.push(createSmokeTexture(r, g, b, 0.5));
+  smokeTextures.push(createSmokeTexture(r, g, b, 0.35));
+}
+
+// ─── Simplex-like noise for turbulence ───
+function noise2D(x, y) {
+  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return (n - Math.floor(n)) * 2 - 1;
+}
+
+function fbm(x, y, t) {
+  let val = 0;
+  let amp = 1;
+  let freq = 1;
+  for (let i = 0; i < 3; i++) {
+    val += amp * noise2D(x * freq + t * 0.3, y * freq + t * 0.2);
+    amp *= 0.5;
+    freq *= 2.1;
+  }
+  return val;
+}
+
+// ─── Particle Class ───
+class SmokeParticle {
+  constructor() { this.alive = false; }
+
+  init(x, y, vx, vy, size, life, textureIdx, depth) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.size = size;
+    this.startSize = size;
+    this.maxLife = life;
+    this.life = life;
+    this.textureIdx = textureIdx;
+    this.depth = depth; // 0 = far, 1 = near
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.02;
+    this.turbOffset = Math.random() * 1000;
+    this.alive = true;
+  }
+}
+
+// Pre-allocate
+for (let i = 0; i < MAX_PARTICLES; i++) {
+  particles.push(new SmokeParticle());
+}
+
+function getDeadParticle() {
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    if (!particles[i].alive) return particles[i];
+  }
+  return null;
+}
+
+// ─── Spawn Functions ───
+function spawnSmokeTrail(x, y, speed) {
+  const p = getDeadParticle();
+  if (!p) return;
+
+  // More particles when moving faster
+  const count = Math.min(4, 1 + Math.floor(speed / 8));
+  for (let c = 0; c < count; c++) {
+    const pp = c === 0 ? p : getDeadParticle();
+    if (!pp) break;
+
+    const depth = Math.random();
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * 4;
+    const px = x + Math.cos(angle) * dist;
+    const py = y + Math.sin(angle) * dist;
+
+    // Drift: upward + slight random horizontal
+    const baseVy = -(0.3 + Math.random() * 0.8);
+    const baseVx = (Math.random() - 0.5) * 0.4;
+
+    // Add mouse direction influence
+    const dx = x - mouse.prevX;
+    const dy = y - mouse.prevY;
+    const dirVx = dx * 0.05 * (Math.random() * 0.5);
+    const dirVy = dy * 0.05 * (Math.random() * 0.5);
+
+    const size = 20 + Math.random() * 40 + speed * 0.8;
+    const life = 60 + Math.random() * 80 + speed * 1.5;
+    const texIdx = Math.floor(Math.random() * smokeTextures.length);
+
+    pp.init(px, py, baseVx + dirVx, baseVy + dirVy, size, life, texIdx, depth);
+  }
+}
+
+function spawnSmokeBurst(x, y) {
+  const p = getDeadParticle();
+  if (!p) return;
+
+  const depth = Math.random();
+  const angle = Math.random() * Math.PI * 2;
+  const force = 1 + Math.random() * 3;
+  const vx = Math.cos(angle) * force;
+  const vy = Math.sin(angle) * force - 1.5; // bias upward
+  const size = 30 + Math.random() * 60;
+  const life = 80 + Math.random() * 100;
+  const texIdx = Math.floor(Math.random() * smokeTextures.length);
+
+  p.init(
+    x + (Math.random() - 0.5) * 10,
+    y + (Math.random() - 0.5) * 10,
+    vx, vy, size, life, texIdx, depth
+  );
+}
+
+// ─── Ambient floating smoke (background atmosphere) ───
+let ambientTimer = 0;
+function spawnAmbient() {
+  const p = getDeadParticle();
+  if (!p) return;
+
+  const x = Math.random() * W;
+  const y = H + 50;
+  const size = 60 + Math.random() * 120;
+  const life = 200 + Math.random() * 300;
+  const texIdx = Math.floor(Math.random() * smokeTextures.length);
+
+  p.init(x, y, (Math.random() - 0.5) * 0.3, -(0.2 + Math.random() * 0.4), size, life, texIdx, 0);
+}
+
+// ─── Animation Loop ───
+let time = 0;
+let lastTime = performance.now();
+let spawnAccumulator = 0;
+
+function update(dt) {
+  time += dt * 0.01;
+
+  // Spawn trail particles
+  if (mouse.active && mouse.speed > 0.5) {
+    spawnAccumulator += mouse.speed * dt * 0.06;
+    while (spawnAccumulator >= 1) {
+      spawnSmokeTrail(mouse.x, mouse.y, mouse.speed);
+      spawnAccumulator -= 1;
+    }
+  }
+
+  // Decay mouse speed naturally
+  mouse.speed *= 0.92;
+
+  // Ambient smoke
+  ambientTimer += dt;
+  if (ambientTimer > 300) {
+    ambientTimer = 0;
+    spawnAmbient();
+  }
+
+  // Update particles
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    const p = particles[i];
+    if (!p.alive) continue;
+
+    p.life -= dt * 0.06;
+    if (p.life <= 0) {
+      p.alive = false;
+      continue;
+    }
+
+    const lifeRatio = p.life / p.maxLife;
+
+    // Turbulence
+    const turbX = fbm(p.x * 0.005, p.y * 0.005, time + p.turbOffset) * 0.5;
+    const turbY = fbm(p.x * 0.005 + 100, p.y * 0.005, time + p.turbOffset) * 0.3;
+
+    // Apply forces
+    p.vx += turbX * dt * 0.003;
+    p.vy += turbY * dt * 0.003 - dt * 0.0003; // buoyancy
+
+    // Damping
+    p.vx *= 0.995;
+    p.vy *= 0.995;
+
+    p.x += p.vx * dt * 0.06;
+    p.y += p.vy * dt * 0.06;
+
+    // Smoke expands over time
+    const expandFactor = 1 + (1 - lifeRatio) * 2.5;
+    p.size = p.startSize * expandFactor;
+
+    p.rotation += p.rotSpeed;
+
+    // Kill if way off screen
+    if (p.y < -200 || p.x < -200 || p.x > W + 200) {
+      p.alive = false;
+    }
+  }
+}
+
+function draw() {
+  // Clear with very slight trail for motion blur feel
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.25)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw smoke with additive blending for glow
+  ctx.globalCompositeOperation = 'screen';
+
+  // Sort by depth for proper layering (far first)
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    const p = particles[i];
+    if (!p.alive) continue;
+
+    const lifeRatio = p.life / p.maxLife;
+    // Opacity curve: fade in quickly, sustain, then fade out
+    let opacity;
+    if (lifeRatio > 0.85) {
+      opacity = (1 - lifeRatio) / 0.15; // fade in
+    } else {
+      opacity = Math.pow(lifeRatio / 0.85, 1.5); // fade out
+    }
+
+    // Depth-based opacity (far = more transparent)
+    opacity *= 0.15 + p.depth * 0.25;
+    opacity = Math.max(0, Math.min(1, opacity));
+
+    if (opacity < 0.005) continue;
+
+    const tex = smokeTextures[p.textureIdx];
+    const drawSize = p.size * 2;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.globalAlpha = opacity;
+    ctx.drawImage(tex, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+    ctx.restore();
+  }
+
+  // Subtle glow around cursor
+  if (mouse.active) {
+    ctx.globalCompositeOperation = 'screen';
+    const glowSize = 80 + mouse.speed * 2;
+    const glowGrad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, glowSize);
+    glowGrad.addColorStop(0, 'rgba(255, 140, 50, 0.04)');
+    glowGrad.addColorStop(0.5, 'rgba(255, 100, 30, 0.015)');
+    glowGrad.addColorStop(1, 'rgba(255, 80, 20, 0)');
+    ctx.fillStyle = glowGrad;
+    ctx.fillRect(mouse.x - glowSize, mouse.y - glowSize, glowSize * 2, glowSize * 2);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function loop(now) {
+  const dt = Math.min(now - lastTime, 50); // cap delta to avoid explosion on tab switch
+  lastTime = now;
+
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ─── Initial clear ───
+ctx.fillStyle = '#0a0a0f';
+ctx.fillRect(0, 0, W, H);
+
+requestAnimationFrame(loop);
+
+// ─── Touch support ───
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  mouse.prevX = mouse.x;
+  mouse.prevY = mouse.y;
+  mouse.x = t.clientX;
+  mouse.y = t.clientY;
+  mouse.speed = Math.hypot(mouse.x - mouse.prevX, mouse.y - mouse.prevY);
+  mouse.active = true;
+  cursorDot.style.left = t.clientX + 'px';
+  cursorDot.style.top = t.clientY + 'px';
+}, { passive: false });
+
+document.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  mouse.x = t.clientX;
+  mouse.y = t.clientY;
+  mouse.prevX = t.clientX;
+  mouse.prevY = t.clientY;
+  mouse.active = true;
+  for (let i = 0; i < 25; i++) {
+    spawnSmokeBurst(t.clientX, t.clientY);
+  }
+});
+
+document.addEventListener('touchend', () => { mouse.active = false; });
+</script>
+
+</body>
+</html>

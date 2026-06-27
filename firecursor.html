@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fire Cursor</title>
+<style>
+  /* Reset and full-screen dark canvas */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  canvas#fireCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Hint text that fades away */
+  .hint {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 160, 60, 0.7);
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    z-index: 5;
+    animation: hintFade 4s ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes hintFade {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Ambient background glow */
+  .ambient {
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 600px; height: 600px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(180, 60, 10, 0.04) 0%, transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+    animation: ambientPulse 6s ease-in-out infinite;
+  }
+
+  @keyframes ambientPulse {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+    50%      { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+<canvas id="fireCanvas"></canvas>
+<div class="hint">Move your mouse to summon fire</div>
+
+<script>
+// === Canvas Setup ===
+const canvas = document.getElementById('fireCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// === Mouse Tracking ===
+let mouse = { x: -100, y: -100, prevX: -100, prevY: -100, speed: 0, active: false };
+
+document.addEventListener('mousemove', (e) => {
+  mouse.prevX = mouse.x;
+  mouse.prevY = mouse.y;
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  const dx = mouse.x - mouse.prevX;
+  const dy = mouse.y - mouse.prevY;
+  mouse.speed = Math.sqrt(dx * dx + dy * dy);
+  mouse.active = true;
+});
+
+document.addEventListener('mouseleave', () => { mouse.active = false; });
+document.addEventListener('mouseenter', () => { mouse.active = true; });
+
+// Touch support
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  mouse.prevX = mouse.x;
+  mouse.prevY = mouse.y;
+  mouse.x = t.clientX;
+  mouse.y = t.clientY;
+  const dx = mouse.x - mouse.prevX;
+  const dy = mouse.y - mouse.prevY;
+  mouse.speed = Math.sqrt(dx * dx + dy * dy);
+  mouse.active = true;
+}, { passive: false });
+
+document.addEventListener('touchend', () => { mouse.active = false; });
+
+// === Simplex-like Noise (simple 2D) ===
+function noise2D(x, y) {
+  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function smoothNoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const a = noise2D(ix, iy);
+  const b = noise2D(ix + 1, iy);
+  const c = noise2D(ix, iy + 1);
+  const d = noise2D(ix + 1, iy + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+// === Fire Color Palette ===
+// Maps a life ratio (0=new, 1=dead) to a fire color
+function fireColor(life, alpha) {
+  // White/yellow core → orange → red → dark red → smoke
+  let r, g, b;
+  if (life < 0.1) {
+    // Brilliant white-yellow core
+    const t = life / 0.1;
+    r = 255;
+    g = 255 - t * 30;
+    b = 220 - t * 180;
+  } else if (life < 0.3) {
+    // Yellow to bright orange
+    const t = (life - 0.1) / 0.2;
+    r = 255;
+    g = 225 - t * 100;
+    b = 40 - t * 40;
+  } else if (life < 0.55) {
+    // Orange to red
+    const t = (life - 0.3) / 0.25;
+    r = 255 - t * 40;
+    g = 125 - t * 85;
+    b = 0;
+  } else if (life < 0.8) {
+    // Red to dark red
+    const t = (life - 0.55) / 0.25;
+    r = 215 - t * 120;
+    g = 40 - t * 30;
+    b = 0;
+  } else {
+    // Dark red to smoke (dark gray)
+    const t = (life - 0.8) / 0.2;
+    r = 95 - t * 60;
+    g = 10 - t * 5;
+    b = t * 15;
+  }
+  const a = Math.max(0, alpha * (1 - life * life));
+  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a.toFixed(3)})`;
+}
+
+// === Particle System ===
+const particles = [];
+const embers = [];      // Small bright sparks
+const smokeParticles = [];
+const MAX_PARTICLES = 800;
+const MAX_EMBERS = 150;
+const MAX_SMOKE = 100;
+
+// Fire particle
+class FireParticle {
+  constructor(x, y, velScale) {
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
+    const speed = (1.5 + Math.random() * 3) * velScale;
+    this.x = x + (Math.random() - 0.5) * 6;
+    this.y = y + (Math.random() - 0.5) * 4;
+    this.vx = Math.cos(angle) * speed + (Math.random() - 0.5) * 0.8;
+    this.vy = Math.sin(angle) * speed;
+    this.life = 0;
+    this.maxLife = 0.6 + Math.random() * 0.5;
+    this.size = 8 + Math.random() * 18;
+    this.turbulenceOffset = Math.random() * 1000;
+    this.decay = 1 / (this.maxLife * 60);
+  }
+
+  update(time) {
+    this.life += this.decay;
+    // Turbulence
+    const turb = smoothNoise(this.x * 0.008 + time * 2, this.y * 0.008 + this.turbulenceOffset);
+    const turbAngle = turb * Math.PI * 2;
+    this.vx += Math.cos(turbAngle) * 0.15;
+    // Rise acceleration
+    this.vy -= 0.04;
+    // Damping
+    this.vx *= 0.98;
+    this.vy *= 0.99;
+    this.x += this.vx;
+    this.y += this.vy;
+    // Shrink
+    this.size *= 0.995;
+    return this.life < 1 && this.size > 0.5;
+  }
+
+  draw(ctx, time) {
+    const alpha = 0.6 + 0.4 * (1 - this.life);
+    const color = fireColor(this.life, alpha);
+    const sz = Math.max(0.5, this.size * (1 - this.life * 0.5));
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, sz, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+}
+
+// Ember (small bright spark)
+class Ember {
+  constructor(x, y) {
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.5;
+    const speed = 2 + Math.random() * 5;
+    this.x = x + (Math.random() - 0.5) * 10;
+    this.y = y + (Math.random() - 0.5) * 6;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 1;
+    this.life = 0;
+    this.maxLife = 0.4 + Math.random() * 0.8;
+    this.size = 1 + Math.random() * 2.5;
+    this.decay = 1 / (this.maxLife * 60);
+    this.brightness = 0.7 + Math.random() * 0.3;
+    this.flickerSpeed = 10 + Math.random() * 20;
+  }
+
+  update(time) {
+    this.life += this.decay;
+    this.vy -= 0.02; // buoyancy
+    this.vx *= 0.995;
+    this.vy *= 0.995;
+    this.x += this.vx;
+    this.y += this.vy;
+    return this.life < 1;
+  }
+
+  draw(ctx, time) {
+    const flicker = 0.5 + 0.5 * Math.sin(time * this.flickerSpeed + this.x);
+    const alpha = Math.max(0, (1 - this.life) * this.brightness * flicker);
+    if (alpha < 0.01) return;
+    // Bright yellow-white ember
+    const r = 255;
+    const g = Math.round(200 + 55 * (1 - this.life));
+    const b = Math.round(80 * (1 - this.life));
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.3, this.size * (1 - this.life * 0.7)), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+    ctx.fill();
+  }
+}
+
+// Smoke particle (rises above fire)
+class SmokeParticle {
+  constructor(x, y) {
+    this.x = x + (Math.random() - 0.5) * 14;
+    this.y = y - 20 - Math.random() * 30;
+    this.vx = (Math.random() - 0.5) * 0.6;
+    this.vy = -(0.3 + Math.random() * 0.8);
+    this.life = 0;
+    this.maxLife = 1.5 + Math.random() * 1.5;
+    this.size = 12 + Math.random() * 20;
+    this.decay = 1 / (this.maxLife * 60);
+    this.turbOffset = Math.random() * 1000;
+  }
+
+  update(time) {
+    this.life += this.decay;
+    const turb = smoothNoise(this.x * 0.005 + time, this.y * 0.005 + this.turbOffset);
+    this.vx += (turb - 0.5) * 0.08;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.size += 0.15; // smoke expands
+    return this.life < 1;
+  }
+
+  draw(ctx) {
+    const alpha = Math.max(0, 0.06 * (1 - this.life) * (this.life > 0.1 ? 1 : this.life / 0.1));
+    if (alpha < 0.002) return;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(1, this.size), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(60,50,45,${alpha.toFixed(4)})`;
+    ctx.fill();
+  }
+}
+
+// === Spawn Logic ===
+let spawnAccum = 0;
+let emberAccum = 0;
+let smokeAccum = 0;
+
+function spawnParticles(time) {
+  if (!mouse.active) return;
+
+  const speedFactor = Math.min(mouse.speed / 15, 3);
+  // Base spawn rate increases with speed
+  const baseRate = 4 + speedFactor * 8;
+
+  // Spawn fire particles along the path from prev to current
+  const dx = mouse.x - mouse.prevX;
+  const dy = mouse.y - mouse.prevY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const steps = Math.max(1, Math.floor(dist / 4));
+
+  for (let s = 0; s < steps; s++) {
+    const t = steps === 1 ? 1 : s / (steps - 1);
+    const px = mouse.prevX + dx * t;
+    const py = mouse.prevY + dy * t;
+
+    // Fire
+    spawnAccum += baseRate / steps;
+    while (spawnAccum >= 1 && particles.length < MAX_PARTICLES) {
+      particles.push(new FireParticle(px, py, 0.6 + speedFactor * 0.3));
+      spawnAccum -= 1;
+    }
+
+    // Embers
+    emberAccum += (1 + speedFactor * 3) / steps;
+    while (emberAccum >= 1 && embers.length < MAX_EMBERS) {
+      embers.push(new Ember(px, py));
+      emberAccum -= 1;
+    }
+
+    // Smoke
+    smokeAccum += (0.3 + speedFactor * 0.5) / steps;
+    while (smokeAccum >= 1 && smokeParticles.length < MAX_SMOKE) {
+      smokeParticles.push(new SmokeParticle(px, py));
+      smokeAccum -= 1;
+    }
+  }
+
+  // Even when still, emit a gentle flame
+  if (dist < 2) {
+    spawnAccum += 2;
+    while (spawnAccum >= 1 && particles.length < MAX_PARTICLES) {
+      particles.push(new FireParticle(mouse.x, mouse.y, 0.5));
+      spawnAccum -= 1;
+    }
+    emberAccum += 0.3;
+    while (emberAccum >= 1 && embers.length < MAX_EMBERS) {
+      embers.push(new Ember(mouse.x, mouse.y));
+      emberAccum -= 1;
+    }
+    smokeAccum += 0.15;
+    while (smokeAccum >= 1 && smokeParticles.length < MAX_SMOKE) {
+      smokeParticles.push(new SmokeParticle(mouse.x, mouse.y));
+      smokeAccum -= 1;
+    }
+  }
+}
+
+// === Heat Glow (drawn under the fire) ===
+function drawHeatGlow(x, y, intensity) {
+  const radius = 50 + intensity * 30;
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  grad.addColorStop(0, `rgba(255,120,20,${(0.12 * intensity).toFixed(3)})`);
+  grad.addColorStop(0.4, `rgba(255,60,10,${(0.06 * intensity).toFixed(3)})`);
+  grad.addColorStop(1, 'rgba(255,30,0,0)');
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+// === Core Glow (bright center) ===
+function drawCoreGlow(x, y, intensity, time) {
+  const flicker = 0.85 + 0.15 * Math.sin(time * 15 + Math.cos(time * 23) * 2);
+  const radius = (8 + intensity * 6) * flicker;
+  const grad = ctx.createRadialGradient(x, y - 2, 0, x, y - 2, radius);
+  grad.addColorStop(0, `rgba(255,255,230,${(0.9 * flicker).toFixed(3)})`);
+  grad.addColorStop(0.3, `rgba(255,220,100,${(0.5 * flicker).toFixed(3)})`);
+  grad.addColorStop(0.7, `rgba(255,140,30,${(0.15 * flicker).toFixed(3)})`);
+  grad.addColorStop(1, 'rgba(255,80,10,0)');
+  ctx.beginPath();
+  ctx.arc(x, y - 2, radius, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+// === Main Loop ===
+let lastTime = 0;
+
+function animate(timestamp) {
+  const time = timestamp * 0.001;
+  const dt = Math.min(time - lastTime, 0.05);
+  lastTime = time;
+
+  // Clear
+  ctx.clearRect(0, 0, W, H);
+
+  // Spawn
+  spawnParticles(time);
+
+  // Intensity based on speed
+  const intensity = Math.min(mouse.speed / 20, 2.5);
+
+  // Draw smoke (bottom layer, normal blend)
+  ctx.globalCompositeOperation = 'source-over';
+  for (let i = smokeParticles.length - 1; i >= 0; i--) {
+    if (!smokeParticles[i].update(time)) {
+      smokeParticles.splice(i, 1);
+    } else {
+      smokeParticles[i].draw(ctx);
+    }
+  }
+
+  // Heat glow
+  if (mouse.active) {
+    drawHeatGlow(mouse.x, mouse.y, 0.5 + intensity);
+  }
+
+  // Fire particles with additive blending for glow
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = particles.length - 1; i >= 0; i--) {
+    if (!particles[i].update(time)) {
+      particles.splice(i, 1);
+    } else {
+      particles[i].draw(ctx, time);
+    }
+  }
+
+  // Embers with additive
+  for (let i = embers.length - 1; i >= 0; i--) {
+    if (!embers[i].update(time)) {
+      embers.splice(i, 1);
+    } else {
+      embers[i].draw(ctx, time);
+    }
+  }
+
+  // Core glow
+  if (mouse.active) {
+    drawCoreGlow(mouse.x, mouse.y, intensity, time);
+  }
+
+  // Reset composite
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Decay speed when not moving
+  if (!mouse.active || mouse.speed < 0.5) {
+    mouse.speed *= 0.9;
+  }
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
