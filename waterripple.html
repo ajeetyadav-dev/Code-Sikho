@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Ripple</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;700;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: #030d15;
+            font-family: 'Outfit', sans-serif;
+            cursor: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+        }
+        .ui {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 36px 20px 30px;
+        }
+        .title {
+            font-size: clamp(36px, 8vw, 88px);
+            font-weight: 900;
+            letter-spacing: -2px;
+            color: rgba(0, 229, 255, 0.06);
+            white-space: nowrap;
+            user-select: none;
+            animation: breathe 6s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.45; }
+        }
+        .hint {
+            font-size: clamp(10px, 1.4vw, 13px);
+            font-weight: 200;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(0, 229, 255, 0.3);
+            opacity: 0;
+            animation: fadeUp 1.5s 1s ease forwards;
+            user-select: none;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .title { animation: none; opacity: 0.6; }
+            .hint { animation: none; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div class="ui">
+        <div class="title">WATER RIPPLE</div>
+        <div class="hint">Move to ripple &mdash; Click for waves</div>
+    </div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        /* ── Reduced motion check ── */
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* ── Canvas setup ── */
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const simCvs = document.createElement('canvas');
+        const simCtx = simCvs.getContext('2d');
+
+        /* ── Simulation constants ── */
+        const SCALE = 3;
+        const DAMPING = 5;          // >> DAMPING  (higher = faster fade)
+        const REFRACT = 3;          // >> REFRACT  (refraction strength)
+        const SPEC_DIV = 3;         // >> SPEC_DIV (specular brightness)
+        let W, H, sW, sH;
+        let buf1, buf2;
+        let bgTex;                  // Pre-rendered background ImageData
+        let waterOut;               // Reusable output ImageData
+
+        /* ── Mouse state ── */
+        let mx = -200, my = -200, pmx = -200, pmy = -200;
+        let mouseIn = false, mouseDown = false;
+        let clickPulse = 0;
+
+        /* ── Effect arrays ── */
+        let rings = [];
+        let particles = [];
+        let caustics = [];
+        let frameCount = 0;
+
+        /* ══════════════════════════════════════
+           INITIALIZATION
+           ══════════════════════════════════════ */
+        function init() {
+            resize();
+            if (!prefersReduced) {
+                initParticles();
+                initCaustics();
+            }
+            bindEvents();
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
+            sW = Math.ceil(W / SCALE);
+            sH = Math.ceil(H / SCALE);
+            simCvs.width = sW;
+            simCvs.height = sH;
+            buf1 = new Int16Array(sW * sH);
+            buf2 = new Int16Array(sW * sH);
+            buildBackground();
+            waterOut = simCtx.createImageData(sW, sH);
+        }
+
+        /* ── Pre-render background texture ── */
+        function buildBackground() {
+            const off = document.createElement('canvas');
+            off.width = sW; off.height = sH;
+            const c = off.getContext('2d');
+
+            // Deep-ocean radial gradient
+            const g = c.createRadialGradient(sW * 0.5, sH * 0.32, 0, sW * 0.5, sH * 0.5, sW * 0.9);
+            g.addColorStop(0, '#0f3a4d');
+            g.addColorStop(0.25, '#0b2c3c');
+            g.addColorStop(0.55, '#071d2b');
+            g.addColorStop(1, '#030d15');
+            c.fillStyle = g;
+            c.fillRect(0, 0, sW, sH);
+
+            // Scattered caustic light patches
+            for (let i = 0; i < 35; i++) {
+                const cx = Math.random() * sW;
+                const cy = Math.random() * sH;
+                const r = 15 + Math.random() * 55;
+                const cg = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+                cg.addColorStop(0, `rgba(0,195,215,${(0.025 + Math.random() * 0.045).toFixed(3)})`);
+                cg.addColorStop(1, 'rgba(0,195,215,0)');
+                c.fillStyle = cg;
+                c.beginPath();
+                c.arc(cx, cy, r, 0, Math.PI * 2);
+                c.fill();
+            }
+            // Brighter accents
+            for (let i = 0; i < 10; i++) {
+                const cx = Math.random() * sW;
+                const cy = Math.random() * sH;
+                const r = 4 + Math.random() * 20;
+                const cg = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+                cg.addColorStop(0, `rgba(0,255,200,${(0.035 + Math.random() * 0.06).toFixed(3)})`);
+                cg.addColorStop(1, 'rgba(0,255,200,0)');
+                c.fillStyle = cg;
+                c.beginPath();
+                c.arc(cx, cy, r, 0, Math.PI * 2);
+                c.fill();
+            }
+            bgTex = c.getImageData(0, 0, sW, sH);
+        }
+
+        /* ── Floating particles (underwater light specks) ── */
+        function initParticles() {
+            particles = [];
+            const count = Math.min(90, Math.floor(W * H / 14000));
+            for (let i = 0; i < count; i++) particles.push(spawnParticle(false));
+        }
+        function spawnParticle(bottom) {
+            return {
+                x: Math.random() * W,
+                y: bottom ? H + 10 : Math.random() * H,
+                r: 0.8 + Math.random() * 2.2,
+                vy: -(0.12 + Math.random() * 0.35),
+                vx: (Math.random() - 0.5) * 0.18,
+                a: 0.15 + Math.random() * 0.45,
+                ph: Math.random() * Math.PI * 2
+            };
+        }
+
+        /* ── Animated caustic blobs ── */
+        function initCaustics() {
+            caustics = [];
+            for (let i = 0; i < 14; i++) {
+                caustics.push({
+                    x: Math.random() * W, y: Math.random() * H,
+                    r: 90 + Math.random() * 220,
+                    vx: (Math.random() - 0.5) * 0.25,
+                    vy: (Math.random() - 0.5) * 0.18,
+                    ph: Math.random() * Math.PI * 2,
+                    a: 0.012 + Math.random() * 0.022
+                });
+            }
+        }
+
+        /* ══════════════════════════════════════
+           WATER RIPPLE SIMULATION
+           ══════════════════════════════════════ */
+        function addDrop(x, y, radius, strength) {
+            const sx = Math.floor(x / SCALE);
+            const sy = Math.floor(y / SCALE);
+            const sr = Math.max(1, Math.floor(radius / SCALE));
+            const srSq = sr * sr;
+            for (let dy = -sr; dy <= sr; dy++) {
+                for (let dx = -sr; dx <= sr; dx++) {
+                    const dSq = dx * dx + dy * dy;
+                    if (dSq < srSq) {
+                        const px = sx + dx, py = sy + dy;
+                        if (px > 0 && px < sW - 1 && py > 0 && py < sH - 1) {
+                            buf1[py * sW + px] += (Math.cos(Math.sqrt(dSq) / sr * 1.5707963) * strength) | 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        function stepWater() {
+            for (let y = 1; y < sH - 1; y++) {
+                for (let x = 1; x < sW - 1; x++) {
+                    const i = y * sW + x;
+                    buf2[i] = ((buf1[i - 1] + buf1[i + 1] + buf1[i - sW] + buf1[i + sW]) >> 1) - buf2[i];
+                    buf2[i] -= buf2[i] >> DAMPING;
+                }
+            }
+            const tmp = buf1; buf1 = buf2; buf2 = tmp;
+        }
+
+        function renderWater() {
+            // Copy background as base
+            waterOut.data.set(bgTex.data);
+            const d = waterOut.data;
+            const bg = bgTex.data;
+
+            for (let y = 1; y < sH - 1; y++) {
+                for (let x = 1; x < sW - 1; x++) {
+                    const i = y * sW + x;
+                    const nx = buf1[i - 1] - buf1[i + 1];
+                    const ny = buf1[i - sW] - buf1[i + sW];
+
+                    // Refracted sample position
+                    let rx = x + (nx >> REFRACT);
+                    let ry = y + (ny >> REFRACT);
+                    if (rx < 0) rx = 0; else if (rx >= sW) rx = sW - 1;
+                    if (ry < 0) ry = 0; else if (ry >= sH) ry = sH - 1;
+                    const si = (ry * sW + rx) << 2;
+                    const di = i << 2;
+
+                    d[di]     = bg[si];
+                    d[di + 1] = bg[si + 1];
+                    d[di + 2] = bg[si + 2];
+
+                    // Specular highlight
+                    const spec = (nx * nx + ny * ny) >> SPEC_DIV;
+                    if (spec > 0) {
+                        d[di]     = d[di]     + spec > 255 ? 255 : d[di] + spec;
+                        d[di + 1] = d[di + 1] + (spec << 1) > 255 ? 255 : d[di + 1] + (spec << 1);
+                        d[di + 2] = d[di + 2] + (spec << 1) + spec > 255 ? 255 : d[di + 2] + (spec << 1) + spec;
+                    }
+                }
+            }
+            simCtx.putImageData(waterOut, 0, 0);
+        }
+
+        /* ══════════════════════════════════════
+           OVERLAY EFFECTS
+           ══════════════════════════════════════ */
+
+        /* ── Ripple rings (artistic, on click) ── */
+        function addRing(x, y, maxR, speed, lw) {
+            rings.push({ x, y, r: 0, maxR, speed, lw, a: 1 });
+        }
+        function tickRings() {
+            for (let i = rings.length - 1; i >= 0; i--) {
+                const rn = rings[i];
+                rn.r += rn.speed;
+                rn.a = 1 - rn.r / rn.maxR;
+                if (rn.a <= 0) { rings.splice(i, 1); }
+            }
+        }
+        function drawRings() {
+            for (const rn of rings) {
+                for (let j = 0; j < 4; j++) {
+                    const r = rn.r - j * 5;
+                    if (r <= 0) continue;
+                    const a = rn.a * (1 - j * 0.25);
+                    if (a <= 0.01) continue;
+                    ctx.beginPath();
+                    ctx.arc(rn.x, rn.y, r, 0, 6.2832);
+                    ctx.strokeStyle = `rgba(0,229,255,${(a * 0.55).toFixed(3)})`;
+                    ctx.lineWidth = rn.lw * (1 - j * 0.2);
+                    ctx.stroke();
+                }
+                // Soft glow band
+                if (rn.a > 0.2) {
+                    const inner = Math.max(0.1, rn.r * 0.85);
+                    const outer = rn.r * 1.15;
+                    const g = ctx.createRadialGradient(rn.x, rn.y, inner, rn.x, rn.y, outer);
+                    g.addColorStop(0, 'rgba(0,229,255,0)');
+                    g.addColorStop(0.5, `rgba(0,229,255,${(rn.a * 0.04).toFixed(3)})`);
+                    g.addColorStop(1, 'rgba(0,229,255,0)');
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.arc(rn.x, rn.y, outer, 0, 6.2832);
+                    ctx.fill();
+                }
+            }
+        }
+
+        /* ── Particles ── */
+        function tickParticles() {
+            const t = frameCount * 0.016;
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.y += p.vy;
+                p.x += p.vx + Math.sin(t * 0.8 + p.ph) * 0.12;
+                if (p.y < -15) particles[i] = spawnParticle(true);
+            }
+        }
+        function drawParticles() {
+            const t = frameCount * 0.016;
+            for (const p of particles) {
+                const flicker = 0.7 + Math.sin(t * 2.5 + p.ph) * 0.3;
+                const a = Math.max(0, Math.min(1, p.a * flicker));
+                const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3.5);
+                g.addColorStop(0, `rgba(180,255,240,${(a * 0.9).toFixed(3)})`);
+                g.addColorStop(0.35, `rgba(0,229,255,${(a * 0.35).toFixed(3)})`);
+                g.addColorStop(1, 'rgba(0,229,255,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r * 3.5, 0, 6.2832);
+                ctx.fill();
+            }
+        }
+
+        /* ── Caustic blobs ── */
+        function tickCaustics() {
+            for (const c of caustics) {
+                c.x += c.vx; c.y += c.vy;
+                if (c.x < -c.r) c.x = W + c.r;
+                if (c.x > W + c.r) c.x = -c.r;
+                if (c.y < -c.r) c.y = H + c.r;
+                if (c.y > H + c.r) c.y = -c.r;
+            }
+        }
+        function drawCaustics() {
+            const t = frameCount * 0.016;
+            for (const c of caustics) {
+                const pulse = 1 + Math.sin(t * 0.45 + c.ph) * 0.2;
+                const r = c.r * pulse;
+                const a = c.a * (0.65 + Math.sin(t * 0.3 + c.ph * 1.7) * 0.35);
+                const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+                g.addColorStop(0, `rgba(0,200,220,${a.toFixed(4)})`);
+                g.addColorStop(0.55, `rgba(0,180,200,${(a * 0.3).toFixed(4)})`);
+                g.addColorStop(1, 'rgba(0,150,180,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, r, 0, 6.2832);
+                ctx.fill();
+            }
+        }
+
+        /* ── Custom cursor ── */
+        function drawCursor() {
+            if (!mouseIn) return;
+            const t = frameCount * 0.016;
+            const pulse = 1 + Math.sin(t * 4) * 0.12;
+            const expand = 1 + clickPulse * 2.5;
+            const r = 5.5 * pulse * expand;
+
+            // Outer glow
+            const g1 = ctx.createRadialGradient(mx, my, 0, mx, my, 45 * expand);
+            g1.addColorStop(0, `rgba(0,229,255,${(0.12 + clickPulse * 0.2).toFixed(3)})`);
+            g1.addColorStop(0.45, `rgba(0,229,255,${(0.04 + clickPulse * 0.08).toFixed(3)})`);
+            g1.addColorStop(1, 'rgba(0,229,255,0)');
+            ctx.fillStyle = g1;
+            ctx.beginPath();
+            ctx.arc(mx, my, 45 * expand, 0, 6.2832);
+            ctx.fill();
+
+            // Core dot
+            const g2 = ctx.createRadialGradient(mx, my, 0, mx, my, r);
+            g2.addColorStop(0, 'rgba(220,255,248,0.95)');
+            g2.addColorStop(0.45, 'rgba(0,255,200,0.65)');
+            g2.addColorStop(1, 'rgba(0,229,255,0)');
+            ctx.fillStyle = g2;
+            ctx.beginPath();
+            ctx.arc(mx, my, r, 0, 6.2832);
+            ctx.fill();
+        }
+
+        /* ── Vignette ── */
+        function drawVignette() {
+            const diag = Math.sqrt(W * W + H * H) * 0.5;
+            const g = ctx.createRadialGradient(W * 0.5, H * 0.5, diag * 0.35, W * 0.5, H * 0.5, diag);
+            g.addColorStop(0, 'rgba(0,0,0,0)');
+            g.addColorStop(1, 'rgba(0,0,0,0.55)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        /* ── Ambient rain drops ── */
+        let nextAmbient = 60;
+        function ambientDrop() {
+            if (--nextAmbient <= 0) {
+                addDrop(Math.random() * W, Math.random() * H, 12 + Math.random() * 10, 100 + Math.random() * 80);
+                nextAmbient = 40 + (Math.random() * 120) | 0;
+            }
+        }
+
+        /* ══════════════════════════════════════
+           EVENTS
+           ══════════════════════════════════════ */
+        function bindEvents() {
+            window.addEventListener('resize', () => { resize(); if (!prefersReduced) { initParticles(); initCaustics(); } });
+            canvas.addEventListener('mousemove', e => { pmx = mx; pmy = my; mx = e.clientX; my = e.clientY; mouseIn = true; });
+            canvas.addEventListener('mouseenter', () => { mouseIn = true; });
+            canvas.addEventListener('mouseleave', () => { mouseIn = false; });
+            canvas.addEventListener('mousedown', e => { mouseDown = true; handleClick(e.clientX, e.clientY); });
+            canvas.addEventListener('mouseup', () => { mouseDown = false; });
+            canvas.addEventListener('touchstart', e => {
+                e.preventDefault();
+                const t = e.touches[0];
+                mx = t.clientX; my = t.clientY; pmx = mx; pmy = my;
+                mouseIn = true; handleClick(mx, my);
+            }, { passive: false });
+            canvas.addEventListener('touchmove', e => {
+                e.preventDefault();
+                const t = e.touches[0];
+                pmx = mx; pmy = my; mx = t.clientX; my = t.clientY;
+            }, { passive: false });
+            canvas.addEventListener('touchend', () => { mouseIn = false; mouseDown = false; });
+        }
+
+        function handleClick(x, y) {
+            clickPulse = 1;
+            // Large simulation drop
+            addDrop(x, y, 55, 600);
+            // Artistic rings staggered
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => addRing(x, y, 160 + i * 55, 2.2 + i * 0.4, 2.8 - i * 0.4), i * 90);
+            }
+        }
+
+        /* ══════════════════════════════════════
+           MAIN LOOP
+           ══════════════════════════════════════ */
+        function loop() {
+            frameCount++;
+
+            /* ── Mouse → water drops ── */
+            if (mouseIn) {
+                const dx = mx - pmx, dy = my - pmy;
+                const speed = Math.sqrt(dx * dx + dy * dy);
+
+                if (speed > 1.5) {
+                    const str = Math.min(280, speed * 4.5);
+                    const rad = 7 + speed * 0.45;
+                    addDrop(mx, my, rad, str);
+                }
+
+                // Subtle breathing ripple when still
+                if (frameCount % 5 === 0) {
+                    addDrop(mx, my, 3.5, 35);
+                }
+
+                // Hold = continuous big ripples
+                if (mouseDown && frameCount % 3 === 0) {
+                    addDrop(mx, my, 28, 320);
+                }
+            }
+
+            ambientDrop();
+
+            /* ── Simulation (2 steps for faster propagation) ── */
+            stepWater();
+            stepWater();
+            renderWater();
+
+            /* ── Composite to screen ── */
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(simCvs, 0, 0, W, H);
+
+            /* ── Overlay layers ── */
+            if (!prefersReduced) {
+                tickCaustics();
+                drawCaustics();
+                tickParticles();
+                drawParticles();
+            }
+
+            tickRings();
+            drawRings();
+
+            // Click pulse decay
+            if (clickPulse > 0) { clickPulse *= 0.88; if (clickPulse < 0.01) clickPulse = 0; }
+            drawCursor();
+
+            drawVignette();
+
+            requestAnimationFrame(loop);
+        }
+
+        init();
+    })();
+    </script>
+</body>
+</html>

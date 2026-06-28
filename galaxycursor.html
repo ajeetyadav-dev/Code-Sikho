@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galaxy Cursor 🌌</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #05080f;
+    --bg-mid: #0a1020;
+    --cyan: #00e5c8;
+    --cyan-dim: #00e5c844;
+    --gold: #ffc845;
+    --rose: #ff4f8b;
+    --teal: #0af0d0;
+    --violet: #b366ff;
+    --text: #e0e8f0;
+    --text-dim: #5a6a80;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    font-family: 'Outfit', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+    color: var(--text);
+  }
+
+  /* Main canvas for all particle effects */
+  #galaxy-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  /* Background nebula blobs */
+  .nebula-layer {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .nebula-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: nebulaDrift 20s ease-in-out infinite alternate;
+  }
+
+  .nebula-blob:nth-child(1) {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, var(--cyan), transparent 70%);
+    top: 10%; left: 15%;
+    animation-duration: 25s;
+  }
+  .nebula-blob:nth-child(2) {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, var(--rose), transparent 70%);
+    bottom: 10%; right: 10%;
+    animation-duration: 30s;
+    animation-delay: -5s;
+  }
+  .nebula-blob:nth-child(3) {
+    width: 450px; height: 450px;
+    background: radial-gradient(circle, var(--gold), transparent 70%);
+    top: 50%; left: 55%;
+    transform: translate(-50%, -50%);
+    animation-duration: 22s;
+    animation-delay: -10s;
+  }
+  .nebula-blob:nth-child(4) {
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, var(--violet), transparent 70%);
+    top: 70%; left: 25%;
+    animation-duration: 28s;
+    animation-delay: -3s;
+  }
+
+  @keyframes nebulaDrift {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.1); }
+    66% { transform: translate(-20px, 50px) scale(0.95); }
+    100% { transform: translate(30px, 20px) scale(1.05); }
+  }
+
+  /* Interactive elements layer */
+  .content-layer {
+    position: relative;
+    z-index: 10;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .title-group {
+    text-align: center;
+    pointer-events: auto;
+  }
+
+  .title-group h1 {
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--cyan), var(--gold), var(--rose), var(--teal));
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 6s ease-in-out infinite;
+    margin-bottom: 16px;
+  }
+
+  .title-group p {
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
+    font-weight: 200;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Floating orbs to interact with */
+  .orb-container {
+    position: fixed;
+    z-index: 5;
+    pointer-events: auto;
+  }
+
+  .orb {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.4s ease;
+    cursor: none;
+  }
+
+  .orb::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: border-color 0.4s ease;
+  }
+
+  .orb:hover {
+    transform: scale(1.3);
+  }
+
+  .orb:hover::before {
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  .orb-1 {
+    top: 15%; left: 12%;
+    background: radial-gradient(circle at 35% 35%, var(--cyan), #064040);
+    box-shadow: 0 0 40px var(--cyan-dim), inset 0 0 20px rgba(0,0,0,0.4);
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+  .orb-1:hover { box-shadow: 0 0 80px var(--cyan-dim), 0 0 120px rgba(0,229,200,0.1), inset 0 0 20px rgba(0,0,0,0.4); }
+
+  .orb-2 {
+    top: 65%; left: 8%;
+    background: radial-gradient(circle at 35% 35%, var(--gold), #403000);
+    box-shadow: 0 0 40px rgba(255,200,69,0.25), inset 0 0 20px rgba(0,0,0,0.4);
+    animation: orbFloat 10s ease-in-out infinite reverse;
+    animation-delay: -3s;
+  }
+  .orb-2:hover { box-shadow: 0 0 80px rgba(255,200,69,0.4), 0 0 120px rgba(255,200,69,0.1), inset 0 0 20px rgba(0,0,0,0.4); }
+
+  .orb-3 {
+    top: 20%; right: 10%;
+    background: radial-gradient(circle at 35% 35%, var(--rose), #400820);
+    box-shadow: 0 0 40px rgba(255,79,139,0.25), inset 0 0 20px rgba(0,0,0,0.4);
+    animation: orbFloat 9s ease-in-out infinite;
+    animation-delay: -6s;
+  }
+  .orb-3:hover { box-shadow: 0 0 80px rgba(255,79,139,0.4), 0 0 120px rgba(255,79,139,0.1), inset 0 0 20px rgba(0,0,0,0.4); }
+
+  .orb-4 {
+    bottom: 15%; right: 14%;
+    background: radial-gradient(circle at 35% 35%, var(--violet), #200840);
+    box-shadow: 0 0 40px rgba(179,102,255,0.25), inset 0 0 20px rgba(0,0,0,0.4);
+    animation: orbFloat 11s ease-in-out infinite reverse;
+    animation-delay: -2s;
+  }
+  .orb-4:hover { box-shadow: 0 0 80px rgba(179,102,255,0.4), 0 0 120px rgba(179,102,255,0.1), inset 0 0 20px rgba(0,0,0,0.4); }
+
+  .orb-5 {
+    bottom: 25%; left: 35%;
+    width: 50px; height: 50px;
+    background: radial-gradient(circle at 35% 35%, var(--teal), #043030);
+    box-shadow: 0 0 30px rgba(10,240,208,0.2), inset 0 0 15px rgba(0,0,0,0.4);
+    animation: orbFloat 7s ease-in-out infinite;
+    animation-delay: -4s;
+  }
+  .orb-5:hover { box-shadow: 0 0 60px rgba(10,240,208,0.35), inset 0 0 15px rgba(0,0,0,0.4); }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-20px) scale(1); }
+  }
+
+  /* Hint text */
+  .hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 0.8rem;
+    font-weight: 200;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: hintPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  /* Stats corner */
+  .stats {
+    position: fixed;
+    top: 24px; right: 28px;
+    z-index: 10;
+    text-align: right;
+    pointer-events: none;
+  }
+  .stats .label {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .stats .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--cyan);
+    line-height: 1.2;
+  }
+
+  /* Mode selector */
+  .mode-bar {
+    position: fixed;
+    top: 24px; left: 28px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  .mode-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: var(--text-dim);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: none;
+    transition: all 0.3s ease;
+  }
+
+  .mode-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .mode-btn.active {
+    background: rgba(0,229,200,0.08);
+    border-color: var(--cyan-dim);
+    color: var(--cyan);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nebula-blob, .orb, .title-group h1, .hint {
+      animation: none !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .orb { width: 50px !important; height: 50px !important; }
+    .orb-5 { width: 35px !important; height: 35px !important; }
+    .mode-bar { top: auto; bottom: 60px; left: 50%; transform: translateX(-50%); flex-direction: row; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nebula background -->
+<div class="nebula-layer" aria-hidden="true">
+  <div class="nebula-blob"></div>
+  <div class="nebula-blob"></div>
+  <div class="nebula-blob"></div>
+  <div class="nebula-blob"></div>
+</div>
+
+<!-- Main particle canvas -->
+<canvas id="galaxy-canvas" aria-hidden="true"></canvas>
+
+<!-- Floating interactive orbs -->
+<div class="orb-container"><div class="orb orb-1" aria-label="Cyan celestial body"></div></div>
+<div class="orb-container"><div class="orb orb-2" aria-label="Gold celestial body"></div></div>
+<div class="orb-container"><div class="orb orb-3" aria-label="Rose celestial body"></div></div>
+<div class="orb-container"><div class="orb orb-4" aria-label="Violet celestial body"></div></div>
+<div class="orb-container"><div class="orb orb-5" aria-label="Teal celestial body"></div></div>
+
+<!-- Center title -->
+<div class="content-layer">
+  <div class="title-group">
+    <h1>Galaxy Cursor</h1>
+    <p>Move through the cosmos</p>
+  </div>
+</div>
+
+<!-- Mode selector -->
+<nav class="mode-bar" aria-label="Cursor mode selection">
+  <button class="mode-btn active" data-mode="stardust">Stardust</button>
+  <button class="mode-btn" data-mode="comet">Comet</button>
+  <button class="mode-btn" data-mode="nebula">Nebula</button>
+  <button class="mode-btn" data-mode="warp">Warp</button>
+</nav>
+
+<!-- Particle count -->
+<div class="stats" aria-live="polite">
+  <div class="label">Particles</div>
+  <div class="value" id="particle-count">0</div>
+</div>
+
+<!-- Bottom hint -->
+<div class="hint" aria-hidden="true">Click anywhere to burst</div>
+
+<script>
+(() => {
+  // --- Canvas Setup ---
+  const canvas = document.getElementById('galaxy-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // --- State ---
+  let mouse = { x: W / 2, y: H / 2 };
+  let prevMouse = { x: W / 2, y: H / 2 };
+  let mouseSpeed = 0;
+  let isMoving = false;
+  let moveTimeout = null;
+  let currentMode = 'stardust';
+  let hoveringOrb = null; // color of hovered orb
+
+  // Color palettes per mode
+  const palettes = {
+    stardust: ['#00e5c8', '#ffc845', '#ff4f8b', '#0af0d0', '#b366ff', '#ffffff'],
+    comet: ['#00e5c8', '#0af0d0', '#88ffee', '#ffffff', '#aaffee', '#55ffdd'],
+    nebula: ['#ff4f8b', '#b366ff', '#ff77aa', '#dd55ff', '#ff99cc', '#cc77ff'],
+    warp: ['#ffc845', '#ffaa22', '#ffffff', '#ffdd77', '#ffe0a0', '#ffcc44']
+  };
+
+  // --- Background Stars ---
+  const bgStars = [];
+  const BG_STAR_COUNT = 200;
+  for (let i = 0; i < BG_STAR_COUNT; i++) {
+    bgStars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.5 + 0.3,
+      alpha: Math.random() * 0.6 + 0.2,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinkleOffset: Math.random() * Math.PI * 2,
+      // Parallax depth layer (0 = far, 1 = near)
+      depth: Math.random()
+    });
+  }
+
+  function drawBgStars(time) {
+    for (const s of bgStars) {
+      // Subtle parallax based on mouse position
+      const px = s.x + (mouse.x - W / 2) * s.depth * 0.015;
+      const py = s.y + (mouse.y - H / 2) * s.depth * 0.015;
+      const twinkle = Math.sin(time * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
+      const alpha = s.alpha * twinkle;
+
+      ctx.beginPath();
+      ctx.arc(px, py, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220, 230, 255, ${alpha})`;
+      ctx.fill();
+
+      // Add glow to brighter stars
+      if (s.r > 1) {
+        ctx.beginPath();
+        ctx.arc(px, py, s.r * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200, 220, 255, ${alpha * 0.08})`;
+        ctx.fill();
+      }
+    }
+  }
+
+  // --- Particle System ---
+  const particles = [];
+  const MAX_PARTICLES = 800;
+
+  class Particle {
+    constructor(x, y, vx, vy, color, life, size, type) {
+      this.x = x;
+      this.y = y;
+      this.vx = vx;
+      this.vy = vy;
+      this.color = color;
+      this.life = life;
+      this.maxLife = life;
+      this.size = size;
+      this.type = type || 'default'; // default, spark, ring
+      this.rotation = Math.random() * Math.PI * 2;
+      this.rotSpeed = (Math.random() - 0.5) * 0.1;
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life--;
+
+      if (this.type === 'default') {
+        this.vx *= 0.97;
+        this.vy *= 0.97;
+        this.vy += 0.005; // tiny gravity
+      } else if (this.type === 'spark') {
+        this.vx *= 0.95;
+        this.vy *= 0.95;
+      } else if (this.type === 'ring') {
+        this.size += 3;
+        this.vx *= 0.92;
+        this.vy *= 0.92;
+      }
+
+      this.rotation += this.rotSpeed;
+      return this.life > 0;
+    }
+
+    draw() {
+      const progress = 1 - this.life / this.maxLife;
+      const alpha = Math.max(0, 1 - progress * progress); // ease out fade
+      const sz = Math.max(0.1, this.size * (1 - progress * 0.5));
+
+      if (this.type === 'ring') {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, sz, 0, Math.PI * 2);
+        ctx.strokeStyle = this.color.replace('1)', `${alpha * 0.5})`);
+        ctx.lineWidth = Math.max(0.5, 2 - progress * 2);
+        ctx.stroke();
+        return;
+      }
+
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+
+      // Glow layer
+      if (sz > 1) {
+        const glowR = sz * 3;
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+        grad.addColorStop(0, this.color.replace('1)', `${alpha * 0.25})`));
+        grad.addColorStop(1, this.color.replace('1)', '0)'));
+        ctx.beginPath();
+        ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      // Core
+      if (this.type === 'spark') {
+        // Diamond shape for sparks
+        ctx.beginPath();
+        ctx.moveTo(0, -sz);
+        ctx.lineTo(sz * 0.5, 0);
+        ctx.moveTo(0, sz);
+        ctx.lineTo(-sz * 0.5, 0);
+        ctx.closePath();
+        ctx.fillStyle = this.color.replace('1)', `${alpha})`);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, sz, 0, Math.PI * 2);
+        ctx.fillStyle = this.color.replace('1)', `${alpha})`);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // Convert hex to rgba string
+  function hexToRgba(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, 1)`;
+  }
+
+  function getColor() {
+    const pal = hoveringOrb
+      ? [hoveringOrb, '#ffffff', hoveringOrb, '#ffffff']
+      : palettes[currentMode];
+    return hexToRgba(pal[Math.floor(Math.random() * pal.length)]);
+  }
+
+  // --- Trail Spawning per Mode ---
+  function spawnTrailParticles() {
+    if (!isMoving) return;
+
+    const dx = mouse.x - prevMouse.x;
+    const dy = mouse.y - prevMouse.y;
+    const speed = Math.sqrt(dx * dx + dy * dy);
+
+    // Spawn rate based on speed
+    const count = Math.min(8, Math.floor(speed * 0.3) + 1);
+
+    for (let i = 0; i < count; i++) {
+      if (particles.length >= MAX_PARTICLES) break;
+
+      const t = i / count;
+      const x = prevMouse.x + dx * t + (Math.random() - 0.5) * 10;
+      const y = prevMouse.y + dy * t + (Math.random() - 0.5) * 10;
+
+      let vx, vy, life, size, type;
+
+      switch (currentMode) {
+        case 'stardust':
+          vx = (Math.random() - 0.5) * 1.5;
+          vy = (Math.random() - 0.5) * 1.5;
+          life = 40 + Math.random() * 40;
+          size = Math.random() * 2.5 + 0.5;
+          type = Math.random() > 0.8 ? 'spark' : 'default';
+          break;
+
+        case 'comet':
+          // Particles trail behind the direction of movement
+          vx = -dx * 0.1 + (Math.random() - 0.5) * 0.5;
+          vy = -dy * 0.1 + (Math.random() - 0.5) * 0.5;
+          life = 30 + Math.random() * 30;
+          size = Math.random() * 2 + 0.8;
+          type = 'default';
+          break;
+
+        case 'nebula':
+          // Slow, large, diffuse particles
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * 20;
+          vx = Math.cos(angle) * dist * 0.05;
+          vy = Math.sin(angle) * dist * 0.05;
+          life = 60 + Math.random() * 60;
+          size = Math.random() * 4 + 2;
+          type = 'default';
+          break;
+
+        case 'warp':
+          // Streak lines along movement
+          vx = -dx * 0.3 + (Math.random() - 0.5) * 0.3;
+          vy = -dy * 0.3 + (Math.random() - 0.5) * 0.3;
+          life = 15 + Math.random() * 15;
+          size = Math.random() * 1.5 + 0.3;
+          type = 'spark';
+          break;
+
+        default:
+          vx = (Math.random() - 0.5) * 2;
+          vy = (Math.random() - 0.5) * 2;
+          life = 50;
+          size = 1.5;
+          type = 'default';
+      }
+
+      particles.push(new Particle(x, y, vx, vy, getColor(), life, size, type));
+    }
+  }
+
+  // --- Click Burst ---
+  function spawnBurst(x, y) {
+    const burstCount = 50;
+
+    // Expanding ring
+    if (particles.length < MAX_PARTICLES) {
+      particles.push(new Particle(x, y, 0, 0, getColor(), 30, 5, 'ring'));
+    }
+
+    for (let i = 0; i < burstCount; i++) {
+      if (particles.length >= MAX_PARTICLES) break;
+
+      const angle = (i / burstCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+      const speed = Math.random() * 6 + 2;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      const life = 30 + Math.random() * 40;
+      const size = Math.random() * 3 + 0.5;
+      const type = Math.random() > 0.6 ? 'spark' : 'default';
+
+      particles.push(new Particle(x, y, vx, vy, getColor(), life, size, type));
+    }
+  }
+
+  // --- Cursor Drawing ---
+  function drawCursor(time) {
+    const x = mouse.x;
+    const y = mouse.y;
+
+    // Outer glow
+    const outerR = 30 + Math.sin(time * 0.003) * 5;
+    const outerGrad = ctx.createRadialGradient(x, y, 0, x, y, outerR);
+
+    const glowColor = hoveringOrb || palettes[currentMode][0];
+    const r = parseInt(glowColor.slice(1, 3), 16);
+    const g = parseInt(glowColor.slice(3, 5), 16);
+    const b = parseInt(glowColor.slice(5, 7), 16);
+
+    outerGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.15)`);
+    outerGrad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.05)`);
+    outerGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+    ctx.beginPath();
+    ctx.arc(x, y, outerR, 0, Math.PI * 2);
+    ctx.fillStyle = outerGrad;
+    ctx.fill();
+
+    // Orbiting dots
+    const orbitCount = 3;
+    const orbitR = 12 + Math.sin(time * 0.004) * 2;
+    for (let i = 0; i < orbitCount; i++) {
+      const a = (i / orbitCount) * Math.PI * 2 + time * 0.003;
+      const ox = x + Math.cos(a) * orbitR;
+      const oy = y + Math.sin(a) * orbitR;
+      const dotSize = 1.5 + Math.sin(time * 0.005 + i) * 0.5;
+      const dotAlpha = 0.5 + Math.sin(time * 0.004 + i * 2) * 0.3;
+
+      ctx.beginPath();
+      ctx.arc(ox, oy, dotSize, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${dotAlpha})`;
+      ctx.fill();
+    }
+
+    // Core bright point
+    const coreR = 3 + (isMoving ? Math.min(mouseSpeed * 0.02, 3) : 0);
+    const coreGrad = ctx.createRadialGradient(x, y, 0, x, y, coreR * 3);
+    coreGrad.addColorStop(0, `rgba(255, 255, 255, 0.95)`);
+    coreGrad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.6)`);
+    coreGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+    ctx.beginPath();
+    ctx.arc(x, y, coreR * 3, 0, Math.PI * 2);
+    ctx.fillStyle = coreGrad;
+    ctx.fill();
+
+    // Inner white dot
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(0.5, coreR * 0.6), 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  }
+
+  // --- Main Loop ---
+  const countEl = document.getElementById('particle-count');
+  let frameCount = 0;
+
+  function animate(time) {
+    requestAnimationFrame(animate);
+    frameCount++;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Background stars
+    drawBgStars(time);
+
+    // Spawn trail
+    spawnTrailParticles();
+
+    // Update and draw particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      if (!particles[i].update()) {
+        particles.splice(i, 1);
+      } else {
+        particles[i].draw();
+      }
+    }
+
+    // Draw cursor
+    drawCursor(time);
+
+    // Update counter periodically
+    if (frameCount % 10 === 0) {
+      countEl.textContent = particles.length;
+    }
+
+    // Save previous mouse
+    prevMouse.x = mouse.x;
+    prevMouse.y = mouse.y;
+  }
+
+  requestAnimationFrame(animate);
+
+  // --- Event Listeners ---
+  document.addEventListener('mousemove', (e) => {
+    const dx = e.clientX - mouse.x;
+    const dy = e.clientY - mouse.y;
+    mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    isMoving = true;
+
+    clearTimeout(moveTimeout);
+    moveTimeout = setTimeout(() => {
+      isMoving = false;
+      mouseSpeed = 0;
+    }, 100);
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    spawnBurst(e.clientX, e.clientY);
+  });
+
+  // Touch support
+  document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const dx = touch.clientX - mouse.x;
+    const dy = touch.clientY - mouse.y;
+    mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+    mouse.x = touch.clientX;
+    mouse.y = touch.clientY;
+    isMoving = true;
+
+    clearTimeout(moveTimeout);
+    moveTimeout = setTimeout(() => {
+      isMoving = false;
+      mouseSpeed = 0;
+    }, 100);
+  }, { passive: false });
+
+  document.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    mouse.x = touch.clientX;
+    mouse.y = touch.clientY;
+    spawnBurst(touch.clientX, touch.clientY);
+  });
+
+  // Orb hover detection
+  const orbs = document.querySelectorAll('.orb');
+  const orbColors = {
+    'orb-1': '#00e5c8',
+    'orb-2': '#ffc845',
+    'orb-3': '#ff4f8b',
+    'orb-4': '#b366ff',
+    'orb-5': '#0af0d0'
+  };
+
+  orbs.forEach(orb => {
+    orb.addEventListener('mouseenter', () => {
+      hoveringOrb = orbColors[orb.classList[1]] || null;
+    });
+    orb.addEventListener('mouseleave', () => {
+      hoveringOrb = null;
+    });
+  });
+
+  // Mode buttons
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+    });
+  });
+
+  // Handle window resize for background stars
+  window.addEventListener('resize', () => {
+    for (const s of bgStars) {
+      if (s.x > W) s.x = Math.random() * W;
+      if (s.y > H) s.y = Math.random() * H;
+    }
+  });
+})();
+</script>
+</body>
+</html>
