@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paint Brush Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0F0E0C;
+            --fg: #F5F0E8;
+            --muted: #6B6358;
+            --accent: #C8A96E;
+            --card: rgba(22, 20, 17, 0.92);
+            --border: rgba(200, 169, 110, 0.18);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            overflow: hidden;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--fg);
+            cursor: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+        }
+
+        #bgCanvas { z-index: 0; }
+        #paintCanvas { z-index: 1; }
+        #effectCanvas { z-index: 2; pointer-events: none; }
+
+        /* Slow ambient glow that drifts */
+        .ambient-glow {
+            position: fixed;
+            width: 200%; height: 200%;
+            top: -50%; left: -50%;
+            background:
+                radial-gradient(circle at 30% 40%, rgba(200,169,110,0.035) 0%, transparent 45%),
+                radial-gradient(circle at 72% 58%, rgba(230,57,70,0.025) 0%, transparent 45%);
+            animation: ambientDrift 25s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes ambientDrift {
+            0%, 100% { transform: translate(0,0) rotate(0deg); }
+            25% { transform: translate(2%,-1.5%) rotate(0.8deg); }
+            50% { transform: translate(-1.5%,2%) rotate(-0.5deg); }
+            75% { transform: translate(-2%,-1%) rotate(0.4deg); }
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%);
+        }
+
+        /* Brush cursor */
+        #brushCursor {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            transform-origin: center bottom;
+            filter: drop-shadow(2px 5px 8px rgba(0,0,0,0.65));
+            will-change: transform, left, top;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        #brushCursor.visible { opacity: 1; }
+
+        /* Size indicator ring */
+        #sizeIndicator {
+            position: fixed;
+            pointer-events: none;
+            z-index: 999;
+            border: 1.5px solid rgba(245,240,232,0.35);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.12s ease, height 0.12s ease, border-color 0.2s ease, opacity 0.2s ease;
+            opacity: 0;
+        }
+        #sizeIndicator.visible { opacity: 1; }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 26px; left: 34px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 21px;
+            font-weight: 700;
+            color: var(--fg);
+            opacity: 0.55;
+            letter-spacing: 0.4px;
+        }
+        .header p {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 3px;
+            font-weight: 300;
+            opacity: 0.8;
+        }
+
+        /* Keyboard shortcuts */
+        .shortcuts {
+            position: fixed;
+            top: 26px; right: 34px;
+            z-index: 100;
+            text-align: right;
+            pointer-events: none;
+            opacity: 0.35;
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 2;
+        }
+        .shortcuts kbd {
+            background: rgba(255,255,255,0.07);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: var(--card);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow:
+                0 24px 64px rgba(0,0,0,0.55),
+                0 0 0 1px rgba(255,255,255,0.025) inset;
+            cursor: none;
+        }
+        .toolbar-section {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .divider {
+            width: 1px;
+            height: 34px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        /* Color swatches */
+        .color-swatch {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2.5px solid transparent;
+            cursor: none;
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+        .color-swatch:hover { transform: scale(1.22); }
+        .color-swatch:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        .color-swatch.active {
+            border-color: var(--fg);
+            box-shadow: 0 0 14px rgba(245,240,232,0.25), inset 0 0 0 1px rgba(255,255,255,0.1);
+            transform: scale(1.14);
+        }
+
+        /* Brush size */
+        .size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .size-preview {
+            width: 30px; height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .size-dot {
+            border-radius: 50%;
+            background: var(--fg);
+            transition: width 0.12s ease, height 0.12s ease;
+        }
+        .size-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 90px; height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            outline: none;
+            cursor: none;
+        }
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px; height: 15px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            transition: transform 0.12s ease;
+        }
+        .size-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        .size-slider::-moz-range-thumb {
+            width: 15px; height: 15px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            cursor: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+        }
+        .size-label {
+            font-size: 11px;
+            color: var(--muted);
+            min-width: 22px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Tool buttons */
+        .tool-btn {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: none;
+            transition: all 0.18s ease;
+            flex-shrink: 0;
+        }
+        .tool-btn:hover {
+            background: rgba(255,255,255,0.06);
+            color: var(--fg);
+            border-color: rgba(255,255,255,0.14);
+        }
+        .tool-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        .tool-btn.active {
+            background: rgba(200,169,110,0.14);
+            color: var(--accent);
+            border-color: rgba(200,169,110,0.3);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 28px; left: 50%;
+            transform: translateX(-50%) translateY(-56px);
+            z-index: 2000;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 9px 20px;
+            font-size: 13px;
+            color: var(--fg);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 860px) {
+            .toolbar {
+                bottom: 14px;
+                padding: 10px 14px;
+                gap: 8px;
+                border-radius: 16px;
+                max-width: calc(100vw - 24px);
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .color-swatch { width: 20px; height: 20px; }
+            .size-slider { width: 60px; }
+            .shortcuts { display: none; }
+            .header h1 { font-size: 17px; }
+            .divider { height: 26px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="paintCanvas"></canvas>
+    <canvas id="effectCanvas"></canvas>
+    <div class="ambient-glow"></div>
+    <div class="vignette"></div>
+
+    <!-- Custom brush cursor -->
+    <div id="brushCursor">
+        <svg width="22" height="74" viewBox="0 0 22 74" fill="none">
+            <defs>
+                <linearGradient id="woodGrain" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#7A5C10"/>
+                    <stop offset="22%" stop-color="#C9A02E"/>
+                    <stop offset="48%" stop-color="#B88A1E"/>
+                    <stop offset="75%" stop-color="#A67C1A"/>
+                    <stop offset="100%" stop-color="#856210"/>
+                </linearGradient>
+                <linearGradient id="metallic" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#6E6E6E"/>
+                    <stop offset="30%" stop-color="#D0D0D0"/>
+                    <stop offset="60%" stop-color="#A8A8A8"/>
+                    <stop offset="100%" stop-color="#606060"/>
+                </linearGradient>
+                <linearGradient id="bristleGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+                    <stop offset="0%" stop-color="#555"/>
+                    <stop offset="100%" stop-color="#333"/>
+                </linearGradient>
+            </defs>
+            <!-- Handle end -->
+            <ellipse cx="11" cy="3" rx="5.5" ry="3" fill="#A07518"/>
+            <!-- Handle body -->
+            <rect x="7" y="1" width="8" height="48" rx="3.5" fill="url(#woodGrain)"/>
+            <!-- Handle highlight -->
+            <rect x="9" y="4" width="2.5" height="42" rx="1.2" fill="rgba(255,255,255,0.08)"/>
+            <!-- Ferrule -->
+            <rect x="5.5" y="49" width="11" height="9" rx="1.5" fill="url(#metallic)"/>
+            <line x1="5.5" y1="51.5" x2="16.5" y2="51.5" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+            <line x1="5.5" y1="55.5" x2="16.5" y2="55.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.5"/>
+            <!-- Bristles -->
+            <path d="M7.5,58 Q8,66 10,70 Q11,73 11,73 Q11,73 12,70 Q14,66 14.5,58 Z" fill="url(#bristleGrad)"/>
+            <!-- Individual bristle hints -->
+            <line x1="9" y1="59" x2="9.8" y2="71" stroke="rgba(80,80,80,0.5)" stroke-width="0.4"/>
+            <line x1="11" y1="58.5" x2="11" y2="73" stroke="rgba(80,80,80,0.4)" stroke-width="0.4"/>
+            <line x1="13" y1="59" x2="12.2" y2="71" stroke="rgba(80,80,80,0.5)" stroke-width="0.4"/>
+            <!-- Paint on bristle tip -->
+            <path id="paintTip" d="M9.5,64 Q11,72 11,73 Q11,72 12.5,64 Z" fill="#E63946" opacity="0.88"/>
+            <!-- Wet sheen -->
+            <ellipse cx="11" cy="70" rx="2" ry="1.2" fill="rgba(255,255,255,0.12)"/>
+        </svg>
+    </div>
+
+    <!-- Size indicator ring around brush tip -->
+    <div id="sizeIndicator"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <h1>Paint Brush Studio</h1>
+        <p>Click and drag to paint</p>
+    </header>
+
+    <!-- Keyboard shortcuts -->
+    <aside class="shortcuts" aria-hidden="true">
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd> Undo<br>
+        <kbd>C</kbd> Clear<br>
+        <kbd>E</kbd> Eraser<br>
+        <kbd>[</kbd> <kbd>]</kbd> Size
+    </aside>
+
+    <!-- Toolbar -->
+    <nav class="toolbar" role="toolbar" aria-label="Painting tools">
+        <div class="toolbar-section" id="colorPalette" role="radiogroup" aria-label="Color palette"></div>
+        <div class="divider"></div>
+        <div class="toolbar-section size-control">
+            <div class="size-preview"><div class="size-dot" id="sizeDot"></div></div>
+            <input type="range" class="size-slider" id="sizeSlider" min="2" max="80" value="14" aria-label="Brush size">
+            <span class="size-label" id="sizeLabel">14</span>
+        </div>
+        <div class="divider"></div>
+        <div class="toolbar-section">
+            <button class="tool-btn" id="eraserBtn" title="Eraser (E)" aria-label="Eraser"><i class="fas fa-eraser"></i></button>
+            <button class="tool-btn" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo"><i class="fas fa-undo"></i></button>
+            <button class="tool-btn" id="clearBtn" title="Clear (C)" aria-label="Clear canvas"><i class="fas fa-trash-alt"></i></button>
+            <button class="tool-btn" id="saveBtn" title="Save image" aria-label="Save as image"><i class="fas fa-download"></i></button>
+        </div>
+    </nav>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // === Color palette — curated oil paint colors ===
+        const COLORS = [
+            { name: 'Titanium White',   hex: '#F5F0E8' },
+            { name: 'Cadmium Yellow',   hex: '#F5B800' },
+            { name: 'Cadmium Red',      hex: '#E63946' },
+            { name: 'Alizarin Crimson', hex: '#9B2335' },
+            { name: 'Burnt Sienna',     hex: '#E07A3A' },
+            { name: 'Yellow Ochre',     hex: '#CC9933' },
+            { name: 'Raw Umber',        hex: '#8B6914' },
+            { name: 'Burnt Umber',      hex: '#6B3A2A' },
+            { name: 'Sap Green',        hex: '#4A7C59' },
+            { name: 'Viridian',         hex: '#40826D' },
+            { name: 'Ultramarine',      hex: '#1D3557' },
+            { name: 'Ivory Black',      hex: '#1C1C28' },
+        ];
+
+        const MAX_UNDO = 20;
+
+        // === State ===
+        let currentColor = COLORS[2].hex;
+        let brushSize = 14;
+        let isEraser = false;
+        let isPainting = false;
+        let lastX = 0, lastY = 0;
+        let currentAngle = -90;
+        let targetAngle = -90;
+        let undoStack = [];
+        let particles = [];
+        let dpr = 1;
+        let W = 0, H = 0;
+
+        // === DOM refs ===
+        const bgCanvas     = document.getElementById('bgCanvas');
+        const paintCanvas   = document.getElementById('paintCanvas');
+        const effectCanvas  = document.getElementById('effectCanvas');
+        const bgCtx         = bgCanvas.getContext('2d');
+        const paintCtx      = paintCanvas.getContext('2d');
+        const effectCtx     = effectCanvas.getContext('2d');
+        const brushCursor   = document.getElementById('brushCursor');
+        const sizeIndicator = document.getElementById('sizeIndicator');
+        const sizeSlider    = document.getElementById('sizeSlider');
+        const sizeLabel     = document.getElementById('sizeLabel');
+        const sizeDot       = document.getElementById('sizeDot');
+        const colorPalette  = document.getElementById('colorPalette');
+        const eraserBtn     = document.getElementById('eraserBtn');
+        const undoBtn       = document.getElementById('undoBtn');
+        const clearBtn      = document.getElementById('clearBtn');
+        const saveBtn       = document.getElementById('saveBtn');
+        const paintTip      = document.getElementById('paintTip');
+        const toastEl       = document.getElementById('toast');
+
+        // === Canvas sizing with DPR ===
+        function resizeCanvases() {
+            dpr = window.devicePixelRatio || 1;
+            W = window.innerWidth;
+            H = window.innerHeight;
+
+            [bgCanvas, paintCanvas, effectCanvas].forEach(c => {
+                c.width  = W * dpr;
+                c.height = H * dpr;
+                c.style.width  = W + 'px';
+                c.style.height = H + 'px';
+            });
+
+            bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+            paintCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            effectCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            generateBackground();
+        }
+
+        // === Procedural paper-like background ===
+        function generateBackground() {
+            const w = bgCanvas.width;
+            const h = bgCanvas.height;
+            const img = bgCtx.createImageData(w, h);
+            const d = img.data;
+
+            for (let i = 0; i < d.length; i += 4) {
+                const n = (Math.random() - 0.5) * 14;
+                d[i]   = 16 + n;
+                d[i+1] = 14 + n;
+                d[i+2] = 12 + n;
+                d[i+3] = 255;
+            }
+            bgCtx.putImageData(img, 0, 0);
+
+            // Warm center glow
+            bgCtx.save();
+            bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const g = bgCtx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.55);
+            g.addColorStop(0, 'rgba(45,32,16,0.28)');
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            bgCtx.fillStyle = g;
+            bgCtx.fillRect(0, 0, W, H);
+            bgCtx.restore();
+        }
+
+        // === Build color swatches ===
+        function initPalette() {
+            COLORS.forEach(c => {
+                const el = document.createElement('div');
+                el.className = 'color-swatch' + (c.hex === currentColor ? ' active' : '');
+                el.style.background = c.hex;
+                el.title = c.name;
+                el.setAttribute('role', 'radio');
+                el.setAttribute('aria-checked', c.hex === currentColor ? 'true' : 'false');
+                el.setAttribute('aria-label', c.name);
+                el.tabIndex = 0;
+                el.addEventListener('click', () => selectColor(c.hex, el));
+                el.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectColor(c.hex, el); }
+                });
+                colorPalette.appendChild(el);
+            });
+        }
+
+        function selectColor(hex, el) {
+            currentColor = hex;
+            isEraser = false;
+            eraserBtn.classList.remove('active');
+
+            document.querySelectorAll('.color-swatch').forEach(s => {
+                s.classList.remove('active');
+                s.setAttribute('aria-checked', 'false');
+            });
+            el.classList.add('active');
+            el.setAttribute('aria-checked', 'true');
+
+            paintTip.setAttribute('fill', hex);
+            refreshSizeIndicator();
+        }
+
+        // === Brush size UI ===
+        function setBrushSize(v) {
+            brushSize = Math.max(2, Math.min(80, v));
+            sizeSlider.value = brushSize;
+            sizeLabel.textContent = brushSize;
+            const dot = Math.max(4, Math.min(26, brushSize * 0.55));
+            sizeDot.style.width = dot + 'px';
+            sizeDot.style.height = dot + 'px';
+            refreshSizeIndicator();
+        }
+
+        function refreshSizeIndicator() {
+            sizeIndicator.style.width = brushSize + 'px';
+            sizeIndicator.style.height = brushSize + 'px';
+            sizeIndicator.style.borderColor = isEraser
+                ? 'rgba(245,240,232,0.45)'
+                : hexToRgba(currentColor, 0.4);
+        }
+
+        sizeSlider.addEventListener('input', () => setBrushSize(parseInt(sizeSlider.value)));
+
+        // === Undo ===
+        function saveState() {
+            undoStack.push(paintCtx.getImageData(0, 0, paintCanvas.width, paintCanvas.height));
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+        }
+
+        function undo() {
+            if (!undoStack.length) { showToast('Nothing to undo'); return; }
+            const state = undoStack.pop();
+            paintCtx.save();
+            paintCtx.setTransform(1, 0, 0, 1, 0, 0);
+            paintCtx.putImageData(state, 0, 0);
+            paintCtx.restore();
+            showToast('Undone');
+        }
+
+        // === Toast ===
+        let toastTimer = 0;
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1400);
+        }
+
+        // === Pointer helpers ===
+        function getPos(e) {
+            if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        // === Painting ===
+        function startPaint(e) {
+            e.preventDefault();
+            isPainting = true;
+            const p = getPos(e);
+            lastX = p.x; lastY = p.y;
+            saveState();
+
+            // Initial dot
+            paintCtx.save();
+            paintCtx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+            paintCtx.fillStyle = isEraser ? 'rgba(0,0,0,1)' : currentColor;
+            paintCtx.globalAlpha = isEraser ? 1 : 0.92;
+            paintCtx.beginPath();
+            paintCtx.arc(p.x, p.y, Math.max(1, brushSize / 2), 0, Math.PI * 2);
+            paintCtx.fill();
+            paintCtx.restore();
+
+            // Splatter
+            if (!isEraser) spawnSplatter(p.x, p.y, 10);
+            sizeIndicator.classList.remove('visible');
+        }
+
+        function doPaint(e) {
+            e.preventDefault();
+            const p = getPos(e);
+            updateCursor(p.x, p.y);
+            if (!isPainting) return;
+
+            const dx = p.x - lastX;
+            const dy = p.y - lastY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 0.8) return;
+
+            // Variable width based on speed
+            const speed = Math.min(dist, 80);
+            const widthFactor = 1 - speed / 140;
+            const w = Math.max(1.5, brushSize * widthFactor);
+
+            paintCtx.save();
+            paintCtx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+            paintCtx.strokeStyle = isEraser ? 'rgba(0,0,0,1)' : currentColor;
+            paintCtx.lineWidth = w;
+            paintCtx.lineCap = 'round';
+            paintCtx.lineJoin = 'round';
+            paintCtx.globalAlpha = isEraser ? 1 : (0.82 + widthFactor * 0.18);
+
+            // Smooth quadratic curve through midpoints
+            const mx = (lastX + p.x) / 2;
+            const my = (lastY + p.y) / 2;
+            paintCtx.beginPath();
+            paintCtx.moveTo(lastX, lastY);
+            paintCtx.quadraticCurveTo(lastX, lastY, mx, my);
+            paintCtx.stroke();
+
+            // Texture pass — subtle offset for painterly feel
+            if (!isEraser && brushSize > 5) {
+                paintCtx.globalAlpha = 0.12;
+                paintCtx.lineWidth = w * 1.4;
+                const ox = (Math.random() - 0.5) * w * 0.35;
+                const oy = (Math.random() - 0.5) * w * 0.35;
+                paintCtx.beginPath();
+                paintCtx.moveTo(lastX + ox, lastY + oy);
+                paintCtx.quadraticCurveTo(lastX + ox, lastY + oy, mx + ox, my + oy);
+                paintCtx.stroke();
+            }
+
+            paintCtx.restore();
+
+            // Brush angle follows movement
+            if (dist > 2.5) {
+                targetAngle = Math.atan2(dy, dx) * 180 / Math.PI - 90;
+            }
+
+            // Occasional tiny splatter while painting fast
+            if (!isEraser && speed > 25 && Math.random() < 0.15) {
+                spawnSplatter(p.x, p.y, 2);
+            }
+
+            lastX = p.x;
+            lastY = p.y;
+        }
+
+        function stopPaint() {
+            if (isPainting) {
+                isPainting = false;
+                sizeIndicator.classList.add('visible');
+            }
+        }
+
+        // === Cursor positioning & rotation ===
+        function updateCursor(x, y) {
+            brushCursor.style.left = (x - 11) + 'px';
+            brushCursor.style.top  = (y - 74) + 'px';
+
+            // Smooth angle interpolation (handles wrapping)
+            let diff = targetAngle - currentAngle;
+            while (diff > 180)  diff -= 360;
+            while (diff < -180) diff += 360;
+            currentAngle += diff * 0.22;
+            brushCursor.style.transform = 'rotate(' + currentAngle + 'deg)';
+
+            sizeIndicator.style.left = x + 'px';
+            sizeIndicator.style.top  = y + 'px';
+        }
+
+        // === Splatter particles ===
+        function spawnSplatter(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const spd = 1.2 + Math.random() * 3.5;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(a) * spd,
+                    vy: Math.sin(a) * spd - 1.2,
+                    r: 0.8 + Math.random() * Math.max(1, brushSize * 0.12),
+                    color: currentColor,
+                    alpha: 0.65 + Math.random() * 0.35,
+                    life: 1,
+                    decay: 0.014 + Math.random() * 0.022,
+                    grav: 0.07 + Math.random() * 0.04,
+                });
+            }
+        }
+
+        function tickParticles() {
+            effectCtx.clearRect(0, 0, W, H);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.grav;
+                p.vx *= 0.975;
+                p.life -= p.decay;
+                if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+                effectCtx.save();
+                effectCtx.globalAlpha = p.alpha * p.life;
+                effectCtx.fillStyle = p.color;
+                effectCtx.beginPath();
+                effectCtx.arc(p.x, p.y, Math.max(0.4, p.r * p.life), 0, Math.PI * 2);
+                effectCtx.fill();
+                effectCtx.restore();
+            }
+        }
+
+        // === Main loop ===
+        function loop() {
+            tickParticles();
+            requestAnimationFrame(loop);
+        }
+
+        // === Utility ===
+        function hexToRgba(hex, a) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+        }
+
+        function rgbToHex(rgb) {
+            if (!rgb || rgb.charAt(0) === '#') return (rgb || '').toLowerCase();
+            const m = rgb.match(/\d+/g);
+            if (!m || m.length < 3) return rgb;
+            return '#' + m.slice(0, 3).map(n => {
+                const h = parseInt(n).toString(16);
+                return h.length < 2 ? '0' + h : h;
+            }).join('');
+        }
+
+        // === Event binding ===
+
+        // Mouse
+        document.addEventListener('mousemove', doPaint);
+        document.addEventListener('mousedown', startPaint);
+        document.addEventListener('mouseup', stopPaint);
+
+        document.addEventListener('mouseenter', () => {
+            brushCursor.classList.add('visible');
+            sizeIndicator.classList.add('visible');
+        });
+        document.addEventListener('mouseleave', () => {
+            brushCursor.classList.remove('visible');
+            sizeIndicator.classList.remove('visible');
+            stopPaint();
+        });
+
+        // Touch
+        document.addEventListener('touchstart', startPaint, { passive: false });
+        document.addEventListener('touchmove', doPaint, { passive: false });
+        document.addEventListener('touchend', stopPaint);
+        document.addEventListener('touchcancel', stopPaint);
+
+        // Toolbar — block painting when interacting with controls
+        const toolbar = document.querySelector('.toolbar');
+        toolbar.addEventListener('mousedown', e => e.stopPropagation());
+        toolbar.addEventListener('touchstart', e => e.stopPropagation(), { passive: false });
+
+        // Eraser toggle
+        eraserBtn.addEventListener('click', () => {
+            isEraser = !isEraser;
+            eraserBtn.classList.toggle('active', isEraser);
+            if (isEraser) {
+                document.querySelectorAll('.color-swatch').forEach(s => {
+                    s.classList.remove('active');
+                    s.setAttribute('aria-checked', 'false');
+                });
+                paintTip.setAttribute('fill', '#666666');
+                showToast('Eraser mode');
+            } else {
+                document.querySelectorAll('.color-swatch').forEach(s => {
+                    if (rgbToHex(s.style.background) === currentColor.toLowerCase()) {
+                        s.classList.add('active');
+                        s.setAttribute('aria-checked', 'true');
+                    }
+                });
+                paintTip.setAttribute('fill', currentColor);
+                showToast('Brush mode');
+            }
+            refreshSizeIndicator();
+        });
+
+        undoBtn.addEventListener('click', undo);
+
+        clearBtn.addEventListener('click', () => {
+            saveState();
+            paintCtx.clearRect(0, 0, W, H);
+            showToast('Canvas cleared');
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const tmp = document.createElement('canvas');
+            tmp.width = paintCanvas.width;
+            tmp.height = paintCanvas.height;
+            const tc = tmp.getContext('2d');
+            tc.drawImage(bgCanvas, 0, 0);
+            tc.drawImage(paintCanvas, 0, 0);
+            const a = document.createElement('a');
+            a.download = 'painting.png';
+            a.href = tmp.toDataURL('image/png');
+            a.click();
+            showToast('Image saved');
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+            if (e.key === 'c' && !e.ctrlKey && !e.metaKey) {
+                saveState(); paintCtx.clearRect(0, 0, W, H); showToast('Canvas cleared');
+            }
+            if (e.key === 'e' || e.key === 'E') eraserBtn.click();
+            if (e.key === '[') setBrushSize(brushSize - 4);
+            if (e.key === ']') setBrushSize(brushSize + 4);
+        });
+
+        // Resize — preserve painting
+        window.addEventListener('resize', () => {
+            const tmp = document.createElement('canvas');
+            tmp.width = paintCanvas.width;
+            tmp.height = paintCanvas.height;
+            tmp.getContext('2d').drawImage(paintCanvas, 0, 0);
+            resizeCanvases();
+            paintCtx.save();
+            paintCtx.setTransform(1, 0, 0, 1, 0, 0);
+            paintCtx.drawImage(tmp, 0, 0);
+            paintCtx.restore();
+        });
+
+        // === Init ===
+        resizeCanvases();
+        initPalette();
+        setBrushSize(brushSize);
+        paintTip.setAttribute('fill', currentColor);
+        refreshSizeIndicator();
+        loop();
+
+    })();
+    </script>
+</body>
+</html>

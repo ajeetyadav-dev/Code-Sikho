@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightning Cursor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            overflow: hidden;
+            background: #060610;
+            cursor: none;
+            font-family: 'Orbitron', monospace;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .overlay {
+            position: fixed;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(0, 240, 224, 0.05);
+            font-size: clamp(28px, 8vw, 100px);
+            font-weight: 900;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            animation: flicker 5s infinite;
+        }
+
+        .info {
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(0, 240, 224, 0.3);
+            font-size: 10px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .stats {
+            top: 28px;
+            right: 28px;
+            color: rgba(0, 240, 224, 0.18);
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-align: right;
+            line-height: 2;
+            white-space: pre;
+        }
+
+        .hint-tl {
+            top: 28px;
+            left: 28px;
+            color: rgba(0, 240, 224, 0.12);
+            font-size: 9px;
+            letter-spacing: 3px;
+            line-height: 2.2;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            90% { opacity: 1; }
+            91% { opacity: 0.3; }
+            92% { opacity: 1; }
+            94% { opacity: 0.5; }
+            95% { opacity: 1; }
+            97% { opacity: 0.7; }
+            98% { opacity: 1; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .title { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div class="overlay title">LIGHTNING CURSOR</div>
+    <div class="overlay info">Move to create lightning &mdash; Click to discharge</div>
+    <div class="overlay stats" id="stats"></div>
+    <div class="overlay hint-tl">VOLTAGE: ACTIVE&#10;FIELD: CHARGED</div>
+
+    <script>
+    (() => {
+        /* ---- Canvas Setup ---- */
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const statsEl = document.getElementById('stats');
+
+        let W, H;
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            // Re-fill on resize to avoid flash
+            ctx.fillStyle = '#060610';
+            ctx.fillRect(0, 0, W, H);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        /* ---- State ---- */
+        const mouse = { x: -200, y: -200, px: -200, py: -200, speed: 0, active: false };
+        const smooth = { x: -200, y: -200 };
+
+        const bolts = [];
+        const particles = [];
+        const bursts = [];
+        const waves = [];
+        const ambients = [];
+
+        const MAX_BOLTS = 80;
+        const MAX_PARTICLES = 400;
+        const MAX_AMBIENTS = 6;
+
+        let screenFlash = 0;
+        let totalBolts = 0;
+        let totalClicks = 0;
+        let frame = 0;
+        let idleTimer = 0;
+
+        /* ---- Input Handling ---- */
+        function handleMove(x, y) {
+            mouse.px = mouse.x;
+            mouse.py = mouse.y;
+            mouse.x = x;
+            mouse.y = y;
+            mouse.active = true;
+
+            const dx = mouse.x - mouse.px;
+            const dy = mouse.y - mouse.py;
+            mouse.speed = Math.sqrt(dx * dx + dy * dy);
+
+            // Generate bolt trail when moving fast enough
+            if (mouse.speed > 1.5) {
+                createTrailBolt(mouse.px, mouse.py, mouse.x, mouse.y, mouse.speed);
+            }
+
+            // Emit sparks proportional to speed
+            const count = Math.min(Math.floor(mouse.speed / 3), 8);
+            for (let i = 0; i < count; i++) {
+                spawnSpark(
+                    mouse.x + (Math.random() - 0.5) * 10,
+                    mouse.y + (Math.random() - 0.5) * 10,
+                    mouse.speed
+                );
+            }
+        }
+
+        function handleClick(x, y) {
+            createBurst(x, y);
+            screenFlash = 0.25;
+            totalClicks++;
+        }
+
+        canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        canvas.addEventListener('click', e => handleClick(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            mouse.x = t.clientX; mouse.y = t.clientY;
+            mouse.px = mouse.x; mouse.py = mouse.y;
+            mouse.active = true;
+            handleClick(t.clientX, t.clientY);
+        });
+
+        canvas.addEventListener('mouseleave', () => { mouse.active = false; });
+        canvas.addEventListener('mouseenter', e => {
+            mouse.x = e.clientX; mouse.y = e.clientY;
+            mouse.px = mouse.x; mouse.py = mouse.y;
+            mouse.active = true;
+        });
+
+        /* ---- Lightning Path Generation (Recursive Midpoint Displacement) ---- */
+        function generatePath(x1, y1, x2, y2, depth, displacement) {
+            if (depth <= 0) return [{ x1, y1, x2, y2 }];
+
+            const mx = (x1 + x2) / 2;
+            const my = (y1 + y2) / 2;
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.max(Math.sqrt(dx * dx + dy * dy), 0.001);
+            // Perpendicular direction for offset
+            const nx = -dy / len;
+            const ny = dx / len;
+            const offset = (Math.random() - 0.5) * 2 * displacement;
+            const px = mx + nx * offset;
+            const py = my + ny * offset;
+
+            return [
+                ...generatePath(x1, y1, px, py, depth - 1, displacement * 0.52),
+                ...generatePath(px, py, x2, y2, depth - 1, displacement * 0.52)
+            ];
+        }
+
+        /* ---- Bolt Creation ---- */
+        function createTrailBolt(x1, y1, x2, y2, speed) {
+            if (bolts.length >= MAX_BOLTS) bolts.shift();
+
+            const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            const depth = Math.min(6, Math.max(3, Math.floor(dist / 7)));
+            const disp = Math.max(4, dist * 0.22);
+
+            const segments = generatePath(x1, y1, x2, y2, depth, disp);
+            const branchList = [];
+
+            // Branch count scales with speed
+            const bc = Math.floor(Math.random() * 2) + (speed > 18 ? 3 : speed > 10 ? 2 : speed > 5 ? 1 : 0);
+            for (let i = 0; i < bc; i++) {
+                const idx = Math.floor(Math.random() * Math.max(1, segments.length - 1));
+                const s = segments[idx];
+                const baseAngle = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+                const dir = Math.random() > 0.5 ? 1 : -1;
+                const angle = baseAngle + dir * (0.3 + Math.random() * 1.0);
+                const len = (12 + Math.random() * 40) * Math.min(speed / 12, 2);
+                const bx = s.x1 + Math.cos(angle) * len;
+                const by = s.y1 + Math.sin(angle) * len;
+                branchList.push(generatePath(s.x1, s.y1, bx, by, 3, len * 0.28));
+            }
+
+            bolts.push({
+                segments,
+                branchList,
+                life: 1,
+                decay: 0.035 + Math.random() * 0.04
+            });
+        }
+
+        function createBurst(x, y) {
+            const rays = [];
+            const count = 10 + Math.floor(Math.random() * 8);
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                const len = 50 + Math.random() * 160;
+                const ex = x + Math.cos(angle) * len;
+                const ey = y + Math.sin(angle) * len;
+                rays.push(generatePath(x, y, ex, ey, 5, 22 + Math.random() * 18));
+            }
+            bursts.push({ x, y, rays, life: 1, decay: 0.022 });
+
+            // Shockwave ring
+            waves.push({
+                x, y,
+                radius: 8,
+                maxRadius: 180 + Math.random() * 120,
+                life: 1,
+                decay: 0.018
+            });
+
+            // Sparks explosion
+            for (let i = 0; i < 60; i++) {
+                spawnSpark(
+                    x + (Math.random() - 0.5) * 16,
+                    y + (Math.random() - 0.5) * 16,
+                    30 + Math.random() * 10
+                );
+            }
+        }
+
+        function spawnSpark(x, y, speed) {
+            if (particles.length >= MAX_PARTICLES) return;
+            const angle = Math.random() * Math.PI * 2;
+            const vel = (0.5 + Math.random() * 3.5) * (speed / 14);
+            particles.push({
+                x, y,
+                vx: Math.cos(angle) * vel,
+                vy: Math.sin(angle) * vel - Math.random() * 0.8,
+                life: 1,
+                decay: 0.012 + Math.random() * 0.04,
+                size: 0.4 + Math.random() * 2.2,
+                bright: Math.random() > 0.65
+            });
+        }
+
+        function spawnAmbient() {
+            if (ambients.length >= MAX_AMBIENTS) return;
+            const x1 = Math.random() * W;
+            const y1 = Math.random() * H;
+            const angle = Math.random() * Math.PI * 2;
+            const len = 25 + Math.random() * 90;
+            ambients.push({
+                segments: generatePath(
+                    x1, y1,
+                    x1 + Math.cos(angle) * len,
+                    y1 + Math.sin(angle) * len,
+                    3, len * 0.22
+                ),
+                life: 1,
+                decay: 0.05 + Math.random() * 0.05
+            });
+        }
+
+        /* ---- Drawing Helpers ---- */
+        function drawPath(segs, width, color) {
+            if (!segs.length) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(segs[0].x1, segs[0].y1);
+            for (let i = 0; i < segs.length; i++) {
+                ctx.lineTo(segs[i].x2, segs[i].y2);
+            }
+            ctx.stroke();
+        }
+
+        function drawBoltObj(b) {
+            const a = b.life;
+            // Three-layer glow: outer, mid, core
+            drawPath(b.segments, 9, `rgba(0, 240, 224, ${(a * 0.07).toFixed(3)})`);
+            drawPath(b.segments, 3.8, `rgba(100, 255, 245, ${(a * 0.28).toFixed(3)})`);
+            drawPath(b.segments, 1.6, `rgba(255, 255, 255, ${(a * 0.85).toFixed(3)})`);
+
+            // Branches (thinner, dimmer)
+            for (const br of b.branchList) {
+                drawPath(br, 5, `rgba(0, 240, 224, ${(a * 0.04).toFixed(3)})`);
+                drawPath(br, 1.8, `rgba(100, 255, 245, ${(a * 0.18).toFixed(3)})`);
+                drawPath(br, 0.7, `rgba(255, 255, 255, ${(a * 0.4).toFixed(3)})`);
+            }
+        }
+
+        function drawBurstObj(burst) {
+            const a = burst.life;
+
+            // Central white flash
+            if (a > 0.65) {
+                const fa = (a - 0.65) / 0.35;
+                const g = ctx.createRadialGradient(burst.x, burst.y, 0, burst.x, burst.y, 200);
+                g.addColorStop(0, `rgba(255, 255, 255, ${(fa * 0.7).toFixed(3)})`);
+                g.addColorStop(0.15, `rgba(180, 255, 250, ${(fa * 0.35).toFixed(3)})`);
+                g.addColorStop(0.5, `rgba(0, 240, 224, ${(fa * 0.1).toFixed(3)})`);
+                g.addColorStop(1, 'rgba(0, 240, 224, 0)');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(burst.x, burst.y, 200, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            for (const ray of burst.rays) {
+                drawPath(ray, 7, `rgba(0, 240, 224, ${(a * 0.08).toFixed(3)})`);
+                drawPath(ray, 2.8, `rgba(100, 255, 245, ${(a * 0.32).toFixed(3)})`);
+                drawPath(ray, 1.1, `rgba(255, 255, 255, ${(a * 0.78).toFixed(3)})`);
+            }
+        }
+
+        function drawWaveObj(w) {
+            const a = w.life;
+            // Outer ring
+            ctx.strokeStyle = `rgba(0, 240, 224, ${(a * 0.35).toFixed(3)})`;
+            ctx.lineWidth = 2.5 * a;
+            ctx.beginPath();
+            ctx.arc(w.x, w.y, Math.max(0.1, w.radius), 0, Math.PI * 2);
+            ctx.stroke();
+            // Inner bright ring
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(a * 0.2).toFixed(3)})`;
+            ctx.lineWidth = 1 * a;
+            ctx.beginPath();
+            ctx.arc(w.x, w.y, Math.max(0.1, w.radius * 0.95), 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        function drawCursor(x, y) {
+            const speedFactor = Math.min(mouse.speed / 20, 1);
+            const glowRadius = 90 + speedFactor * 60;
+            const glowAlpha = 0.08 + speedFactor * 0.12;
+
+            // Large ambient glow (speed-responsive)
+            const g1 = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
+            g1.addColorStop(0, `rgba(0, 240, 224, ${glowAlpha.toFixed(3)})`);
+            g1.addColorStop(0.35, `rgba(0, 240, 224, ${(glowAlpha * 0.2).toFixed(3)})`);
+            g1.addColorStop(1, 'rgba(0, 240, 224, 0)');
+            ctx.fillStyle = g1;
+            ctx.beginPath();
+            ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner hot glow
+            const g2 = ctx.createRadialGradient(x, y, 0, x, y, 16);
+            g2.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            g2.addColorStop(0.25, 'rgba(200, 255, 250, 0.65)');
+            g2.addColorStop(0.6, 'rgba(0, 240, 224, 0.18)');
+            g2.addColorStop(1, 'rgba(0, 240, 224, 0)');
+            ctx.fillStyle = g2;
+            ctx.beginPath();
+            ctx.arc(x, y, 16, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core dot
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crosshair
+            ctx.strokeStyle = `rgba(0, 240, 224, ${(0.12 + speedFactor * 0.1).toFixed(3)})`;
+            ctx.lineWidth = 0.6;
+            const gap = 9;
+            const arm = 22;
+            ctx.beginPath();
+            ctx.moveTo(x - arm, y); ctx.lineTo(x - gap, y);
+            ctx.moveTo(x + gap, y); ctx.lineTo(x + arm, y);
+            ctx.moveTo(x, y - arm); ctx.lineTo(x, y - gap);
+            ctx.moveTo(x, y + gap); ctx.lineTo(x, y + arm);
+            ctx.stroke();
+
+            // Rotating ring
+            const rotAngle = frame * 0.015;
+            ctx.strokeStyle = `rgba(0, 240, 224, ${(0.08 + speedFactor * 0.06).toFixed(3)})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(x, y, 28, rotAngle, rotAngle + Math.PI * 0.6);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x, y, 28, rotAngle + Math.PI, rotAngle + Math.PI * 1.6);
+            ctx.stroke();
+        }
+
+        /* ---- Idle Static Arcs ---- */
+        function updateIdleArcs() {
+            if (!mouse.active) return;
+            if (mouse.speed < 2) {
+                idleTimer++;
+                if (idleTimer % 12 === 0) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 12 + Math.random() * 35;
+                    const x1 = smooth.x + Math.cos(angle) * dist * 0.25;
+                    const y1 = smooth.y + Math.sin(angle) * dist * 0.25;
+                    const x2 = smooth.x + Math.cos(angle) * dist;
+                    const y2 = smooth.y + Math.sin(angle) * dist;
+
+                    if (bolts.length < MAX_BOLTS) {
+                        bolts.push({
+                            segments: generatePath(x1, y1, x2, y2, 2, dist * 0.32),
+                            branchList: [],
+                            life: 0.5 + Math.random() * 0.3,
+                            decay: 0.07 + Math.random() * 0.05
+                        });
+                    }
+                }
+            } else {
+                idleTimer = 0;
+            }
+        }
+
+        /* ---- Main Animation Loop ---- */
+        function loop() {
+            frame++;
+
+            // Fade overlay — creates lightning trail persistence
+            ctx.fillStyle = 'rgba(6, 6, 16, 0.16)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Smooth cursor interpolation
+            smooth.x += (mouse.x - smooth.x) * 0.32;
+            smooth.y += (mouse.y - smooth.y) * 0.32;
+
+            // Spawn ambient arcs periodically
+            if (frame % 35 === 0 && Math.random() > 0.25) spawnAmbient();
+
+            // Idle crackling near cursor
+            updateIdleArcs();
+
+            /* --- Draw Ambient Arcs --- */
+            for (let i = ambients.length - 1; i >= 0; i--) {
+                const a = ambients[i];
+                drawPath(a.segments, 2.5, `rgba(0, 240, 224, ${(a.life * 0.05).toFixed(4)})`);
+                drawPath(a.segments, 0.8, `rgba(100, 255, 245, ${(a.life * 0.12).toFixed(4)})`);
+                a.life -= a.decay;
+                if (a.life <= 0) ambients.splice(i, 1);
+            }
+
+            /* --- Draw Trail Bolts --- */
+            for (let i = bolts.length - 1; i >= 0; i--) {
+                drawBoltObj(bolts[i]);
+                bolts[i].life -= bolts[i].decay;
+                if (bolts[i].life <= 0) {
+                    bolts.splice(i, 1);
+                    totalBolts++;
+                }
+            }
+
+            /* --- Draw Bursts --- */
+            for (let i = bursts.length - 1; i >= 0; i--) {
+                drawBurstObj(bursts[i]);
+                bursts[i].life -= bursts[i].decay;
+                if (bursts[i].life <= 0) bursts.splice(i, 1);
+            }
+
+            /* --- Draw Shockwaves --- */
+            for (let i = waves.length - 1; i >= 0; i--) {
+                const w = waves[i];
+                drawWaveObj(w);
+                w.radius += (w.maxRadius - w.radius) * 0.07;
+                w.life -= w.decay;
+                if (w.life <= 0) waves.splice(i, 1);
+            }
+
+            /* --- Draw Particles --- */
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                const a = p.life;
+                const r = Math.max(0.1, p.size * a);
+
+                if (p.bright) {
+                    // Warm bright spark
+                    ctx.fillStyle = `rgba(255, 255, 210, ${(a * 0.9).toFixed(3)})`;
+                } else {
+                    // Cool cyan spark
+                    ctx.fillStyle = `rgba(0, 240, 224, ${(a * 0.55).toFixed(3)})`;
+                }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Tiny glow around bright sparks
+                if (p.bright && a > 0.5) {
+                    ctx.fillStyle = `rgba(0, 240, 224, ${(a * 0.08).toFixed(3)})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.035; // Gravity
+                p.vx *= 0.988; // Drag
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            /* --- Screen Flash (on click) --- */
+            if (screenFlash > 0.005) {
+                ctx.fillStyle = `rgba(180, 255, 248, ${screenFlash.toFixed(4)})`;
+                ctx.fillRect(0, 0, W, H);
+                screenFlash *= 0.82;
+            } else {
+                screenFlash = 0;
+            }
+
+            /* --- Draw Cursor --- */
+            if (mouse.active) {
+                drawCursor(smooth.x, smooth.y);
+            }
+
+            /* --- Update Stats --- */
+            if (frame % 8 === 0) {
+                statsEl.textContent =
+                    `DISCHARGES ${totalClicks}\n` +
+                    `ARCS ${totalBolts}\n` +
+                    `SPARKS ${particles.length}\n` +
+                    `VELOCITY ${Math.round(mouse.speed)}`;
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        /* ---- Initial State ---- */
+        ctx.fillStyle = '#060610';
+        ctx.fillRect(0, 0, W, H);
+
+        // Spawn a few initial ambient arcs so the page isn't dead on load
+        for (let i = 0; i < 3; i++) spawnAmbient();
+
+        loop();
+    })();
+    </script>
+</body>
+</html>
