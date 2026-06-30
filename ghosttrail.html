@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost Trail Cursor</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #08080e;
+    --fg: #e8e4dc;
+    --muted: #5a5666;
+    --accent: #00ffa3;
+    --accent-warm: #ffe0a0;
+    --card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  canvas#trailCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Atmospheric background layers */
+  .bg-layer {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .bg-layer::before {
+    content: '';
+    position: absolute;
+    top: 30%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(0,255,163,0.04) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: breathe 8s ease-in-out infinite;
+  }
+
+  .bg-layer::after {
+    content: '';
+    position: absolute;
+    bottom: 10%; right: 15%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(255,224,160,0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: breathe 10s ease-in-out infinite reverse;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  }
+
+  /* Noise overlay */
+  .noise {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+  }
+
+  /* Content overlay */
+  .content {
+    position: relative;
+    z-index: 3;
+    pointer-events: none;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .content h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: clamp(3rem, 8vw, 7rem);
+    letter-spacing: 0.08em;
+    line-height: 1.05;
+    color: var(--fg);
+    margin-bottom: 1.5rem;
+    opacity: 0.85;
+    text-shadow: 0 0 80px rgba(0,255,163,0.08);
+  }
+
+  .content h1 span {
+    display: block;
+    font-weight: 600;
+    font-size: 0.55em;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.7;
+    margin-bottom: 0.5em;
+  }
+
+  .content p {
+    font-weight: 300;
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 440px;
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+  }
+
+  /* Controls panel */
+  .controls {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: all;
+    display: flex;
+    gap: 0.5rem;
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.4rem;
+    transition: opacity 0.4s;
+  }
+
+  .controls:hover { opacity: 1 !important; }
+
+  .ctrl-btn {
+    pointer-events: all;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 400;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .ctrl-btn:hover { color: var(--fg); background: rgba(255,255,255,0.05); }
+  .ctrl-btn.active { color: var(--bg); background: var(--accent); font-weight: 500; }
+  .ctrl-btn.active-warm { color: var(--bg); background: var(--accent-warm); font-weight: 500; }
+  .ctrl-btn i { font-size: 0.7rem; }
+
+  /* Stats */
+  .stats {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 10;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.5;
+    line-height: 1.8;
+    pointer-events: none;
+  }
+
+  /* Speed indicator */
+  .speed-ring {
+    position: fixed;
+    top: 1.5rem;
+    left: 1.5rem;
+    z-index: 10;
+    pointer-events: none;
+    width: 48px;
+    height: 48px;
+  }
+
+  .speed-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .speed-ring circle {
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .speed-ring .track { stroke: var(--border); }
+  .speed-ring .fill { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 0.15s ease; }
+
+  .speed-label {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.55rem;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  /* Fade in */
+  .content, .controls, .stats, .speed-ring {
+    animation: fadeUp 1.2s ease both;
+  }
+  .controls { animation-delay: 0.4s; }
+  .stats { animation-delay: 0.6s; }
+  .speed-ring { animation-delay: 0.5s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .stats { animation-name: fadeUpStats; }
+  .speed-ring { animation-name: fadeUpStats; }
+  @keyframes fadeUpStats {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 0.5; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .controls { gap: 0.25rem; padding: 0.3rem; }
+    .ctrl-btn { font-size: 0.68rem; padding: 0.4rem 0.7rem; }
+    .ctrl-btn span.label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="noise"></div>
+<canvas id="trailCanvas"></canvas>
+
+<div class="content">
+  <h1>
+    <span>Spectral</span>
+    Ghost Trail
+  </h1>
+  <p>Move your cursor to summon ethereal trails. Each ghost follows with its own delay, fading into the void behind you.</p>
+</div>
+
+<div class="speed-ring" aria-hidden="true">
+  <svg viewBox="0 0 48 48">
+    <circle class="track" cx="24" cy="24" r="20"/>
+    <circle class="fill" id="speedFill" cx="24" cy="24" r="20"
+      stroke-dasharray="125.66"
+      stroke-dashoffset="125.66"/>
+  </svg>
+  <div class="speed-label" id="speedLabel">0</div>
+</div>
+
+<div class="stats" id="stats" aria-hidden="true">
+  <div id="particleCount">Particles: 0</div>
+  <div id="ghostCount">Ghosts: 0</div>
+  <div id="fpsCount">FPS: 60</div>
+</div>
+
+<nav class="controls" role="toolbar" aria-label="Trail settings" style="opacity:0.6;">
+  <button class="ctrl-btn active" data-mode="spectral" aria-pressed="true">
+    <i class="fas fa-ghost"></i> <span class="label">Spectral</span>
+  </button>
+  <button class="ctrl-btn" data-mode="fire" aria-pressed="false">
+    <i class="fas fa-fire"></i> <span class="label">Ember</span>
+  </button>
+  <button class="ctrl-btn" data-mode="frost" aria-pressed="false">
+    <i class="fas fa-snowflake"></i> <span class="label">Frost</span>
+  </button>
+  <button class="ctrl-btn" data-mode="void" aria-pressed="false">
+    <i class="fas fa-circle-notch"></i> <span class="label">Void</span>
+  </button>
+  <button class="ctrl-btn" data-mode="long" aria-pressed="false">
+    <i class="fas fa-wind"></i> <span class="label">Long</span>
+  </button>
+</nav>
+
+<script>
+// ─── Canvas Setup ───
+const canvas = document.getElementById('trailCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Color Themes ───
+const themes = {
+  spectral: {
+    ghosts: [
+      { r: 0, g: 255, b: 163 },
+      { r: 0, g: 220, b: 180 },
+      { r: 180, g: 255, b: 220 },
+      { r: 255, g: 255, b: 255 },
+    ],
+    particle: { r: 0, g: 255, b: 163 },
+    glow: 'rgba(0,255,163,0.15)',
+    accent: '#00ffa3',
+  },
+  fire: {
+    ghosts: [
+      { r: 255, g: 120, b: 30 },
+      { r: 255, g: 80, b: 20 },
+      { r: 255, g: 180, b: 60 },
+      { r: 255, g: 240, b: 200 },
+    ],
+    particle: { r: 255, g: 140, b: 40 },
+    glow: 'rgba(255,120,30,0.15)',
+    accent: '#ff7820',
+  },
+  frost: {
+    ghosts: [
+      { r: 140, g: 220, b: 255 },
+      { r: 180, g: 240, b: 255 },
+      { r: 220, g: 245, b: 255 },
+      { r: 255, g: 255, b: 255 },
+    ],
+    particle: { r: 180, g: 230, b: 255 },
+    glow: 'rgba(140,220,255,0.12)',
+    accent: '#8cdcff',
+  },
+  void: {
+    ghosts: [
+      { r: 180, g: 120, b: 255 },
+      { r: 220, g: 160, b: 255 },
+      { r: 255, g: 200, b: 255 },
+      { r: 255, g: 255, b: 255 },
+    ],
+    particle: { r: 200, g: 140, b: 255 },
+    glow: 'rgba(180,120,255,0.12)',
+    accent: '#b478ff',
+  },
+  long: {
+    ghosts: [
+      { r: 0, g: 255, b: 163 },
+      { r: 0, g: 200, b: 200 },
+      { r: 100, g: 180, b: 255 },
+      { r: 255, g: 255, b: 255 },
+    ],
+    particle: { r: 0, g: 220, b: 180 },
+    glow: 'rgba(0,255,163,0.1)',
+    accent: '#00ffa3',
+  }
+};
+
+let currentMode = 'spectral';
+
+// ─── Mouse State ───
+let mouse = { x: W / 2, y: H / 2 };
+let prevMouse = { x: W / 2, y: H / 2 };
+let mouseSpeed = 0;
+let smoothSpeed = 0;
+let isMoving = false;
+let moveTimeout = null;
+
+document.addEventListener('mousemove', (e) => {
+  prevMouse.x = mouse.x;
+  prevMouse.y = mouse.y;
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  isMoving = true;
+  clearTimeout(moveTimeout);
+  moveTimeout = setTimeout(() => { isMoving = false; }, 100);
+});
+
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  prevMouse.x = mouse.x;
+  prevMouse.y = mouse.y;
+  mouse.x = t.clientX;
+  mouse.y = t.clientY;
+  isMoving = true;
+  clearTimeout(moveTimeout);
+  moveTimeout = setTimeout(() => { isMoving = false; }, 100);
+}, { passive: false });
+
+// ─── Ghost Trail System ───
+class Ghost {
+  constructor(delay, size, colorIndex) {
+    this.delay = delay;
+    this.size = size;
+    this.colorIndex = colorIndex;
+    this.x = W / 2;
+    this.y = H / 2;
+    this.history = [];
+    this.maxHistory = Math.floor(delay * 3);
+  }
+
+  update(mx, my) {
+    this.history.unshift({ x: mx, y: my });
+    if (this.history.length > this.maxHistory) {
+      this.history.pop();
+    }
+    const idx = Math.min(Math.floor(this.delay), this.history.length - 1);
+    const target = this.history[idx];
+    if (target) {
+      // Smooth follow with easing
+      this.x += (target.x - this.x) * 0.35;
+      this.y += (target.y - this.y) * 0.35;
+    }
+  }
+
+  draw(ctx, theme, speed) {
+    const c = theme.ghosts[this.colorIndex % theme.ghosts.length];
+    const speedFactor = Math.min(speed / 15, 1);
+    const baseAlpha = 0.6 - this.colorIndex * 0.12;
+    const alpha = baseAlpha * (0.3 + speedFactor * 0.7);
+    const size = this.size * (1 + speedFactor * 0.5);
+
+    // Outer glow
+    const glowSize = size * 3;
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowSize);
+    grad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${alpha * 0.3})`);
+    grad.addColorStop(0.4, `rgba(${c.r},${c.g},${c.b},${alpha * 0.08})`);
+    grad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Core
+    const coreGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size);
+    coreGrad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${alpha})`);
+    coreGrad.addColorStop(0.6, `rgba(${c.r},${c.g},${c.b},${alpha * 0.4})`);
+    coreGrad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+    ctx.fillStyle = coreGrad;
+    ctx.fill();
+  }
+}
+
+// ─── Particle System ───
+class Particle {
+  constructor(x, y, theme, speed) {
+    this.x = x;
+    this.y = y;
+    const c = theme.particle;
+    this.r = c.r;
+    this.g = c.g;
+    this.b = c.b;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = (0.3 + Math.random() * 1.5) * (0.5 + speed * 0.15);
+    this.vx = Math.cos(angle) * vel;
+    this.vy = Math.sin(angle) * vel - 0.3; // slight upward drift
+    this.life = 1;
+    this.decay = 0.008 + Math.random() * 0.02;
+    this.size = 1 + Math.random() * 2.5;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.vy -= 0.005; // gentle float
+    this.life -= this.decay;
+  }
+
+  draw(ctx) {
+    if (this.life <= 0) return;
+    const alpha = this.life * this.life * 0.6;
+    const s = this.size * this.life;
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(0.1, s * 2));
+    grad.addColorStop(0, `rgba(${this.r},${this.g},${this.b},${alpha})`);
+    grad.addColorStop(1, `rgba(${this.r},${this.g},${this.b},0)`);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.1, s * 2), 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+}
+
+// ─── Trail Line System (connecting ghost positions) ───
+function drawTrailLine(ctx, ghosts, theme, alpha) {
+  if (ghosts.length < 2) return;
+  const c = theme.ghosts[0];
+  ctx.beginPath();
+  ctx.moveTo(mouse.x, mouse.y);
+  for (let i = 0; i < ghosts.length; i++) {
+    ctx.lineTo(ghosts[i].x, ghosts[i].y);
+  }
+  ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${alpha * 0.15})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+// ─── Initialize Ghosts ───
+function createGhosts(mode) {
+  const isLong = mode === 'long';
+  const count = isLong ? 8 : 5;
+  const maxDelay = isLong ? 30 : 18;
+  const ghosts = [];
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const delay = 2 + t * maxDelay;
+    const size = isLong ? 6 - t * 3 : 8 - t * 4;
+    ghosts.push(new Ghost(delay, Math.max(2, size), i));
+  }
+  return ghosts;
+}
+
+let ghosts = createGhosts(currentMode);
+let particles = [];
+let frameCount = 0;
+
+// ─── Main Cursor Draw ───
+function drawMainCursor(ctx, theme, speed) {
+  const c = theme.ghosts[theme.ghosts.length - 1]; // whitest
+  const speedFactor = Math.min(speed / 12, 1);
+  const baseSize = 5 + speedFactor * 3;
+
+  // Large outer glow
+  const outerR = baseSize * 6;
+  const outerGrad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, outerR);
+  outerGrad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0.12)`);
+  outerGrad.addColorStop(0.3, `rgba(${c.r},${c.g},${c.b},0.03)`);
+  outerGrad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, outerR, 0, Math.PI * 2);
+  ctx.fillStyle = outerGrad;
+  ctx.fill();
+
+  // Inner bright core
+  const innerGrad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, baseSize);
+  innerGrad.addColorStop(0, `rgba(255,255,255,0.95)`);
+  innerGrad.addColorStop(0.3, `rgba(${c.r},${c.g},${c.b},0.8)`);
+  innerGrad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, baseSize, 0, Math.PI * 2);
+  ctx.fillStyle = innerGrad;
+  ctx.fill();
+
+  // Tiny crosshair
+  ctx.strokeStyle = `rgba(255,255,255,${0.2 + speedFactor * 0.2})`;
+  ctx.lineWidth = 0.5;
+  const ch = baseSize * 2.5;
+  ctx.beginPath();
+  ctx.moveTo(mouse.x - ch, mouse.y);
+  ctx.lineTo(mouse.x - baseSize * 1.2, mouse.y);
+  ctx.moveTo(mouse.x + baseSize * 1.2, mouse.y);
+  ctx.lineTo(mouse.x + ch, mouse.y);
+  ctx.moveTo(mouse.x, mouse.y - ch);
+  ctx.lineTo(mouse.x, mouse.y - baseSize * 1.2);
+  ctx.moveTo(mouse.x, mouse.y + baseSize * 1.2);
+  ctx.lineTo(mouse.x, mouse.y + ch);
+  ctx.stroke();
+}
+
+// ─── FPS Tracking ───
+let lastTime = performance.now();
+let fps = 60;
+let fpsSmooth = 60;
+
+// ─── Speed Ring ───
+const speedFill = document.getElementById('speedFill');
+const speedLabel = document.getElementById('speedLabel');
+const circumference = 2 * Math.PI * 20; // r=20
+
+// ─── Stats ───
+const particleCountEl = document.getElementById('particleCount');
+const ghostCountEl = document.getElementById('ghostCount');
+const fpsCountEl = document.getElementById('fpsCount');
+
+// ─── Animation Loop ───
+function animate(now) {
+  requestAnimationFrame(animate);
+
+  // FPS
+  const dt = now - lastTime;
+  lastTime = now;
+  fps = 1000 / Math.max(dt, 1);
+  fpsSmooth += (fps - fpsSmooth) * 0.1;
+
+  // Speed calc
+  const dx = mouse.x - prevMouse.x;
+  const dy = mouse.y - prevMouse.y;
+  mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+  smoothSpeed += (mouseSpeed - smoothSpeed) * 0.2;
+
+  // Clear with fade trail
+  ctx.clearRect(0, 0, W, H);
+
+  const theme = themes[currentMode];
+
+  // Update ghosts
+  for (const g of ghosts) {
+    g.update(mouse.x, mouse.y);
+  }
+
+  // Spawn particles
+  if (isMoving && smoothSpeed > 1) {
+    const spawnCount = Math.min(Math.floor(smoothSpeed * 0.4), 6);
+    for (let i = 0; i < spawnCount; i++) {
+      // Spawn from random ghost positions
+      const srcGhost = ghosts[Math.floor(Math.random() * ghosts.length)];
+      particles.push(new Particle(
+        srcGhost.x + (Math.random() - 0.5) * 8,
+        srcGhost.y + (Math.random() - 0.5) * 8,
+        theme,
+        smoothSpeed
+      ));
+    }
+  }
+
+  // Also spawn subtle ambient particles when idle
+  if (frameCount % 8 === 0 && particles.length < 50) {
+    particles.push(new Particle(
+      mouse.x + (Math.random() - 0.5) * 30,
+      mouse.y + (Math.random() - 0.5) * 30,
+      theme,
+      0.5
+    ));
+  }
+
+  // Update and draw particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    if (particles[i].life <= 0) {
+      particles.splice(i, 1);
+    } else {
+      particles[i].draw(ctx);
+    }
+  }
+
+  // Cap particles
+  if (particles.length > 400) {
+    particles.splice(0, particles.length - 400);
+  }
+
+  // Draw trail line
+  drawTrailLine(ctx, ghosts, theme, Math.min(smoothSpeed / 5, 1));
+
+  // Draw ghosts (back to front)
+  for (let i = ghosts.length - 1; i >= 0; i--) {
+    ghosts[i].draw(ctx, theme, smoothSpeed);
+  }
+
+  // Draw main cursor
+  drawMainCursor(ctx, theme, smoothSpeed);
+
+  // Update speed ring
+  const speedNorm = Math.min(smoothSpeed / 25, 1);
+  const offset = circumference * (1 - speedNorm);
+  speedFill.style.strokeDashoffset = offset;
+  speedFill.style.stroke = theme.accent;
+  speedLabel.textContent = Math.round(smoothSpeed);
+
+  // Update stats every 10 frames
+  if (frameCount % 10 === 0) {
+    particleCountEl.textContent = `Particles: ${particles.length}`;
+    ghostCountEl.textContent = `Ghosts: ${ghosts.length}`;
+    fpsCountEl.textContent = `FPS: ${Math.round(fpsSmooth)}`;
+  }
+
+  frameCount++;
+}
+
+requestAnimationFrame(animate);
+
+// ─── Mode Switching ───
+const buttons = document.querySelectorAll('.ctrl-btn[data-mode]');
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.mode;
+    if (mode === currentMode) return;
+    currentMode = mode;
+
+    // Update button states
+    buttons.forEach(b => {
+      b.classList.remove('active', 'active-warm');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    if (mode === 'fire') {
+      btn.classList.add('active-warm');
+    } else {
+      btn.classList.add('active');
+    }
+    btn.setAttribute('aria-pressed', 'true');
+
+    // Recreate ghosts for new mode
+    ghosts = createGhosts(mode);
+
+    // Clear particles for clean transition
+    particles = [];
+
+    // Update CSS accent
+    const theme = themes[mode];
+    document.documentElement.style.setProperty('--accent', theme.accent);
+  });
+});
+
+// ─── Click burst effect ───
+document.addEventListener('click', (e) => {
+  const theme = themes[currentMode];
+  // Burst of particles
+  for (let i = 0; i < 30; i++) {
+    const p = new Particle(e.clientX, e.clientY, theme, 8);
+    p.vx *= 3;
+    p.vy *= 3;
+    p.size *= 1.5;
+    p.decay *= 0.6;
+    particles.push(p);
+  }
+});
+
+// ─── Handle page visibility ───
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    lastTime = performance.now();
+  }
+});
+</script>
+</body>
+</html>

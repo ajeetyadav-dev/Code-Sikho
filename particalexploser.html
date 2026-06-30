@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Explosion Cursor</title>
+<style>
+  /* Reset & full-screen canvas */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --fg: #f0e6d3;
+    --accent: #ff6a00;
+    --accent2: #00e5ff;
+    --muted: #2a2a3a;
+  }
+
+  body {
+    background: var(--bg);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  canvas {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+  }
+
+  /* Hint overlay */
+  .hint {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: var(--muted);
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: hintFade 4s ease-in-out forwards;
+    text-align: center;
+  }
+
+  @keyframes hintFade {
+    0%, 60% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Counter display */
+  .counter {
+    position: fixed;
+    top: 24px;
+    right: 32px;
+    z-index: 10;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter span {
+    color: var(--accent);
+    font-size: 20px;
+    font-weight: 700;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div class="hint">Move to spark &middot; Click to explode &middot; Hold for inferno</div>
+<div class="counter">Particles<span id="pcount">0</span></div>
+
+<script>
+// === Canvas Setup ===
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const pcountEl = document.getElementById('pcount');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// === Mouse State ===
+const mouse = { x: W / 2, y: H / 2, px: W / 2, py: H / 2, down: false, speed: 0 };
+let shakeX = 0, shakeY = 0;
+let holdTimer = 0;
+
+canvas.addEventListener('mousemove', e => {
+  mouse.px = mouse.x;
+  mouse.py = mouse.y;
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  mouse.speed = Math.hypot(mouse.x - mouse.px, mouse.y - mouse.py);
+});
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  mouse.down = true;
+  holdTimer = 0;
+  // Big explosion on click
+  spawnExplosion(mouse.x, mouse.y, e.button === 2 ? 3 : 1);
+});
+canvas.addEventListener('mouseup', () => { mouse.down = false; holdTimer = 0; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  mouse.x = t.clientX; mouse.y = t.clientY;
+  mouse.px = mouse.x; mouse.py = mouse.y;
+  mouse.down = true; holdTimer = 0;
+  spawnExplosion(mouse.x, mouse.y, 1);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  mouse.px = mouse.x; mouse.py = mouse.y;
+  mouse.x = t.clientX; mouse.y = t.clientY;
+  mouse.speed = Math.hypot(mouse.x - mouse.px, mouse.y - mouse.py);
+}, { passive: false });
+canvas.addEventListener('touchend', () => { mouse.down = false; holdTimer = 0; });
+
+// === Color Palettes ===
+// Warm fire palette
+const fireColors = [
+  { r: 255, g: 106, b: 0 },   // bright orange
+  { r: 255, g: 200, b: 50 },  // gold
+  { r: 255, g: 60, b: 20 },   // red-orange
+  { r: 255, g: 255, b: 180 }, // white-hot
+  { r: 200, g: 30, b: 0 },    // deep red
+];
+// Cool accent palette
+const coolColors = [
+  { r: 0, g: 229, b: 255 },   // cyan
+  { r: 100, g: 200, b: 255 }, // light blue
+  { r: 0, g: 150, b: 200 },   // teal
+  { r: 180, g: 255, b: 255 }, // ice white
+];
+// Mixed palette for special explosions
+const mixedColors = [...fireColors, ...coolColors];
+
+function pickColor(palette) {
+  return palette[Math.floor(Math.random() * palette.length)];
+}
+
+function lerpColor(a, b, t) {
+  return {
+    r: a.r + (b.r - a.r) * t,
+    g: a.g + (b.g - a.g) * t,
+    b: a.b + (b.b - a.b) * t,
+  };
+}
+
+// === Particle Pool ===
+const MAX_PARTICLES = 6000;
+const particles = [];
+
+class Particle {
+  constructor() { this.alive = false; }
+
+  init(x, y, vx, vy, color, size, life, type, gravity, drag) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.color = color;
+    this.size = Math.max(0.5, size);
+    this.origSize = this.size;
+    this.life = life;
+    this.maxLife = life;
+    this.type = type; // 'spark', 'glow', 'ember', 'ring', 'trail'
+    this.gravity = gravity;
+    this.drag = drag;
+    this.alive = true;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.2;
+    // For trail type
+    this.trail = [];
+    this.trailMax = type === 'spark' ? 5 : 0;
+    return this;
+  }
+
+  update(dt) {
+    if (!this.alive) return;
+
+    // Store trail positions
+    if (this.trailMax > 0) {
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > this.trailMax) this.trail.shift();
+    }
+
+    this.vy += this.gravity * dt;
+    this.vx *= Math.pow(this.drag, dt);
+    this.vy *= Math.pow(this.drag, dt);
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.rotation += this.rotSpeed * dt;
+    this.life -= dt;
+
+    const t = 1 - Math.max(0, this.life / this.maxLife);
+
+    if (this.type === 'glow') {
+      this.size = this.origSize * (1 - t * 0.6);
+    } else {
+      this.size = this.origSize * (1 - t * 0.8);
+    }
+
+    if (this.life <= 0 || this.size < 0.2) {
+      this.alive = false;
+    }
+  }
+
+  draw(ctx) {
+    if (!this.alive || this.size < 0.2) return;
+
+    const t = 1 - Math.max(0, this.life / this.maxLife);
+    const alpha = Math.max(0, 1 - t * t); // quadratic fade
+    const { r, g, b } = this.color;
+
+    // Draw trail
+    if (this.trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+      ctx.lineTo(this.x, this.y);
+      ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${alpha * 0.3})`;
+      ctx.lineWidth = Math.max(0.5, this.size * 0.5);
+      ctx.stroke();
+    }
+
+    if (this.type === 'glow') {
+      // Soft radial glow
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, this.size * 3));
+      grad.addColorStop(0, `rgba(${r|0},${g|0},${b|0},${alpha * 0.6})`);
+      grad.addColorStop(0.4, `rgba(${r|0},${g|0},${b|0},${alpha * 0.15})`);
+      grad.addColorStop(1, `rgba(${r|0},${g|0},${b|0},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(1, this.size * 3), 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.type === 'ember') {
+      // Tiny bright dot
+      ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${alpha})`;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(0.5, this.size), 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.type === 'spark') {
+      // Elongated spark with rotation
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+      const len = Math.max(1, this.size * 2.5);
+      const wid = Math.max(0.5, this.size * 0.5);
+      ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Bright core
+      ctx.fillStyle = `rgba(255,255,255,${alpha * 0.7})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, wid * 0.8, wid * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'ring') {
+      // Expanding ring particle
+      ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${alpha * 0.5})`;
+      ctx.lineWidth = Math.max(0.5, this.size * 0.3);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, Math.max(1, this.size), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+// Pre-allocate pool
+for (let i = 0; i < MAX_PARTICLES; i++) {
+  particles.push(new Particle());
+}
+
+function getParticle() {
+  for (let i = 0; i < particles.length; i++) {
+    if (!particles[i].alive) return particles[i];
+  }
+  return null; // pool exhausted
+}
+
+// === Shockwave Rings ===
+const shockwaves = [];
+class Shockwave {
+  constructor(x, y, maxRadius, color, width) {
+    this.x = x;
+    this.y = y;
+    this.radius = 0;
+    this.maxRadius = maxRadius;
+    this.color = color;
+    this.width = width;
+    this.life = 1;
+    this.alive = true;
+  }
+  update(dt) {
+    this.radius += (this.maxRadius - this.radius) * 0.08 * dt;
+    this.life -= dt * 1.8;
+    if (this.life <= 0) this.alive = false;
+  }
+  draw(ctx) {
+    if (!this.alive) return;
+    const { r, g, b } = this.color;
+    const alpha = Math.max(0, this.life) * 0.6;
+    ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${alpha})`;
+    ctx.lineWidth = Math.max(0.5, this.width * this.life);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(1, this.radius), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// === Spawn Functions ===
+function spawnTrailSparks(x, y, speed) {
+  const count = Math.min(8, Math.floor(speed * 0.5));
+  for (let i = 0; i < count; i++) {
+    const p = getParticle();
+    if (!p) break;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = 20 + Math.random() * 60;
+    const color = pickColor(fireColors);
+    p.init(
+      x + (Math.random() - 0.5) * 4,
+      y + (Math.random() - 0.5) * 4,
+      Math.cos(angle) * vel,
+      Math.sin(angle) * vel,
+      color,
+      1 + Math.random() * 2,
+      0.3 + Math.random() * 0.4,
+      'spark',
+      80,
+      0.96
+    );
+  }
+}
+
+function spawnExplosion(x, y, intensity) {
+  // intensity: 1 = normal, 2 = big, 3 = massive
+  const baseCount = 60 * intensity;
+  const baseSpeed = 200 * intensity;
+  const palette = intensity >= 3 ? mixedColors : fireColors;
+
+  // Core flash - large glow particles
+  for (let i = 0; i < 5 * intensity; i++) {
+    const p = getParticle();
+    if (!p) break;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = 10 + Math.random() * 30;
+    p.init(
+      x + (Math.random() - 0.5) * 10,
+      y + (Math.random() - 0.5) * 10,
+      Math.cos(angle) * vel,
+      Math.sin(angle) * vel,
+      { r: 255, g: 255, b: 230 },
+      15 + Math.random() * 25 * intensity,
+      0.3 + Math.random() * 0.3,
+      'glow',
+      0,
+      0.9
+    );
+  }
+
+  // Sparks - fast, elongated
+  for (let i = 0; i < baseCount; i++) {
+    const p = getParticle();
+    if (!p) break;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = baseSpeed * (0.3 + Math.random() * 0.7);
+    const color = pickColor(palette);
+    p.init(
+      x + (Math.random() - 0.5) * 6,
+      y + (Math.random() - 0.5) * 6,
+      Math.cos(angle) * vel,
+      Math.sin(angle) * vel,
+      color,
+      1.5 + Math.random() * 3,
+      0.5 + Math.random() * 0.8,
+      'spark',
+      120 + Math.random() * 80,
+      0.97
+    );
+  }
+
+  // Embers - small, floaty, long-lived
+  for (let i = 0; i < baseCount * 0.6; i++) {
+    const p = getParticle();
+    if (!p) break;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = baseSpeed * 0.5 * (0.2 + Math.random() * 0.8);
+    const color = pickColor(palette);
+    p.init(
+      x + (Math.random() - 0.5) * 8,
+      y + (Math.random() - 0.5) * 8,
+      Math.cos(angle) * vel,
+      Math.sin(angle) * vel - 20,
+      color,
+      0.8 + Math.random() * 1.5,
+      1 + Math.random() * 1.5,
+      'ember',
+      -30 - Math.random() * 40, // negative gravity = float up
+      0.99
+    );
+  }
+
+  // Secondary glow orbs
+  for (let i = 0; i < 8 * intensity; i++) {
+    const p = getParticle();
+    if (!p) break;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = baseSpeed * 0.4 * (0.3 + Math.random() * 0.5);
+    const color = pickColor(palette);
+    p.init(
+      x, y,
+      Math.cos(angle) * vel,
+      Math.sin(angle) * vel,
+      color,
+      5 + Math.random() * 10,
+      0.6 + Math.random() * 0.6,
+      'glow',
+      20,
+      0.95
+    );
+  }
+
+  // Shockwaves
+  shockwaves.push(new Shockwave(x, y, 80 * intensity, { r: 255, g: 180, b: 50 }, 3 * intensity));
+  if (intensity >= 2) {
+    shockwaves.push(new Shockwave(x, y, 140 * intensity, { r: 255, g: 100, b: 0 }, 2));
+  }
+  if (intensity >= 3) {
+    shockwaves.push(new Shockwave(x, y, 200, { r: 0, g: 229, b: 255 }, 1.5));
+    shockwaves.push(new Shockwave(x, y, 120, { r: 255, g: 255, b: 200 }, 4));
+  }
+
+  // Screen shake
+  const shakeAmount = 4 * intensity;
+  shakeX = (Math.random() - 0.5) * shakeAmount;
+  shakeY = (Math.random() - 0.5) * shakeAmount;
+}
+
+function spawnHoldParticles(x, y, dt) {
+  // Continuous stream while holding
+  const count = Math.floor(dt * 120);
+  for (let i = 0; i < count; i++) {
+    const p = getParticle();
+    if (!p) break;
+    const angle = Math.random() * Math.PI * 2;
+    const vel = 60 + Math.random() * 180;
+    const color = pickColor(holdTimer > 1.5 ? mixedColors : fireColors);
+    const type = Math.random() < 0.3 ? 'glow' : 'spark';
+    p.init(
+      x + (Math.random() - 0.5) * 12,
+      y + (Math.random() - 0.5) * 12,
+      Math.cos(angle) * vel,
+      Math.sin(angle) * vel,
+      color,
+      type === 'glow' ? 4 + Math.random() * 8 : 1 + Math.random() * 3,
+      0.3 + Math.random() * 0.6,
+      type,
+      type === 'glow' ? 10 : 100,
+      0.96
+    );
+  }
+
+  // Periodic burst rings while holding
+  if (Math.random() < dt * 3) {
+    shockwaves.push(new Shockwave(x, y, 50 + holdTimer * 30, pickColor(fireColors), 1.5));
+  }
+}
+
+// === Ambient Background Particles ===
+const bgParticles = [];
+for (let i = 0; i < 40; i++) {
+  bgParticles.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    size: 0.5 + Math.random() * 1.5,
+    alpha: 0.1 + Math.random() * 0.2,
+    vx: (Math.random() - 0.5) * 8,
+    vy: (Math.random() - 0.5) * 8,
+    pulse: Math.random() * Math.PI * 2,
+  });
+}
+
+// === Custom Cursor Glow ===
+function drawCursorGlow(x, y) {
+  // Outer soft glow
+  const grad1 = ctx.createRadialGradient(x, y, 0, x, y, 60);
+  grad1.addColorStop(0, 'rgba(255,106,0,0.12)');
+  grad1.addColorStop(0.5, 'rgba(255,106,0,0.03)');
+  grad1.addColorStop(1, 'rgba(255,106,0,0)');
+  ctx.fillStyle = grad1;
+  ctx.beginPath();
+  ctx.arc(x, y, 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner bright dot
+  const grad2 = ctx.createRadialGradient(x, y, 0, x, y, 6);
+  grad2.addColorStop(0, 'rgba(255,255,240,0.9)');
+  grad2.addColorStop(0.5, 'rgba(255,180,80,0.5)');
+  grad2.addColorStop(1, 'rgba(255,106,0,0)');
+  ctx.fillStyle = grad2;
+  ctx.beginPath();
+  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crosshair lines
+  ctx.strokeStyle = 'rgba(255,200,120,0.25)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y); ctx.lineTo(x - 4, y);
+  ctx.moveTo(x + 4, y); ctx.lineTo(x + 12, y);
+  ctx.moveTo(x, y - 12); ctx.lineTo(x, y - 4);
+  ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 12);
+  ctx.stroke();
+}
+
+// === Main Loop ===
+let lastTime = performance.now();
+let frameCount = 0;
+
+function loop(now) {
+  requestAnimationFrame(loop);
+
+  const rawDt = (now - lastTime) / 1000;
+  const dt = Math.min(rawDt, 0.05); // cap delta to avoid spiral of death
+  lastTime = now;
+  frameCount++;
+
+  // --- Update ---
+
+  // Mouse trail sparks
+  if (mouse.speed > 2) {
+    spawnTrailSparks(mouse.x, mouse.y, mouse.speed);
+  }
+
+  // Hold-to-inferno
+  if (mouse.down) {
+    holdTimer += dt;
+    spawnHoldParticles(mouse.x, mouse.y, dt);
+    // Escalating explosions while holding
+    if (holdTimer > 0.8 && Math.random() < dt * 4) {
+      spawnExplosion(
+        mouse.x + (Math.random() - 0.5) * 40,
+        mouse.y + (Math.random() - 0.5) * 40,
+        holdTimer > 2 ? 2 : 1
+      );
+    }
+  }
+
+  // Update particles
+  let aliveCount = 0;
+  for (let i = 0; i < particles.length; i++) {
+    if (particles[i].alive) {
+      particles[i].update(dt);
+      if (particles[i].alive) aliveCount++;
+    }
+  }
+
+  // Update shockwaves
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    shockwaves[i].update(dt);
+    if (!shockwaves[i].alive) shockwaves.splice(i, 1);
+  }
+
+  // Update background particles
+  for (const bp of bgParticles) {
+    bp.x += bp.vx * dt;
+    bp.y += bp.vy * dt;
+    bp.pulse += dt * 1.5;
+    if (bp.x < 0) bp.x = W;
+    if (bp.x > W) bp.x = 0;
+    if (bp.y < 0) bp.y = H;
+    if (bp.y > H) bp.y = 0;
+  }
+
+  // Decay screen shake
+  shakeX *= 0.85;
+  shakeY *= 0.85;
+
+  // Update counter every 6 frames
+  if (frameCount % 6 === 0) {
+    pcountEl.textContent = aliveCount;
+  }
+
+  // --- Draw ---
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  // Clear with very slight trail effect for motion blur
+  ctx.fillStyle = 'rgba(10,10,15,0.92)';
+  ctx.fillRect(-10, -10, W + 20, H + 20);
+
+  // Background ambient particles
+  for (const bp of bgParticles) {
+    const a = bp.alpha * (0.6 + 0.4 * Math.sin(bp.pulse));
+    ctx.fillStyle = `rgba(255,180,100,${a})`;
+    ctx.beginPath();
+    ctx.arc(bp.x, bp.y, bp.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Additive blending for all explosion particles
+  ctx.globalCompositeOperation = 'lighter';
+
+  // Draw particles (glow type first for layering)
+  for (let i = 0; i < particles.length; i++) {
+    if (particles[i].alive && particles[i].type === 'glow') {
+      particles[i].draw(ctx);
+    }
+  }
+  for (let i = 0; i < particles.length; i++) {
+    if (particles[i].alive && particles[i].type === 'ring') {
+      particles[i].draw(ctx);
+    }
+  }
+  for (let i = 0; i < particles.length; i++) {
+    if (particles[i].alive && particles[i].type === 'ember') {
+      particles[i].draw(ctx);
+    }
+  }
+  for (let i = 0; i < particles.length; i++) {
+    if (particles[i].alive && particles[i].type === 'spark') {
+      particles[i].draw(ctx);
+    }
+  }
+
+  // Draw shockwaves
+  for (const sw of shockwaves) {
+    sw.draw(ctx);
+  }
+
+  // Reset composite
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Cursor glow (always on top, not additive)
+  drawCursorGlow(mouse.x, mouse.y);
+
+  ctx.restore();
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
