@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S. Interface</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --cyan: #00d4ff;
+    --cyan-dim: rgba(0,212,255,0.15);
+    --cyan-glow: rgba(0,212,255,0.5);
+    --orange: #ff6a00;
+    --orange-dim: rgba(255,106,0,0.15);
+    --orange-glow: rgba(255,106,0,0.5);
+    --red: #ff2a2a;
+    --green: #00ff88;
+    --bg: #050a12;
+    --bg2: #0a1628;
+    --text: #c8e6f0;
+    --text-dim: rgba(200,230,240,0.4);
+    --border: rgba(0,212,255,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: crosshair;
+  }
+
+  /* Background layers */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridShift 20s linear infinite;
+  }
+  @keyframes gridShift {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+  .bg-radial {
+    background: radial-gradient(ellipse at 50% 50%, rgba(0,212,255,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 80%, rgba(255,106,0,0.02) 0%, transparent 40%);
+  }
+  .bg-scanline {
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,212,255,0.008) 2px, rgba(0,212,255,0.008) 4px
+    );
+    animation: scanMove 8s linear infinite;
+  }
+  @keyframes scanMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
+  }
+
+  /* Particles canvas */
+  #particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* Main layout */
+  .interface {
+    position: relative; z-index: 2;
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    gap: 0;
+    padding: 16px;
+  }
+
+  /* Top bar */
+  .top-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 8px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan-glow), 0 0 40px rgba(0,212,255,0.2);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+  .top-info {
+    display: flex; gap: 30px; align-items: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+  .top-info span.val { color: var(--cyan); }
+  .status-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 14px;
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 2px;
+    color: var(--green);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .status-badge::before {
+    content: ''; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Panels */
+  .panel {
+    background: linear-gradient(135deg, rgba(0,212,255,0.03), rgba(0,0,0,0.3));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+  }
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan-glow), transparent);
+  }
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title i { color: var(--cyan); font-size: 10px; }
+
+  /* Left column */
+  .left-col {
+    display: flex; flex-direction: column; gap: 12px;
+    overflow: hidden;
+  }
+
+  .sys-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(0,212,255,0.05);
+  }
+  .sys-item:last-child { border-bottom: none; }
+  .sys-label { color: var(--text-dim); font-weight: 400; }
+  .sys-val { font-family: 'Orbitron', monospace; font-size: 11px; }
+  .sys-val.cyan { color: var(--cyan); }
+  .sys-val.orange { color: var(--orange); }
+  .sys-val.green { color: var(--green); }
+  .sys-val.red { color: var(--red); }
+
+  .bar-container {
+    width: 100%; height: 3px;
+    background: rgba(0,212,255,0.08);
+    border-radius: 2px; margin-top: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 1s ease;
+  }
+  .bar-fill.cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan-glow); }
+  .bar-fill.orange { background: var(--orange); box-shadow: 0 0 6px var(--orange-glow); }
+  .bar-fill.green { background: var(--green); box-shadow: 0 0 6px rgba(0,255,136,0.5); }
+
+  /* Center area - main HUD */
+  .center-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .hud-container {
+    position: relative;
+    width: 420px; height: 420px;
+  }
+
+  /* SVG HUD rings */
+  .hud-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  .hud-ring {
+    fill: none;
+    stroke-linecap: round;
+  }
+  .ring-outer {
+    stroke: var(--cyan);
+    stroke-width: 1.5;
+    stroke-dasharray: 8 12;
+    opacity: 0.4;
+    animation: rotateCW 30s linear infinite;
+    transform-origin: 210px 210px;
+  }
+  .ring-mid {
+    stroke: var(--cyan);
+    stroke-width: 2;
+    stroke-dasharray: 120 80 40 80;
+    opacity: 0.6;
+    animation: rotateCCW 20s linear infinite;
+    transform-origin: 210px 210px;
+  }
+  .ring-inner {
+    stroke: var(--orange);
+    stroke-width: 1;
+    stroke-dasharray: 60 40 20 40 60 40;
+    opacity: 0.5;
+    animation: rotateCW 15s linear infinite;
+    transform-origin: 210px 210px;
+  }
+  .ring-core {
+    stroke: var(--cyan);
+    stroke-width: 2.5;
+    stroke-dasharray: 4 8;
+    opacity: 0.3;
+    animation: rotateCCW 10s linear infinite;
+    transform-origin: 210px 210px;
+  }
+  .arc-progress {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 0 999;
+    filter: drop-shadow(0 0 6px var(--cyan-glow));
+    transition: stroke-dasharray 1.5s ease;
+    transform-origin: 210px 210px;
+  }
+  .arc-progress-orange {
+    fill: none;
+    stroke: var(--orange);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 0 999;
+    filter: drop-shadow(0 0 4px var(--orange-glow));
+    transition: stroke-dasharray 1.5s ease;
+    transform-origin: 210px 210px;
+  }
+
+  @keyframes rotateCW { to { transform: rotate(360deg); } }
+  @keyframes rotateCCW { to { transform: rotate(-360deg); } }
+
+  /* Center core */
+  .hud-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .core-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--cyan);
+    text-shadow: 0 0 30px var(--cyan-glow), 0 0 60px rgba(0,212,255,0.15);
+    line-height: 1;
+  }
+  .core-unit {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .core-label {
+    font-size: 11px;
+    color: var(--orange);
+    letter-spacing: 2px;
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  /* HUD corner decorations */
+  .hud-corner {
+    position: absolute;
+    width: 30px; height: 30px;
+    border-color: var(--cyan);
+    border-style: solid;
+    opacity: 0.5;
+  }
+  .hud-corner.tl { top: -10px; left: -10px; border-width: 2px 0 0 2px; }
+  .hud-corner.tr { top: -10px; right: -10px; border-width: 2px 2px 0 0; }
+  .hud-corner.bl { bottom: -10px; left: -10px; border-width: 0 0 2px 2px; }
+  .hud-corner.br { bottom: -10px; right: -10px; border-width: 0 2px 2px 0; }
+
+  /* Waveform */
+  .waveform-container {
+    width: 100%;
+    height: 60px;
+    margin-top: 30px;
+    position: relative;
+  }
+  #waveformCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Chat / Command area */
+  .chat-area {
+    width: 100%;
+    max-width: 560px;
+    margin-top: 24px;
+  }
+  .chat-log {
+    height: 100px;
+    overflow-y: auto;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    scrollbar-width: thin;
+    scrollbar-color: var(--cyan-dim) transparent;
+  }
+  .chat-log::-webkit-scrollbar { width: 3px; }
+  .chat-log::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+  .chat-msg { margin-bottom: 6px; }
+  .chat-msg.jarvis {
+    color: var(--cyan);
+  }
+  .chat-msg.jarvis::before {
+    content: 'JARVIS: ';
+    font-weight: 700;
+    color: var(--orange);
+  }
+  .chat-msg.user {
+    color: var(--text-dim);
+    text-align: right;
+  }
+  .chat-msg.user::after {
+    content: ' :USER';
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .cmd-row {
+    display: flex; gap: 8px;
+  }
+  .cmd-input {
+    flex: 1;
+    background: rgba(0,212,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+    color: var(--cyan);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .cmd-input::placeholder { color: var(--text-dim); }
+  .cmd-input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 15px rgba(0,212,255,0.1), inset 0 0 15px rgba(0,212,255,0.03);
+  }
+  .cmd-btn {
+    padding: 10px 18px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 3px;
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cmd-btn:hover {
+    background: rgba(0,212,255,0.15);
+    box-shadow: 0 0 20px rgba(0,212,255,0.15);
+    border-color: var(--cyan);
+  }
+  .cmd-btn:active { transform: scale(0.96); }
+  .cmd-btn.mic {
+    border-color: rgba(255,106,0,0.3);
+    color: var(--orange);
+    background: rgba(255,106,0,0.06);
+  }
+  .cmd-btn.mic:hover {
+    background: rgba(255,106,0,0.15);
+    box-shadow: 0 0 20px rgba(255,106,0,0.15);
+    border-color: var(--orange);
+  }
+  .cmd-btn.mic.listening {
+    background: rgba(255,106,0,0.25);
+    border-color: var(--orange);
+    animation: micPulse 1s ease-in-out infinite;
+  }
+  @keyframes micPulse {
+    0%,100% { box-shadow: 0 0 10px rgba(255,106,0,0.2); }
+    50% { box-shadow: 0 0 25px rgba(255,106,0,0.4); }
+  }
+
+  /* Right column */
+  .right-col {
+    display: flex; flex-direction: column; gap: 12px;
+    overflow: hidden;
+  }
+
+  /* Mini chart canvas */
+  .mini-chart {
+    width: 100%;
+    height: 80px;
+    display: block;
+    margin-top: 6px;
+  }
+
+  /* Threat list */
+  .threat-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0,212,255,0.04);
+    font-size: 12px;
+  }
+  .threat-item:last-child { border-bottom: none; }
+  .threat-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .threat-dot.low { background: var(--green); box-shadow: 0 0 4px rgba(0,255,136,0.5); }
+  .threat-dot.med { background: var(--orange); box-shadow: 0 0 4px var(--orange-glow); }
+  .threat-dot.high { background: var(--red); box-shadow: 0 0 4px rgba(255,42,42,0.5); }
+  .threat-name { flex: 1; color: var(--text-dim); }
+  .threat-level {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+  .threat-level.low { color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+  .threat-level.med { color: var(--orange); border: 1px solid rgba(255,106,0,0.2); }
+  .threat-level.high { color: var(--red); border: 1px solid rgba(255,42,42,0.2); }
+
+  /* Network nodes */
+  .node-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0;
+    font-size: 12px;
+  }
+  .node-icon {
+    width: 24px; height: 24px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--cyan);
+  }
+  .node-info { flex: 1; }
+  .node-name { font-weight: 600; font-size: 12px; }
+  .node-addr { font-size: 10px; color: var(--text-dim); font-family: 'Orbitron', monospace; }
+  .node-status {
+    font-family: 'Orbitron', monospace;
+    font-size: 8px; letter-spacing: 1px;
+  }
+  .node-status.on { color: var(--green); }
+  .node-status.off { color: var(--red); }
+
+  /* Bottom bar */
+  .bottom-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+  .bottom-bar .coords { color: var(--cyan); }
+
+  /* Floating data tags */
+  .data-tag {
+    position: absolute;
+    font-family: 'Orbitron', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .data-tag.t1 { top: 40px; left: 60px; }
+  .data-tag.t2 { top: 60px; right: 80px; }
+  .data-tag.t3 { bottom: 140px; left: 40px; }
+  .data-tag.t4 { bottom: 160px; right: 50px; }
+
+  /* Toast notification */
+  .toast-container {
+    position: fixed; top: 70px; right: 20px; z-index: 100;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 10px 18px;
+    background: rgba(10,22,40,0.95);
+    border-left: 3px solid var(--cyan);
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+    color: var(--text);
+    backdrop-filter: blur(10px);
+    animation: toastIn 0.4s ease, toastOut 0.4s ease 3s forwards;
+    max-width: 300px;
+  }
+  .toast.warn { border-left-color: var(--orange); }
+  .toast.error { border-left-color: var(--red); }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(40px); }
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .interface {
+      grid-template-columns: 220px 1fr 220px;
+    }
+    .hud-container { width: 320px; height: 320px; }
+  }
+  @media (max-width: 800px) {
+    .interface {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr auto auto;
+      overflow-y: auto;
+    }
+    .left-col, .right-col { flex-direction: row; flex-wrap: wrap; }
+    .left-col .panel, .right-col .panel { flex: 1; min-width: 200px; }
+    .hud-container { width: 280px; height: 280px; }
+    .data-tag { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="bg-layer bg-grid"></div>
+<div class="bg-layer bg-radial"></div>
+<div class="bg-layer bg-scanline"></div>
+<canvas id="particles"></canvas>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Main interface -->
+<div class="interface">
+
+  <!-- Top bar -->
+  <header class="top-bar">
+    <div class="logo">
+      <div class="dot"></div>
+      J.A.R.V.I.S.
+    </div>
+    <div class="top-info">
+      <span>DATE <span class="val" id="dateDisplay">--</span></span>
+      <span>TIME <span class="val" id="timeDisplay">--:--:--</span></span>
+      <span>LAT <span class="val" id="latDisplay">40.7128</span></span>
+      <span>LON <span class="val" id="lonDisplay">-74.0060</span></span>
+      <div class="status-badge">ONLINE</div>
+    </div>
+  </header>
+
+  <!-- Left column -->
+  <aside class="left-col">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-microchip"></i> SYSTEM DIAGNOSTICS</div>
+      <div class="sys-item">
+        <span class="sys-label">CPU Load</span>
+        <span class="sys-val cyan" id="cpuVal">0%</span>
+      </div>
+      <div class="bar-container"><div class="bar-fill cyan" id="cpuBar" style="width:0%"></div></div>
+
+      <div class="sys-item" style="margin-top:8px">
+        <span class="sys-label">Memory</span>
+        <span class="sys-val orange" id="memVal">0 GB</span>
+      </div>
+      <div class="bar-container"><div class="bar-fill orange" id="memBar" style="width:0%"></div></div>
+
+      <div class="sys-item" style="margin-top:8px">
+        <span class="sys-label">Neural Net</span>
+        <span class="sys-val green" id="neuralVal">IDLE</span>
+      </div>
+
+      <div class="sys-item">
+        <span class="sys-label">Core Temp</span>
+        <span class="sys-val cyan" id="tempVal">0°C</span>
+      </div>
+      <div class="bar-container"><div class="bar-fill cyan" id="tempBar" style="width:0%"></div></div>
+
+      <div class="sys-item" style="margin-top:8px">
+        <span class="sys-label">Power Output</span>
+        <span class="sys-val orange" id="powerVal">0 kW</span>
+      </div>
+      <div class="bar-container"><div class="bar-fill orange" id="powerBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-shield-halved"></i> DEFENSE SYSTEMS</div>
+      <div class="sys-item">
+        <span class="sys-label">Repulsor Array</span>
+        <span class="sys-val green">ACTIVE</span>
+      </div>
+      <div class="sys-item">
+        <span class="sys-label">Flare Deploy</span>
+        <span class="sys-val green">READY</span>
+      </div>
+      <div class="sys-item">
+        <span class="sys-label">Particle Shield</span>
+        <span class="sys-val orange">CHARGING</span>
+      </div>
+      <div class="sys-item">
+        <span class="sys-label">Life Support</span>
+        <span class="sys-val green">NOMINAL</span>
+      </div>
+      <div class="sys-item">
+        <span class="sys-label">EMP Hardening</span>
+        <span class="sys-val green">ENGAGED</span>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1;min-height:0;">
+      <div class="panel-title"><i class="fas fa-chart-line"></i> POWER HISTORY</div>
+      <canvas class="mini-chart" id="powerChart"></canvas>
+    </div>
+  </aside>
+
+  <!-- Center area -->
+  <main class="center-area">
+    <div class="data-tag t1" id="tag1">SYS.CORE.FREQ: 4.7 THz</div>
+    <div class="data-tag t2" id="tag2">QUANTUM.BUS: STABLE</div>
+    <div class="data-tag t3" id="tag3">ARC.REACTOR: MARK VII</div>
+    <div class="data-tag t4" id="tag4">HUD.RENDER: 120 FPS</div>
+
+    <div class="hud-container">
+      <div class="hud-corner tl"></div>
+      <div class="hud-corner tr"></div>
+      <div class="hud-corner bl"></div>
+      <div class="hud-corner br"></div>
+
+      <svg class="hud-svg" viewBox="0 0 420 420">
+        <!-- Outer ring -->
+        <circle class="hud-ring ring-outer" cx="210" cy="210" r="195"/>
+        <!-- Mid ring -->
+        <circle class="hud-ring ring-mid" cx="210" cy="210" r="170"/>
+        <!-- Inner ring -->
+        <circle class="hud-ring ring-inner" cx="210" cy="210" r="145"/>
+        <!-- Core ring -->
+        <circle class="hud-ring ring-core" cx="210" cy="210" r="100"/>
+
+        <!-- Progress arcs -->
+        <circle class="arc-progress" id="arcMain" cx="210" cy="210" r="182"/>
+        <circle class="arc-progress-orange" id="arcSec" cx="210" cy="210" r="160" style="transform:rotate(90deg);transform-origin:210px 210px;"/>
+
+        <!-- Tick marks -->
+        <g id="tickMarks" opacity="0.25"></g>
+      </svg>
+
+      <div class="hud-core">
+        <div class="core-value" id="coreValue">87</div>
+        <div class="core-unit">PERCENT</div>
+        <div class="core-label">ARC REACTOR OUTPUT</div>
+      </div>
+    </div>
+
+    <!-- Waveform -->
+    <div class="waveform-container">
+      <canvas id="waveformCanvas"></canvas>
+    </div>
+
+    <!-- Chat / Command -->
+    <div class="chat-area">
+      <div class="chat-log" id="chatLog">
+        <div class="chat-msg jarvis">Good evening, sir. All systems are operational. How may I assist you today?</div>
+      </div>
+      <div class="cmd-row">
+        <input type="text" class="cmd-input" id="cmdInput" placeholder="Enter command or ask Jarvis..." aria-label="Command input">
+        <button class="cmd-btn" id="sendBtn" aria-label="Send command"><i class="fas fa-arrow-right"></i> EXEC</button>
+        <button class="cmd-btn mic" id="micBtn" aria-label="Voice input"><i class="fas fa-microphone"></i></button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Right column -->
+  <aside class="right-col">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-triangle-exclamation"></i> THREAT ASSESSMENT</div>
+      <div id="threatList">
+        <div class="threat-item">
+          <span class="threat-dot low"></span>
+          <span class="threat-name">Perimeter Sector 7</span>
+          <span class="threat-level low">LOW</span>
+        </div>
+        <div class="threat-item">
+          <span class="threat-dot med"></span>
+          <span class="threat-name">Network Anomaly #42</span>
+          <span class="threat-level med">MED</span>
+        </div>
+        <div class="threat-item">
+          <span class="threat-dot low"></span>
+          <span class="threat-name">Atmospheric Disturbance</span>
+          <span class="threat-level low">LOW</span>
+        </div>
+        <div class="threat-item">
+          <span class="threat-dot high"></span>
+          <span class="threat-name">Unauthorized Access Attempt</span>
+          <span class="threat-level high">HIGH</span>
+        </div>
+        <div class="threat-item">
+          <span class="threat-dot low"></span>
+          <span class="threat-name">Satellite Uplink Latency</span>
+          <span class="threat-level low">LOW</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-network-wired"></i> CONNECTED NODES</div>
+      <div class="node-row">
+        <div class="node-icon"><i class="fas fa-satellite"></i></div>
+        <div class="node-info">
+          <div class="node-name">STARK-SAT-01</div>
+          <div class="node-addr">192.168.1.101</div>
+        </div>
+        <span class="node-status on">ONLINE</span>
+      </div>
+      <div class="node-row">
+        <div class="node-icon"><i class="fas fa-server"></i></div>
+        <div class="node-info">
+          <div class="node-name">TOWER-MAIN</div>
+          <div class="node-addr">192.168.1.1</div>
+        </div>
+        <span class="node-status on">ONLINE</span>
+      </div>
+      <div class="node-row">
+        <div class="node-icon"><i class="fas fa-helmet-safety"></i></div>
+        <div class="node-info">
+          <div class="node-name">MARK-VII-SUIT</div>
+          <div class="node-addr">10.0.0.77</div>
+        </div>
+        <span class="node-status on">ONLINE</span>
+      </div>
+      <div class="node-row">
+        <div class="node-icon"><i class="fas fa-car"></i></div>
+        <div class="node-info">
+          <div class="node-name">AUDI-R8-PROXY</div>
+          <div class="node-addr">10.0.0.88</div>
+        </div>
+        <span class="node-status off">OFFLINE</span>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1;min-height:0;">
+      <div class="panel-title"><i class="fas fa-wave-square"></i> SIGNAL MONITOR</div>
+      <canvas class="mini-chart" id="signalChart"></canvas>
+    </div>
+  </aside>
+
+  <!-- Bottom bar -->
+  <footer class="bottom-bar">
+    <span>STARK INDUSTRIES // CLASSIFIED</span>
+    <span>CURSOR <span class="coords" id="cursorCoords">0, 0</span></span>
+    <span>FRAME <span class="coords" id="frameCount">0</span></span>
+    <span>UPTIME <span class="coords" id="uptime">00:00:00</span></span>
+  </footer>
+
+</div>
+
+<script>
+// ===== UTILITIES =====
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+const rand = (min, max) => Math.random() * (max - min) + min;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// ===== PARTICLES =====
+const particleCanvas = $('#particles');
+const pCtx = particleCanvas.getContext('2d');
+let particles = [];
+
+function resizeParticles() {
+  particleCanvas.width = window.innerWidth;
+  particleCanvas.height = window.innerHeight;
+}
+resizeParticles();
+window.addEventListener('resize', resizeParticles);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = rand(0, particleCanvas.width);
+    this.y = rand(0, particleCanvas.height);
+    this.vx = rand(-0.15, 0.15);
+    this.vy = rand(-0.3, -0.05);
+    this.size = rand(0.5, 2);
+    this.alpha = rand(0.1, 0.4);
+    this.life = rand(100, 400);
+    this.maxLife = this.life;
+    // Some particles are orange
+    this.isOrange = Math.random() < 0.15;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life--;
+    if (this.life <= 0 || this.y < -10 || this.x < -10 || this.x > particleCanvas.width + 10) {
+      this.reset();
+      this.y = particleCanvas.height + 10;
+    }
+  }
+  draw(ctx) {
+    const fade = Math.min(1, this.life / (this.maxLife * 0.3));
+    const a = this.alpha * fade;
+    const color = this.isOrange ? `rgba(255,106,0,${a})` : `rgba(0,212,255,${a})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // Glow
+    if (this.size > 1.2) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+      const gc = this.isOrange ? `rgba(255,106,0,${a * 0.15})` : `rgba(0,212,255,${a * 0.15})`;
+      ctx.fillStyle = gc;
+      ctx.fill();
+    }
+  }
+}
+
+for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  particles.forEach(p => { p.update(); p.draw(pCtx); });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ===== TICK MARKS on HUD SVG =====
+(function createTicks() {
+  const g = $('#tickMarks');
+  const cx = 210, cy = 210, r = 195;
+  for (let i = 0; i < 72; i++) {
+    const angle = (i / 72) * Math.PI * 2 - Math.PI / 2;
+    const len = i % 6 === 0 ? 10 : 4;
+    const x1 = cx + Math.cos(angle) * r;
+    const y1 = cy + Math.sin(angle) * r;
+    const x2 = cx + Math.cos(angle) * (r - len);
+    const y2 = cy + Math.sin(angle) * (r - len);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#00d4ff');
+    line.setAttribute('stroke-width', i % 6 === 0 ? '1.5' : '0.5');
+    g.appendChild(line);
+  }
+})();
+
+// ===== ARC PROGRESS ANIMATION =====
+function setArcProgress(el, percent, radius) {
+  const circumference = 2 * Math.PI * radius;
+  const filled = (percent / 100) * circumference;
+  el.setAttribute('stroke-dasharray', `${filled} ${circumference}`);
+}
+
+let arcMainPercent = 0;
+let arcSecPercent = 0;
+
+function animateArcs() {
+  // Smoothly approach targets
+  arcMainPercent += (87 - arcMainPercent) * 0.03;
+  arcSecPercent += (64 - arcSecPercent) * 0.03;
+  setArcProgress($('#arcMain'), arcMainPercent, 182);
+  setArcProgress($('#arcSec'), arcSecPercent, 160);
+  requestAnimationFrame(animateArcs);
+}
+animateArcs();
+
+// ===== CORE VALUE =====
+const coreEl = $('#coreValue');
+let coreDisplay = 0;
+function animateCore() {
+  coreDisplay += (87 - coreDisplay) * 0.04;
+  coreEl.textContent = Math.round(coreDisplay);
+  requestAnimationFrame(animateCore);
+}
+animateCore();
+
+// ===== WAVEFORM =====
+const wfCanvas = $('#waveformCanvas');
+const wfCtx = wfCanvas.getContext('2d');
+let wfPhase = 0;
+
+function resizeWaveform() {
+  const rect = wfCanvas.parentElement.getBoundingClientRect();
+  wfCanvas.width = rect.width * window.devicePixelRatio;
+  wfCanvas.height = rect.height * window.devicePixelRatio;
+  wfCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+resizeWaveform();
+window.addEventListener('resize', resizeWaveform);
+
+function drawWaveform() {
+  const w = wfCanvas.width / window.devicePixelRatio;
+  const h = wfCanvas.height / window.devicePixelRatio;
+  wfCtx.clearRect(0, 0, w, h);
+
+  // Draw multiple wave layers
+  const waves = [
+    { freq: 0.02, amp: 0.35, speed: 0.04, color: 'rgba(0,212,255,0.6)', width: 1.5 },
+    { freq: 0.035, amp: 0.2, speed: -0.03, color: 'rgba(0,212,255,0.25)', width: 1 },
+    { freq: 0.05, amp: 0.15, speed: 0.06, color: 'rgba(255,106,0,0.3)', width: 1 },
+  ];
+
+  waves.forEach(wave => {
+    wfCtx.beginPath();
+    wfCtx.strokeStyle = wave.color;
+    wfCtx.lineWidth = wave.width;
+    for (let x = 0; x <= w; x++) {
+      const y = h / 2 + Math.sin(x * wave.freq + wfPhase * wave.speed) * h * wave.amp
+                      + Math.sin(x * wave.freq * 1.7 + wfPhase * wave.speed * 0.7) * h * wave.amp * 0.3;
+      if (x === 0) wfCtx.moveTo(x, y);
+      else wfCtx.lineTo(x, y);
+    }
+    wfCtx.stroke();
+  });
+
+  // Center line
+  wfCtx.beginPath();
+  wfCtx.strokeStyle = 'rgba(0,212,255,0.08)';
+  wfCtx.lineWidth = 0.5;
+  wfCtx.moveTo(0, h / 2);
+  wfCtx.lineTo(w, h / 2);
+  wfCtx.stroke();
+
+  wfPhase++;
+  requestAnimationFrame(drawWaveform);
+}
+drawWaveform();
+
+// ===== MINI CHARTS =====
+function drawMiniChart(canvasId, data, color, glowColor) {
+  const canvas = $(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = 80 * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = 80;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(0,212,255,0.05)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 4; i++) {
+    const y = (h / 4) * i;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  if (data.length < 2) return;
+  const step = w / (data.length - 1);
+
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  data.forEach((v, i) => {
+    ctx.lineTo(i * step, h - (v / 100) * h * 0.85);
+  });
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, glowColor || 'rgba(0,212,255,0.15)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = i * step, y = h - (v / 100) * h * 0.85;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // End dot
+  const lastX = (data.length - 1) * step;
+  const lastY = h - (data[data.length - 1] / 100) * h * 0.85;
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// Chart data
+const powerData = [];
+const signalData = [];
+for (let i = 0; i < 40; i++) {
+  powerData.push(clamp(60 + Math.sin(i * 0.3) * 20 + rand(-5, 5), 10, 100));
+  signalData.push(clamp(50 + Math.cos(i * 0.25) * 25 + rand(-8, 8), 5, 100));
+}
+
+function updateCharts() {
+  powerData.push(clamp(powerData[powerData.length - 1] + rand(-6, 6), 20, 95));
+  powerData.shift();
+  signalData.push(clamp(signalData[signalData.length - 1] + rand(-8, 8), 5, 98));
+  signalData.shift();
+  drawMiniChart('#powerChart', powerData, '#ff6a00', 'rgba(255,106,0,0.12)');
+  drawMiniChart('#signalChart', signalData, '#00d4ff', 'rgba(0,212,255,0.12)');
+}
+updateCharts();
+setInterval(updateCharts, 1200);
+
+// ===== SYSTEM DIAGNOSTICS (live updating) =====
+let cpuBase = 42, memBase = 14.2, tempBase = 38, powerBase = 3.7;
+
+function updateDiagnostics() {
+  cpuBase = clamp(cpuBase + rand(-4, 4), 15, 85);
+  memBase = clamp(memBase + rand(-0.3, 0.3), 8, 28);
+  tempBase = clamp(tempBase + rand(-2, 2), 28, 72);
+  powerBase = clamp(powerBase + rand(-0.3, 0.3), 1.5, 6.5);
+
+  const cpu = Math.round(cpuBase);
+  const mem = memBase.toFixed(1);
+  const temp = Math.round(tempBase);
+  const power = powerBase.toFixed(1);
+
+  $('#cpuVal').textContent = cpu + '%';
+  $('#cpuBar').style.width = cpu + '%';
+  if (cpu > 70) { $('#cpuVal').className = 'sys-val red'; $('#cpuBar').className = 'bar-fill cyan'; }
+  else { $('#cpuVal').className = 'sys-val cyan'; }
+
+  $('#memVal').textContent = mem + ' GB';
+  $('#memBar').style.width = (memBase / 32 * 100) + '%';
+
+  $('#tempVal').textContent = temp + '°C';
+  $('#tempBar').style.width = (temp / 100 * 100) + '%';
+  if (temp > 60) { $('#tempVal').className = 'sys-val red'; }
+  else { $('#tempVal').className = 'sys-val cyan'; }
+
+  $('#powerVal').textContent = power + ' kW';
+  $('#powerBar').style.width = (powerBase / 8 * 100) + '%';
+
+  // Neural net status
+  const states = ['IDLE', 'PROCESSING', 'LEARNING', 'OPTIMIZING', 'SCANNING'];
+  $('#neuralVal').textContent = states[Math.floor(rand(0, states.length))];
+}
+updateDiagnostics();
+setInterval(updateDiagnostics, 2000);
+
+// ===== TIME / DATE =====
+const startTime = Date.now();
+function updateClock() {
+  const now = new Date();
+  const time = now.toTimeString().split(' ')[0];
+  const date = now.toISOString().split('T')[0].replace(/-/g, '.');
+  $('#timeDisplay').textContent = time;
+  $('#dateDisplay').textContent = date;
+
+  // Uptime
+  const diff = Math.floor((Date.now() - startTime) / 1000);
+  const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+  const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+  const s = String(diff % 60).padStart(2, '0');
+  $('#uptime').textContent = `${h}:${m}:${s}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ===== CURSOR TRACKING =====
+document.addEventListener('mousemove', (e) => {
+  $('#cursorCoords').textContent = `${e.clientX}, ${e.clientY}`;
+});
+
+// ===== FRAME COUNTER =====
+let frames = 0;
+function countFrames() {
+  frames++;
+  $('#frameCount').textContent = frames;
+  requestAnimationFrame(countFrames);
+}
+countFrames();
+
+// ===== TOAST NOTIFICATIONS =====
+function showToast(msg, type = 'info') {
+  const container = $('#toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// Random toasts
+const toastMessages = [
+  ['Satellite uplink synchronized', 'info'],
+  ['Perimeter scan complete — no breaches', 'info'],
+  ['Network anomaly detected in sector 4', 'warn'],
+  ['Arc reactor output stabilized', 'info'],
+  ['Unauthorized access attempt blocked', 'error'],
+  ['Weather update: Clear skies, 22°C', 'info'],
+  ['F.R.I.D.A.Y. backup protocol initiated', 'info'],
+  ['New firmware available for Mark VII', 'warn'],
+];
+function randomToast() {
+  const [msg, type] = toastMessages[Math.floor(Math.random() * toastMessages.length)];
+  showToast(msg, type);
+}
+setTimeout(randomToast, 4000);
+setInterval(randomToast, 12000);
+
+// ===== CHAT / COMMAND SYSTEM =====
+const chatLog = $('#chatLog');
+const cmdInput = $('#cmdInput');
+
+const responses = {
+  'hello': 'Good evening, sir. All systems are functioning within normal parameters.',
+  'status': 'All primary systems are online. Arc reactor at 87% output. Defense grid active. No critical alerts at this time.',
+  'scan': 'Initiating full spectrum scan... Scan complete. No hostile signatures detected within 50km radius.',
+  'power': 'Arc reactor Mark VII operating at peak efficiency. Current output: 3.7 gigajoules per second.',
+  'weather': 'Current conditions: Clear skies, 22 degrees Celsius, wind from the southwest at 12 km/h. Visibility excellent.',
+  'threat': 'Current threat level: ELEVATED. One unauthorized access attempt logged in the last hour. Perimeter defenses are on standby.',
+  'suit': 'Mark VII suit status: All systems green. Repulsors charged. Flight systems ready. JARVIS integration nominal.',
+  'help': 'Available commands: status, scan, power, weather, threat, suit, diagnostics, time, shutdown, hello, who are you.',
+  'diagnostics': 'Running full diagnostic sweep... CPU: 42%, Memory: 14.2GB/32GB, Core temp: 38°C. All subsystems within expected tolerances.',
+  'time': `The current time is ${new Date().toTimeString().split(' ')[0]}. Shall I set a reminder?`,
+  'shutdown': 'I must advise against that, sir. Perhaps a sleep mode would be more appropriate?',
+  'who are you': 'I am J.A.R.V.I.S. — Just A Rather Very Intelligent System. At your service, as always.',
+};
+
+function addChat(text, type) {
+  const div = document.createElement('div');
+  div.className = `chat-msg ${type}`;
+  div.textContent = text;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function processCommand(cmd) {
+  const lower = cmd.toLowerCase().trim();
+  if (!lower) return;
+
+  addChat(cmd, 'user');
+
+  let response = null;
+  for (const [key, val] of Object.entries(responses)) {
+    if (lower.includes(key)) { response = val; break; }
+  }
+
+  if (!response) {
+    const fallbacks = [
+      `I've analyzed your request regarding "${cmd}". Processing... I'll have a detailed report shortly, sir.`,
+      `Interesting query. Cross-referencing Stark Industries databases for information on "${cmd}".`,
+      `I'm not entirely sure about that one, sir. Shall I run a deeper analysis, or would you prefer to rephrase?`,
+      `My algorithms don't have a specific response for that. However, I've logged it for further processing.`,
+    ];
+    response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
+  // Simulate typing delay
+  setTimeout(() => addChat(response, 'jarvis'), 400 + Math.random() * 600);
+
+  // Trigger visual feedback
+  arcMainPercent = 70 + rand(0, 20);
+  $('#neuralVal').textContent = 'PROCESSING';
+  setTimeout(() => { $('#neuralVal').textContent = 'IDLE'; }, 2000);
+}
+
+ $('#sendBtn').addEventListener('click', () => {
+  processCommand(cmdInput.value);
+  cmdInput.value = '';
+});
+cmdInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    processCommand(cmdInput.value);
+    cmdInput.value = '';
+  }
+});
+
+// ===== VOICE RECOGNITION =====
+const micBtn = $('#micBtn');
+let recognition = null;
+let isListening = false;
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    processCommand(transcript);
+    stopListening();
+  };
+  recognition.onerror = () => stopListening();
+  recognition.onend = () => stopListening();
+}
+
+function startListening() {
+  if (!recognition) {
+    showToast('Speech recognition not supported in this browser.', 'warn');
+    return;
+  }
+  isListening = true;
+  micBtn.classList.add('listening');
+  try { recognition.start(); } catch(e) {}
+  showToast('Listening... Speak now.', 'info');
+}
+
+function stopListening() {
+  isListening = false;
+  micBtn.classList.remove('listening');
+  try { recognition.stop(); } catch(e) {}
+}
+
+micBtn.addEventListener('click', () => {
+  if (isListening) stopListening();
+  else startListening();
+});
+
+// ===== FLOATING DATA TAG UPDATES =====
+function updateTags() {
+  $('#tag1').textContent = `SYS.CORE.FREQ: ${(4.5 + rand(0, 0.4)).toFixed(1)} THz`;
+  const states = ['STABLE', 'OPTIMAL', 'NOMINAL', 'LOCKED'];
+  $('#tag2').textContent = `QUANTUM.BUS: ${states[Math.floor(rand(0, states.length))]}`;
+  $('#tag4').textContent = `HUD.RENDER: ${Math.round(115 + rand(0, 10))} FPS`;
+}
+setInterval(updateTags, 3000);
+
+// ===== INITIAL TOAST =====
+setTimeout(() => showToast('J.A.R.V.I.S. interface initialized. Welcome back, sir.'), 1500);
+
+// ===== HOVER GLOW ON PANELS =====
+ $$('.panel').forEach(panel => {
+  panel.addEventListener('mouseenter', () => {
+    panel.style.borderColor = 'rgba(0,212,255,0.25)';
+    panel.style.boxShadow = '0 0 30px rgba(0,212,255,0.05), inset 0 0 30px rgba(0,212,255,0.02)';
+  });
+  panel.addEventListener('mouseleave', () => {
+    panel.style.borderColor = '';
+    panel.style.boxShadow = '';
+  });
+});
+
+// ===== THREAT LIST RANDOM UPDATES =====
+function updateThreats() {
+  const threats = [
+    { name: 'Perimeter Sector 7', level: 'low' },
+    { name: 'Network Anomaly #42', level: 'med' },
+    { name: 'Atmospheric Disturbance', level: 'low' },
+    { name: 'Unauthorized Access Attempt', level: 'high' },
+    { name: 'Satellite Uplink Latency', level: 'low' },
+    { name: 'Seismic Activity Zone 3', level: 'med' },
+    { name: 'Firewall Probe Detected', level: 'high' },
+    { name: 'Drone Signal Intercept', level: 'med' },
+    { name: 'Power Grid Fluctuation', level: 'low' },
+    { name: 'Unknown EM Signature', level: 'high' },
+  ];
+
+  // Pick 5 random threats
+  const shuffled = threats.sort(() => 0.5 - Math.random()).slice(0, 5);
+  const list = $('#threatList');
+  list.innerHTML = shuffled.map(t => `
+    <div class="threat-item">
+      <span class="threat-dot ${t.level}"></span>
+      <span class="threat-name">${t.name}</span>
+      <span class="threat-level ${t.level}">${t.level.toUpperCase()}</span>
+    </div>
+  `).join('');
+}
+setInterval(updateThreats, 10000);
+
+// ===== KEYBOARD SHORTCUT =====
+document.addEventListener('keydown', (e) => {
+  // Focus input with /
+  if (e.key === '/' && document.activeElement !== cmdInput) {
+    e.preventDefault();
+    cmdInput.focus();
+  }
+  // Escape to unfocus
+  if (e.key === 'Escape') {
+    cmdInput.blur();
+    stopListening();
+  }
+});
+</script>
+</body>
+</html>
