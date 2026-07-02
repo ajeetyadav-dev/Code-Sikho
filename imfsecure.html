@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMF Secure Access</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --fg: #e8e6e3;
+    --muted: #5a5a6a;
+    --accent: #c41e3a;
+    --accent-glow: rgba(196, 30, 58, 0.6);
+    --card: rgba(18, 18, 24, 0.85);
+    --border: rgba(196, 30, 58, 0.25);
+    --fuse-orange: #ff6a00;
+    --fuse-yellow: #ffd000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Particle canvas */
+  #particles {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* Atmospheric gradients */
+  .atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(196, 30, 58, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 20% 80%, rgba(10, 10, 20, 0.9) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 50% at 80% 80%, rgba(10, 10, 20, 0.9) 0%, transparent 60%);
+  }
+
+  /* Vignette */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse 70% 60% at 50% 50%, transparent 40%, rgba(0,0,0,0.7) 100%);
+  }
+
+  /* Main container */
+  .login-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 440px;
+    padding: 0 20px;
+  }
+
+  /* Fuse animation at top */
+  .fuse-track {
+    width: 100%;
+    max-width: 440px;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .fuse-burn {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--fuse-orange), var(--fuse-yellow));
+    border-radius: 2px;
+    animation: fuseBurn 8s linear infinite;
+  }
+
+  .fuse-spark {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--fuse-yellow);
+    box-shadow:
+      0 0 10px var(--fuse-yellow),
+      0 0 20px var(--fuse-orange),
+      0 0 40px var(--accent),
+      0 0 60px var(--accent-glow);
+    animation: fuseBurn 8s linear infinite;
+    z-index: 2;
+  }
+
+  @keyframes fuseBurn {
+    0% { left: 0%; }
+    100% { left: 100%; }
+  }
+
+  /* IMF Emblem */
+  .emblem-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .emblem {
+    width: 90px;
+    height: 90px;
+    position: relative;
+    animation: emblemPulse 4s ease-in-out infinite;
+  }
+
+  @keyframes emblemPulse {
+    0%, 100% { filter: drop-shadow(0 0 8px var(--accent-glow)); }
+    50% { filter: drop-shadow(0 0 20px var(--accent-glow)) drop-shadow(0 0 40px rgba(196,30,58,0.2)); }
+  }
+
+  .emblem-ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    animation: ringRotate 12s linear infinite;
+  }
+
+  .emblem-ring::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .emblem-ring-inner {
+    position: absolute;
+    inset: 14px;
+    border: 1.5px solid rgba(196, 30, 58, 0.5);
+    border-radius: 50%;
+    animation: ringRotate 8s linear infinite reverse;
+  }
+
+  .emblem-ring-inner::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  @keyframes ringRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .emblem-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent-glow);
+    letter-spacing: 2px;
+  }
+
+  /* Title */
+  .title {
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(196, 30, 58, 0.5);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  /* Briefing typewriter */
+  .briefing {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 28px;
+    min-height: 48px;
+    padding: 12px 16px;
+    border: 1px solid rgba(196, 30, 58, 0.1);
+    border-radius: 4px;
+    background: rgba(196, 30, 58, 0.02);
+    position: relative;
+  }
+
+  .briefing .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.8s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Card */
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 28px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+
+  /* Corner decorations */
+  .corner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.4;
+  }
+  .corner-tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+  .corner-tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+  .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+  .corner-br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+  /* Input group */
+  .input-group {
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .input-wrapper {
+    position: relative;
+  }
+
+  .input-wrapper i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+    transition: color 0.3s;
+  }
+
+  .input-wrapper input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    padding: 12px 14px 12px 42px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    color: var(--fg);
+    outline: none;
+    transition: all 0.3s ease;
+  }
+
+  .input-wrapper input::placeholder {
+    color: rgba(255, 255, 255, 0.15);
+  }
+
+  .input-wrapper input:focus {
+    border-color: var(--accent);
+    background: rgba(196, 30, 58, 0.04);
+    box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.08), inset 0 0 20px rgba(196, 30, 58, 0.03);
+  }
+
+  .input-wrapper input:focus + i,
+  .input-wrapper input:focus ~ i {
+    color: var(--accent);
+  }
+
+  .input-wrapper:has(input:focus) i {
+    color: var(--accent);
+  }
+
+  /* Toggle password */
+  .toggle-pass {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    transition: color 0.3s;
+    padding: 4px;
+  }
+  .toggle-pass:hover { color: var(--accent); }
+
+  /* Remember & Forgot */
+  .form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    font-size: 11px;
+  }
+
+  .remember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .remember input[type="checkbox"] {
+    display: none;
+  }
+
+  .checkmark {
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    font-size: 10px;
+    color: transparent;
+  }
+
+  .remember input:checked ~ .checkmark {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+  }
+
+  .forgot {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.3s;
+    letter-spacing: 1px;
+  }
+  .forgot:hover { color: var(--accent); }
+
+  /* Submit button */
+  .btn-submit {
+    width: 100%;
+    padding: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: white;
+    background: linear-gradient(135deg, var(--accent), #8b1528);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+  }
+
+  .btn-submit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+  }
+
+  .btn-submit:hover {
+    box-shadow: 0 0 20px var(--accent-glow), 0 4px 30px rgba(196, 30, 58, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-submit:hover::before {
+    transform: translateX(100%);
+  }
+
+  .btn-submit:active {
+    transform: translateY(0);
+  }
+
+  .btn-submit.loading {
+    pointer-events: none;
+    opacity: 0.8;
+  }
+
+  /* Countdown timer */
+  .countdown-bar {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .countdown-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .countdown-label span:last-child {
+    color: var(--accent);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+  }
+
+  .countdown-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .countdown-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--fuse-orange));
+    border-radius: 2px;
+    transition: width 1s linear;
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+
+  /* Self-destruct text */
+  .destruct-text {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(196, 30, 58, 0.3);
+    text-transform: uppercase;
+    animation: flicker 4s ease-in-out infinite;
+  }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+    92% { opacity: 0.3; }
+    93% { opacity: 0.8; }
+    94% { opacity: 0.3; }
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 24px;
+    font-size: 13px;
+    color: var(--fg);
+    backdrop-filter: blur(20px);
+    z-index: 200;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: rgba(40, 180, 99, 0.4); }
+  .toast.success i { color: #28b463; }
+  .toast.error { border-color: var(--border); }
+  .toast.error i { color: var(--accent); }
+
+  /* Glitch effect for emblem */
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 1px); }
+    40% { transform: translate(2px, -1px); }
+    60% { transform: translate(-1px, -1px); }
+    80% { transform: translate(1px, 2px); }
+  }
+
+  .glitch-active {
+    animation: glitch 0.15s linear 3;
+  }
+
+  /* Red flash overlay */
+  .flash-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    z-index: 150;
+    pointer-events: none;
+    transition: opacity 0.1s;
+  }
+
+  .flash-overlay.flash {
+    opacity: 0.15;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .login-card { padding: 24px 20px; }
+    .emblem { width: 72px; height: 72px; }
+    .emblem-text { font-size: 18px; }
+    .title { font-size: 12px; letter-spacing: 4px; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particles" aria-hidden="true"></canvas>
+<div class="atmosphere" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="flash-overlay" id="flashOverlay" aria-hidden="true"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert">
+  <i class="fa-solid fa-circle-check"></i>
+  <span id="toastMsg">Message</span>
+</div>
+
+<main class="login-container">
+  <!-- Fuse -->
+  <div class="fuse-track" aria-hidden="true">
+    <div class="fuse-burn"></div>
+    <div class="fuse-spark"></div>
+  </div>
+
+  <!-- Emblem -->
+  <div class="emblem-container">
+    <div class="emblem" id="emblem">
+      <div class="emblem-ring"></div>
+      <div class="emblem-ring-inner"></div>
+      <div class="emblem-text">IMF</div>
+    </div>
+  </div>
+
+  <!-- Titles -->
+  <div class="title">Impossible Missions Force</div>
+  <div class="subtitle">Secure Terminal Access</div>
+
+  <!-- Briefing typewriter -->
+  <div class="briefing" aria-live="polite">
+    <span id="typewriter"></span><span class="cursor"></span>
+  </div>
+
+  <!-- Login Card -->
+  <div class="login-card">
+    <div class="corner corner-tl" aria-hidden="true"></div>
+    <div class="corner corner-tr" aria-hidden="true"></div>
+    <div class="corner corner-bl" aria-hidden="true"></div>
+    <div class="corner corner-br" aria-hidden="true"></div>
+
+    <form id="loginForm" autocomplete="off" novalidate>
+      <div class="input-group">
+        <label for="agentId">Agent Identifier</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-fingerprint"></i>
+          <input type="text" id="agentId" placeholder="Ethan_Hunt_007" aria-required="true" spellcheck="false">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="accessCode">Access Code</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="accessCode" placeholder="••••••••••" aria-required="true">
+          <button type="button" class="toggle-pass" id="togglePass" aria-label="Toggle password visibility">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-options">
+        <label class="remember">
+          <input type="checkbox" id="rememberMe">
+          <span class="checkmark"><i class="fa-solid fa-check"></i></span>
+          Remember terminal
+        </label>
+        <a href="#" class="forgot" id="forgotLink">Breach Protocol</a>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        Accept Mission
+      </button>
+    </form>
+
+    <!-- Self-destruct countdown -->
+    <div class="countdown-bar">
+      <div class="countdown-label">
+        <span>Session Timeout</span>
+        <span id="countdownTime">05:00</span>
+      </div>
+      <div class="countdown-track">
+        <div class="countdown-fill" id="countdownFill" style="width: 100%"></div>
+      </div>
+    </div>
+
+    <div class="destruct-text">
+      This message will self-destruct in <span id="destructTimer">300</span> seconds
+    </div>
+  </div>
+</main>
+
+<script>
+  // ========== Particle System ==========
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 80;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2 + 0.5;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.speedY = (Math.random() - 0.5) * 0.3 - 0.1;
+      this.opacity = Math.random() * 0.3 + 0.05;
+      this.life = Math.random() * 400 + 200;
+      this.maxLife = this.life;
+      // Some particles are reddish
+      this.isRed = Math.random() < 0.15;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+      this.life--;
+      if (this.life <= 0 || this.x < -10 || this.x > canvas.width + 10 || this.y < -10 || this.y > canvas.height + 10) {
+        this.reset();
+      }
+    }
+    draw() {
+      const fade = Math.min(1, this.life / (this.maxLife * 0.3));
+      const alpha = this.opacity * fade;
+      if (this.isRed) {
+        ctx.fillStyle = `rgba(196, 30, 58, ${alpha})`;
+        ctx.shadowColor = 'rgba(196, 30, 58, 0.3)';
+        ctx.shadowBlur = 6;
+      } else {
+        ctx.fillStyle = `rgba(200, 200, 210, ${alpha})`;
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ========== Typewriter Effect ==========
+  const briefingText = "Your mission, should you choose to accept it, involves accessing the IMF secure network. This terminal will self-destruct upon session expiration.";
+  const typewriterEl = document.getElementById('typewriter');
+  let charIndex = 0;
+
+  function typeNextChar() {
+    if (charIndex < briefingText.length) {
+      typewriterEl.textContent += briefingText[charIndex];
+      charIndex++;
+      // Variable speed for realism
+      const delay = briefingText[charIndex - 1] === ',' ? 200 : briefingText[charIndex - 1] === '.' ? 300 : 35 + Math.random() * 25;
+      setTimeout(typeNextChar, delay);
+    }
+  }
+  setTimeout(typeNextChar, 800);
+
+  // ========== Countdown Timer ==========
+  const TOTAL_SECONDS = 300;
+  let remaining = TOTAL_SECONDS;
+  const countdownTimeEl = document.getElementById('countdownTime');
+  const countdownFillEl = document.getElementById('countdownFill');
+  const destructTimerEl = document.getElementById('destructTimer');
+
+  function updateCountdown() {
+    if (remaining <= 0) return;
+    remaining--;
+    const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
+    const secs = (remaining % 60).toString().padStart(2, '0');
+    countdownTimeEl.textContent = `${mins}:${secs}`;
+    destructTimerEl.textContent = remaining;
+    countdownFillEl.style.width = `${(remaining / TOTAL_SECONDS) * 100}%`;
+
+    // Change color when low
+    if (remaining <= 30) {
+      countdownTimeEl.style.color = '#ff4444';
+      countdownFillEl.style.background = 'linear-gradient(90deg, #ff4444, #ff6a00)';
+    }
+  }
+  setInterval(updateCountdown, 1000);
+
+  // ========== Toggle Password ==========
+  const togglePass = document.getElementById('togglePass');
+  const accessCode = document.getElementById('accessCode');
+  togglePass.addEventListener('click', () => {
+    const isPassword = accessCode.type === 'password';
+    accessCode.type = isPassword ? 'text' : 'password';
+    togglePass.querySelector('i').className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+  });
+
+  // ========== Toast System ==========
+  const toastEl = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  let toastTimeout;
+
+  function showToast(message, type = 'success') {
+    clearTimeout(toastTimeout);
+    toastEl.className = 'toast ' + type;
+    toastEl.querySelector('i').className = type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-triangle-exclamation';
+    toastMsg.textContent = message;
+    // Force reflow
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
+    toastTimeout = setTimeout(() => {
+      toastEl.classList.remove('show');
+    }, 3000);
+  }
+
+  // ========== Flash Effect ==========
+  const flashOverlay = document.getElementById('flashOverlay');
+  function triggerFlash() {
+    flashOverlay.classList.add('flash');
+    setTimeout(() => flashOverlay.classList.remove('flash'), 150);
+  }
+
+  // ========== Glitch Effect ==========
+  const emblem = document.getElementById('emblem');
+  function triggerGlitch() {
+    emblem.classList.add('glitch-active');
+    setTimeout(() => emblem.classList.remove('glitch-active'), 500);
+  }
+
+  // ========== Form Submit ==========
+  const loginForm = document.getElementById('loginForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const agentId = document.getElementById('agentId');
+
+  // Glitch on input focus
+  agentId.addEventListener('focus', triggerGlitch);
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const id = agentId.value.trim();
+    const code = accessCode.value.trim();
+
+    if (!id) {
+      triggerFlash();
+      showToast('Agent identifier required', 'error');
+      agentId.focus();
+      return;
+    }
+    if (!code) {
+      triggerFlash();
+      showToast('Access code required', 'error');
+      accessCode.focus();
+      return;
+    }
+    if (code.length < 4) {
+      triggerFlash();
+      showToast('Access code too short', 'error');
+      return;
+    }
+
+    // Simulate authentication
+    submitBtn.classList.add('loading');
+    submitBtn.textContent = 'VERIFYING...';
+    triggerGlitch();
+
+    setTimeout(() => {
+      triggerFlash();
+      triggerGlitch();
+
+      // Simulate success (any credentials work)
+      setTimeout(() => {
+        showToast(`Welcome, Agent ${id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`, 'success');
+        submitBtn.classList.remove('loading');
+        submitBtn.textContent = 'ACCESS GRANTED';
+        submitBtn.style.background = 'linear-gradient(135deg, #28b463, #1e8449)';
+
+        // Reset after a moment
+        setTimeout(() => {
+          submitBtn.textContent = 'ACCEPT MISSION';
+          submitBtn.style.background = '';
+        }, 3000);
+      }, 600);
+    }, 1500);
+  });
+
+  // ========== Forgot Link ==========
+  document.getElementById('forgotLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    triggerFlash();
+    triggerGlitch();
+    showToast('Breach protocol initiated. Stand by.', 'error');
+  });
+
+  // ========== Random Glitches ==========
+  setInterval(() => {
+    if (Math.random() < 0.15) {
+      triggerGlitch();
+    }
+  }, 5000);
+
+  // ========== Mouse Parallax on Emblem ==========
+  document.addEventListener('mousemove', (e) => {
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    const dx = (e.clientX - cx) / cx;
+    const dy = (e.clientY - cy) / cy;
+    emblem.style.transform = `translate(${dx * 6}px, ${dy * 6}px)`;
+  });
+</script>
+</body>
+</html>
