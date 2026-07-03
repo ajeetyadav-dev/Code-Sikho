@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TERMINAL ACCESS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00aa2a;
+    --green-dark: #003b00;
+    --red: #ff0033;
+    --red-dim: #880011;
+    --amber: #ffaa00;
+    --bg: #0a0a0a;
+    --bg-terminal: #050a05;
+    --glow-green: 0 0 10px #00ff4180, 0 0 40px #00ff4120;
+    --glow-red: 0 0 10px #ff003380, 0 0 40px #ff003320;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Matrix rain canvas */
+  #matrixCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.15;
+  }
+
+  /* Scanline overlay */
+  .scanlines {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1000;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+  }
+
+  /* CRT flicker */
+  .crt-flicker {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 999;
+    pointer-events: none;
+    animation: flicker 0.15s infinite alternate;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 0.97; }
+    100% { opacity: 1; }
+  }
+
+  /* Vignette */
+  .vignette {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 998;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+  }
+
+  /* Main terminal container */
+  .terminal-wrapper {
+    position: relative;
+    z-index: 10;
+    width: 95%;
+    max-width: 1100px;
+    height: 90vh;
+    max-height: 750px;
+    border: 1px solid var(--green-dim);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--glow-green), inset 0 0 60px rgba(0,255,65,0.03);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Top bar */
+  .top-bar {
+    background: linear-gradient(90deg, #0d1a0d, #0a120a);
+    border-bottom: 1px solid var(--green-dark);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .top-bar-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .top-bar-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  .top-bar-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green);
+  }
+
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 1px;
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: pulse-dot 1s infinite;
+  }
+
+  .status-dot.connected {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Side panel */
+  .terminal-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    background: var(--bg-terminal);
+  }
+
+  .side-panel {
+    width: 200px;
+    border-right: 1px solid var(--green-dark);
+    padding: 12px 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #060e06, #040804);
+  }
+
+  .side-section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: var(--green-dim);
+    padding: 8px 14px 4px;
+    text-transform: uppercase;
+  }
+
+  .side-item {
+    padding: 6px 14px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    border-left: 2px solid transparent;
+  }
+
+  .side-item:hover {
+    background: rgba(0,255,65,0.05);
+    border-left-color: var(--green-dim);
+  }
+
+  .side-item.active {
+    background: rgba(0,255,65,0.08);
+    border-left-color: var(--green);
+    color: #fff;
+  }
+
+  .side-item i {
+    width: 14px;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  .side-item .badge {
+    margin-left: auto;
+    background: var(--red);
+    color: #fff;
+    font-size: 8px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  /* Main terminal area */
+  .main-terminal {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .terminal-output {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.7;
+    scroll-behavior: smooth;
+  }
+
+  .terminal-output::-webkit-scrollbar { width: 4px; }
+  .terminal-output::-webkit-scrollbar-track { background: transparent; }
+  .terminal-output::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 2px; }
+
+  .line { margin-bottom: 2px; white-space: pre-wrap; word-break: break-all; }
+  .line.system { color: var(--green-dim); }
+  .line.error { color: var(--red); text-shadow: 0 0 6px rgba(255,0,51,0.3); }
+  .line.warning { color: var(--amber); }
+  .line.success { color: var(--green); text-shadow: 0 0 6px rgba(0,255,65,0.3); }
+  .line.info { color: #00ccff; }
+  .line.white { color: #cccccc; }
+  .line.dim { color: #335533; }
+
+  .highlight { color: #fff; font-weight: bold; }
+  .highlight-red { color: var(--red); font-weight: bold; }
+  .highlight-green { color: var(--green); font-weight: bold; }
+  .highlight-amber { color: var(--amber); font-weight: bold; }
+
+  /* Glitch text effect */
+  .glitch {
+    position: relative;
+    display: inline-block;
+    animation: glitch-shift 3s infinite;
+  }
+
+  @keyframes glitch-shift {
+    0%, 92%, 100% { transform: none; }
+    93% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+    94% { transform: translate(2px, -1px); }
+    95% { transform: translate(-1px, -2px); filter: hue-rotate(0deg); }
+    96% { transform: translate(1px, 2px); }
+  }
+
+  /* Progress bar */
+  .progress-container {
+    margin: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .progress-bar-outer {
+    flex: 1;
+    height: 8px;
+    background: var(--green-dark);
+    border: 1px solid #004400;
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-bar-inner {
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    width: 0%;
+    transition: width 0.3s ease;
+    position: relative;
+  }
+
+  .progress-bar-inner.danger {
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+  }
+
+  .progress-bar-inner.amber {
+    background: var(--amber);
+    box-shadow: 0 0 8px var(--amber);
+  }
+
+  .progress-pct {
+    font-size: 11px;
+    min-width: 38px;
+    text-align: right;
+    color: var(--green);
+  }
+
+  /* ASCII art */
+  .ascii-art {
+    color: var(--green-dim);
+    font-size: 9px;
+    line-height: 1.1;
+    margin: 8px 0;
+  }
+
+  /* Input area */
+  .input-area {
+    border-top: 1px solid var(--green-dark);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,10,0,0.8);
+    flex-shrink: 0;
+  }
+
+  .prompt-symbol {
+    color: var(--green);
+    font-weight: bold;
+    font-size: 14px;
+    text-shadow: 0 0 8px var(--green);
+    flex-shrink: 0;
+  }
+
+  .terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    caret-color: var(--green);
+  }
+
+  .terminal-input::placeholder {
+    color: #1a3a1a;
+  }
+
+  /* Bottom status bar */
+  .bottom-bar {
+    background: linear-gradient(90deg, #0d1a0d, #0a120a);
+    border-top: 1px solid var(--green-dark);
+    padding: 4px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--green-dim);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .bottom-bar-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .bottom-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Screen shake */
+  .shake {
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-3px, 2px); }
+    40% { transform: translate(3px, -2px); }
+    60% { transform: translate(-2px, -1px); }
+    80% { transform: translate(2px, 1px); }
+  }
+
+  /* Screen flash red */
+  .flash-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255,0,51,0.1);
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.05s;
+  }
+
+  .flash-overlay.active {
+    opacity: 1;
+  }
+
+  /* Typing cursor */
+  .cursor-blink {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: var(--green);
+    vertical-align: text-bottom;
+    animation: blink-cursor 0.8s step-end infinite;
+  }
+
+  @keyframes blink-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Network graph mini */
+  .mini-graph {
+    display: flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 20px;
+  }
+
+  .mini-graph-bar {
+    width: 3px;
+    background: var(--green);
+    opacity: 0.6;
+    transition: height 0.3s;
+  }
+
+  /* Data table */
+  .data-table {
+    margin: 6px 0;
+    font-size: 11px;
+    border-collapse: collapse;
+  }
+
+  .data-table th {
+    color: var(--green-dim);
+    text-align: left;
+    padding: 2px 12px 2px 0;
+    border-bottom: 1px solid var(--green-dark);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    letter-spacing: 2px;
+  }
+
+  .data-table td {
+    padding: 3px 12px 3px 0;
+    border-bottom: 1px solid #0a1a0a;
+  }
+
+  .data-table tr:hover td {
+    background: rgba(0,255,65,0.03);
+  }
+
+  /* Spinning loader */
+  .spin {
+    display: inline-block;
+    animation: spin-anim 1s linear infinite;
+  }
+
+  @keyframes spin-anim {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .side-panel { display: none; }
+    .terminal-wrapper { width: 100%; height: 100vh; max-height: none; border-radius: 0; border: none; }
+    .top-bar-right { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .crt-flicker, .scanlines { display: none; }
+    .glitch { animation: none; }
+    .status-dot { animation: none; }
+    .cursor-blink { animation: none; opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrixCanvas" aria-hidden="true"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="crt-flicker" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<div class="terminal-wrapper" id="terminalWrapper">
+  <div class="flash-overlay" id="flashOverlay" aria-hidden="true"></div>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-dots">
+        <span class="dot-red"></span>
+        <span class="dot-amber"></span>
+        <span class="dot-green"></span>
+      </div>
+      <span class="top-bar-title">ROOT ACCESS TERMINAL v4.7.1</span>
+    </div>
+    <div class="top-bar-right">
+      <div class="status-indicator">
+        <div class="status-dot" id="connDot"></div>
+        <span id="connStatus">DISCONNECTED</span>
+      </div>
+      <span id="clockDisplay">00:00:00</span>
+      <span>ENCRYPTED</span>
+      <div class="mini-graph" id="netGraph" aria-label="Network activity graph"></div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="terminal-body">
+    <!-- Side Panel -->
+    <nav class="side-panel" aria-label="Terminal navigation">
+      <div class="side-section-title">Modules</div>
+      <div class="side-item active" data-cmd="scan"><i class="fas fa-radar"></i> Network Scan</div>
+      <div class="side-item" data-cmd="exploit"><i class="fas fa-skull-crossbones"></i> Exploit DB <span class="badge">3</span></div>
+      <div class="side-item" data-cmd="crack"><i class="fas fa-key"></i> Password Crack</div>
+      <div class="side-item" data-cmd="decrypt"><i class="fas fa-lock-open"></i> Decrypt</div>
+      <div class="side-section-title">Recon</div>
+      <div class="side-item" data-cmd="ports"><i class="fas fa-network-wired"></i> Port Map</div>
+      <div class="side-item" data-cmd="sniff"><i class="fas fa-wifi"></i> Packet Sniff</div>
+      <div class="side-item" data-cmd="trace"><i class="fas fa-route"></i> Trace Route</div>
+      <div class="side-section-title">Access</div>
+      <div class="side-item" data-cmd="payload"><i class="fas fa-biohazard"></i> Payloads</div>
+      <div class="side-item" data-cmd="exfil"><i class="fas fa-file-export"></i> Data Exfil</div>
+      <div class="side-item" data-cmd="wipe"><i class="fas fa-trash-alt"></i> Wipe Tracks</div>
+      <div class="side-section-title">System</div>
+      <div class="side-item" data-cmd="help"><i class="fas fa-terminal"></i> Help</div>
+      <div class="side-item" data-cmd="clear"><i class="fas fa-eraser"></i> Clear</div>
+    </nav>
+
+    <!-- Main terminal -->
+    <div class="main-terminal">
+      <div class="terminal-output" id="terminalOutput" role="log" aria-live="polite"></div>
+      <div class="input-area">
+        <span class="prompt-symbol">root@breach:~$</span>
+        <input type="text" class="terminal-input" id="terminalInput" placeholder="type a command..." autocomplete="off" autofocus aria-label="Terminal command input">
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-bar-section">
+      <div class="bottom-bar-item"><i class="fas fa-shield-halved"></i> PROXY: 3 NODES</div>
+      <div class="bottom-bar-item"><i class="fas fa-clock"></i> UPTIME: <span id="uptimeDisplay">00:00</span></div>
+    </div>
+    <div class="bottom-bar-section">
+      <div class="bottom-bar-item">PID: <span id="pidDisplay">7741</span></div>
+      <div class="bottom-bar-item">MEM: <span id="memDisplay">12%</span></div>
+      <div class="bottom-bar-item"><i class="fas fa-skull"></i> THREAT: <span id="threatLevel" style="color:var(--red)">HIGH</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== MATRIX RAIN =====================
+const matrixCanvas = document.getElementById('matrixCanvas');
+const mCtx = matrixCanvas.getContext('2d');
+let matrixCols = [];
+const matrixChars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF<>/{}[];:';
+
+function initMatrix() {
+  matrixCanvas.width = window.innerWidth;
+  matrixCanvas.height = window.innerHeight;
+  const colCount = Math.floor(matrixCanvas.width / 14);
+  matrixCols = [];
+  for (let i = 0; i < colCount; i++) {
+    matrixCols.push(Math.random() * matrixCanvas.height / 14);
+  }
+}
+
+function drawMatrix() {
+  mCtx.fillStyle = 'rgba(5,10,5,0.12)';
+  mCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+  mCtx.font = '13px Share Tech Mono';
+  for (let i = 0; i < matrixCols.length; i++) {
+    const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+    const x = i * 14;
+    const y = matrixCols[i] * 14;
+    mCtx.fillStyle = `rgba(0,255,65,${0.4 + Math.random() * 0.6})`;
+    mCtx.fillText(char, x, y);
+    if (y > matrixCanvas.height && Math.random() > 0.975) {
+      matrixCols[i] = 0;
+    }
+    matrixCols[i]++;
+  }
+  requestAnimationFrame(drawMatrix);
+}
+
+initMatrix();
+drawMatrix();
+window.addEventListener('resize', initMatrix);
+
+// ===================== MINI NETWORK GRAPH =====================
+const netGraph = document.getElementById('netGraph');
+const graphBars = [];
+for (let i = 0; i < 20; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'mini-graph-bar';
+  bar.style.height = '2px';
+  netGraph.appendChild(bar);
+  graphBars.push(bar);
+}
+
+function updateGraph() {
+  graphBars.forEach(bar => {
+    bar.style.height = (2 + Math.random() * 18) + 'px';
+    bar.style.background = Math.random() > 0.85 ? 'var(--red)' : 'var(--green)';
+  });
+}
+setInterval(updateGraph, 400);
+
+// ===================== CLOCK & UPTIME =====================
+const clockEl = document.getElementById('clockDisplay');
+const uptimeEl = document.getElementById('uptimeDisplay');
+const memEl = document.getElementById('memDisplay');
+let startTime = Date.now();
+
+function updateClock() {
+  const now = new Date();
+  clockEl.textContent = now.toTimeString().split(' ')[0];
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  uptimeEl.textContent = `${m}:${s}`;
+  memEl.textContent = (12 + Math.floor(Math.random() * 8)) + '%';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===================== TERMINAL ENGINE =====================
+const output = document.getElementById('terminalOutput');
+const input = document.getElementById('terminalInput');
+const wrapper = document.getElementById('terminalWrapper');
+const flashOverlay = document.getElementById('flashOverlay');
+const connDot = document.getElementById('connDot');
+const connStatus = document.getElementById('connStatus');
+
+let commandHistory = [];
+let historyIndex = -1;
+let isAnimating = false;
+let connected = false;
+
+// Add a line to terminal output
+function addLine(text, cls = '') {
+  const div = document.createElement('div');
+  div.className = `line ${cls}`;
+  div.innerHTML = text;
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+// Add empty line
+function addEmpty() {
+  addLine('&nbsp;');
+}
+
+// Flash screen red
+function flashScreen() {
+  flashOverlay.classList.add('active');
+  wrapper.classList.add('shake');
+  setTimeout(() => {
+    flashOverlay.classList.remove('active');
+    wrapper.classList.remove('shake');
+  }, 200);
+}
+
+// Simulate progress bar with callback
+function animateProgress(label, target, duration, cls, onComplete) {
+  return new Promise(resolve => {
+    const container = document.createElement('div');
+    container.className = 'progress-container';
+    container.innerHTML = `
+      <span style="font-size:11px;min-width:140px;color:var(--green-dim)">${label}</span>
+      <div class="progress-bar-outer"><div class="progress-bar-inner ${cls || ''}"></div></div>
+      <span class="progress-pct">0%</span>
+    `;
+    output.appendChild(container);
+    output.scrollTop = output.scrollHeight;
+
+    const bar = container.querySelector('.progress-bar-inner');
+    const pct = container.querySelector('.progress-pct');
+    let current = 0;
+    const step = 16;
+    const increment = target / (duration / step);
+
+    const timer = setInterval(() => {
+      current += increment + (Math.random() * 2 - 1);
+      if (current >= target) {
+        current = target;
+        clearInterval(timer);
+        bar.style.width = current + '%';
+        pct.textContent = Math.floor(current) + '%';
+        if (onComplete) onComplete();
+        resolve();
+      }
+      bar.style.width = current + '%';
+      pct.textContent = Math.floor(current) + '%';
+      output.scrollTop = output.scrollHeight;
+    }, step);
+  });
+}
+
+// Type text character by character
+function typeText(text, cls = '', speed = 20) {
+  return new Promise(resolve => {
+    const div = document.createElement('div');
+    div.className = `line ${cls}`;
+    output.appendChild(div);
+    let i = 0;
+    const timer = setInterval(() => {
+      div.innerHTML = text.substring(0, i + 1) + '<span class="cursor-blink"></span>';
+      i++;
+      output.scrollTop = output.scrollHeight;
+      if (i >= text.length) {
+        clearInterval(timer);
+        div.innerHTML = text;
+        resolve();
+      }
+    }, speed);
+  });
+}
+
+// Delay helper
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// Random IP
+function randIP() {
+  return `${Math.floor(Math.random()*223)+1}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+}
+
+// Random hex
+function randHex(len) {
+  let s = '';
+  for (let i = 0; i < len; i++) s += '0123456789abcdef'[Math.floor(Math.random()*16)];
+  return s;
+}
+
+// Random MAC
+function randMAC() {
+  return Array.from({length:6}, () => randHex(2)).join(':');
+}
+
+// ===================== BOOT SEQUENCE =====================
+async function bootSequence() {
+  isAnimating = true;
+  input.disabled = true;
+
+  const ascii = `<span class="ascii-art">
+ ██╗  ██╗ █████╗  ██████╗██╗  ██╗███████╗██████╗
+ ██║  ██║██╔══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗
+ ███████║███████║██║     █████╔╝ █████╗  ██║  ██║
+ ██╔══██║██╔══██║██║     ██╔═██╗ ██╔══╝  ██║  ██║
+ ██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██████╔╝
+ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═════╝</span>`;
+
+  addEmpty();
+  addLine(ascii, 'dim');
+  addEmpty();
+  await typeText('> INITIALISING BREACH FRAMEWORK v4.7.1 ...', 'system', 25);
+  addEmpty();
+
+  await animateProgress('LOADING KERNEL', 100, 800, '');
+  addLine('[  OK  ] Kernel module loaded: <span class="highlight">breach_core.ko</span>', 'system');
+  await delay(150);
+
+  await animateProgress('LOADING NETWORK', 100, 600, '');
+  addLine('[  OK  ] Network stack initialised: <span class="highlight">TOR_ROUTING</span>', 'system');
+  await delay(100);
+
+  await animateProgress('LOADING CRYPTO', 100, 700, '');
+  addLine('[  OK  ] Crypto engine: <span class="highlight">AES-256-GCM + CHACHA20</span>', 'system');
+  await delay(100);
+
+  await animateProgress('LOADING EXPLOITS', 100, 500, 'danger');
+  addLine('[ <span class="highlight-red">WARN</span> ] 3 zero-day exploits loaded from <span class="highlight-red">/opt/exploits/</span>', 'warning');
+  await delay(100);
+
+  flashScreen();
+  addEmpty();
+  await typeText('> ESTABLISHING ENCRYPTED TUNNEL ...', 'system', 30);
+  await delay(400);
+
+  const hops = 5;
+  for (let i = 1; i <= hops; i++) {
+    addLine(`  <span class="dim">[${i}/${hops}]</span> Proxy node: <span class="highlight">${randIP()}:${3000 + Math.floor(Math.random()*60000)}</span> <span class="success">[RELAY OK]</span>`);
+    await delay(300 + Math.random() * 400);
+  }
+
+  addEmpty();
+  await typeText('> TUNNEL ESTABLISHED — 3 HOPS ACTIVE', 'success', 20);
+  await delay(200);
+
+  connDot.classList.add('connected');
+  connStatus.textContent = 'CONNECTED';
+  connected = true;
+
+  addEmpty();
+  addLine('<span class="highlight-amber">╔══════════════════════════════════════════════════════╗</span>', '');
+  addLine('<span class="highlight-amber">║</span>  <span class="glitch highlight-red">UNAUTHORISED ACCESS DETECTED — PROCEED WITH CAUTION</span>  <span class="highlight-amber">║</span>', '');
+  addLine('<span class="highlight-amber">╚══════════════════════════════════════════════════════╝</span>', '');
+  addEmpty();
+  addLine('Type <span class="highlight">help</span> for available commands.', 'dim');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+// ===================== COMMAND HANDLERS =====================
+
+async function cmdScan() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> INITIATING NETWORK SCAN ON SUBNET 192.168.1.0/24 ...', 'system', 20);
+  addEmpty();
+
+  const hosts = [];
+  const hostCount = 6 + Math.floor(Math.random() * 6);
+  for (let i = 0; i < hostCount; i++) {
+    hosts.push({
+      ip: `192.168.1.${10 + i}`,
+      mac: randMAC(),
+      os: ['Linux 5.15', 'Windows 11', 'FreeBSD 13', 'macOS 14', 'Ubuntu 22.04', 'Debian 12'][Math.floor(Math.random()*6)],
+      ports: Math.floor(Math.random() * 8) + 1,
+      vuln: Math.random() > 0.5
+    });
+  }
+
+  for (let i = 0; i < hosts.length; i++) {
+    const h = hosts[i];
+    const cls = h.vuln ? 'warning' : 'system';
+    const vulnTag = h.vuln ? ' <span class="highlight-red">[VULNERABLE]</span>' : '';
+    addLine(`  <span class="dim">[${String(i+1).padStart(2,'0')}]</span> <span class="highlight">${h.ip}</span>  ${h.mac}  ${h.os}  (${h.ports} ports)${vulnTag}`, cls);
+    await delay(200 + Math.random() * 300);
+  }
+
+  addEmpty();
+  const vulnCount = hosts.filter(h => h.vuln).length;
+  addLine(`Scan complete. <span class="highlight">${hosts.length}</span> hosts found. <span class="highlight-red">${vulnCount}</span> vulnerable.`, 'success');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdExploit() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> LOADING EXPLOIT DATABASE ...', 'system', 20);
+  addEmpty();
+
+  const exploits = [
+    { id: 'CVE-2024-3094', name: 'XZ Utils Backdoor', type: 'RCE', risk: 'CRITICAL', target: 'Linux' },
+    { id: 'CVE-2024-21762', name: 'FortiOS Out-of-Bound Write', type: 'RCE', risk: 'CRITICAL', target: 'Fortinet' },
+    { id: 'CVE-2024-1709', name: 'ConnectWise Auth Bypass', type: 'AUTH', risk: 'CRITICAL', target: 'Windows' },
+  ];
+
+  addLine('  <span class="dim">ID               NAME                              TYPE   RISK      TARGET</span>', '');
+  addLine('  <span class="dim">─────────────────────────────────────────────────────────────────────────</span>', 'dim');
+
+  for (const e of exploits) {
+    const riskCls = e.risk === 'CRITICAL' ? 'highlight-red' : 'highlight-amber';
+    addLine(`  <span class="highlight">${e.id}</span>  ${e.name.padEnd(34)} ${e.type.padEnd(7)} <span class="${riskCls}">${e.risk.padEnd(10)}</span> ${e.target}`, '');
+    await delay(300);
+  }
+
+  addEmpty();
+  addLine(`<span class="highlight-red">[!]</span> 3 zero-day exploits ready. Use with extreme caution.`, 'warning');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdCrack() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  const targetHash = '$6$rounds=656000$' + randHex(16) + '$' + randHex(40);
+  addEmpty();
+  await typeText(`> TARGET HASH: ${targetHash}`, 'system', 15);
+  await typeText('> STARTING DICTIONARY ATTACK (ROCKYOU-ENHANCED) ...', 'system', 20);
+  addEmpty();
+
+  await animateProgress('CRACKING', 0, 500, '', async () => {});
+  addLine('  <span class="dim">[~]</span> Trying wordlist... 0 / 14,341,564', 'dim');
+
+  await animateProgress('CRACKING', 35, 1500, '', async () => {});
+  addLine('  <span class="dim">[~]</span> Trying wordlist... 5,019,547 / 14,341,564', 'dim');
+
+  flashScreen();
+  await animateProgress('CRACKING', 78, 1200, 'amber', async () => {});
+
+  await delay(300);
+  await animateProgress('CRACKING', 100, 600, 'danger', async () => {});
+
+  addEmpty();
+  flashScreen();
+  addLine('  <span class="highlight-red">[!!!] HASH CRACKED SUCCESSFULLY</span>', 'error');
+  addLine(`  Password: <span class="highlight">D3adL1ft_2024!x</span>`, 'success');
+  addLine(`  Hash type: <span class="highlight">SHA-512 ($6$)</span>`, 'system');
+  addLine(`  Time elapsed: <span class="highlight">4.72s</span>`, 'system');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdDecrypt() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> INTERCEPTED ENCRYPTED PAYLOAD:', 'system', 20);
+  addLine(`  <span class="dim">${randHex(64)}</span>`, 'dim');
+  addLine(`  <span class="dim">${randHex(64)}</span>`, 'dim');
+  addLine(`  <span class="dim">${randHex(32)}</span>`, 'dim');
+  addEmpty();
+
+  await typeText('> ANALYSING CIPHER ... identified: AES-256-CBC', 'system', 15);
+  await delay(300);
+  await typeText('> EXTRACTING KEY FROM MEMORY DUMP ...', 'warning', 15);
+  await delay(400);
+
+  await animateProgress('DECRYPTING', 100, 2000, '', async () => {});
+
+  addEmpty();
+  addLine('<span class="success">[OK] DECRYPTION SUCCESSFUL</span>', 'success');
+  addLine('');
+  addLine('  Decrypted content:', 'system');
+  addLine('  ─────────────────────────────────────', 'dim');
+  addLine('  <span class="white">FROM: admin@corp-server.local</span>', '');
+  addLine('  <span class="white">TO:   cfo@corp-server.local</span>', '');
+  addLine('  <span class="white">SUBJ: Q4 Financial Report - CONFIDENTIAL</span>', '');
+  addEmpty();
+  addLine('  <span class="white">The attached document contains preliminary Q4</span>', '');
+  addLine('  <span class="white">revenue figures. Do not distribute until board</span>', '');
+  addLine('  <span class="white">review on Jan 15. Access key: 7F-9A-2B-C1</span>', '');
+  addLine('  ─────────────────────────────────────', 'dim');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdPorts() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> SCANNING OPEN PORTS ON 192.168.1.1 ...', 'system', 20);
+  addEmpty();
+
+  const ports = [
+    { port: 22, state: 'OPEN', service: 'OpenSSH 8.9', banner: 'SSH-2.0-OpenSSH_8.9p1' },
+    { port: 80, state: 'OPEN', service: 'nginx 1.24', banner: 'HTTP/1.1 200 OK' },
+    { port: 443, state: 'OPEN', service: 'nginx 1.24 (TLS)', banner: 'TLSv1.3 AES256-GCM' },
+    { port: 3306, state: 'OPEN', service: 'MySQL 8.0.35', banner: 'J\u00005.7.42-log\u0000' },
+    { port: 5432, state: 'FILTERED', service: 'PostgreSQL?', banner: 'N/A' },
+    { port: 8080, state: 'OPEN', service: 'Jetty 11.0.13', banner: 'HTTP/1.1 401 Unauthorized' },
+    { port: 8443, state: 'OPEN', service: 'Unknown TLS', banner: 'TLSv1.2 ECDHE-RSA' },
+    { port: 27017, state: 'FILTERED', service: 'MongoDB?', banner: 'N/A' },
+  ];
+
+  for (const p of ports) {
+    const stateCls = p.state === 'OPEN' ? 'highlight-green' : 'highlight-amber';
+    addLine(`  <span class="highlight">${String(p.port).padEnd(6)}</span> <span class="${stateCls}">${p.state.padEnd(10)}</span> <span class="white">${p.service.padEnd(20)}</span> <span class="dim">${p.banner}</span>`, '');
+    await delay(250 + Math.random() * 200);
+  }
+
+  addEmpty();
+  addLine(`Port scan complete. <span class="highlight">${ports.filter(p=>p.state==='OPEN').length}</span> open, <span class="highlight-amber">${ports.filter(p=>p.state==='FILTERED').length}</span> filtered.`, 'system');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdSniff() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> STARTING PACKET SNIFFER ON eth0 ... (Ctrl+C to stop)', 'system', 20);
+  addEmpty();
+  addLine('  <span class="dim">TIMESTAMP          SRC IP            DST IP            PROTO  LEN   INFO</span>', '');
+  addLine('  <span class="dim">──────────────────────────────────────────────────────────────────────────</span>', 'dim');
+
+  const protos = ['TCP', 'UDP', 'DNS', 'TLS', 'HTTP', 'ARP', 'ICMP'];
+  const infos = ['SYN', 'ACK', 'PSH,ACK', 'GET /api/', 'POST /login', 'query A google.com', 'Certificate', 'Reply', 'Request'];
+
+  for (let i = 0; i < 18; i++) {
+    const ts = new Date(Date.now() - (18 - i) * 200).toISOString().substring(11, 23);
+    const proto = protos[Math.floor(Math.random() * protos.length)];
+    const info = infos[Math.floor(Math.random() * infos.length)];
+    const len = 40 + Math.floor(Math.random() * 1400);
+    const protoCls = proto === 'HTTP' ? 'highlight-red' : proto === 'DNS' ? 'highlight-amber' : 'system';
+    addLine(`  <span class="dim">${ts}</span>  ${randIP().padEnd(18)}  ${randIP().padEnd(18)}  <span class="${protoCls}">${proto.padEnd(6)}</span>  ${String(len).padEnd(5)}  ${info}`, '');
+    await delay(200 + Math.random() * 400);
+  }
+
+  addEmpty();
+  addLine('<span class="dim">[+] 18 packets captured in 3.6s</span>', 'dim');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdTrace() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  const target = '10.0.0.1';
+  addEmpty();
+  await typeText(`> TRACEROUTE TO ${target}, 30 HOPS MAX ...`, 'system', 20);
+  addEmpty();
+
+  const hops = 12;
+  for (let i = 1; i <= hops; i++) {
+    const ip = i === hops ? target : randIP();
+    const ms1 = (1 + Math.random() * 5).toFixed(1);
+    const ms2 = (1 + Math.random() * 8).toFixed(1);
+    const ms3 = (1 + Math.random() * 12).toFixed(1);
+    const isTarget = i === hops;
+    const cls = isTarget ? 'highlight-green' : 'system';
+    addLine(`  <span class="dim">${String(i).padStart(2)}</span>  <span class="${cls}">${ip}</span>  ${ms1}ms  ${ms2}ms  ${ms3}ms${isTarget ? '  <span class="highlight-green">[TARGET REACHED]</span>' : ''}`, '');
+    await delay(300 + Math.random() * 300);
+  }
+
+  addEmpty();
+  addLine(`Trace complete. <span class="highlight">${hops}</span> hops to target.`, 'system');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdPayload() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> AVAILABLE PAYLOADS:', 'system', 20);
+  addEmpty();
+
+  const payloads = [
+    { name: 'reverse_tcp_shell', size: '14.2 KB', arch: 'x86_64', encoder: 'shikata_ga_nai' },
+    { name: 'web_delivery', size: '2.1 KB', arch: 'multi', encoder: 'none' },
+    { name: 'meterpreter_stager', size: '8.7 KB', arch: 'x86', encoder: 'xor_dynamic' },
+  ];
+
+  for (const p of payloads) {
+    addLine(`  <span class="highlight-red"><i class="fas fa-biohazard"></i></span> <span class="highlight">${p.name}</span>`, '');
+    addLine(`      Size: ${p.size}  |  Arch: ${p.arch}  |  Encoder: ${p.dim ? 'dim' : ''}${p.encoder}`, 'dim');
+    await delay(400);
+  }
+
+  addEmpty();
+  addLine('<span class="warning">[!] Payload generation requires explicit confirmation.</span>', 'warning');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdExfil() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  await typeText('> INITIATING DATA EXFILTRATION OVER ENCRYPTED CHANNEL ...', 'warning', 20);
+  addEmpty();
+
+  const files = [
+    { name: '/etc/shadow', size: '2.4 KB' },
+    { name: '/var/lib/mysql/users.ibd', size: '16.2 MB' },
+    { name: '/home/admin/.ssh/id_rsa', size: '3.2 KB' },
+    { name: '/opt/corp/financials_q4.xlsx', size: '845 KB' },
+    { name: '/etc/kubernetes/admin.conf', size: '5.6 KB' },
+  ];
+
+  for (const f of files) {
+    await animateProgress(f.name.split('/').pop(), 100, 600 + Math.random() * 800, '', async () => {});
+    addLine(`  <span class="success">[OK]</span> ${f.name} <span class="dim">(${f.size})</span>`, 'dim');
+    await delay(100);
+  }
+
+  addEmpty();
+  flashScreen();
+  addLine('<span class="highlight-red">[!!!] EXFILTRATION COMPLETE — 17.3 MB TRANSFERRED</span>', 'error');
+  addLine('<span class="dim">      Data sent via DNS tunneling over 3 proxy nodes</span>', 'dim');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+async function cmdWipe() {
+  if (isAnimating) return;
+  isAnimating = true;
+  input.disabled = true;
+
+  addEmpty();
+  flashScreen();
+  await typeText('> INITIATING ANTI-FORENSICS WIPE ...', 'error', 25);
+  addEmpty();
+
+  const tasks = [
+    'Clearing /var/log/auth.log',
+    'Clearing /var/log/syslog',
+    'Purging bash history',
+    'Removing temporary files in /tmp/',
+    'Overwriting free space with zeros (1 pass)',
+    'Resetting filesystem timestamps',
+    'Clearing iptables logs',
+    'Removing shell artifacts',
+  ];
+
+  for (const t of tasks) {
+    await delay(200 + Math.random() * 400);
+    addLine(`  <span class="highlight-red">[WIPE]</span> ${t} ... <span class="success">DONE</span>`, 'system');
+  }
+
+  addEmpty();
+  await animateProgress('SHREDDING FREE SPACE', 100, 2000, 'danger', async () => {});
+
+  addEmpty();
+  addLine('<span class="success">[OK] ALL FORENSIC ARTIFACTS REMOVED</span>', 'success');
+  addLine('<span class="dim">    Recovery probability: &lt;0.001%</span>', 'dim');
+  addEmpty();
+
+  isAnimating = false;
+  input.disabled = false;
+  input.focus();
+}
+
+function cmdHelp() {
+  addEmpty();
+  addLine('<span class="highlight">AVAILABLE COMMANDS:</span>', '');
+  addLine('─────────────────────────────────────────────────', 'dim');
+  addLine('  <span class="highlight-green">scan</span>      Scan network for live hosts & vulnerabilities', 'system');
+  addLine('  <span class="highlight-green">exploit</span>   List available exploit modules', 'system');
+  addLine('  <span class="highlight-green">crack</span>     Brute-force password hash cracking', 'system');
+  addLine('  <span class="highlight-green">decrypt</span>   Decrypt intercepted encrypted payloads', 'system');
+  addLine('  <span class="highlight-green">ports</span>     Scan open ports on target host', 'system');
+  addLine('  <span class="highlight-green">sniff</span>     Capture and analyse network packets', 'system');
+  addLine('  <span class="highlight-green">trace</span>     Traceroute to target destination', 'system');
+  addLine('  <span class="highlight-green">payload</span>   List available payload generators', 'system');
+  addLine('  <span class="highlight-green">exfil</span>     Exfiltrate data over encrypted channel', 'system');
+  addLine('  <span class="highlight-green">wipe</span>      Anti-forensics: wipe all traces', 'system');
+  addLine('  <span class="highlight-green">clear</span>     Clear terminal output', 'system');
+  addLine('  <span class="highlight-green">help</span>      Show this help message', 'system');
+  addEmpty();
+  addLine('  <span class="dim">Tip: Click sidebar items or use Tab for autocomplete</span>', 'dim');
+  addEmpty();
+}
+
+function cmdClear() {
+  output.innerHTML = '';
+}
+
+// ===================== INPUT HANDLING =====================
+const commandMap = {
+  scan: cmdScan,
+  exploit: cmdExploit,
+  crack: cmdCrack,
+  decrypt: cmdDecrypt,
+  ports: cmdPorts,
+  sniff: cmdSniff,
+  trace: cmdTrace,
+  payload: cmdPayload,
+  exfil: cmdExfil,
+  wipe: cmdWipe,
+  help: cmdHelp,
+  clear: cmdClear,
+};
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const cmd = input.value.trim().toLowerCase();
+    if (!cmd) return;
+
+    // Echo the command
+    addLine(`<span class="prompt-symbol" style="font-size:13px">root@breach:~$</span> ${cmd}`, 'white');
+    input.value = '';
+
+    // Add to history
+    commandHistory.unshift(cmd);
+    if (commandHistory.length > 50) commandHistory.pop();
+    historyIndex = -1;
+
+    // Execute
+    if (commandMap[cmd]) {
+      commandMap[cmd]();
+    } else {
+      addLine(`<span class="error">[-] Command not found: '${cmd}'. Type 'help' for available commands.</span>`, 'error');
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex < commandHistory.length - 1) {
+      historyIndex++;
+      input.value = commandHistory[historyIndex];
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex > 0) {
+      historyIndex--;
+      input.value = commandHistory[historyIndex];
+    } else {
+      historyIndex = -1;
+      input.value = '';
+    }
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    const partial = input.value.trim().toLowerCase();
+    const matches = Object.keys(commandMap).filter(c => c.startsWith(partial));
+    if (matches.length === 1) {
+      input.value = matches[0];
+    } else if (matches.length > 1) {
+      addLine(`<span class="prompt-symbol" style="font-size:13px">root@breach:~$</span> ${partial}`, 'white');
+      addLine(matches.join('  '), 'dim');
+    }
+  }
+});
+
+// Sidebar clicks
+document.querySelectorAll('.side-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const cmd = item.dataset.cmd;
+    if (!cmd || isAnimating) return;
+
+    // Update active state
+    document.querySelectorAll('.side-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+
+    // Echo and execute
+    addLine(`<span class="prompt-symbol" style="font-size:13px">root@breach:~$</span> ${cmd}`, 'white');
+    if (commandMap[cmd]) {
+      commandMap[cmd]();
+    }
+  });
+});
+
+// Click anywhere on terminal to focus input
+document.querySelector('.main-terminal').addEventListener('click', () => {
+  if (!input.disabled) input.focus();
+});
+
+// Random PID on load
+document.getElementById('pidDisplay').textContent = 1000 + Math.floor(Math.random() * 50000);
+
+// ===================== AMBIENT EFFECTS =====================
+
+// Random screen glitch every 8-15 seconds
+function randomGlitch() {
+  if (Math.random() > 0.5) {
+    flashScreen();
+  }
+  setTimeout(randomGlitch, 8000 + Math.random() * 7000);
+}
+setTimeout(randomGlitch, 5000);
+
+// Occasional fake alert in status
+setInterval(() => {
+  if (!connected) return;
+  const threats = ['INTRUSION DETECTED', 'FIREWALL ALERT', 'IDS TRIGGERED', 'ANOMALY FOUND'];
+  const orig = document.getElementById('threatLevel').textContent;
+  document.getElementById('threatLevel').textContent = threats[Math.floor(Math.random() * threats.length)];
+  document.getElementById('threatLevel').style.color = 'var(--red)';
+  setTimeout(() => {
+    document.getElementById('threatLevel').textContent = orig;
+  }, 2000);
+}, 12000);
+
+// ===================== START =====================
+bootSequence();
+</script>
+</body>
+</html>
