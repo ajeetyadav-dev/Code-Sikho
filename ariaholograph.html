@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA — Holographic AI Interface</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --holo: #00f0ff;
+    --holo-dim: #00f0ff44;
+    --holo-glow: #00f0ff88;
+    --teal: #00d4aa;
+    --amber: #f0a500;
+    --bg: #060a12;
+    --bg-panel: #0a1020cc;
+    --border: #00f0ff22;
+    --text: #c8eaf0;
+    --text-dim: #4a7080;
+    --danger: #ff3860;
+    --success: #00d4aa;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Share Tech Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* Background canvas */
+  #bgCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  /* Scan line overlay */
+  .scanlines {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 100;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 240, 255, 0.015) 2px,
+      rgba(0, 240, 255, 0.015) 4px
+    );
+  }
+
+  .scan-sweep {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: linear-gradient(90deg, transparent, var(--holo-glow), transparent);
+    z-index: 101;
+    pointer-events: none;
+    animation: sweep 4s ease-in-out infinite;
+    opacity: 0.5;
+  }
+
+  @keyframes sweep {
+    0%, 100% { top: -4px; opacity: 0; }
+    10% { opacity: 0.5; }
+    90% { opacity: 0.5; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* Main layout */
+  .interface {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 320px 1fr 300px;
+    grid-template-rows: 60px 1fr 80px;
+    height: 100vh;
+    gap: 1px;
+  }
+
+  /* Top bar */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    color: var(--holo);
+    text-shadow: 0 0 20px var(--holo-glow), 0 0 40px var(--holo-dim);
+    letter-spacing: 6px;
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .topbar-right span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .topbar-right i { color: var(--holo); font-size: 12px; }
+
+  /* Left panel — Chat */
+  .panel-left {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--holo);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+  }
+
+  .panel-header i { font-size: 14px; }
+
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--holo-dim) transparent;
+  }
+
+  .chat-area::-webkit-scrollbar { width: 3px; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--holo-dim); border-radius: 3px; }
+
+  .msg {
+    max-width: 90%;
+    padding: 10px 14px;
+    border-radius: 2px 12px 12px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    animation: msg-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+  }
+
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .msg.ai {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #00f0ff10, #00d4aa08);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--holo);
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #f0a50015, #f0a50008);
+    border: 1px solid #f0a50022;
+    border-right: 2px solid var(--amber);
+    border-radius: 12px 2px 12px 12px;
+  }
+
+  .msg-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .msg.ai .msg-label { color: var(--holo); }
+  .msg.user .msg-label { color: var(--amber); }
+
+  .msg-time {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    text-align: right;
+  }
+
+  .typing-indicator {
+    align-self: flex-start;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #00f0ff10, #00d4aa08);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--holo);
+    display: none;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .typing-indicator.active { display: flex; }
+
+  .typing-dot {
+    width: 6px; height: 6px;
+    background: var(--holo);
+    border-radius: 50%;
+    animation: typing-bounce 1.2s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+    30% { transform: translateY(-8px); opacity: 1; }
+  }
+
+  /* Center — Hologram */
+  .holo-center {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .holo-container {
+    position: relative;
+    width: 380px;
+    height: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hologram core */
+  .holo-core {
+    position: absolute;
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, var(--holo), transparent 70%);
+    border-radius: 50%;
+    animation: core-pulse 3s ease-in-out infinite;
+    z-index: 5;
+  }
+
+  @keyframes core-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 40px var(--holo-glow), 0 0 80px var(--holo-dim); }
+    50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 60px var(--holo-glow), 0 0 120px var(--holo-dim); }
+  }
+
+  /* Hologram face geometry */
+  .holo-face {
+    position: absolute;
+    width: 120px; height: 150px;
+    z-index: 4;
+  }
+
+  .holo-face svg {
+    width: 100%; height: 100%;
+    filter: drop-shadow(0 0 6px var(--holo-glow));
+  }
+
+  .holo-face line, .holo-face circle, .holo-face path, .holo-face ellipse {
+    stroke: var(--holo);
+    stroke-width: 1;
+    fill: none;
+    opacity: 0.7;
+  }
+
+  /* Rotating rings */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid;
+    border-color: var(--holo-dim);
+  }
+
+  .ring-1 {
+    width: 200px; height: 200px;
+    animation: ring-rotate 8s linear infinite;
+    border-top-color: var(--holo);
+    border-bottom-color: var(--holo);
+  }
+
+  .ring-2 {
+    width: 260px; height: 260px;
+    animation: ring-rotate 12s linear infinite reverse;
+    border-left-color: var(--teal);
+    border-right-color: var(--teal);
+    transform: rotateX(65deg);
+  }
+
+  .ring-3 {
+    width: 320px; height: 320px;
+    animation: ring-rotate 16s linear infinite;
+    border-top-color: var(--holo-dim);
+    transform: rotateY(65deg);
+  }
+
+  .ring-4 {
+    width: 180px; height: 180px;
+    animation: ring-rotate 6s linear infinite reverse;
+    border-left-color: var(--amber);
+    border-right-color: transparent;
+    border-top-color: transparent;
+    border-bottom-color: var(--amber-dim);
+    transform: rotateX(45deg) rotateZ(30deg);
+  }
+
+  @keyframes ring-rotate {
+    from { transform: rotateX(65deg) rotateZ(0deg); }
+    to { transform: rotateX(65deg) rotateZ(360deg); }
+  }
+
+  .ring-2 { animation-name: ring-rotate-r; }
+  @keyframes ring-rotate-r {
+    from { transform: rotateX(65deg) rotateZ(360deg); }
+    to { transform: rotateX(65deg) rotateZ(0deg); }
+  }
+
+  .ring-3 { animation-name: ring-rotate-y; }
+  @keyframes ring-rotate-y {
+    from { transform: rotateY(65deg) rotateX(0deg); }
+    to { transform: rotateY(65deg) rotateX(360deg); }
+  }
+
+  .ring-4 { animation-name: ring-rotate-4; }
+  @keyframes ring-rotate-4 {
+    from { transform: rotateX(45deg) rotateZ(30deg); }
+    to { transform: rotateX(45deg) rotateZ(390deg); }
+  }
+
+  /* Orbiting dots on rings */
+  .orbit-dot {
+    position: absolute;
+    width: 5px; height: 5px;
+    background: var(--holo);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--holo);
+  }
+
+  .orbit-dot-1 { animation: orbit1 8s linear infinite; }
+  .orbit-dot-2 { animation: orbit2 12s linear infinite; }
+  .orbit-dot-3 { animation: orbit3 16s linear infinite; }
+
+  @keyframes orbit1 {
+    from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+  }
+  @keyframes orbit2 {
+    from { transform: rotate(0deg) translateX(130px) rotate(0deg) rotateX(65deg); }
+    to { transform: rotate(360deg) translateX(130px) rotate(-360deg) rotateX(65deg); }
+  }
+  @keyframes orbit3 {
+    from { transform: rotate(0deg) translateX(160px) rotate(0deg) rotateY(65deg); }
+    to { transform: rotate(360deg) translateX(160px) rotate(-360deg) rotateY(65deg); }
+  }
+
+  /* Hologram base */
+  .holo-base {
+    position: absolute;
+    bottom: 40px;
+    width: 300px;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--holo-glow), var(--holo), var(--holo-glow), transparent);
+    border-radius: 50%;
+    animation: base-pulse 3s ease-in-out infinite;
+  }
+
+  .holo-base-ellipse {
+    position: absolute;
+    bottom: 30px;
+    width: 300px;
+    height: 30px;
+    border: 1px solid var(--holo-dim);
+    border-radius: 50%;
+    animation: base-pulse 3s ease-in-out infinite 0.5s;
+  }
+
+  @keyframes base-pulse {
+    0%, 100% { opacity: 0.4; transform: scaleX(1); }
+    50% { opacity: 0.8; transform: scaleX(1.1); }
+  }
+
+  /* Hologram glitch */
+  .holo-glitch {
+    position: absolute;
+    width: 100%; height: 100%;
+    z-index: 6;
+    pointer-events: none;
+    animation: glitch 5s ease-in-out infinite;
+  }
+
+  @keyframes glitch {
+    0%, 92%, 100% { opacity: 0; }
+    93% { opacity: 1; transform: translateX(-3px) skewX(-2deg); }
+    94% { opacity: 0; }
+    95% { opacity: 1; transform: translateX(4px) skewX(3deg); }
+    96% { opacity: 0; }
+    97% { opacity: 0.5; transform: translateX(-2px); }
+    98% { opacity: 0; }
+  }
+
+  .holo-glitch::before, .holo-glitch::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--holo);
+    opacity: 0.06;
+  }
+  .holo-glitch::before { mix-blend-mode: multiply; }
+  .holo-glitch::after { mix-blend-mode: screen; }
+
+  /* Audio waveform */
+  .waveform {
+    position: absolute;
+    bottom: 70px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 30px;
+    z-index: 5;
+  }
+
+  .wave-bar {
+    width: 3px;
+    background: var(--holo);
+    border-radius: 2px;
+    animation: wave 0.8s ease-in-out infinite alternate;
+    box-shadow: 0 0 4px var(--holo-dim);
+  }
+
+  @keyframes wave {
+    from { height: 3px; opacity: 0.3; }
+    to { height: 100%; opacity: 1; }
+  }
+
+  /* Hologram floating labels */
+  .holo-label {
+    position: absolute;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--holo);
+    text-transform: uppercase;
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+
+  .holo-label.top { top: 20px; }
+  .holo-label.bottom-label { bottom: 10px; font-size: 14px; letter-spacing: 6px; opacity: 0.9; }
+  .holo-label.left-label { left: -60px; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: left center; }
+  .holo-label.right-label { right: -60px; top: 50%; transform: rotate(90deg) translateX(50%); transform-origin: right center; }
+
+  /* Right panel — Metrics */
+  .panel-right {
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--holo-dim) transparent;
+  }
+
+  .metric-group {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .metric-group-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+  }
+
+  .metric-label { color: var(--text-dim); }
+
+  .metric-value {
+    color: var(--holo);
+    font-weight: bold;
+    font-size: 13px;
+  }
+
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.teal { color: var(--teal); }
+
+  .metric-bar-bg {
+    width: 100%;
+    height: 3px;
+    background: #0a1520;
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .metric-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--holo), var(--teal));
+    transition: width 1s ease;
+    box-shadow: 0 0 6px var(--holo-dim);
+  }
+
+  .metric-bar-fill.amber {
+    background: linear-gradient(90deg, var(--amber), #ff6b00);
+    box-shadow: 0 0 6px #f0a50044;
+  }
+
+  /* Activity log */
+  .log-entry {
+    font-size: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #0a1520;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    animation: fade-in 0.3s ease;
+  }
+
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .log-time { color: var(--text-dim); white-space: nowrap; font-size: 9px; }
+  .log-msg { color: var(--text); line-height: 1.4; }
+  .log-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .log-dot.info { background: var(--holo); }
+  .log-dot.warn { background: var(--amber); }
+  .log-dot.ok { background: var(--success); }
+
+  /* Bottom bar — Input */
+  .bottombar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+
+  .input-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-wrap input {
+    width: 100%;
+    padding: 14px 20px;
+    background: #0a1020;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .input-wrap input::placeholder { color: var(--text-dim); }
+
+  .input-wrap input:focus {
+    border-color: var(--holo);
+    box-shadow: 0 0 20px var(--holo-dim), inset 0 0 20px #00f0ff08;
+  }
+
+  .btn-holo {
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #00f0ff15, #00d4aa10);
+    border: 1px solid var(--holo);
+    color: var(--holo);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .btn-holo:hover {
+    background: linear-gradient(135deg, #00f0ff30, #00d4aa20);
+    box-shadow: 0 0 20px var(--holo-dim);
+    transform: translateY(-1px);
+  }
+
+  .btn-holo:active { transform: translateY(0); }
+
+  .btn-mic {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: #0a1020;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .btn-mic:hover { border-color: var(--holo); color: var(--holo); }
+  .btn-mic.active {
+    border-color: var(--danger);
+    color: var(--danger);
+    box-shadow: 0 0 20px #ff386044;
+    animation: mic-pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 20px #ff386044; }
+    50% { box-shadow: 0 0 30px #ff386088; }
+  }
+
+  /* Quick actions */
+  .quick-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .quick-btn {
+    padding: 8px 14px;
+    background: #0a1020;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .quick-btn:hover { border-color: var(--holo); color: var(--holo); }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    padding: 12px 20px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--holo);
+    backdrop-filter: blur(12px);
+    font-size: 12px;
+    color: var(--text);
+    animation: toast-in 0.4s cubic-bezier(0.22, 1, 0.36, 1), toast-out 0.3s ease 3s forwards;
+    border-radius: 2px;
+  }
+
+  @keyframes toast-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes toast-out { to { opacity: 0; transform: translateX(40px); } }
+
+  /* Data stream decoration */
+  .data-stream {
+    position: absolute;
+    font-size: 9px;
+    color: var(--holo-dim);
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.4;
+    writing-mode: vertical-rl;
+  }
+
+  .data-stream.left { left: 10px; top: 20%; }
+  .data-stream.right { right: 10px; top: 30%; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .interface {
+      grid-template-columns: 1fr;
+      grid-template-rows: 60px 1fr 80px;
+    }
+    .panel-left, .panel-right { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="scanlines"></div>
+<div class="scan-sweep"></div>
+
+<div class="interface">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="status-dot"></div>
+      <div>
+        <div class="logo">ARIA</div>
+        <div class="logo-sub">Adaptive Reasoning & Intelligence Array</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span><i class="fas fa-microchip"></i> Neural Core v4.7.2</span>
+      <span><i class="fas fa-shield-halved"></i> Secure Link</span>
+      <span><i class="fas fa-clock"></i> <span id="clock">00:00:00</span></span>
+      <span><i class="fas fa-temperature-half"></i> <span id="temp">37.2C</span></span>
+    </div>
+  </header>
+
+  <!-- Left Panel: Chat -->
+  <aside class="panel-left">
+    <div class="panel-header"><i class="fas fa-comments"></i> Communication Log</div>
+    <div class="chat-area" id="chatArea">
+      <div class="msg ai">
+        <div class="msg-label">ARIA</div>
+        Neural link established. All cognitive subsystems online. How may I assist you today?
+        <div class="msg-time">--:--:--</div>
+      </div>
+    </div>
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  </aside>
+
+  <!-- Center: Hologram -->
+  <main class="holo-center">
+    <div class="data-stream left">01001 10110 01101 11010 00111 10010 01110 11001 00010 10101</div>
+    <div class="data-stream right">11010 00101 10110 01011 10001 01110 11010 00101 10110 01011</div>
+
+    <div class="holo-container">
+      <div class="holo-core"></div>
+
+      <div class="holo-face">
+        <svg viewBox="0 0 120 150">
+          <!-- Head outline -->
+          <ellipse cx="60" cy="50" rx="35" ry="42" stroke-width="1.2" opacity="0.5"/>
+          <!-- Eyes -->
+          <ellipse cx="44" cy="42" rx="8" ry="4" stroke-width="1.5"/>
+          <ellipse cx="76" cy="42" rx="8" ry="4" stroke-width="1.5"/>
+          <circle cx="44" cy="42" r="2" fill="var(--holo)" opacity="0.8"/>
+          <circle cx="76" cy="42" r="2" fill="var(--holo)" opacity="0.8"/>
+          <!-- Nose -->
+          <line x1="60" y1="48" x2="56" y2="62" stroke-width="0.8" opacity="0.4"/>
+          <line x1="56" y1="62" x2="60" y2="64" stroke-width="0.8" opacity="0.4"/>
+          <!-- Mouth -->
+          <path d="M48 72 Q60 80 72 72" stroke-width="1" opacity="0.5"/>
+          <!-- Jaw lines -->
+          <path d="M25 50 Q28 85 60 95" stroke-width="0.6" opacity="0.3"/>
+          <path d="M95 50 Q92 85 60 95" stroke-width="0.6" opacity="0.3"/>
+          <!-- Neural paths -->
+          <line x1="44" y1="42" x2="30" y2="30" stroke-width="0.5" opacity="0.3" stroke-dasharray="2 3"/>
+          <line x1="76" y1="42" x2="90" y2="30" stroke-width="0.5" opacity="0.3" stroke-dasharray="2 3"/>
+          <line x1="60" y1="8" x2="60" y2="20" stroke-width="0.5" opacity="0.3" stroke-dasharray="2 3"/>
+          <!-- Forehead markings -->
+          <line x1="42" y1="25" x2="78" y2="25" stroke-width="0.5" opacity="0.3"/>
+          <line x1="45" y1="30" x2="75" y2="30" stroke-width="0.5" opacity="0.2"/>
+          <!-- Neck -->
+          <line x1="50" y1="90" x2="50" y2="110" stroke-width="0.8" opacity="0.3"/>
+          <line x1="70" y1="90" x2="70" y2="110" stroke-width="0.8" opacity="0.3"/>
+          <line x1="50" y1="100" x2="70" y2="100" stroke-width="0.5" opacity="0.2"/>
+          <!-- Shoulder hints -->
+          <path d="M50 110 Q35 115 20 130" stroke-width="0.6" opacity="0.2"/>
+          <path d="M70 110 Q85 115 100 130" stroke-width="0.6" opacity="0.2"/>
+          <!-- Data points -->
+          <circle cx="30" cy="30" r="2" fill="var(--teal)" opacity="0.6"/>
+          <circle cx="90" cy="30" r="2" fill="var(--teal)" opacity="0.6"/>
+          <circle cx="60" cy="8" r="2" fill="var(--amber)" opacity="0.6"/>
+        </svg>
+      </div>
+
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+      <div class="ring ring-4"></div>
+
+      <div class="orbit-dot orbit-dot-1"></div>
+      <div class="orbit-dot orbit-dot-2"></div>
+      <div class="orbit-dot orbit-dot-3"></div>
+
+      <div class="holo-base"></div>
+      <div class="holo-base-ellipse"></div>
+
+      <div class="waveform" id="waveform"></div>
+
+      <div class="holo-glitch"></div>
+
+      <div class="holo-label top">Cognitive Render Active</div>
+      <div class="holo-label bottom-label">ARIA</div>
+      <div class="holo-label left-label">Sentiment: Neutral</div>
+      <div class="holo-label right-label">Confidence: 98.7%</div>
+    </div>
+  </main>
+
+  <!-- Right Panel: Metrics -->
+  <aside class="panel-right">
+    <div class="panel-header"><i class="fas fa-chart-line"></i> System Telemetry</div>
+
+    <div class="metric-group">
+      <div class="metric-group-title">Neural Load</div>
+      <div class="metric-row">
+        <span class="metric-label">CPU Cores</span>
+        <span class="metric-value" id="cpuVal">73%</span>
+      </div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="cpuBar" style="width:73%"></div></div>
+      <div class="metric-row" style="margin-top:12px">
+        <span class="metric-label">Memory Allocation</span>
+        <span class="metric-value teal" id="memVal">5.2 GB</span>
+      </div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:65%;background:linear-gradient(90deg,var(--teal),#00ffcc)"></div></div>
+      <div class="metric-row" style="margin-top:12px">
+        <span class="metric-label">Thermal Output</span>
+        <span class="metric-value amber" id="thermalVal">42.1C</span>
+      </div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill amber" id="thermalBar" style="width:42%"></div></div>
+    </div>
+
+    <div class="metric-group">
+      <div class="metric-group-title">Language Model</div>
+      <div class="metric-row">
+        <span class="metric-label">Parameters</span>
+        <span class="metric-value">2.1T</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Context Window</span>
+        <span class="metric-value">128K</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Response Latency</span>
+        <span class="metric-value teal" id="latencyVal">23ms</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Tokens/sec</span>
+        <span class="metric-value" id="tpsVal">847</span>
+      </div>
+    </div>
+
+    <div class="metric-group">
+      <div class="metric-group-title">Session</div>
+      <div class="metric-row">
+        <span class="metric-label">Uptime</span>
+        <span class="metric-value" id="uptimeVal">00:00:00</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Queries</span>
+        <span class="metric-value" id="queryCount">0</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Accuracy</span>
+        <span class="metric-value teal">99.2%</span>
+      </div>
+    </div>
+
+    <div class="metric-group" style="border-bottom:none; flex:1;">
+      <div class="metric-group-title">Activity Log</div>
+      <div id="activityLog"></div>
+    </div>
+  </aside>
+
+  <!-- Bottom Bar -->
+  <footer class="bottombar">
+    <button class="btn-mic" id="micBtn" aria-label="Toggle voice input"><i class="fas fa-microphone"></i></button>
+    <div class="input-wrap">
+      <input type="text" id="userInput" placeholder="Enter command or query..." autocomplete="off" aria-label="Command input">
+    </div>
+    <div class="quick-actions">
+      <button class="quick-btn" data-query="Analyze system status">Status</button>
+      <button class="quick-btn" data-query="What can you do?">Capabilities</button>
+      <button class="quick-btn" data-query="Run diagnostics">Diagnostics</button>
+    </div>
+    <button class="btn-holo" id="sendBtn"><i class="fas fa-paper-plane"></i> Transmit</button>
+  </footer>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== Background Canvas: Grid + Particles =====
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Particles
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = -Math.random() * 0.5 - 0.1;
+    this.size = Math.random() * 2 + 0.5;
+    this.alpha = Math.random() * 0.5 + 0.1;
+    this.life = Math.random() * 400 + 200;
+    this.age = 0;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.age++;
+    if (this.age > this.life || this.y < -10 || this.x < -10 || this.x > W + 10) this.reset();
+  }
+  draw() {
+    const fade = 1 - this.age / this.life;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 240, 255, ${this.alpha * fade})`;
+    ctx.fill();
+  }
+}
+
+const particles = Array.from({ length: 80 }, () => new Particle());
+
+function drawGrid() {
+  // Perspective grid floor
+  const vanishY = H * 0.45;
+  const horizonY = vanishY;
+  const gridLines = 20;
+  const spacing = 60;
+
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
+  ctx.lineWidth = 1;
+
+  // Horizontal lines (with perspective)
+  for (let i = 0; i < gridLines; i++) {
+    const t = i / gridLines;
+    const y = horizonY + (H - horizonY) * Math.pow(t, 1.5);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+
+  // Vertical lines converging to vanishing point
+  const cx = W / 2;
+  for (let i = -10; i <= 10; i++) {
+    const bottomX = cx + i * spacing * 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, horizonY);
+    ctx.lineTo(bottomX, H);
+    ctx.stroke();
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Ambient radial glow in center
+  const grd = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, 400);
+  grd.addColorStop(0, 'rgba(0, 240, 255, 0.03)');
+  grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+
+  drawGrid();
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ===== Waveform Bars =====
+const waveformEl = document.getElementById('waveform');
+for (let i = 0; i < 40; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'wave-bar';
+  bar.style.animationDelay = `${i * 0.04}s`;
+  bar.style.animationDuration = `${0.5 + Math.random() * 0.6}s`;
+  waveformEl.appendChild(bar);
+}
+
+// ===== Clock =====
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toTimeString().split(' ')[0];
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== Uptime =====
+const startTime = Date.now();
+function updateUptime() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+  const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('uptimeVal').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateUptime, 1000);
+
+// ===== Fluctuating Metrics =====
+function fluctuate() {
+  const cpu = 65 + Math.random() * 20;
+  document.getElementById('cpuVal').textContent = Math.round(cpu) + '%';
+  document.getElementById('cpuBar').style.width = cpu + '%';
+
+  const thermal = 38 + Math.random() * 10;
+  document.getElementById('thermalVal').textContent = thermal.toFixed(1) + 'C';
+  document.getElementById('thermalBar').style.width = (thermal / 100 * 100) + '%';
+
+  const temp = 36.5 + Math.random() * 2;
+  document.getElementById('temp').textContent = temp.toFixed(1) + 'C';
+
+  const latency = 18 + Math.random() * 15;
+  document.getElementById('latencyVal').textContent = Math.round(latency) + 'ms';
+
+  const tps = 800 + Math.random() * 120;
+  document.getElementById('tpsVal').textContent = Math.round(tps);
+}
+setInterval(fluctuate, 2000);
+
+// ===== Activity Log =====
+const logMessages = [
+  { type: 'ok', msg: 'Neural pathway optimization complete' },
+  { type: 'info', msg: 'Context buffer refreshed — 128K tokens' },
+  { type: 'info', msg: 'Attention head reallocation: layer 24' },
+  { type: 'warn', msg: 'Minor latency spike detected — self-correcting' },
+  { type: 'ok', msg: 'Security scan passed — no anomalies' },
+  { type: 'info', msg: 'Embedding cache updated — 2.1T params loaded' },
+  { type: 'ok', msg: 'Quantum noise reduction applied' },
+  { type: 'info', msg: 'Memory defragmentation cycle complete' },
+];
+
+const activityLog = document.getElementById('activityLog');
+let logIndex = 0;
+
+function addLogEntry(entry) {
+  const now = new Date();
+  const time = now.toTimeString().split(' ')[0];
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `<span class="log-dot ${entry.type}"></span><span class="log-time">${time}</span><span class="log-msg">${entry.msg}</span>`;
+  activityLog.prepend(div);
+  // Keep only 20 entries
+  while (activityLog.children.length > 20) activityLog.removeChild(activityLog.lastChild);
+}
+
+// Initial logs
+addLogEntry(logMessages[0]);
+addLogEntry(logMessages[1]);
+setInterval(() => {
+  logIndex = (logIndex + 1) % logMessages.length;
+  addLogEntry(logMessages[logIndex]);
+}, 5000);
+
+// ===== Chat System =====
+const chatArea = document.getElementById('chatArea');
+const typingIndicator = document.getElementById('typingIndicator');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+let queryCounter = 0;
+
+const aiResponses = {
+  'analyze system status': 'All systems nominal. Neural core operating at 73% capacity with 5.2GB memory allocated. Thermal output stable at 42.1C. Response latency averaging 23ms across all inference pipelines. No security threats detected in the last 24 cycles.',
+  'what can you do?': 'I provide multi-modal intelligence: natural language understanding, code synthesis, data analysis, real-time system monitoring, predictive modeling, and strategic decision support. My architecture spans 2.1 trillion parameters across 96 layers with a 128K context window.',
+  'run diagnostics': 'Initiating full diagnostic sweep...\n\nNeural pathways: 99.7% integrity\nMemory sectors: No corruption detected\nAttention layers: All 96 heads responsive\nEmbedding tables: Consistent checksums\nInference engine: Optimal throughput\n\nDiagnostics complete. All subsystems green.',
+  'default': [
+    'Processing your query through the neural matrix. Cross-referencing 2.1 trillion parameters. The analysis suggests multiple viable approaches — shall I elaborate on the highest-confidence path?',
+    'Interesting query. My attention mechanism has identified relevant patterns across the training distribution. I can provide a detailed synthesis if you need deeper analysis.',
+    'Neural inference complete. The response has been generated with 99.2% confidence. I\'m detecting additional contextual factors that may refine this answer further.',
+    'Query processed in 23ms. The multi-head attention layers have converged on a coherent response. I can also explore alternative interpretations if needed.',
+    'My language model has synthesized a response from the relevant knowledge substrate. The reasoning chain passed all validation gates. What aspect would you like me to expand on?',
+  ]
+};
+
+function getTime() {
+  return new Date().toTimeString().split(' ')[0];
+}
+
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = `msg ${sender}`;
+  div.innerHTML = `<div class="msg-label">${sender === 'ai' ? 'ARIA' : 'You'}</div>${text.replace(/\n/g, '<br>')}<div class="msg-time">${getTime()}</div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function getAIResponse(query) {
+  const lower = query.toLowerCase().trim();
+  if (aiResponses[lower]) return aiResponses[lower];
+  const defaults = aiResponses['default'];
+  return defaults[Math.floor(Math.random() * defaults.length)];
+}
+
+function sendMessage(text) {
+  if (!text.trim()) return;
+  addMessage(text, 'user');
+  queryCounter++;
+  document.getElementById('queryCount').textContent = queryCounter;
+
+  // Show typing
+  typingIndicator.classList.add('active');
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  const responseDelay = 800 + Math.random() * 1200;
+  setTimeout(() => {
+    typingIndicator.classList.remove('active');
+    addMessage(getAIResponse(text), 'ai');
+    addLogEntry({ type: 'ok', msg: `Query #${queryCounter} processed — ${Math.round(responseDelay)}ms` });
+  }, responseDelay);
+}
+
+sendBtn.addEventListener('click', () => {
+  sendMessage(userInput.value);
+  userInput.value = '';
+  userInput.focus();
+});
+
+userInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    sendMessage(userInput.value);
+    userInput.value = '';
+  }
+});
+
+// Quick action buttons
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const query = btn.dataset.query;
+    sendMessage(query);
+  });
+});
+
+// ===== Mic Button =====
+const micBtn = document.getElementById('micBtn');
+let micActive = false;
+
+micBtn.addEventListener('click', () => {
+  micActive = !micActive;
+  micBtn.classList.toggle('active', micActive);
+  micBtn.innerHTML = micActive ? '<i class="fas fa-stop"></i>' : '<i class="fas fa-microphone"></i>';
+
+  if (micActive) {
+    showToast('Voice input activated — listening...');
+    // Simulate voice recognition after 3s
+    setTimeout(() => {
+      if (micActive) {
+        micActive = false;
+        micBtn.classList.remove('active');
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        const voiceQueries = ['What is the current system load?', 'Analyze my previous queries', 'Generate a status report'];
+        const randomQuery = voiceQueries[Math.floor(Math.random() * voiceQueries.length)];
+        sendMessage(randomQuery);
+      }
+    }, 3000);
+  } else {
+    showToast('Voice input deactivated');
+  }
+});
+
+// ===== Toast =====
+function showToast(msg) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// Initial toast
+setTimeout(() => showToast('Holographic interface initialized — all systems online'), 800);
+
+// ===== Mouse parallax on hologram =====
+const holoContainer = document.querySelector('.holo-container');
+document.querySelector('.holo-center').addEventListener('mousemove', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width - 0.5;
+  const y = (e.clientY - rect.top) / rect.height - 0.5;
+  holoContainer.style.transform = `perspective(800px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
+});
+
+document.querySelector('.holo-center').addEventListener('mouseleave', () => {
+  holoContainer.style.transform = 'perspective(800px) rotateY(0deg) rotateX(0deg)';
+  holoContainer.style.transition = 'transform 0.6s ease';
+  setTimeout(() => holoContainer.style.transition = '', 600);
+});
+</script>
+</body>
+</html>

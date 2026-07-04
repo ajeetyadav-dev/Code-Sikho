@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globe Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        :root {
+            --bg: #050910;
+            --card: rgba(10, 16, 32, 0.9);
+            --border: rgba(0, 210, 150, 0.12);
+            --accent: #00d296;
+            --accent2: #ff6b35;
+            --text: #e2e8f0;
+            --muted: #556680;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        #canvas-container { position: fixed; inset: 0; z-index: 0; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* Vignette overlay */
+        .vignette {
+            position: fixed; inset: 0; z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(5,9,16,0.6) 100%);
+        }
+
+        /* Loading */
+        .loading-screen {
+            position: fixed; inset: 0; z-index: 200;
+            background: var(--bg);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 1s ease;
+        }
+        .loading-screen.hide { opacity: 0; pointer-events: none; }
+        .ld-ring {
+            width: 52px; height: 52px;
+            border: 2px solid rgba(0,210,150,0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        .ld-text { margin-top: 18px; font-size: 13px; color: var(--muted); font-weight: 300; letter-spacing: 1px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Logo */
+        .logo {
+            position: fixed; top: 22px; left: 24px; z-index: 20;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .logo-icon {
+            width: 38px; height: 38px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), #007a55);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px; color: #fff;
+            box-shadow: 0 4px 16px rgba(0,210,150,0.2);
+        }
+        .logo-text { font-weight: 800; font-size: 17px; letter-spacing: -0.5px; }
+
+        /* Search */
+        .search-wrap { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 30; width: min(460px, 88vw); }
+        .search-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 12px 18px;
+            display: flex; align-items: center; gap: 10px;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 6px 28px rgba(0,0,0,0.45);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .search-box:focus-within {
+            border-color: rgba(0,210,150,0.35);
+            box-shadow: 0 6px 28px rgba(0,210,150,0.06);
+        }
+        .search-box input {
+            background: none; border: none; outline: none;
+            color: var(--text); font-family: 'Outfit', sans-serif;
+            font-size: 14px; width: 100%; font-weight: 300;
+        }
+        .search-box input::placeholder { color: var(--muted); }
+        .search-results {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; margin-top: 6px;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 6px 28px rgba(0,0,0,0.5);
+            max-height: 280px; overflow-y: auto; display: none;
+        }
+        .search-results.open { display: block; }
+        .sr-item {
+            padding: 11px 18px; cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .sr-item:last-child { border-bottom: none; }
+        .sr-item:hover { background: rgba(0,210,150,0.07); }
+        .sr-city { font-weight: 600; font-size: 13px; }
+        .sr-country { font-size: 11px; color: var(--muted); margin-left: 6px; }
+
+        /* Left panel */
+        .loc-panel {
+            position: fixed; left: 20px; top: 82px; bottom: 70px;
+            width: 260px; z-index: 15;
+            display: flex; flex-direction: column; gap: 6px;
+            overflow-y: auto; scrollbar-width: thin;
+            scrollbar-color: rgba(0,210,150,0.15) transparent;
+        }
+        .loc-panel::-webkit-scrollbar { width: 3px; }
+        .loc-panel::-webkit-scrollbar-thumb { background: rgba(0,210,150,0.2); border-radius: 3px; }
+        .loc-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 12px 14px;
+            cursor: pointer; transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .loc-card:hover {
+            border-color: rgba(0,210,150,0.3);
+            transform: translateX(3px);
+            background: rgba(0,210,150,0.04);
+        }
+        .loc-card.active { border-color: var(--accent); background: rgba(0,210,150,0.07); }
+        .lc-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+        .lc-country { font-size: 11px; color: var(--muted); }
+
+        /* Right info panel */
+        .info-panel {
+            position: fixed; right: -380px; top: 82px;
+            width: 330px; z-index: 25;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 26px;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.55);
+            transition: right 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .info-panel.open { right: 20px; }
+        .ip-close {
+            position: absolute; top: 14px; right: 14px;
+            width: 30px; height: 30px; border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            color: var(--muted); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; font-size: 12px;
+        }
+        .ip-close:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+        .ip-title { font-size: 26px; font-weight: 900; line-height: 1.15; margin-bottom: 3px; }
+        .ip-country { color: var(--accent); font-weight: 500; font-size: 13px; margin-bottom: 16px; }
+        .ip-desc { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 20px; font-weight: 300; }
+        .ip-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .ip-stat {
+            background: rgba(255,255,255,0.025); border-radius: 10px;
+            padding: 12px; border: 1px solid rgba(255,255,255,0.03);
+        }
+        .ip-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+        .ip-stat-val { font-size: 15px; font-weight: 700; }
+
+        /* Bottom bar */
+        .bottom-bar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 15; display: flex; align-items: center; gap: 18px;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 9px 18px;
+            backdrop-filter: blur(12px); font-size: 11px; color: var(--muted);
+        }
+        .bb-sep { width: 1px; height: 14px; background: var(--border); }
+        .bb-val { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+        /* Marker labels */
+        .mk-label {
+            position: absolute; pointer-events: none;
+            transform: translate(-50%, -100%);
+            padding: 3px 9px; background: rgba(8,14,28,0.92);
+            border: 1px solid rgba(255,107,53,0.2);
+            border-radius: 5px; font-size: 10px; font-weight: 500;
+            white-space: nowrap; opacity: 0;
+            transition: opacity 0.25s;
+            backdrop-filter: blur(6px);
+            color: #ffc4a8;
+        }
+        .mk-label.vis { opacity: 1; }
+
+        /* Zoom controls */
+        .zoom-ctrl {
+            position: fixed; right: 20px; bottom: 80px; z-index: 15;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .zoom-btn {
+            width: 38px; height: 38px; border-radius: 10px;
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--muted); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+        .zoom-btn:hover { color: var(--text); border-color: rgba(0,210,150,0.3); }
+
+        @media (max-width: 768px) {
+            .loc-panel { display: none; }
+            .info-panel { width: calc(100vw - 40px); right: -100vw; }
+            .info-panel.open { right: 20px; }
+            .bottom-bar { font-size: 10px; gap: 10px; padding: 8px 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-screen" id="loader">
+    <div class="ld-ring"></div>
+    <div class="ld-text">INITIALIZING GLOBE</div>
+</div>
+
+<div class="vignette"></div>
+
+<!-- Logo -->
+<div class="logo">
+    <div class="logo-icon"><i class="fas fa-globe-americas"></i></div>
+    <div class="logo-text">Globe Explorer</div>
+</div>
+
+<!-- Search -->
+<div class="search-wrap">
+    <div class="search-box">
+        <i class="fas fa-search" style="color:var(--muted);font-size:13px;"></i>
+        <input type="text" id="searchInput" placeholder="Search cities, countries..." autocomplete="off">
+    </div>
+    <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- Left panel -->
+<div class="loc-panel" id="locPanel"></div>
+
+<!-- Right info panel -->
+<div class="info-panel" id="infoPanel">
+    <button class="ip-close" id="ipClose"><i class="fas fa-times"></i></button>
+    <div class="ip-title" id="ipTitle"></div>
+    <div class="ip-country" id="ipCountry"></div>
+    <div class="ip-desc" id="ipDesc"></div>
+    <div class="ip-stats">
+        <div class="ip-stat"><div class="ip-stat-label">Population</div><div class="ip-stat-val" id="ipPop"></div></div>
+        <div class="ip-stat"><div class="ip-stat-label">Latitude</div><div class="ip-stat-val" id="ipLat"></div></div>
+        <div class="ip-stat"><div class="ip-stat-label">Longitude</div><div class="ip-stat-val" id="ipLng"></div></div>
+        <div class="ip-stat"><div class="ip-stat-label">Timezone</div><div class="ip-stat-val" id="ipTz"></div></div>
+    </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="bottom-bar">
+    <span><i class="fas fa-arrows-alt" style="margin-right:5px;"></i>Drag to rotate</span>
+    <div class="bb-sep"></div>
+    <span><i class="fas fa-search-plus" style="margin-right:5px;"></i>Scroll to zoom</span>
+    <div class="bb-sep"></div>
+    <span>Lat <span class="bb-val" id="bLat">0.00°</span></span>
+    <div class="bb-sep"></div>
+    <span>Lng <span class="bb-val" id="bLng">0.00°</span></span>
+</div>
+
+<!-- Zoom buttons -->
+<div class="zoom-ctrl">
+    <button class="zoom-btn" id="zoomIn"><i class="fas fa-plus"></i></button>
+    <button class="zoom-btn" id="zoomOut"><i class="fas fa-minus"></i></button>
+    <button class="zoom-btn" id="zoomReset" style="margin-top:4px;font-size:12px;"><i class="fas fa-crosshairs"></i></button>
+</div>
+
+<!-- Marker labels -->
+<div id="mkLabels"></div>
+
+<!-- Canvas -->
+<div id="canvas-container"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ===================== DATA =====================
+const locations = [
+    { name:"New York", lat:40.7128, lng:-74.006, country:"United States", pop:"8.3M", tz:"UTC-5", desc:"The city that never sleeps. A global hub for finance, culture, and innovation, crowned by the iconic Manhattan skyline." },
+    { name:"London", lat:51.5074, lng:-0.1278, country:"United Kingdom", pop:"8.9M", tz:"UTC+0", desc:"A historic capital blending ancient traditions with cutting-edge modernity along the River Thames." },
+    { name:"Tokyo", lat:35.6762, lng:139.6503, country:"Japan", pop:"13.9M", tz:"UTC+9", desc:"A neon-lit metropolis where centuries-old temples stand beside futuristic architecture." },
+    { name:"Sydney", lat:-33.8688, lng:151.2093, country:"Australia", pop:"5.3M", tz:"UTC+11", desc:"A stunning harbor city famous for its opera house, golden beaches, and outdoor lifestyle." },
+    { name:"Paris", lat:48.8566, lng:2.3522, country:"France", pop:"2.1M", tz:"UTC+1", desc:"The City of Light — a timeless capital of art, fashion, gastronomy, and romance." },
+    { name:"Dubai", lat:25.2048, lng:55.2708, country:"UAE", pop:"3.4M", tz:"UTC+4", desc:"A desert oasis of innovation, home to the world's tallest building and bold architectural visions." },
+    { name:"Rio de Janeiro", lat:-22.9068, lng:-43.1729, country:"Brazil", pop:"6.7M", tz:"UTC-3", desc:"Cidade Maravilhosa — where lush mountains meet golden beaches and samba rhythms fill the air." },
+    { name:"Cairo", lat:30.0444, lng:31.2357, country:"Egypt", pop:"9.5M", tz:"UTC+2", desc:"Gateway to the ancient pyramids and a sprawling metropolis at the crossroads of Africa and the Middle East." },
+    { name:"Moscow", lat:55.7558, lng:37.6173, country:"Russia", pop:"12.5M", tz:"UTC+3", desc:"The heart of the world's largest country, where onion domes and Soviet-era monuments define the skyline." },
+    { name:"Mumbai", lat:19.076, lng:72.8777, country:"India", pop:"12.5M", tz:"UTC+5:30", desc:"India's city of dreams — a vibrant, chaotic, and endlessly fascinating coastal metropolis." },
+    { name:"Singapore", lat:1.3521, lng:103.8198, country:"Singapore", pop:"5.7M", tz:"UTC+8", desc:"A meticulously designed garden city-state at the tip of the Malay Peninsula." },
+    { name:"Cape Town", lat:-33.9249, lng:18.4241, country:"South Africa", pop:"4.6M", tz:"UTC+2", desc:"Where two great oceans meet beneath the dramatic shadow of Table Mountain." },
+    { name:"Istanbul", lat:41.0082, lng:28.9784, country:"Turkey", pop:"15.5M", tz:"UTC+3", desc:"The only city spanning two continents, bridging Europe and Asia across the Bosphorus Strait." },
+    { name:"Seoul", lat:37.5665, lng:126.978, country:"South Korea", pop:"9.7M", tz:"UTC+9", desc:"A high-tech capital where K-pop culture and ancient palaces coexist in dynamic harmony." },
+    { name:"Mexico City", lat:19.4326, lng:-99.1332, country:"Mexico", pop:"9.2M", tz:"UTC-6", desc:"Built on the ruins of Tenochtitlan, one of the world's largest and most culturally rich cities." },
+    { name:"Nairobi", lat:-1.2921, lng:36.8219, country:"Kenya", pop:"4.4M", tz:"UTC+3", desc:"East Africa's vibrant capital, a gateway to wildlife safaris and a hub of tech innovation." },
+];
+
+// Flight path connections (index pairs)
+const connections = [
+    [0,1],[1,4],[4,7],[0,6],[2,3],[2,9],[3,11],[5,9],[10,2],[12,4],[13,2],[8,1],[14,0],[15,11]
+];
+
+const R = 5; // Earth radius
+
+function ll2v(lat, lng, r) {
+    const phi = (90 - lat) * Math.PI / 180;
+    const theta = (lng + 180) * Math.PI / 180;
+    return new THREE.Vector3(
+        -r * Math.sin(phi) * Math.cos(theta),
+        r * Math.cos(phi),
+        r * Math.sin(phi) * Math.sin(theta)
+    );
+}
+
+// ===================== NOISE =====================
+function makePerm(seed) {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = seed;
+    for (let i = 255; i > 0; i--) {
+        s = (s * 16807) % 2147483647;
+        const j = s % (i + 1);
+        [p[i], p[j]] = [p[j], p[i]];
+    }
+    const perm = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    return perm;
+}
+
+function makeNoise2D(perm) {
+    const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+    const lerp = (a, b, t) => a + t * (b - a);
+    const grad = (h, x, y) => {
+        const v = h & 3;
+        const u = v < 2 ? x : y;
+        const w = v < 2 ? y : x;
+        return ((v & 1) ? -u : u) + ((v & 2) ? -w : w);
+    };
+    return (x, y) => {
+        const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        const u = fade(x), v = fade(y);
+        const a = perm[X] + Y, b = perm[X + 1] + Y;
+        return lerp(
+            lerp(grad(perm[a], x, y), grad(perm[b], x - 1, y), u),
+            lerp(grad(perm[a + 1], x, y - 1), grad(perm[b + 1], x - 1, y - 1), u), v
+        );
+    };
+}
+
+function fbm(noise, x, y, oct = 6) {
+    let val = 0, amp = 0.5, freq = 1;
+    for (let i = 0; i < oct; i++) { val += amp * noise(x * freq, y * freq); amp *= 0.5; freq *= 2; }
+    return val;
+}
+
+// ===================== CONTINENT BIAS =====================
+const conts = [
+    {lat:50,lng:-100,rx:30,ry:24},{lat:35,lng:-90,rx:16,ry:12},{lat:65,lng:-105,rx:32,ry:9},
+    {lat:18,lng:-88,rx:8,ry:8},{lat:38,lng:-78,rx:13,ry:10},
+    {lat:-5,lng:-58,rx:17,ry:22},{lat:-25,lng:-55,rx:13,ry:20},{lat:-40,lng:-68,rx:7,ry:12},
+    {lat:52,lng:10,rx:18,ry:10},{lat:42,lng:13,rx:8,ry:6},{lat:60,lng:28,rx:14,ry:7},
+    {lat:65,lng:15,rx:9,ry:5},{lat:54,lng:-3,rx:5,ry:6},{lat:48,lng:5,rx:10,ry:8},
+    {lat:15,lng:20,rx:17,ry:20},{lat:-5,lng:28,rx:15,ry:17},{lat:-22,lng:30,rx:11,ry:13},
+    {lat:30,lng:10,rx:13,ry:7},{lat:45,lng:70,rx:32,ry:16},{lat:55,lng:100,rx:38,ry:13},
+    {lat:35,lng:108,rx:18,ry:13},{lat:25,lng:80,rx:13,ry:13},{lat:15,lng:100,rx:11,ry:11},
+    {lat:30,lng:50,rx:11,ry:9},{lat:22,lng:78,rx:9,ry:13},{lat:32,lng:115,rx:11,ry:9},
+    {lat:37,lng:137,rx:4,ry:10},{lat:35,lng:128,rx:3,ry:5},
+    {lat:5,lng:110,rx:13,ry:5},{lat:-3,lng:120,rx:11,ry:4},
+    {lat:-25,lng:135,rx:19,ry:15},{lat:-42,lng:172,rx:3,ry:7},
+    {lat:72,lng:-42,rx:9,ry:11},{lat:-82,lng:0,rx:180,ry:8},
+];
+
+function contBias(lat, lng) {
+    let b = 0;
+    for (const c of conts) {
+        let dl = lat - c.lat, dn = lng - c.lng;
+        if (dn > 180) dn -= 360; if (dn < -180) dn += 360;
+        b += Math.exp(-((dl / c.ry) ** 2 + (dn / c.rx) ** 2) * 1.8) * 0.7;
+    }
+    return b;
+}
+
+// ===================== TEXTURE GENERATION =====================
+function genTextures() {
+    const w = 1024, h = 512;
+    const cColor = document.createElement('canvas'); cColor.width = w; cColor.height = h;
+    const cBump = document.createElement('canvas'); cBump.width = w; cBump.height = h;
+    const ctxC = cColor.getContext('2d'), ctxB = cBump.getContext('2d');
+    const dC = ctxC.createImageData(w, h), dB = ctxB.createImageData(w, h);
+
+    const perm = makePerm(12345);
+    const noise = makeNoise2D(perm);
+
+    const oD = [6,14,38], oM = [10,26,56], oS = [16,44,74];
+    const lL = [20,66,48], lMi = [28,86,56], lH = [46,106,66], lMt = [86,116,90];
+    const snow = [195,208,218], desert = [115,98,58];
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const u = x / w, v = y / h;
+            const lat = 90 - v * 180, lng = u * 360 - 180;
+            const bias = contBias(lat, lng);
+
+            // Sphere-mapped noise (avoids seam)
+            const th = u * Math.PI * 2, ph = v * Math.PI;
+            const nx = Math.sin(ph) * Math.cos(th), ny = Math.cos(ph), nz = Math.sin(ph) * Math.sin(th);
+            const n1 = fbm(noise, nx * 2 + 10, ny * 2 + 10, 6);
+            const n2 = fbm(noise, ny * 2 + 20, nz * 2 + 20, 6);
+            const n3 = fbm(noise, nz * 2 + 30, nx * 2 + 30, 6);
+            const nv = (n1 + n2 + n3) / 3;
+
+            const height = bias + nv * 0.3;
+            const absLat = Math.abs(lat);
+            const polar = Math.max(0, (absLat - 65) / 25);
+            const desertF = Math.max(0, 1 - Math.abs(absLat - 25) / 20) * (bias > 0.2 ? 1 : 0);
+
+            let r, g, b, bump;
+            if (height < 0.05) {
+                const t = Math.min(1, (0.05 - height) / 0.4);
+                r = oS[0] * (1 - t) + oD[0] * t + nv * 6;
+                g = oS[1] * (1 - t) + oD[1] * t + nv * 6;
+                b = oS[2] * (1 - t) + oD[2] * t + nv * 10;
+                bump = 0;
+            } else {
+                const lh = Math.min(1, (height - 0.05) / 0.5);
+                const det = fbm(noise, u * 20, v * 20, 4) * 0.15;
+                if (lh < 0.3) {
+                    const t = lh / 0.3;
+                    r = lL[0]*(1-t)+lMi[0]*t + det*40;
+                    g = lL[1]*(1-t)+lMi[1]*t + det*40;
+                    b = lL[2]*(1-t)+lMi[2]*t + det*20;
+                } else if (lh < 0.7) {
+                    const t = (lh - 0.3) / 0.4;
+                    r = lMi[0]*(1-t)+lH[0]*t + det*30;
+                    g = lMi[1]*(1-t)+lH[1]*t + det*30;
+                    b = lMi[2]*(1-t)+lH[2]*t + det*15;
+                } else {
+                    const t = (lh - 0.7) / 0.3;
+                    r = lH[0]*(1-t)+lMt[0]*t;
+                    g = lH[1]*(1-t)+lMt[1]*t;
+                    b = lH[2]*(1-t)+lMt[2]*t;
+                }
+                if (desertF > 0) {
+                    r = r*(1-desertF*0.6)+desert[0]*desertF*0.6;
+                    g = g*(1-desertF*0.6)+desert[1]*desertF*0.6;
+                    b = b*(1-desertF*0.6)+desert[2]*desertF*0.6;
+                }
+                if (polar > 0) {
+                    r = r*(1-polar)+snow[0]*polar;
+                    g = g*(1-polar)+snow[1]*polar;
+                    b = b*(1-polar)+snow[2]*polar;
+                }
+                bump = Math.min(255, lh * 255);
+            }
+
+            const i = (y * w + x) * 4;
+            dC.data[i] = Math.max(0, Math.min(255, r | 0));
+            dC.data[i+1] = Math.max(0, Math.min(255, g | 0));
+            dC.data[i+2] = Math.max(0, Math.min(255, b | 0));
+            dC.data[i+3] = 255;
+            dB.data[i] = dB.data[i+1] = dB.data[i+2] = bump | 0;
+            dB.data[i+3] = 255;
+        }
+    }
+    ctxC.putImageData(dC, 0, 0);
+    ctxB.putImageData(dB, 0, 0);
+    return {
+        color: new THREE.CanvasTexture(cColor),
+        bump: new THREE.CanvasTexture(cBump)
+    };
+}
+
+function genCloudTex() {
+    const w = 512, h = 256;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(w, h);
+    const perm = makePerm(99999);
+    const noise = makeNoise2D(perm);
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const u = x / w, v = y / h;
+            const th = u * Math.PI * 2, ph = v * Math.PI;
+            const nx = Math.sin(ph)*Math.cos(th), ny = Math.cos(ph), nz = Math.sin(ph)*Math.sin(th);
+            const n = (fbm(noise, nx*3+50, ny*3+50, 5) + fbm(noise, nz*3+70, nx*3+70, 5)) / 2;
+            let cloud = Math.max(0, n - 0.05) * 3;
+            cloud = Math.min(1, cloud) * (Math.sin(v * Math.PI) * 0.7 + 0.3);
+            const i = (y * w + x) * 4;
+            img.data[i] = img.data[i+1] = img.data[i+2] = 255;
+            img.data[i+3] = (cloud * 160) | 0;
+        }
+    }
+    ctx.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(c);
+}
+
+// ===================== SCENE SETUP =====================
+const container = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050910);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(0, 3, 14);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.rotateSpeed = 0.5;
+controls.zoomSpeed = 0.7;
+controls.minDistance = 6.2;
+controls.maxDistance = 28;
+controls.enablePan = false;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.25;
+
+// ===================== LIGHTING =====================
+const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+sun.position.set(10, 5, 8);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x162840, 0.5));
+const rim = new THREE.DirectionalLight(0x3366aa, 0.25);
+rim.position.set(-6, -3, -8);
+scene.add(rim);
+
+// ===================== STARS =====================
+(function() {
+    const N = 5000;
+    const pos = new Float32Array(N * 3), sz = new Float32Array(N), col = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+        const r = 80 + Math.random() * 150;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i*3] = r*Math.sin(ph)*Math.cos(th);
+        pos[i*3+1] = r*Math.sin(ph)*Math.sin(th);
+        pos[i*3+2] = r*Math.cos(ph);
+        sz[i] = 0.4 + Math.random() * 2.2;
+        const t = Math.random();
+        col[i*3]   = t < 0.08 ? 1 : t < 0.13 ? 0.65 : 0.92;
+        col[i*3+1] = t < 0.08 ? 0.78 : t < 0.13 ? 0.82 : 0.94;
+        col[i*3+2] = t < 0.08 ? 0.55 : 1;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+    geo.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
+    const mat = new THREE.ShaderMaterial({
+        vertexShader: `
+            attribute float size; attribute vec3 aCol; varying vec3 vC;
+            void main(){ vC=aCol; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize=size*(180./-mv.z); gl_Position=projectionMatrix*mv; }`,
+        fragmentShader: `
+            varying vec3 vC; void main(){ float d=length(gl_PointCoord-vec2(.5)); float a=1.-smoothstep(0.,.5,d); a*=a; gl_FragColor=vec4(vC,a); }`,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    scene.add(new THREE.Points(geo, mat));
+})();
+
+// ===================== EARTH =====================
+const tex = genTextures();
+const earthGeo = new THREE.SphereGeometry(R, 128, 64);
+const earthMat = new THREE.MeshPhongMaterial({
+    map: tex.color, bumpMap: tex.bump, bumpScale: 0.04,
+    specular: new THREE.Color(0x1a2a3a), shininess: 12
+});
+const earth = new THREE.Mesh(earthGeo, earthMat);
+scene.add(earth);
+
+// ===================== ATMOSPHERE =====================
+const aVert = `
+    varying vec3 vN; varying vec3 vP;
+    void main(){ vN=normalize(normalMatrix*normal); vP=(modelViewMatrix*vec4(position,1.)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`;
+
+// Inner glow
+scene.add(new THREE.Mesh(
+    new THREE.SphereGeometry(R * 1.035, 64, 64),
+    new THREE.ShaderMaterial({
+        vertexShader: aVert,
+        fragmentShader: `
+            varying vec3 vN; varying vec3 vP;
+            void main(){ vec3 vd=normalize(-vP); float i=pow(1.05-dot(vN,vd),3.2);
+            vec3 c=mix(vec3(.08,.45,.95),vec3(.3,.82,1.),i); gl_FragColor=vec4(c,i*.75); }`,
+        blending: THREE.AdditiveBlending, side: THREE.BackSide, transparent: true, depthWrite: false
+    })
+));
+
+// Outer glow
+scene.add(new THREE.Mesh(
+    new THREE.SphereGeometry(R * 1.14, 64, 64),
+    new THREE.ShaderMaterial({
+        vertexShader: aVert,
+        fragmentShader: `
+            varying vec3 vN; varying vec3 vP;
+            void main(){ vec3 vd=normalize(-vP); float i=pow(1.02-dot(vN,vd),5.5);
+            gl_FragColor=vec4(.12,.4,.9,i*.22); }`,
+        blending: THREE.AdditiveBlending, side: THREE.BackSide, transparent: true, depthWrite: false
+    })
+));
+
+// ===================== CLOUDS =====================
+const clouds = new THREE.Mesh(
+    new THREE.SphereGeometry(R * 1.012, 64, 32),
+    new THREE.MeshPhongMaterial({ map: genCloudTex(), transparent: true, opacity: 0.35, depthWrite: false })
+);
+scene.add(clouds);
+
+// ===================== FLIGHT ARCS =====================
+const arcGroup = new THREE.Group();
+scene.add(arcGroup);
+
+connections.forEach(([a, b]) => {
+    const pA = ll2v(locations[a].lat, locations[a].lng, R);
+    const pB = ll2v(locations[b].lat, locations[b].lng, R);
+    const mid = pA.clone().add(pB).multiplyScalar(0.5);
+    const dist = pA.distanceTo(pB);
+    mid.normalize().multiplyScalar(R + dist * 0.28);
+
+    const curve = new THREE.QuadraticBezierCurve3(pA, mid, pB);
+    const pts = curve.getPoints(48);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({ color: 0x00d296, transparent: true, opacity: 0.12 });
+    arcGroup.add(new THREE.Line(geo, mat));
+});
+
+// ===================== MARKERS =====================
+const mkGroup = new THREE.Group();
+scene.add(mkGroup);
+const mkDots = [], mkPulses = [];
+
+locations.forEach((loc, i) => {
+    const pos = ll2v(loc.lat, loc.lng, R);
+    const outer = ll2v(loc.lat, loc.lng, R + 0.16);
+
+    // Stem
+    const lg = new THREE.BufferGeometry().setFromPoints([pos, outer]);
+    mkGroup.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0xff6b35, transparent: true, opacity: 0.55 })));
+
+    // Dot
+    const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.045, 12, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff6b35 })
+    );
+    dot.position.copy(outer);
+    dot.userData = { idx: i };
+    mkGroup.add(dot);
+    mkDots.push(dot);
+
+    // Pulse ring
+    const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.06, 0.11, 20),
+        new THREE.MeshBasicMaterial({ color: 0xff6b35, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false })
+    );
+    ring.position.copy(outer);
+    ring.lookAt(0, 0, 0);
+    mkGroup.add(ring);
+    mkPulses.push(ring);
+});
+
+// ===================== LABELS =====================
+const labelsEl = document.getElementById('mkLabels');
+const labels = locations.map(l => {
+    const d = document.createElement('div');
+    d.className = 'mk-label';
+    d.textContent = l.name;
+    labelsEl.appendChild(d);
+    return d;
+});
+
+const tmpV = new THREE.Vector3();
+function updateLabels() {
+    const camDir = camera.position.clone().normalize();
+    mkDots.forEach((m, i) => {
+        m.getWorldPosition(tmpV);
+        const dot = tmpV.clone().normalize().dot(camDir);
+        if (dot > 0.18) {
+            const proj = tmpV.clone().project(camera);
+            labels[i].style.left = ((proj.x * 0.5 + 0.5) * window.innerWidth) + 'px';
+            labels[i].style.top = ((-proj.y * 0.5 + 0.5) * window.innerHeight - 14) + 'px';
+            labels[i].classList.add('vis');
+        } else {
+            labels[i].classList.remove('vis');
+        }
+    });
+}
+
+// ===================== RAYCASTING =====================
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+renderer.domElement.addEventListener('click', e => {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    ray.setFromCamera(mouse, camera);
+    const hits = ray.intersectObjects(mkDots);
+    if (hits.length) selectLocation(hits[0].object.userData.idx);
+});
+
+renderer.domElement.addEventListener('mousemove', e => {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    ray.setFromCamera(mouse, camera);
+    renderer.domElement.style.cursor = ray.intersectObjects(mkDots).length ? 'pointer' : 'grab';
+});
+
+// ===================== CAMERA FLY-TO =====================
+let camTarget = null, flyActive = false;
+
+function flyTo(loc) {
+    const dir = ll2v(loc.lat, loc.lng, 1).normalize();
+    const dist = 8;
+    const pos = dir.clone().multiplyScalar(dist);
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+    pos.add(right.multiplyScalar(0.6));
+    pos.y += 1.2;
+    camTarget = pos;
+    flyActive = true;
+    controls.autoRotate = false;
+}
+
+function tickFly() {
+    if (!flyActive || !camTarget) return;
+    camera.position.lerp(camTarget, 0.035);
+    if (camera.position.distanceTo(camTarget) < 0.04) flyActive = false;
+}
+
+// ===================== UI: LEFT PANEL =====================
+const locPanel = document.getElementById('locPanel');
+const cards = locations.map((loc, i) => {
+    const c = document.createElement('div');
+    c.className = 'loc-card';
+    c.innerHTML = `<div class="lc-name">${loc.name}</div><div class="lc-country">${loc.country}</div>`;
+    c.addEventListener('click', () => selectLocation(i));
+    locPanel.appendChild(c);
+    return c;
+});
+
+// ===================== UI: INFO PANEL =====================
+const infoPanel = document.getElementById('infoPanel');
+let activeIdx = -1;
+
+function selectLocation(idx) {
+    activeIdx = idx;
+    const l = locations[idx];
+    document.getElementById('ipTitle').textContent = l.name;
+    document.getElementById('ipCountry').textContent = l.country;
+    document.getElementById('ipDesc').textContent = l.desc;
+    document.getElementById('ipPop').textContent = l.pop;
+    document.getElementById('ipLat').textContent = l.lat.toFixed(2) + '°';
+    document.getElementById('ipLng').textContent = l.lng.toFixed(2) + '°';
+    document.getElementById('ipTz').textContent = l.tz;
+    infoPanel.classList.add('open');
+    cards.forEach((c, i) => c.classList.toggle('active', i === idx));
+    flyTo(l);
+}
+
+document.getElementById('ipClose').addEventListener('click', () => {
+    infoPanel.classList.remove('open');
+    activeIdx = -1;
+    cards.forEach(c => c.classList.remove('active'));
+    controls.autoRotate = true;
+});
+
+// ===================== UI: SEARCH =====================
+const sInput = document.getElementById('searchInput');
+const sResults = document.getElementById('searchResults');
+
+sInput.addEventListener('input', () => {
+    const q = sInput.value.trim().toLowerCase();
+    if (!q) { sResults.classList.remove('open'); return; }
+    const m = locations.filter(l => l.name.toLowerCase().includes(q) || l.country.toLowerCase().includes(q));
+    sResults.innerHTML = m.length ? m.map(l => {
+        const idx = locations.indexOf(l);
+        return `<div class="sr-item" data-i="${idx}"><span class="sr-city">${l.name}</span><span class="sr-country">${l.country}</span></div>`;
+    }).join('') : '<div style="padding:12px 18px;color:var(--muted);font-size:12px;">No results found</div>';
+    sResults.classList.add('open');
+});
+
+sResults.addEventListener('click', e => {
+    const item = e.target.closest('.sr-item');
+    if (item) { selectLocation(+item.dataset.i); sInput.value = ''; sResults.classList.remove('open'); }
+});
+
+sInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { sInput.value = ''; sResults.classList.remove('open'); sInput.blur(); }
+    if (e.key === 'Enter') {
+        const first = sResults.querySelector('.sr-item');
+        if (first) { selectLocation(+first.dataset.i); sInput.value = ''; sResults.classList.remove('open'); }
+    }
+});
+
+document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) sResults.classList.remove('open'); });
+
+// ===================== ZOOM BUTTONS =====================
+document.getElementById('zoomIn').addEventListener('click', () => {
+    const dir = camera.position.clone().normalize();
+    const newDist = Math.max(controls.minDistance, camera.position.length() - 2);
+    camera.position.copy(dir.multiplyScalar(newDist));
+});
+document.getElementById('zoomOut').addEventListener('click', () => {
+    const dir = camera.position.clone().normalize();
+    const newDist = Math.min(controls.maxDistance, camera.position.length() + 2);
+    camera.position.copy(dir.multiplyScalar(newDist));
+});
+document.getElementById('zoomReset').addEventListener('click', () => {
+    camTarget = new THREE.Vector3(0, 3, 14);
+    flyActive = true;
+    controls.autoRotate = true;
+    infoPanel.classList.remove('open');
+    activeIdx = -1;
+    cards.forEach(c => c.classList.remove('active'));
+});
+
+// ===================== COORDINATES =====================
+const bLat = document.getElementById('bLat'), bLng = document.getElementById('bLng');
+function updateCoords() {
+    ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const hits = ray.intersectObject(earth);
+    if (hits.length) {
+        const p = hits[0].point;
+        const r = p.length();
+        const lat = 90 - Math.acos(Math.max(-1, Math.min(1, p.y / r))) * 180 / Math.PI;
+        let lng = Math.atan2(p.z, -p.x) * 180 / Math.PI - 180;
+        if (lng < -180) lng += 360;
+        bLat.textContent = lat.toFixed(2) + '°';
+        bLng.textContent = lng.toFixed(2) + '°';
+    }
+}
+
+// ===================== RESIZE =====================
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===================== INTRO ANIMATION =====================
+earth.scale.setScalar(0.01);
+clouds.scale.setScalar(0.01);
+mkGroup.scale.setScalar(0.01);
+arcGroup.scale.setScalar(0.01);
+let introT = 0;
+
+// ===================== ANIMATION LOOP =====================
+const clock = new THREE.Clock();
+
+function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    // Intro scale-in
+    if (introT < 1) {
+        introT = Math.min(1, introT + 0.012);
+        const ease = 1 - Math.pow(1 - introT, 4);
+        const s = ease;
+        earth.scale.setScalar(s);
+        clouds.scale.setScalar(s);
+        mkGroup.scale.setScalar(s);
+        arcGroup.scale.setScalar(s);
+    }
+
+    clouds.rotation.y += 0.00018;
+
+    // Pulse markers
+    mkPulses.forEach((ring, i) => {
+        const p = (Math.sin(t * 2.2 + i * 0.6) + 1) * 0.5;
+        ring.scale.setScalar(1 + p * 1.8);
+        ring.material.opacity = 0.45 * (1 - p);
+    });
+
+    // Arc pulse
+    arcGroup.children.forEach((line, i) => {
+        line.material.opacity = 0.06 + Math.sin(t * 0.8 + i * 0.3) * 0.04;
+    });
+
+    tickFly();
+    controls.update();
+    updateLabels();
+    updateCoords();
+    renderer.render(scene, camera);
+}
+
+// ===================== START =====================
+setTimeout(() => {
+    document.getElementById('loader').classList.add('hide');
+    setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
+}, 600);
+
+animate();
+</script>
+</body>
+</html>
