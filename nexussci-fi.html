@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS-7 // Command Interface</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { display: ['Orbitron','sans-serif'], mono: ['Share Tech Mono','monospace'] },
+      colors: {
+        deep: '#060a13', panel: '#0c1220', card: '#111a2e',
+        bdr: '#1a2744', cyan: '#00e5ff', mint: '#0ef0ad',
+        amber: '#f59e0b', danger: '#ff2d55', flame: '#ff6b2b',
+      }
+    }
+  }
+}
+</script>
+<style>
+  :root {
+    --cyan: #00e5ff; --mint: #0ef0ad; --amber: #f59e0b;
+    --danger: #ff2d55; --flame: #ff6b2b;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#060a13; color:#e2e8f0; font-family:'Share Tech Mono',monospace; overflow:hidden; height:100vh; }
+  
+  /* Scanlines */
+  body::after {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+  }
+
+  /* Main Grid */
+  .dash {
+    display:grid; height:100vh; gap:1px; background:#0a1628;
+    grid-template-columns: 270px 1fr 270px;
+    grid-template-rows: 52px 1fr 190px;
+    grid-template-areas: "hd hd hd" "lf ct rt" "bt bt bt";
+  }
+
+  /* Panel styling */
+  .pnl { background:#0c1220; position:relative; overflow:hidden; }
+  .pnl::before, .pnl::after {
+    content:''; position:absolute; width:16px; height:16px; pointer-events:none; z-index:2;
+  }
+  .pnl::before { top:4px; left:4px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); opacity:.5; }
+  .pnl::after { bottom:4px; right:4px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); opacity:.5; }
+  .pnl-inner-corners::before { top:4px; right:4px; left:auto; border-top:2px solid var(--cyan); border-left:none; border-right:2px solid var(--cyan); }
+  .pnl-inner-corners::after { bottom:4px; left:4px; right:auto; border-bottom:2px solid var(--cyan); border-right:none; border-left:2px solid var(--cyan); }
+
+  /* Label */
+  .lbl { font-family:'Orbitron',sans-serif; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#475569; }
+  .lbl-val { font-family:'Orbitron',sans-serif; color:var(--cyan); }
+
+  /* Gauge ring */
+  .gauge-ring { transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease; }
+
+  /* Glow pulse */
+  @keyframes glow-pulse { 0%,100%{opacity:.4;} 50%{opacity:1;} }
+  .glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+
+  /* Blink */
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+  .blink { animation: blink 1s step-end infinite; }
+
+  /* Sweep rotation */
+  @keyframes sweep { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+  /* Button styles */
+  .cmd-btn {
+    background: linear-gradient(180deg, #1a2744 0%, #0f1a2e 100%);
+    border:1px solid #1a2744; color:#94a3b8; font-family:'Orbitron',sans-serif;
+    font-size:10px; letter-spacing:1px; padding:6px 12px; cursor:pointer;
+    transition: all 0.2s ease; text-transform:uppercase; position:relative; overflow:hidden;
+  }
+  .cmd-btn:hover { border-color:var(--cyan); color:var(--cyan); background:linear-gradient(180deg,#1e3050 0%,#0f1a2e 100%); }
+  .cmd-btn:active { transform:scale(0.96); }
+  .cmd-btn.active { border-color:var(--mint); color:var(--mint); box-shadow:0 0 12px rgba(14,240,173,0.15); }
+  .cmd-btn.danger-btn:hover { border-color:var(--danger); color:var(--danger); box-shadow:0 0 12px rgba(255,45,85,0.2); }
+  .cmd-btn.warp-btn.active { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 15px rgba(0,229,255,0.25); }
+
+  /* Toggle */
+  .toggle-track {
+    width:40px; height:20px; background:#1a2744; border-radius:10px; cursor:pointer;
+    position:relative; transition:background 0.3s ease; border:1px solid #253352;
+  }
+  .toggle-track.on { background:#0a3d2e; border-color:var(--mint); }
+  .toggle-thumb {
+    width:16px; height:16px; background:#64748b; border-radius:50%;
+    position:absolute; top:1px; left:1px; transition:all 0.3s ease;
+  }
+  .toggle-track.on .toggle-thumb { left:21px; background:var(--mint); box-shadow:0 0 8px rgba(14,240,173,0.5); }
+
+  /* Power bar */
+  .power-bar-bg { background:#0a1628; height:8px; border-radius:4px; overflow:hidden; border:1px solid #1a2744; }
+  .power-bar-fill { height:100%; border-radius:4px; transition:width 0.5s ease, background 0.3s ease; }
+
+  /* Comms log */
+  .comms-log { overflow-y:auto; scrollbar-width:thin; scrollbar-color:#1a2744 transparent; }
+  .comms-log::-webkit-scrollbar { width:4px; }
+  .comms-log::-webkit-scrollbar-track { background:transparent; }
+  .comms-log::-webkit-scrollbar-thumb { background:#1a2744; border-radius:2px; }
+
+  /* Alert toast */
+  .alert-toast {
+    position:fixed; top:60px; right:16px; z-index:1000; padding:10px 16px;
+    border-radius:4px; font-size:12px; transform:translateX(120%); transition:transform 0.4s ease;
+    border-left:3px solid; max-width:320px;
+  }
+  .alert-toast.show { transform:translateX(0); }
+  .alert-toast.info { background:#0c1a2e; border-color:var(--cyan); color:var(--cyan); }
+  .alert-toast.warning { background:#1a1508; border-color:var(--amber); color:var(--amber); }
+  .alert-toast.critical { background:#1a0a0e; border-color:var(--danger); color:var(--danger); }
+
+  /* Hyperspace flash */
+  .hyper-flash {
+    position:fixed; inset:0; background:white; z-index:5000; pointer-events:none;
+    opacity:0; transition:opacity 0.15s ease;
+  }
+  .hyper-flash.active { opacity:1; }
+
+  /* Emergency overlay */
+  .emergency-overlay {
+    position:fixed; inset:0; z-index:4000; pointer-events:none; opacity:0;
+    border:3px solid var(--danger); box-shadow:inset 0 0 80px rgba(255,45,85,0.15);
+    transition:opacity 0.3s ease;
+  }
+  .emergency-overlay.active { opacity:1; animation:blink 0.5s step-end infinite; }
+
+  /* Vignette on viewport */
+  .vignette {
+    position:absolute; inset:0; pointer-events:none; z-index:2;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(6,10,19,0.7) 100%);
+  }
+
+  /* Boot overlay */
+  .boot-overlay {
+    position:fixed; inset:0; background:#060a13; z-index:10000;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
+    transition:opacity 0.8s ease;
+  }
+  .boot-overlay.hide { opacity:0; pointer-events:none; }
+  @keyframes boot-bar { from{width:0} to{width:100%} }
+  .boot-bar-fill { height:2px; background:var(--cyan); animation:boot-bar 1.8s ease-in-out forwards; box-shadow:0 0 10px var(--cyan); }
+
+  /* Scrollbar for panels */
+  .scroll-y { overflow-y:auto; scrollbar-width:thin; scrollbar-color:#1a2744 transparent; }
+  .scroll-y::-webkit-scrollbar { width:3px; }
+  .scroll-y::-webkit-scrollbar-thumb { background:#1a2744; }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Boot Overlay -->
+<div class="boot-overlay" id="bootOverlay">
+  <div class="font-display text-cyan text-sm tracking-[6px]">NEXUS-7</div>
+  <div class="text-[10px] text-slate-500 tracking-[3px]">INITIALIZING COMMAND INTERFACE</div>
+  <div class="w-48 h-[2px] bg-bdr rounded"><div class="boot-bar-fill rounded"></div></div>
+</div>
+
+<!-- Hyperspace Flash -->
+<div class="hyper-flash" id="hyperFlash"></div>
+
+<!-- Emergency Overlay -->
+<div class="emergency-overlay" id="emergencyOverlay"></div>
+
+<!-- Alert Toast Container -->
+<div id="alertContainer"></div>
+
+<!-- Dashboard -->
+<div class="dash" id="dashboard">
+
+  <!-- HEADER -->
+  <header class="pnl flex items-center justify-between px-5" style="grid-area:hd">
+    <div class="flex items-center gap-3">
+      <div class="w-2 h-2 rounded-full bg-mint glow-pulse"></div>
+      <span class="font-display text-sm tracking-[4px] text-cyan">NEXUS-7</span>
+      <span class="text-[10px] text-slate-600 tracking-widest ml-2">// HEAVY CRUISER</span>
+    </div>
+    <div class="flex items-center gap-6">
+      <div class="text-center">
+        <div class="lbl text-[8px]">STELLAR DATE</div>
+        <div class="lbl-val text-xs" id="stellarDate">2847.156.09</div>
+      </div>
+      <div class="text-center">
+        <div class="lbl text-[8px]">SHIPS TIME</div>
+        <div class="lbl-val text-xs" id="shipTime">14:27:53</div>
+      </div>
+      <div class="flex items-center gap-2" id="alertIndicator">
+        <div class="w-2 h-2 rounded-full bg-mint"></div>
+        <span class="text-[10px] text-mint tracking-wider">NOMINAL</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL: Navigation -->
+  <aside class="pnl pnl-inner-corners flex flex-col gap-1 p-3 scroll-y" style="grid-area:lf">
+    <!-- Radar -->
+    <div class="lbl text-[8px] mb-1 mt-1"><i class="fa-solid fa-satellite-dish mr-1"></i>TACTICAL RADAR</div>
+    <div class="relative mx-auto" style="width:220px;height:220px;">
+      <canvas id="radarCanvas" width="220" height="220"></canvas>
+    </div>
+
+    <!-- Heading -->
+    <div class="mt-2">
+      <div class="lbl text-[8px] mb-1"><i class="fa-solid fa-compass mr-1"></i>HEADING</div>
+      <div class="flex items-center gap-2">
+        <div class="lbl-val text-2xl font-bold" id="headingVal">047</div>
+        <div class="text-slate-600 text-xs">.3 MARK</div>
+      </div>
+    </div>
+
+    <!-- Coordinates -->
+    <div class="mt-2">
+      <div class="lbl text-[8px] mb-2"><i class="fa-solid fa-location-crosshairs mr-1"></i>COORDINATES</div>
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <div class="text-[9px] text-slate-600">X</div>
+          <div class="lbl-val text-sm" id="coordX">1247.3</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-slate-600">Y</div>
+          <div class="lbl-val text-sm" id="coordY">-892.1</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-slate-600">Z</div>
+          <div class="lbl-val text-sm" id="coordZ">3341.7</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sector -->
+    <div class="mt-2">
+      <div class="lbl text-[8px] mb-1"><i class="fa-solid fa-map mr-1"></i>SECTOR</div>
+      <div class="lbl-val text-sm" id="sectorName">VEIL NEBULA - GRID 7G</div>
+    </div>
+
+    <!-- Nearest Object -->
+    <div class="mt-2">
+      <div class="lbl text-[8px] mb-1"><i class="fa-solid fa-crosshairs mr-1"></i>NEAREST CONTACT</div>
+      <div class="flex justify-between text-xs">
+        <span class="text-slate-400" id="nearestName">UNIDENTIFIED VESSEL</span>
+        <span class="text-amber" id="nearestDist">12,480 KM</span>
+      </div>
+    </div>
+
+    <!-- Speed Display -->
+    <div class="mt-2 p-2 border border-bdr rounded bg-deep/50">
+      <div class="lbl text-[8px] mb-1">VELOCITY</div>
+      <div class="flex items-baseline gap-1">
+        <span class="lbl-val text-3xl font-black" id="speedDisplay">0</span>
+        <span class="text-[10px] text-slate-500" id="speedUnit">KM/S</span>
+      </div>
+      <div class="text-[10px] text-slate-600 mt-1" id="speedLabel">STATIONARY</div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Viewport -->
+  <main class="pnl relative" style="grid-area:ct">
+    <canvas id="viewportCanvas" class="w-full h-full"></canvas>
+    <div class="vignette"></div>
+
+    <!-- HUD Overlay -->
+    <div class="absolute inset-0 z-3 pointer-events-none">
+      <!-- Top heading tape -->
+      <div class="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-4">
+        <div class="w-16 h-px bg-gradient-to-r from-transparent to-cyan/40"></div>
+        <span class="font-display text-[10px] text-cyan/60 tracking-[3px]" id="hudHeading">HDG 047.3</span>
+        <div class="w-16 h-px bg-gradient-to-l from-transparent to-cyan/40"></div>
+      </div>
+
+      <!-- Center crosshair -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div class="w-8 h-8 border border-cyan/20 rounded-full"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-3 bg-cyan/30"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-px bg-cyan/30"></div>
+      </div>
+
+      <!-- Bottom left: speed -->
+      <div class="absolute bottom-4 left-4">
+        <div class="text-[9px] text-slate-500">WARP</div>
+        <div class="font-display text-2xl text-cyan" id="hudWarp">0.0</div>
+      </div>
+
+      <!-- Bottom right: distance -->
+      <div class="absolute bottom-4 right-4 text-right">
+        <div class="text-[9px] text-slate-500">RANGE TO TARGET</div>
+        <div class="font-display text-lg text-amber" id="hudRange">12,480 KM</div>
+      </div>
+
+      <!-- Warp flash indicator -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center opacity-0 transition-opacity duration-300" id="warpFlashText">
+        <div class="font-display text-2xl text-cyan tracking-[8px]">WARP ENGAGED</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL: Systems -->
+  <aside class="pnl flex flex-col gap-1 p-3 scroll-y" style="grid-area:rt">
+    <div class="lbl text-[8px] mb-1 mt-1"><i class="fa-solid fa-microchip mr-1"></i>SHIP SYSTEMS</div>
+
+    <!-- Gauges Grid -->
+    <div class="grid grid-cols-2 gap-2" id="gaugesGrid">
+      <!-- Generated by JS -->
+    </div>
+
+    <!-- Power Distribution -->
+    <div class="mt-3">
+      <div class="lbl text-[8px] mb-2"><i class="fa-solid fa-bolt mr-1"></i>POWER DISTRIBUTION</div>
+      <div class="space-y-2" id="powerDist">
+        <!-- Generated by JS -->
+      </div>
+    </div>
+
+    <!-- Fuel -->
+    <div class="mt-3">
+      <div class="lbl text-[8px] mb-1"><i class="fa-solid fa-gas-pump mr-1"></i>FUEL RESERVES</div>
+      <div class="power-bar-bg">
+        <div class="power-bar-fill bg-mint" id="fuelBar" style="width:73%"></div>
+      </div>
+      <div class="flex justify-between text-[10px] mt-1">
+        <span class="text-slate-500">DEUTERIUM</span>
+        <span class="text-mint" id="fuelVal">73.2%</span>
+      </div>
+    </div>
+
+    <!-- Core Temp -->
+    <div class="mt-2">
+      <div class="lbl text-[8px] mb-1"><i class="fa-solid fa-temperature-half mr-1"></i>WARP CORE TEMP</div>
+      <div class="flex items-baseline gap-1">
+        <span class="lbl-val text-xl" id="coreTemp">2,847</span>
+        <span class="text-[10px] text-slate-500">K</span>
+      </div>
+      <div class="power-bar-bg mt-1">
+        <div class="power-bar-fill bg-flame" id="coreTempBar" style="width:42%"></div>
+      </div>
+    </div>
+
+    <!-- Toggles -->
+    <div class="mt-3 space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-slate-400"><i class="fa-solid fa-shield-halved mr-1"></i>SHIELDS</span>
+        <div class="toggle-track on" id="toggleShields" role="switch" aria-checked="true" tabindex="0"><div class="toggle-thumb"></div></div>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-slate-400"><i class="fa-solid fa-crosshairs mr-1"></i>WEAPONS</span>
+        <div class="toggle-track" id="toggleWeapons" role="switch" aria-checked="false" tabindex="0"><div class="toggle-thumb"></div></div>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-slate-400"><i class="fa-solid fa-eye-slash mr-1"></i>STEALTH MODE</span>
+        <div class="toggle-track" id="toggleStealth" role="switch" aria-checked="false" tabindex="0"><div class="toggle-thumb"></div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- BOTTOM: Console -->
+  <nav class="pnl flex gap-1 p-3" style="grid-area:bt" aria-label="Ship controls">
+
+    <!-- Warp Control -->
+    <section class="flex flex-col gap-2 w-64 shrink-0">
+      <div class="lbl text-[8px]"><i class="fa-solid fa-gauge-high mr-1"></i>WARP DRIVE</div>
+      <div class="flex gap-1 flex-wrap" id="warpButtons">
+        <!-- Generated by JS -->
+      </div>
+      <button class="cmd-btn text-[9px] mt-auto py-2" id="btnHyperspace">
+        <i class="fa-solid fa-burst mr-1"></i>HYPERSPACE JUMP
+      </button>
+    </section>
+
+    <!-- Actions -->
+    <section class="flex flex-col gap-2 w-44 shrink-0">
+      <div class="lbl text-[8px]"><i class="fa-solid fa-terminal mr-1"></i>ACTIONS</div>
+      <button class="cmd-btn text-[9px]" id="btnScan"><i class="fa-solid fa-radar mr-1"></i>SCAN AREA</button>
+      <button class="cmd-btn text-[9px]" id="btnDock"><i class="fa-solid fa-link mr-1"></i>REQUEST DOCK</button>
+      <button class="cmd-btn danger-btn text-[9px] mt-auto" id="btnEmergency"><i class="fa-solid fa-triangle-exclamation mr-1"></i>EMERGENCY</button>
+    </section>
+
+    <!-- Comms Log -->
+    <section class="flex flex-col flex-1 min-w-0">
+      <div class="lbl text-[8px] mb-1"><i class="fa-solid fa-message mr-1"></i>COMMUNICATIONS LOG</div>
+      <div class="comms-log flex-1 space-y-1 pr-2" id="commsLog">
+        <!-- Generated by JS -->
+      </div>
+    </section>
+  </nav>
+
+</div>
+
+<script>
+// ====== STATE ======
+const ship = {
+  warp: 0,
+  shields: 87, hull: 95, engines: 92, weapons: 100, lifeSupport: 98,
+  heading: 47.3,
+  coords: { x: 1247.3, y: -892.1, z: 3341.7 },
+  sector: 'VEIL NEBULA - GRID 7G',
+  fuel: 73.2,
+  coreTemp: 2847,
+  shieldsOn: true, weaponsOn: false, stealthOn: false,
+  power: { weapons: 30, shields: 40, engines: 30 },
+  hyperspaceActive: false,
+  emergencyActive: false,
+};
+
+const sectors = [
+  'VEIL NEBULA - GRID 7G', 'ANDROMEDA PERIPHERY - SEC 12', 'ORION ARM - CLUSTER 9',
+  'KEPLER RIDGE - ZONE 4', 'CYGNUS EXPANSE - DEEP 3', 'SAGITTARIUS GAP - NODE 11',
+  'PROXIMA BASIN - SECTOR 2C', 'TRAPPIST CORRIDOR - LANE 8', 'HD 106906 - OUTER RIM',
+];
+
+const contactNames = [
+  'FREIGHTER C-47', 'CRUISER VALIANT', 'UNKNOWN VESSEL', 'STATION ALPHA',
+  'MINING BARGE REX', 'PATROL SHIP NOVA', 'DREADNOUGHT THANE', 'SHUTTLE KAI-9',
+];
+
+const commMessages = [
+  { from:'FLEET CMD', msg:'NEXUS-7, maintain current heading. ETA to waypoint: 4.7 hours.' },
+  { from:'SENSORS', msg:'Detecting elevated radiation levels in adjacent sector.' },
+  { from:'STATION ALPHA', msg:'Docking protocols available on channel 4. Stand by.' },
+  { from:'CARGO BAY', msg:'Container 47-B showing temperature variance. Monitoring.' },
+  { from:'NAV AI', msg:'Course correction applied. Minor deviation detected and resolved.' },
+  { from:'ENGINEERING', msg:'Warp core output stable. No anomalies in plasma flow.' },
+  { from:'SCIENCE', msg:'Spectral analysis complete. Mineral deposits detected nearby.' },
+  { from:'FLEET CMD', msg:'All vessels: heightened alert in grid 7G. Report contacts.' },
+  { from:'MEDICAL', msg:'Crew health nominal. All biometrics within parameters.' },
+  { from:'UNKNOWN', msg:'...---... ...---... ...---...' },
+  { from:'PATROL NOVA', msg:'NEXUS-7, this is NOVA. Visual contact confirmed. Friendly.' },
+  { from:'NAV AI', msg:'Gravitational wave detected. Source: 0.3 light-years port.' },
+];
+
+const alertMessages = [
+  { level:'warning', msg:'Micrometeorite field detected on current trajectory' },
+  { level:'info', msg:'Long-range scan cycle complete' },
+  { level:'warning', msg:'Gravitational anomaly at bearing 127 mark 4' },
+  { level:'info', msg:'New navigation waypoint uploaded' },
+  { level:'warning', msg:'Subspace interference detected on comm channels' },
+  { level:'info', msg:'Proximity alert: Vessel approaching at 4,200 km' },
+  { level:'warning', msg:'Minor shield fluctuation registered' },
+  { level:'info', msg:'Astrometrics chart updated for current region' },
+];
+
+// ====== STARS ======
+const stars = [];
+const STAR_COUNT = 500;
+const starColors = ['#ffffff','#c8e6ff','#ffe4c8','#d4f0ff','#fff5e0'];
+
+function initStars() {
+  for (let i = 0; i < STAR_COUNT; i++) {
+    stars.push({
+      x: (Math.random() - 0.5) * 2000,
+      y: (Math.random() - 0.5) * 2000,
+      z: Math.random() * 2000 + 1,
+      pz: 0, color: starColors[Math.floor(Math.random() * starColors.length)],
+      sx: 0, sy: 0,
+    });
+  }
+}
+
+// ====== RADAR CONTACTS ======
+const radarContacts = [];
+function spawnContact() {
+  if (radarContacts.length >= 6) return;
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 20 + Math.random() * 80;
+  radarContacts.push({
+    x: 110 + Math.cos(angle) * dist,
+    y: 110 + Math.sin(angle) * dist,
+    life: 1, decay: 0.002 + Math.random() * 0.003,
+    size: 2 + Math.random() * 2,
+  });
+}
+
+// ====== DOM REFS ======
+const $ = id => document.getElementById(id);
+const viewportCanvas = $('viewportCanvas');
+const radarCanvas = $('radarCanvas');
+const vCtx = viewportCanvas.getContext('2d');
+const rCtx = radarCanvas.getContext('2d');
+
+// ====== GAUGES ======
+const gaugeConfigs = [
+  { key:'shields', label:'SHIELDS', icon:'fa-shield-halved' },
+  { key:'hull', label:'HULL', icon:'fa-cube' },
+  { key:'engines', label:'ENGINES', icon:'fa-rocket' },
+  { key:'weapons', label:'WEAPONS', icon:'fa-crosshairs' },
+  { key:'lifeSupport', label:'LIFE SUPP', icon:'fa-heart-pulse' },
+];
+
+function createGauges() {
+  const grid = $('gaugesGrid');
+  gaugeConfigs.forEach(g => {
+    const circ = 2 * Math.PI * 36;
+    const val = ship[g.key];
+    const offset = circ * (1 - val / 100);
+    const color = val > 70 ? 'var(--mint)' : val > 40 ? 'var(--amber)' : 'var(--danger)';
+    const div = document.createElement('div');
+    div.className = 'text-center';
+    div.innerHTML = `
+      <svg viewBox="0 0 80 80" class="w-full max-w-[90px] mx-auto">
+        <circle cx="40" cy="40" r="36" fill="none" stroke="#1a2744" stroke-width="5"/>
+        <circle cx="40" cy="40" r="36" fill="none" stroke="${color}" stroke-width="5"
+          stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+          stroke-linecap="round" transform="rotate(-90 40 40)"
+          class="gauge-ring" data-gauge="${g.key}"/>
+        <text x="40" y="38" text-anchor="middle" dominant-baseline="central"
+          fill="${color}" font-size="14" font-family="Orbitron" font-weight="700"
+          data-gauge-text="${g.key}">${val}%</text>
+        <text x="40" y="52" text-anchor="middle" fill="#475569" font-size="6"
+          font-family="Orbitron" letter-spacing="1">${g.label}</text>
+      </svg>`;
+    grid.appendChild(div);
+  });
+}
+
+function updateGauges() {
+  const circ = 2 * Math.PI * 36;
+  gaugeConfigs.forEach(g => {
+    let val = ship[g.key];
+    // Fluctuate slightly
+    val = Math.max(0, Math.min(100, val + (Math.random() - 0.5) * 1.5));
+    ship[g.key] = val;
+    const offset = circ * (1 - val / 100);
+    const color = val > 70 ? 'var(--mint)' : val > 40 ? 'var(--amber)' : 'var(--danger)';
+    const ring = document.querySelector(`[data-gauge="${g.key}"]`);
+    const text = document.querySelector(`[data-gauge-text="${g.key}"]`);
+    if (ring) { ring.setAttribute('stroke-dashoffset', offset); ring.setAttribute('stroke', color); }
+    if (text) { text.textContent = Math.round(val) + '%'; text.setAttribute('fill', color); }
+  });
+}
+
+// ====== POWER DISTRIBUTION ======
+function createPowerDist() {
+  const container = $('powerDist');
+  const items = [
+    { key:'weapons', label:'WEAPONS', color:'var(--flame)' },
+    { key:'shields', label:'SHIELDS', color:'var(--cyan)' },
+    { key:'engines', label:'ENGINES', color:'var(--mint)' },
+  ];
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="flex justify-between text-[9px] mb-0.5">
+        <span class="text-slate-500">${item.label}</span>
+        <span style="color:${item.color}" data-power-val="${item.key}">${ship.power[item.key]}%</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button class="w-4 h-4 text-[8px] text-slate-500 hover:text-white border border-bdr rounded cursor-pointer bg-transparent"
+          data-power-minus="${item.key}" aria-label="Decrease ${item.label} power">-</button>
+        <div class="power-bar-bg flex-1">
+          <div class="power-bar-fill" data-power-bar="${item.key}"
+            style="width:${ship.power[item.key]}%;background:${item.color}"></div>
+        </div>
+        <button class="w-4 h-4 text-[8px] text-slate-500 hover:text-white border border-bdr rounded cursor-pointer bg-transparent"
+          data-power-plus="${item.key}" aria-label="Increase ${item.label} power">+</button>
+      </div>`;
+    container.appendChild(div);
+  });
+
+  // Event delegation for power buttons
+  container.addEventListener('click', e => {
+    const minus = e.target.closest('[data-power-minus]');
+    const plus = e.target.closest('[data-power-plus]');
+    if (minus) adjustPower(minus.dataset.powerMinus, -5);
+    if (plus) adjustPower(plus.dataset.powerPlus, 5);
+  });
+}
+
+function adjustPower(key, delta) {
+  const others = Object.keys(ship.power).filter(k => k !== key);
+  const newVal = Math.max(10, Math.min(60, ship.power[key] + delta));
+  const diff = newVal - ship.power[key];
+  if (diff === 0) return;
+  ship.power[key] = newVal;
+  const share = diff / others.length;
+  others.forEach(k => { ship.power[k] = Math.max(10, Math.min(60, ship.power[k] - share)); });
+  // Normalize to 100
+  const total = Object.values(ship.power).reduce((a,b) => a+b, 0);
+  const scale = 100 / total;
+  Object.keys(ship.power).forEach(k => { ship.power[k] = Math.round(ship.power[k] * scale); });
+  updatePowerUI();
+}
+
+function updatePowerUI() {
+  const colors = { weapons:'var(--flame)', shields:'var(--cyan)', engines:'var(--mint)' };
+  Object.keys(ship.power).forEach(k => {
+    const bar = document.querySelector(`[data-power-bar="${k}"]`);
+    const val = document.querySelector(`[data-power-val="${k}"]`);
+    if (bar) { bar.style.width = ship.power[k] + '%'; }
+    if (val) { val.textContent = ship.power[k] + '%'; }
+  });
+}
+
+// ====== WARP BUTTONS ======
+function createWarpButtons() {
+  const container = $('warpButtons');
+  for (let i = 0; i <= 9; i++) {
+    const btn = document.createElement('button');
+    btn.className = `cmd-btn warp-btn text-[10px] w-8 h-7 p-0 flex items-center justify-center ${i === 0 ? 'active' : ''}`;
+    btn.textContent = i;
+    btn.dataset.warp = i;
+    btn.setAttribute('aria-label', `Warp ${i}`);
+    container.appendChild(btn);
+  }
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('[data-warp]');
+    if (!btn || ship.hyperspaceActive) return;
+    setWarp(parseInt(btn.dataset.warp));
+  });
+}
+
+function setWarp(level) {
+  ship.warp = level;
+  document.querySelectorAll('.warp-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.warp) === level);
+  });
+  const speedLabels = ['STATIONARY','SUB-LIGHT','SUB-LIGHT','SUB-LIGHT','WARP 1','WARP 2','WARP 3','WARP 4','WARP 5','WARP 6'];
+  $('speedDisplay').textContent = level;
+  $('speedUnit').textContent = level === 0 ? 'KM/S' : 'FACTOR';
+  $('speedLabel').textContent = speedLabels[level] || `WARP ${level}`;
+  $('hudWarp').textContent = level + '.0';
+  if (level > 0) {
+    $('warpFlashText').style.opacity = '1';
+    setTimeout(() => { $('warpFlashText').style.opacity = '0'; }, 1200);
+  }
+}
+
+// ====== COMMS LOG ======
+function addCommMessage(msg) {
+  const log = $('commsLog');
+  const div = document.createElement('div');
+  div.className = 'text-[10px] py-1 px-2 border-l-2 border-bdr bg-deep/30';
+  div.innerHTML = `<span class="text-cyan">[${msg.from}]</span> <span class="text-slate-400">${msg.msg}</span>`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  // Keep only last 20
+  while (log.children.length > 20) log.removeChild(log.firstChild);
+}
+
+// ====== ALERT TOASTS ======
+function showAlert(alert) {
+  const container = $('alertContainer');
+  const toast = document.createElement('div');
+  toast.className = `alert-toast ${alert.level}`;
+  toast.innerHTML = `<i class="fa-solid ${alert.level === 'critical' ? 'fa-circle-exclamation' : alert.level === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'} mr-2"></i>${alert.msg}`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => { toast.classList.add('show'); });
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 3500);
+
+  // Update indicator
+  const ind = $('alertIndicator');
+  if (alert.level === 'critical') {
+    ind.innerHTML = '<div class="w-2 h-2 rounded-full bg-danger blink"></div><span class="text-[10px] text-danger tracking-wider">ALERT</span>';
+    setTimeout(() => {
+      ind.innerHTML = '<div class="w-2 h-2 rounded-full bg-mint glow-pulse"></div><span class="text-[10px] text-mint tracking-wider">NOMINAL</span>';
+    }, 4000);
+  } else if (alert.level === 'warning') {
+    ind.innerHTML = '<div class="w-2 h-2 rounded-full bg-amber glow-pulse"></div><span class="text-[10px] text-amber tracking-wider">CAUTION</span>';
+    setTimeout(() => {
+      ind.innerHTML = '<div class="w-2 h-2 rounded-full bg-mint glow-pulse"></div><span class="text-[10px] text-mint tracking-wider">NOMINAL</span>';
+    }, 5000);
+  }
+}
+
+// ====== TOGGLES ======
+function setupToggles() {
+  const map = { toggleShields:'shieldsOn', toggleWeapons:'weaponsOn', toggleStealth:'stealthOn' };
+  Object.entries(map).forEach(([id, key]) => {
+    const el = $(id);
+    el.addEventListener('click', () => {
+      ship[key] = !ship[key];
+      el.classList.toggle('on', ship[key]);
+      el.setAttribute('aria-checked', ship[key]);
+      addCommMessage({ from:'SYSTEM', msg:`${key.replace('On','').toUpperCase()} ${ship[key] ? 'ONLINE' : 'OFFLINE'}` });
+      if (key === 'stealthOn' && ship.stealthOn) {
+        ship.shieldsOn = false;
+        $('toggleShields').classList.remove('on');
+        $('toggleShields').setAttribute('aria-checked','false');
+        addCommMessage({ from:'SYSTEM', msg:'SHIELDS AUTOMATICALLY DISABLED FOR STEALTH' });
+      }
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+  });
+}
+
+// ====== ACTION BUTTONS ======
+function setupActions() {
+  $('btnScan').addEventListener('click', () => {
+    $('btnScan').classList.add('active');
+    addCommMessage({ from:'SENSORS', msg:'Initiating full-spectrum scan...' });
+    showAlert({ level:'info', msg:'Scan in progress — 12 second cycle' });
+    setTimeout(() => {
+      $('btnScan').classList.remove('active');
+      addCommMessage({ from:'SENSORS', msg:'Scan complete. 3 contacts identified. No threats.' });
+    }, 3000);
+  });
+
+  $('btnDock').addEventListener('click', () => {
+    addCommMessage({ from:'COMMS', msg:'Hailing nearest station on all frequencies...' });
+    setTimeout(() => {
+      addCommMessage({ from:'STATION ALPHA', msg:'NEXUS-7, docking clearance granted. Proceed to bay 12.' });
+      showAlert({ level:'info', msg:'Docking clearance received — Bay 12' });
+    }, 2000);
+  });
+
+  $('btnEmergency').addEventListener('click', () => {
+    if (ship.emergencyActive) return;
+    ship.emergencyActive = true;
+    $('emergencyOverlay').classList.add('active');
+    addCommMessage({ from:'COMMAND', msg:'EMERGENCY PROTOCOL ACTIVATED — ALL HANDS TO STATIONS' });
+    showAlert({ level:'critical', msg:'EMERGENCY PROTOCOL INITIATED' });
+    setTimeout(() => {
+      ship.emergencyActive = false;
+      $('emergencyOverlay').classList.remove('active');
+      addCommMessage({ from:'COMMAND', msg:'Emergency protocol resolved. Returning to standard operations.' });
+    }, 5000);
+  });
+
+  $('btnHyperspace').addEventListener('click', initiateHyperspace);
+}
+
+function initiateHyperspace() {
+  if (ship.hyperspaceActive || ship.fuel < 10) {
+    if (ship.fuel < 10) showAlert({ level:'warning', msg:'Insufficient fuel for hyperspace jump' });
+    return;
+  }
+  ship.hyperspaceActive = true;
+  ship.fuel = Math.max(0, ship.fuel - 8.5);
+  $('fuelBar').style.width = ship.fuel + '%';
+  $('fuelVal').textContent = ship.fuel.toFixed(1) + '%';
+
+  // Flash
+  $('hyperFlash').classList.add('active');
+  addCommMessage({ from:'NAV AI', msg:'Hyperspace jump initiating — brace for transition' });
+
+  setTimeout(() => { $('hyperFlash').classList.remove('active'); }, 200);
+  setTimeout(() => { $('hyperFlash').classList.add('active'); }, 400);
+  setTimeout(() => { $('hyperFlash').classList.remove('active'); }, 600);
+
+  // Update coords after jump
+  setTimeout(() => {
+    ship.coords.x = Math.round((Math.random() - 0.5) * 10000 * 10) / 10;
+    ship.coords.y = Math.round((Math.random() - 0.5) * 10000 * 10) / 10;
+    ship.coords.z = Math.round((Math.random() * 20000) * 10) / 10;
+    ship.sector = sectors[Math.floor(Math.random() * sectors.length)];
+    ship.heading = Math.round(Math.random() * 360 * 10) / 10;
+    updateCoordDisplay();
+    addCommMessage({ from:'NAV AI', msg:`Hyperspace jump complete. Arrived in ${ship.sector}` });
+    showAlert({ level:'info', msg:`Jump complete — ${ship.sector}` });
+    ship.hyperspaceActive = false;
+  }, 1800);
+}
+
+// ====== VIEWPORT RENDERING ======
+function resizeViewport() {
+  const rect = viewportCanvas.parentElement.getBoundingClientRect();
+  viewportCanvas.width = rect.width;
+  viewportCanvas.height = rect.height;
+}
+
+function renderViewport(time) {
+  const w = viewportCanvas.width;
+  const h = viewportCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const fov = Math.max(w, h) * 0.5;
+
+  vCtx.fillStyle = '#060a13';
+  vCtx.fillRect(0, 0, w, h);
+
+  // Nebula glow (subtle)
+  const nebGrad = vCtx.createRadialGradient(cx * 0.7, cy * 0.6, 0, cx * 0.7, cy * 0.6, w * 0.4);
+  nebGrad.addColorStop(0, 'rgba(0,229,255,0.02)');
+  nebGrad.addColorStop(0.5, 'rgba(14,240,173,0.01)');
+  nebGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  vCtx.fillStyle = nebGrad;
+  vCtx.fillRect(0, 0, w, h);
+
+  const nebGrad2 = vCtx.createRadialGradient(cx * 1.4, cy * 1.3, 0, cx * 1.4, cy * 1.3, w * 0.3);
+  nebGrad2.addColorStop(0, 'rgba(255,107,43,0.015)');
+  nebGrad2.addColorStop(1, 'rgba(0,0,0,0)');
+  vCtx.fillStyle = nebGrad2;
+  vCtx.fillRect(0, 0, w, h);
+
+  // Star speed
+  const speed = ship.warp === 0 ? 0.5 : ship.warp * 3 + 2;
+  const hyperBoost = ship.hyperspaceActive ? 30 : 0;
+  const totalSpeed = speed + hyperBoost;
+
+  stars.forEach(star => {
+    star.pz = star.z;
+    star.z -= totalSpeed;
+    if (star.z < 1) {
+      star.x = (Math.random() - 0.5) * 2000;
+      star.y = (Math.random() - 0.5) * 2000;
+      star.z = 2000;
+      star.pz = 2000;
+    }
+
+    const sx = (star.x / star.z) * fov + cx;
+    const sy = (star.y / star.z) * fov + cy;
+
+    if (sx < -10 || sx > w + 10 || sy < -10 || sy > h + 10) return;
+
+    const size = Math.max(0.3, (1 - star.z / 2000) * 3);
+    const alpha = Math.min(1, (1 - star.z / 2000) * 1.5);
+
+    if (totalSpeed > 3) {
+      // Streak effect
+      const psx = (star.x / star.pz) * fov + cx;
+      const psy = (star.y / star.pz) * fov + cy;
+      vCtx.beginPath();
+      vCtx.moveTo(psx, psy);
+      vCtx.lineTo(sx, sy);
+      vCtx.strokeStyle = star.color.replace(')', `,${alpha})`).replace('rgb', 'rgba').replace('#ffffff', `rgba(255,255,255,${alpha})`).replace('#c8e6ff', `rgba(200,230,255,${alpha})`).replace('#ffe4c8', `rgba(255,228,200,${alpha})`).replace('#d4f0ff', `rgba(212,240,255,${alpha})`).replace('#fff5e0', `rgba(255,245,224,${alpha})`);
+      // Simpler approach for color
+      vCtx.globalAlpha = alpha;
+      vCtx.strokeStyle = star.color;
+      vCtx.lineWidth = Math.max(0.5, size * 0.7);
+      vCtx.stroke();
+      vCtx.globalAlpha = 1;
+    } else {
+      vCtx.beginPath();
+      vCtx.arc(sx, sy, Math.max(0.3, size), 0, Math.PI * 2);
+      vCtx.globalAlpha = alpha;
+      vCtx.fillStyle = star.color;
+      vCtx.fill();
+      vCtx.globalAlpha = 1;
+    }
+  });
+
+  // Hyperspace tunnel effect
+  if (ship.hyperspaceActive) {
+    vCtx.save();
+    vCtx.globalAlpha = 0.15;
+    const tunnelGrad = vCtx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.5);
+    tunnelGrad.addColorStop(0, 'rgba(0,229,255,0.3)');
+    tunnelGrad.addColorStop(0.3, 'rgba(14,240,173,0.1)');
+    tunnelGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    vCtx.fillStyle = tunnelGrad;
+    vCtx.fillRect(0, 0, w, h);
+    vCtx.restore();
+  }
+}
+
+// ====== RADAR RENDERING ======
+let radarAngle = 0;
+function renderRadar() {
+  const w = 220, h = 220, cx = 110, cy = 110;
+  rCtx.fillStyle = '#060a13';
+  rCtx.fillRect(0, 0, w, h);
+
+  // Grid circles
+  [30, 60, 90].forEach(r => {
+    rCtx.beginPath();
+    rCtx.arc(cx, cy, r, 0, Math.PI * 2);
+    rCtx.strokeStyle = 'rgba(0,229,255,0.1)';
+    rCtx.lineWidth = 0.5;
+    rCtx.stroke();
+  });
+
+  // Cross
+  rCtx.beginPath();
+  rCtx.moveTo(cx, cy - 95); rCtx.lineTo(cx, cy + 95);
+  rCtx.moveTo(cx - 95, cy); rCtx.lineTo(cx + 95, cy);
+  rCtx.strokeStyle = 'rgba(0,229,255,0.08)';
+  rCtx.lineWidth = 0.5;
+  rCtx.stroke();
+
+  // Sweep
+  radarAngle += 0.02;
+  const sweepGrad = rCtx.createConicalGradient ? null : null; // Not widely supported, use arc
+  rCtx.save();
+  rCtx.translate(cx, cy);
+  rCtx.rotate(radarAngle);
+  // Sweep cone
+  rCtx.beginPath();
+  rCtx.moveTo(0, 0);
+  rCtx.arc(0, 0, 95, -0.4, 0);
+  rCtx.closePath();
+  const sg = rCtx.createRadialGradient(0, 0, 0, 0, 0, 95);
+  sg.addColorStop(0, 'rgba(0,229,255,0.3)');
+  sg.addColorStop(1, 'rgba(0,229,255,0.02)');
+  rCtx.fillStyle = sg;
+  rCtx.fill();
+  // Sweep line
+  rCtx.beginPath();
+  rCtx.moveTo(0, 0);
+  rCtx.lineTo(95, 0);
+  rCtx.strokeStyle = 'rgba(0,229,255,0.7)';
+  rCtx.lineWidth = 1;
+  rCtx.stroke();
+  rCtx.restore();
+
+  // Outer ring
+  rCtx.beginPath();
+  rCtx.arc(cx, cy, 95, 0, Math.PI * 2);
+  rCtx.strokeStyle = 'rgba(0,229,255,0.25)';
+  rCtx.lineWidth = 1;
+  rCtx.stroke();
+
+  // Contacts
+  radarContacts.forEach(c => {
+    c.life -= c.decay;
+    rCtx.beginPath();
+    rCtx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+    rCtx.fillStyle = `rgba(0,229,255,${c.life * 0.8})`;
+    rCtx.fill();
+    // Glow
+    rCtx.beginPath();
+    rCtx.arc(c.x, c.y, c.size + 3, 0, Math.PI * 2);
+    rCtx.fillStyle = `rgba(0,229,255,${c.life * 0.15})`;
+    rCtx.fill();
+  });
+  // Remove dead contacts
+  for (let i = radarContacts.length - 1; i >= 0; i--) {
+    if (radarContacts[i].life <= 0) radarContacts.splice(i, 1);
+  }
+
+  // Center dot (ship)
+  rCtx.beginPath();
+  rCtx.arc(cx, cy, 2, 0, Math.PI * 2);
+  rCtx.fillStyle = '#0ef0ad';
+  rCtx.fill();
+
+  // Range labels
+  rCtx.font = '7px Orbitron';
+  rCtx.fillStyle = 'rgba(0,229,255,0.3)';
+  rCtx.textAlign = 'left';
+  rCtx.fillText('10K', cx + 31, cy - 2);
+  rCtx.fillText('20K', cx + 61, cy - 2);
+  rCtx.fillText('30K', cx + 91, cy - 2);
+}
+
+// ====== UPDATE DISPLAYS ======
+function updateCoordDisplay() {
+  $('coordX').textContent = ship.coords.x.toFixed(1);
+  $('coordY').textContent = ship.coords.y.toFixed(1);
+  $('coordZ').textContent = ship.coords.z.toFixed(1);
+  $('sectorName').textContent = ship.sector;
+  $('headingVal').textContent = String(Math.floor(ship.heading)).padStart(3, '0');
+  $('hudHeading').textContent = `HDG ${ship.heading.toFixed(1)}`;
+}
+
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  $('shipTime').textContent = `${h}:${m}:${s}`;
+  // Stellar date: year 2847 + day fraction
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = now - start;
+  const day = Math.floor(diff / 86400000);
+  const frac = ((diff % 86400000) / 86400000).toFixed(2).split('.')[1];
+  $('stellarDate').textContent = `2847.${String(day).padStart(3,'0')}.${frac}`;
+}
+
+function updateNearest() {
+  const name = contactNames[Math.floor(Math.random() * contactNames.length)];
+  const dist = Math.floor(5000 + Math.random() * 50000);
+  $('nearestName').textContent = name;
+  $('nearestDist').textContent = dist.toLocaleString() + ' KM';
+  $('hudRange').textContent = dist.toLocaleString() + ' KM';
+}
+
+function updateCoreTemp() {
+  const base = 2400 + ship.warp * 300;
+  ship.coreTemp = base + (Math.random() - 0.5) * 100;
+  $('coreTemp').textContent = Math.round(ship.coreTemp).toLocaleString();
+  const pct = Math.min(100, (ship.coreTemp / 6000) * 100);
+  $('coreTempBar').style.width = pct + '%';
+  $('coreTempBar').style.background = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--amber)' : 'var(--flame)';
+}
+
+// ====== MAIN LOOP ======
+let lastGauge = 0, lastAlert = 0, lastComm = 0, lastNearest = 0, lastContact = 0, lastDrift = 0;
+function animate(time) {
+  renderViewport(time);
+  renderRadar();
+
+  // Gauge updates every 2s
+  if (time - lastGauge > 2000) { updateGauges(); lastGauge = time; }
+  // Alerts every 8-15s
+  if (time - lastAlert > 8000 + Math.random() * 7000) {
+    showAlert(alertMessages[Math.floor(Math.random() * alertMessages.length)]);
+    lastAlert = time;
+  }
+  // Comms every 6-12s
+  if (time - lastComm > 6000 + Math.random() * 6000) {
+    addCommMessage(commMessages[Math.floor(Math.random() * commMessages.length)]);
+    lastComm = time;
+  }
+  // Nearest contact every 10s
+  if (time - lastNearest > 10000) { updateNearest(); lastNearest = time; }
+  // Radar contacts
+  if (time - lastContact > 1500 + Math.random() * 2000) { spawnContact(); lastContact = time; }
+  // Coordinate drift
+  if (time - lastDrift > 500) {
+    const drift = ship.warp === 0 ? 0.01 : ship.warp * 0.5;
+    ship.coords.x += (Math.random() - 0.5) * drift * 2;
+    ship.coords.y += (Math.random() - 0.5) * drift * 2;
+    ship.coords.z += drift;
+    ship.heading += (Math.random() - 0.5) * 0.1;
+    if (ship.heading < 0) ship.heading += 360;
+    if (ship.heading >= 360) ship.heading -= 360;
+    updateCoordDisplay();
+    updateCoreTemp();
+    lastDrift = time;
+  }
+
+  updateTime();
+  requestAnimationFrame(animate);
+}
+
+// ====== INIT ======
+function init() {
+  initStars();
+  resizeViewport();
+  createGauges();
+  createPowerDist();
+  createWarpButtons();
+  setupToggles();
+  setupActions();
+
+  // Initial comms
+  addCommMessage({ from:'SYSTEM', msg:'Command interface online. All systems nominal.' });
+  addCommMessage({ from:'NAV AI', msg:'Current position: VEIL NEBULA — GRID 7G. Standing by for orders.' });
+
+  window.addEventListener('resize', resizeViewport);
+
+  // Boot sequence
+  setTimeout(() => { $('bootOverlay').classList.add('hide'); }, 2000);
+  setTimeout(() => { $('bootOverlay').style.display = 'none'; }, 2800);
+
+  requestAnimationFrame(animate);
+}
+
+init();
+</script>
+</body>
+</html>

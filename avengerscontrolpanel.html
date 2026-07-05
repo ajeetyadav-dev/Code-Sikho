@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVENGERS CONTROL PANEL — SHIELD TACTICAL INTERFACE</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg-panel: rgba(12, 16, 24, 0.85);
+    --fg: #e8eaf0;
+    --muted: #5a6278;
+    --accent: #e63946;
+    --accent-glow: rgba(230, 57, 70, 0.4);
+    --gold: #d4a017;
+    --gold-glow: rgba(212, 160, 23, 0.3);
+    --cyan: #00e5c8;
+    --cyan-glow: rgba(0, 229, 200, 0.25);
+    --card: rgba(18, 22, 34, 0.9);
+    --border: rgba(90, 98, 120, 0.25);
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 229, 200, 0.015) 2px,
+      rgba(0, 229, 200, 0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Background grid */
+  #bgCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 28px;
+    background: linear-gradient(180deg, rgba(12,16,24,0.98) 0%, rgba(12,16,24,0.7) 100%);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .shield-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 11px;
+    color: var(--accent);
+    position: relative;
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes logoPulse {
+    0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+    50% { box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(230,57,70,0.15); }
+  }
+
+  .shield-logo::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(230, 57, 70, 0.2);
+    animation: logoRingSpin 8s linear infinite;
+  }
+
+  @keyframes logoRingSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .header-title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: var(--fg);
+  }
+
+  .header-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .clock {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan-glow);
+    letter-spacing: 2px;
+  }
+
+  .date-display {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    letter-spacing: 1px;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(230, 57, 70, 0.12);
+    border: 1px solid rgba(230, 57, 70, 0.3);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: dotBlink 1.5s ease-in-out infinite;
+  }
+
+  @keyframes dotBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Main Layout */
+  .main-grid {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    grid-template-rows: auto 1fr;
+    gap: 16px;
+    padding: 16px 20px;
+    min-height: calc(100vh - 76px);
+  }
+
+  /* Panel styling */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.4;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  .panel-tag {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Left Column — Hero Roster */
+  .hero-roster {
+    grid-row: 1 / -1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-search {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-search input {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .hero-search input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan-glow);
+  }
+
+  .hero-search input::placeholder {
+    color: var(--muted);
+  }
+
+  .hero-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .hero-list::-webkit-scrollbar { width: 4px; }
+  .hero-list::-webkit-scrollbar-track { background: transparent; }
+  .hero-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .hero-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+  }
+
+  .hero-card:hover {
+    background: rgba(0, 229, 200, 0.06);
+    border-color: rgba(0, 229, 200, 0.15);
+  }
+
+  .hero-card.active {
+    background: rgba(0, 229, 200, 0.1);
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px var(--cyan-glow);
+  }
+
+  .hero-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .hero-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+  }
+
+  .hero-avatar.status-active::after { background: #00e676; }
+  .hero-avatar.status-deployed::after { background: var(--gold); }
+  .hero-avatar.status-injured::after { background: var(--accent); }
+  .hero-avatar.status-offline::after { background: var(--muted); }
+
+  .hero-info { flex: 1; min-width: 0; }
+
+  .hero-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hero-codename {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .hero-power-mini {
+    width: 32px;
+    height: 32px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .hero-power-mini svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .hero-power-mini circle {
+    fill: none;
+    stroke-width: 3;
+  }
+
+  .hero-power-mini .bg-ring { stroke: rgba(255,255,255,0.06); }
+  .hero-power-mini .fg-ring {
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease;
+  }
+
+  /* Center Column */
+  .top-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Threat Level Panel */
+  .threat-panel .panel-body {
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .threat-gauge {
+    width: 120px;
+    height: 120px;
+    position: relative;
+  }
+
+  .threat-gauge svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .threat-gauge circle { fill: none; }
+  .threat-gauge .gauge-bg { stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+  .threat-gauge .gauge-fg {
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.5s ease, stroke 0.5s;
+  }
+
+  .threat-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .threat-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 900;
+  }
+
+  .threat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .threat-desc {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 4px;
+  }
+
+  /* Stats Panel */
+  .stats-panel .panel-body {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .stat-box {
+    background: rgba(0,0,0,0.25);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .stat-box:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan-glow);
+  }
+
+  .stat-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--cyan);
+  }
+
+  .stat-number.gold { color: var(--gold); }
+  .stat-number.red { color: var(--accent); }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Quinjet Panel */
+  .quinjet-panel .panel-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .quinjet-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  .quinjet-label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .quinjet-label i { font-size: 11px; }
+
+  .quinjet-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .fuel-bar {
+    width: 80px;
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .fuel-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  /* World Map */
+  .map-panel {
+    position: relative;
+  }
+
+  .map-panel .panel-body {
+    padding: 0;
+    position: relative;
+    height: 340px;
+  }
+
+  #worldMap {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .map-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    display: flex;
+    gap: 14px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .map-legend span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .legend-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  /* Right Column */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    grid-row: 1 / -1;
+  }
+
+  /* Hero Detail */
+  .hero-detail .panel-body {
+    padding: 16px;
+    text-align: center;
+  }
+
+  .detail-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    border: 2px solid;
+    position: relative;
+  }
+
+  .detail-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .detail-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .detail-realname {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .detail-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .detail-status .s-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .stat-bars {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stat-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stat-bar-label {
+    font-size: 10px;
+    color: var(--muted);
+    width: 52px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .stat-bar-track {
+    flex: 1;
+    height: 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  .stat-bar-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    width: 24px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Mission Log */
+  .mission-log {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mission-log .panel-body {
+    flex: 1;
+    padding: 0;
+    overflow-y: auto;
+    max-height: 300px;
+  }
+
+  .mission-log .panel-body::-webkit-scrollbar { width: 3px; }
+  .mission-log .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .mission-log .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .log-entry:hover {
+    background: rgba(0, 229, 200, 0.04);
+  }
+
+  .log-time {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+    padding-top: 2px;
+    min-width: 48px;
+  }
+
+  .log-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .log-msg {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--fg);
+  }
+
+  .log-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+
+  .log-tag.critical { background: rgba(230,57,70,0.15); color: var(--accent); }
+  .log-tag.warning { background: rgba(212,160,23,0.15); color: var(--gold); }
+  .log-tag.info { background: rgba(0,229,200,0.1); color: var(--cyan); }
+  .log-tag.success { background: rgba(0,230,118,0.1); color: #00e676; }
+
+  /* Mission Board */
+  .mission-board .panel-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mission-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .mission-item:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 10px var(--gold-glow);
+  }
+
+  .mission-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .mission-info { flex: 1; min-width: 0; }
+
+  .mission-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mission-loc {
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .mission-priority {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toastIn 0.4s ease, toastOut 0.4s ease 3s forwards;
+    backdrop-filter: blur(12px);
+    border: 1px solid;
+  }
+
+  .toast.alert {
+    background: rgba(230, 57, 70, 0.15);
+    border-color: rgba(230, 57, 70, 0.3);
+    color: var(--accent);
+  }
+
+  .toast.success {
+    background: rgba(0, 230, 118, 0.12);
+    border-color: rgba(0, 230, 118, 0.3);
+    color: #00e676;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(40px); }
+  }
+
+  /* Button */
+  .btn-deploy {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border: 1px solid var(--accent);
+    background: rgba(230, 57, 70, 0.1);
+    color: var(--accent);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .btn-deploy:hover {
+    background: rgba(230, 57, 70, 0.25);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .btn-deploy:active {
+    transform: scale(0.97);
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .main-grid {
+      grid-template-columns: 240px 1fr 260px;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .main-grid {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto;
+    }
+    .hero-roster { grid-row: auto; grid-column: 1 / -1; }
+    .hero-list { display: flex; overflow-x: auto; gap: 4px; padding: 8px; }
+    .hero-card { flex-shrink: 0; min-width: 160px; }
+    .right-col { grid-column: 1 / -1; flex-direction: row; }
+    .right-col > * { flex: 1; }
+  }
+
+  @media (max-width: 640px) {
+    .header { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+    .header-title { font-size: 13px; }
+    .main-grid { padding: 10px; gap: 10px; grid-template-columns: 1fr; }
+    .top-bar { grid-template-columns: 1fr; }
+    .right-col { flex-direction: column; }
+    .clock { font-size: 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="shield-logo" aria-label="SHIELD emblem">SH</div>
+    <div>
+      <div class="header-title">AVENGERS COMMAND</div>
+      <div class="header-subtitle">Strategic Homeland Intervention Enforcement Logistics</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>Alert Active</span>
+    </div>
+    <div>
+      <div class="clock" id="clock">00:00:00</div>
+      <div class="date-display" id="dateDisplay">--</div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Grid -->
+<main class="main-grid">
+
+  <!-- Left: Hero Roster -->
+  <section class="panel hero-roster" aria-label="Avenger Roster">
+    <div class="panel-header">
+      <span class="panel-title">Avenger Roster</span>
+      <span class="panel-tag" id="rosterCount">8 Operatives</span>
+    </div>
+    <div class="hero-search">
+      <input type="text" id="heroSearch" placeholder="Search operative..." aria-label="Search heroes">
+    </div>
+    <div class="hero-list" id="heroList" role="listbox" aria-label="Hero list"></div>
+  </section>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <!-- Threat Level -->
+    <section class="panel threat-panel" aria-label="Threat Level">
+      <div class="panel-header">
+        <span class="panel-title">Threat Level</span>
+        <span class="panel-tag">GLOBAL</span>
+      </div>
+      <div class="panel-body">
+        <div class="threat-gauge">
+          <svg viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="50"/>
+            <circle class="gauge-fg" id="threatArc" cx="60" cy="60" r="50"
+              stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          </svg>
+          <div class="threat-value">
+            <div class="threat-number" id="threatNumber">0</div>
+            <div class="threat-label">Level</div>
+          </div>
+        </div>
+        <div class="threat-desc" id="threatDesc">Initializing...</div>
+      </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <section class="panel stats-panel" aria-label="Quick Stats">
+      <div class="panel-header">
+        <span class="panel-title">Overview</span>
+        <span class="panel-tag">LIVE</span>
+      </div>
+      <div class="panel-body">
+        <div class="stat-box">
+          <div class="stat-number" id="statActive">0</div>
+          <div class="stat-label">Active</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number gold" id="statDeployed">0</div>
+          <div class="stat-label">Deployed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number red" id="statThreats">0</div>
+          <div class="stat-label">Threats</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="statMissions">0</div>
+          <div class="stat-label">Missions</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quinjet Status -->
+    <section class="panel quinjet-panel" aria-label="Quinjet Status">
+      <div class="panel-header">
+        <span class="panel-title">Quinjet Fleet</span>
+        <span class="panel-tag">3 UNITS</span>
+      </div>
+      <div class="panel-body" id="quinjetBody"></div>
+    </section>
+  </div>
+
+  <!-- World Map -->
+  <section class="panel map-panel" aria-label="Global Threat Map">
+    <div class="panel-header">
+      <span class="panel-title">Global Threat Map</span>
+      <span class="panel-tag">REAL-TIME</span>
+    </div>
+    <div class="panel-body">
+      <canvas id="worldMap"></canvas>
+      <div class="map-legend">
+        <span><span class="legend-dot" style="background:var(--accent)"></span> Critical</span>
+        <span><span class="legend-dot" style="background:var(--gold)"></span> Elevated</span>
+        <span><span class="legend-dot" style="background:var(--cyan)"></span> Monitored</span>
+        <span><span class="legend-dot" style="background:#00e676"></span> Cleared</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Right Column -->
+  <aside class="right-col">
+    <!-- Hero Detail -->
+    <section class="panel hero-detail" aria-label="Selected Hero Details">
+      <div class="panel-header">
+        <span class="panel-title">Operative Detail</span>
+        <span class="panel-tag" id="detailCallsign">--</span>
+      </div>
+      <div class="panel-body" id="detailBody">
+        <div style="color:var(--muted);font-size:13px;padding:30px 0;">Select an operative</div>
+      </div>
+    </section>
+
+    <!-- Active Missions -->
+    <section class="panel mission-board" aria-label="Active Missions">
+      <div class="panel-header">
+        <span class="panel-title">Active Missions</span>
+        <span class="panel-tag" id="missionCount">0</span>
+      </div>
+      <div class="panel-body" id="missionBoard"></div>
+    </section>
+
+    <!-- Comms Log -->
+    <section class="panel mission-log" aria-label="Communications Log">
+      <div class="panel-header">
+        <span class="panel-title">Comms Log</span>
+        <span class="panel-tag">ENCRYPTED</span>
+      </div>
+      <div class="panel-body" id="commsLog"></div>
+    </section>
+  </aside>
+
+</main>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ========== DATA ==========
+const heroes = [
+  {
+    id: 'ironman',
+    name: 'Tony Stark',
+    codename: 'IRON MAN',
+    icon: '🤖',
+    color: '#e63946',
+    status: 'deployed',
+    stats: { str: 55, spd: 70, dur: 85, intel: 100, energy: 95, combat: 65 },
+    location: 'Sokovia Sector'
+  },
+  {
+    id: 'cap',
+    name: 'Steve Rogers',
+    codename: 'CAPTAIN AMERICA',
+    icon: '🛡️',
+    color: '#3a86c8',
+    status: 'active',
+    stats: { str: 75, spd: 60, dur: 70, intel: 70, energy: 20, combat: 100 },
+    location: 'HQ — New York'
+  },
+  {
+    id: 'thor',
+    name: 'Thor Odinson',
+    codename: 'THOR',
+    icon: '⚡',
+    color: '#d4a017',
+    status: 'deployed',
+    stats: { str: 100, spd: 80, dur: 95, intel: 50, energy: 100, combat: 85 },
+    location: 'Asgardian Realm'
+  },
+  {
+    id: 'hulk',
+    name: 'Bruce Banner',
+    codename: 'HULK',
+    icon: '💥',
+    color: '#4caf50',
+    status: 'active',
+    stats: { str: 100, spd: 50, dur: 100, intel: 95, energy: 10, combat: 70 },
+    location: 'Lab — Upstate'
+  },
+  {
+    id: 'widow',
+    name: 'Natasha Romanoff',
+    codename: 'BLACK WIDOW',
+    icon: '🕷️',
+    color: '#e040a0',
+    status: 'deployed',
+    stats: { str: 30, spd: 80, dur: 35, intel: 90, energy: 15, combat: 95 },
+    location: 'Undercover — Budapest'
+  },
+  {
+    id: 'hawkeye',
+    name: 'Clint Barton',
+    codename: 'HAWKEYE',
+    icon: '🏹',
+    color: '#8d6e63',
+    status: 'active',
+    stats: { str: 25, spd: 65, dur: 30, intel: 75, energy: 10, combat: 90 },
+    location: 'HQ — Range'
+  },
+  {
+    id: 'panther',
+    name: "T'Challa",
+    codename: 'BLACK PANTHER',
+    icon: '🐾',
+    color: '#7c4dff',
+    status: 'active',
+    stats: { str: 65, spd: 75, dur: 70, intel: 85, energy: 30, combat: 95 },
+    location: 'Wakanda'
+  },
+  {
+    id: 'strange',
+    name: 'Stephen Strange',
+    codename: 'DR. STRANGE',
+    icon: '🔮',
+    color: '#00bfa5',
+    status: 'injured',
+    stats: { str: 20, spd: 55, dur: 50, intel: 100, energy: 100, combat: 60 },
+    location: 'Sanctum — NYC'
+  }
+];
+
+const missions = [
+  { name: 'Operation Broken Shield', location: 'Sokovia', priority: 'CRITICAL', color: 'var(--accent)', icon: 'fa-explosion' },
+  { name: 'Wakanda Perimeter Watch', location: 'Wakanda', priority: 'HIGH', color: 'var(--gold)', icon: 'fa-shield-halved' },
+  { name: 'Mystic Artifact Recovery', location: 'Kamar-Taj', priority: 'MEDIUM', color: 'var(--cyan)', icon: 'fa-wand-sparkles' },
+  { name: 'Hydra Cell Neutralization', location: 'Budapest', priority: 'CRITICAL', color: 'var(--accent)', icon: 'fa-crosshairs' },
+  { name: 'Asgardian Border Patrol', location: 'Nine Realms', priority: 'HIGH', color: 'var(--gold)', icon: 'fa-bolt' },
+];
+
+const commsMessages = [
+  { msg: 'Iron Man en route to Sokovia coordinates. ETA 22 minutes.', tag: 'info' },
+  { msg: 'Thor reports unusual energy signature near the Bifrost bridge.', tag: 'warning' },
+  { msg: 'Black Widow has made contact with Hydra operative. Extraction pending.', tag: 'critical' },
+  { msg: 'Dr. Strange reporting from Sanctum — mystical barrier holding.', tag: 'success' },
+  { msg: 'Satellite sweep complete. No new threat signatures in Eastern Europe.', tag: 'info' },
+  { msg: 'Hulk containment level stable. Banner requests lab access for analysis.', tag: 'info' },
+  { msg: 'Black Panther deployed additional perimeter guards at Wakandan border.', tag: 'success' },
+  { msg: 'Unidentified vessel approaching Earth atmosphere. Tracking initiated.', tag: 'critical' },
+  { msg: 'Hawkeye reports clear skies at HQ. All perimeter sensors nominal.', tag: 'success' },
+  { msg: 'Captain Rogers requests briefing on Sokovia situation at 1400 hours.', tag: 'warning' },
+  { msg: 'Fury has authorized Level 7 response protocol for Eastern European sector.', tag: 'critical' },
+  { msg: 'Quinjet-2 refueled and standing by for rapid deployment.', tag: 'info' },
+];
+
+const quinjets = [
+  { name: 'Quinjet-1', status: 'In Flight', fuel: 62, speed: 'Mach 2.1', pilot: 'Stark' },
+  { name: 'Quinjet-2', status: 'Standby', fuel: 98, speed: '--', pilot: 'Barton' },
+  { name: 'Quinjet-3', status: 'In Flight', fuel: 41, speed: 'Mach 1.8', pilot: 'Romanoff' },
+];
+
+const threatPoints = [
+  { x: 0.52, y: 0.32, type: 'critical', label: 'Sokovia', pulse: 0 },
+  { x: 0.55, y: 0.58, type: 'elevated', label: 'Wakanda', pulse: 0 },
+  { x: 0.68, y: 0.38, type: 'critical', label: 'Budapest', pulse: 0 },
+  { x: 0.30, y: 0.45, type: 'monitored', label: 'NYC', pulse: 0 },
+  { x: 0.72, y: 0.60, type: 'monitored', label: 'Kamar-Taj', pulse: 0 },
+  { x: 0.40, y: 0.20, type: 'cleared', label: 'Oslo', pulse: 0 },
+  { x: 0.82, y: 0.55, type: 'elevated', label: 'Madripoor', pulse: 0 },
+  { x: 0.15, y: 0.35, type: 'cleared', label: 'Portland', pulse: 0 },
+];
+
+// ========== STATE ==========
+let selectedHeroId = null;
+let threatLevel = 72;
+let animatedThreat = 0;
+
+// ========== BACKGROUND CANVAS ==========
+const bgCanvas = document.getElementById('bgCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+let bgParticles = [];
+
+function resizeBg() {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+// Create floating particles
+for (let i = 0; i < 60; i++) {
+  bgParticles.push({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    r: Math.random() * 1.5 + 0.5,
+    a: Math.random() * 0.3 + 0.05,
+  });
+}
+
+function drawBg(time) {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+  // Grid
+  bgCtx.strokeStyle = 'rgba(0, 229, 200, 0.03)';
+  bgCtx.lineWidth = 0.5;
+  const gridSize = 60;
+  for (let x = 0; x < bgCanvas.width; x += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(x, 0);
+    bgCtx.lineTo(x, bgCanvas.height);
+    bgCtx.stroke();
+  }
+  for (let y = 0; y < bgCanvas.height; y += gridSize) {
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, y);
+    bgCtx.lineTo(bgCanvas.width, y);
+    bgCtx.stroke();
+  }
+
+  // Particles
+  bgParticles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0) p.x = bgCanvas.width;
+    if (p.x > bgCanvas.width) p.x = 0;
+    if (p.y < 0) p.y = bgCanvas.height;
+    if (p.y > bgCanvas.height) p.y = 0;
+
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    bgCtx.fillStyle = `rgba(0, 229, 200, ${p.a})`;
+    bgCtx.fill();
+  });
+
+  // Connection lines
+  for (let i = 0; i < bgParticles.length; i++) {
+    for (let j = i + 1; j < bgParticles.length; j++) {
+      const dx = bgParticles[i].x - bgParticles[j].x;
+      const dy = bgParticles[i].y - bgParticles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(bgParticles[i].x, bgParticles[i].y);
+        bgCtx.lineTo(bgParticles[j].x, bgParticles[j].y);
+        bgCtx.strokeStyle = `rgba(0, 229, 200, ${0.04 * (1 - dist / 120)})`;
+        bgCtx.lineWidth = 0.5;
+        bgCtx.stroke();
+      }
+    }
+  }
+
+  requestAnimationFrame(drawBg);
+}
+requestAnimationFrame(drawBg);
+
+// ========== CLOCK ==========
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+
+  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-US', options).toUpperCase();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ========== THREAT GAUGE ==========
+function updateThreat() {
+  // Slowly fluctuate
+  threatLevel += (Math.random() - 0.48) * 3;
+  threatLevel = Math.max(30, Math.min(95, threatLevel));
+
+  const arc = document.getElementById('threatArc');
+  const num = document.getElementById('threatNumber');
+  const desc = document.getElementById('threatDesc');
+  const circumference = 2 * Math.PI * 50;
+  const offset = circumference * (1 - threatLevel / 100);
+
+  arc.style.strokeDashoffset = offset;
+
+  let color, descText, bgColor;
+  if (threatLevel >= 80) {
+    color = 'var(--accent)';
+    descText = 'CRITICAL';
+    bgColor = 'rgba(230,57,70,0.15)';
+  } else if (threatLevel >= 60) {
+    color = 'var(--gold)';
+    descText = 'ELEVATED';
+    bgColor = 'rgba(212,160,23,0.15)';
+  } else {
+    color = 'var(--cyan)';
+    descText = 'MONITORED';
+    bgColor = 'rgba(0,229,200,0.1)';
+  }
+
+  arc.style.stroke = color;
+  num.style.color = color;
+  desc.textContent = descText;
+  desc.style.color = color;
+  desc.style.background = bgColor;
+
+  // Animate number
+  const target = Math.round(threatLevel);
+  const current = parseInt(num.textContent) || 0;
+  if (current !== target) {
+    const step = current < target ? 1 : -1;
+    let val = current;
+    const interval = setInterval(() => {
+      val += step;
+      num.textContent = val;
+      if (val === target) clearInterval(interval);
+    }, 30);
+  }
+}
+updateThreat();
+setInterval(updateThreat, 4000);
+
+// ========== STATS ==========
+function updateStats() {
+  const active = heroes.filter(h => h.status === 'active').length;
+  const deployed = heroes.filter(h => h.status === 'deployed').length;
+  const threats = threatPoints.filter(t => t.type === 'critical' || t.type === 'elevated').length;
+
+  animateNumber('statActive', active);
+  animateNumber('statDeployed', deployed);
+  animateNumber('statThreats', threats);
+  animateNumber('statMissions', missions.length);
+}
+
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  const current = parseInt(el.textContent) || 0;
+  if (current === target) return;
+  let val = current;
+  const step = current < target ? 1 : -1;
+  const interval = setInterval(() => {
+    val += step;
+    el.textContent = val;
+    if (val === target) clearInterval(interval);
+  }, 60);
+}
+updateStats();
+
+// ========== QUINJETS ==========
+function renderQuinjets() {
+  const body = document.getElementById('quinjetBody');
+  body.innerHTML = quinjets.map(q => {
+    const fuelColor = q.fuel > 60 ? '#00e676' : q.fuel > 30 ? 'var(--gold)' : 'var(--accent)';
+    const statusColor = q.status === 'In Flight' ? 'var(--cyan)' : 'var(--muted)';
+    return `
+      <div class="quinjet-row">
+        <div class="quinjet-label"><i class="fa-solid fa-jet-fighter"></i> ${q.name}</div>
+        <div class="quinjet-val" style="color:${statusColor}">${q.status}</div>
+      </div>
+      <div class="quinjet-row">
+        <div class="quinjet-label"><i class="fa-solid fa-gas-pump"></i> Fuel</div>
+        <div class="fuel-bar"><div class="fuel-fill" style="width:${q.fuel}%;background:${fuelColor}"></div></div>
+        <div class="quinjet-val" style="color:${fuelColor};font-size:10px">${q.fuel}%</div>
+      </div>
+      <div class="quinjet-row">
+        <div class="quinjet-label"><i class="fa-solid fa-gauge-high"></i> Speed</div>
+        <div class="quinjet-val">${q.speed}</div>
+      </div>
+    `;
+  }).join('');
+}
+renderQuinjets();
+
+// Fluctuate fuel
+setInterval(() => {
+  quinjets.forEach(q => {
+    if (q.status === 'In Flight') {
+      q.fuel = Math.max(5, q.fuel - Math.random() * 2);
+    }
+  });
+  renderQuinjets();
+}, 5000);
+
+// ========== HERO LIST ==========
+function renderHeroList(filter = '') {
+  const list = document.getElementById('heroList');
+  const filtered = heroes.filter(h =>
+    h.name.toLowerCase().includes(filter.toLowerCase()) ||
+    h.codename.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  list.innerHTML = filtered.map(h => {
+    const power = Math.round(Object.values(h.stats).reduce((a, b) => a + b, 0) / 6);
+    const circumference = 2 * Math.PI * 12;
+    const offset = circumference * (1 - power / 100);
+    const isActive = selectedHeroId === h.id;
+    return `
+      <div class="hero-card ${isActive ? 'active' : ''}" role="option" aria-selected="${isActive}"
+           onclick="selectHero('${h.id}')" tabindex="0"
+           onkeydown="if(event.key==='Enter')selectHero('${h.id}')">
+        <div class="hero-avatar status-${h.status}" style="background:${h.color}22;color:${h.color}">
+          ${h.icon}
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">${h.codename}</div>
+          <div class="hero-codename">${h.status.toUpperCase()}</div>
+        </div>
+        <div class="hero-power-mini">
+          <svg viewBox="0 0 28 28">
+            <circle class="bg-ring" cx="14" cy="14" r="12"/>
+            <circle class="fg-ring" cx="14" cy="14" r="12"
+              stroke="${h.color}"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${offset}"/>
+          </svg>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('rosterCount').textContent = `${filtered.length} Operatives`;
+}
+
+document.getElementById('heroSearch').addEventListener('input', (e) => {
+  renderHeroList(e.target.value);
+});
+
+renderHeroList();
+
+// ========== HERO DETAIL ==========
+function selectHero(id) {
+  selectedHeroId = id;
+  const h = heroes.find(he => he.id === id);
+  if (!h) return;
+
+  renderHeroList(document.getElementById('heroSearch').value);
+  document.getElementById('detailCallsign').textContent = h.codename;
+
+  const statusColors = {
+    active: { bg: 'rgba(0,230,118,0.12)', color: '#00e676' },
+    deployed: { bg: 'rgba(212,160,23,0.12)', color: 'var(--gold)' },
+    injured: { bg: 'rgba(230,57,70,0.12)', color: 'var(--accent)' },
+    offline: { bg: 'rgba(90,98,120,0.12)', color: 'var(--muted)' },
+  };
+  const sc = statusColors[h.status] || statusColors.active;
+
+  const statEntries = Object.entries(h.stats).map(([key, val]) => {
+    const labels = { str: 'Strength', spd: 'Speed', dur: 'Durability', intel: 'Intel', energy: 'Energy', combat: 'Combat' };
+    return `
+      <div class="stat-bar-row">
+        <div class="stat-bar-label">${labels[key]}</div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill" style="width:${val}%;background:${h.color}"></div>
+        </div>
+        <div class="stat-bar-val" style="color:${h.color}">${val}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-avatar" style="background:${h.color}18;border-color:${h.color};color:${h.color}">
+      ${h.icon}
+    </div>
+    <div class="detail-name">${h.codename}</div>
+    <div class="detail-realname">${h.name}</div>
+    <div class="detail-status" style="background:${sc.bg};color:${sc.color}">
+      <span class="s-dot" style="background:${sc.color}"></span>
+      ${h.status}
+    </div>
+    <div class="stat-bars">${statEntries}</div>
+    <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+      <i class="fa-solid fa-location-dot" style="color:${h.color}"></i> ${h.location}
+    </div>
+    <button class="btn-deploy" onclick="deployHero('${h.id}')">
+      ${h.status === 'deployed' ? 'Recall Operative' : 'Deploy Operative'}
+    </button>
+  `;
+
+  showToast(`${h.codename} profile loaded`, 'success');
+}
+
+function deployHero(id) {
+  const h = heroes.find(he => he.id === id);
+  if (!h) return;
+  if (h.status === 'deployed') {
+    h.status = 'active';
+    h.location = 'HQ — New York';
+    showToast(`${h.codename} recalled to HQ`, 'success');
+  } else if (h.status === 'active') {
+    h.status = 'deployed';
+    h.location = 'En Route — Designated Zone';
+    showToast(`${h.codename} deployed to field`, 'alert');
+  } else {
+    showToast(`${h.codename} is not available for deployment`, 'alert');
+    return;
+  }
+  selectHero(id);
+  updateStats();
+  renderHeroList(document.getElementById('heroSearch').value);
+}
+
+// ========== MISSIONS ==========
+function renderMissions() {
+  const board = document.getElementById('missionBoard');
+  document.getElementById('missionCount').textContent = missions.length;
+  board.innerHTML = missions.map(m => `
+    <div class="mission-item" onclick="showToast('Mission briefing: ${m.name}', 'alert')">
+      <div class="mission-icon" style="background:${m.color}18;color:${m.color}">
+        <i class="fa-solid ${m.icon}"></i>
+      </div>
+      <div class="mission-info">
+        <div class="mission-name">${m.name}</div>
+        <div class="mission-loc"><i class="fa-solid fa-location-dot"></i> ${m.location}</div>
+      </div>
+      <div class="mission-priority" style="background:${m.color}18;color:${m.color}">${m.priority}</div>
+    </div>
+  `).join('');
+}
+renderMissions();
+
+// ========== COMMS LOG ==========
+function renderComms() {
+  const log = document.getElementById('commsLog');
+  const now = new Date();
+  log.innerHTML = commsMessages.map((c, i) => {
+    const time = new Date(now.getTime() - i * 180000);
+    const h = String(time.getHours()).padStart(2, '0');
+    const m = String(time.getMinutes()).padStart(2, '0');
+    return `
+      <div class="log-entry">
+        <div class="log-time">${h}:${m}</div>
+        <div class="log-content">
+          <div class="log-msg">${c.msg}</div>
+          <span class="log-tag ${c.tag}">${c.tag}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+renderComms();
+
+// Add new comms periodically
+setInterval(() => {
+  const newMsgs = [
+    { msg: 'Perimeter scan complete — all sectors clear.', tag: 'success' },
+    { msg: 'Energy spike detected in Sector 7-G. Investigating.', tag: 'warning' },
+    { msg: 'Communications relay updated. Signal strength optimal.', tag: 'info' },
+    { msg: 'Satellite imagery shows movement near abandoned Hydra base.', tag: 'critical' },
+    { msg: 'Medical bay reports all personnel in stable condition.', tag: 'success' },
+    { msg: 'Unidentified aircraft entered restricted airspace. Scrambling alert.', tag: 'critical' },
+  ];
+  const pick = newMsgs[Math.floor(Math.random() * newMsgs.length)];
+  commsMessages.unshift(pick);
+  if (commsMessages.length > 20) commsMessages.pop();
+  renderComms();
+}, 8000);
+
+// ========== WORLD MAP ==========
+const mapCanvas = document.getElementById('worldMap');
+const mapCtx = mapCanvas.getContext('2d');
+
+function resizeMap() {
+  const rect = mapCanvas.parentElement.getBoundingClientRect();
+  mapCanvas.width = rect.width;
+  mapCanvas.height = rect.height;
+}
+resizeMap();
+window.addEventListener('resize', () => { resizeMap(); });
+
+// Simplified world map dots
+function generateWorldDots() {
+  const dots = [];
+  // A very simplified continent outline using dot patterns
+  const continents = [
+    // North America
+    ...Array.from({length: 80}, () => ({x: 0.1 + Math.random() * 0.18, y: 0.15 + Math.random() * 0.25})),
+    // South America
+    ...Array.from({length: 50}, () => ({x: 0.2 + Math.random() * 0.1, y: 0.5 + Math.random() * 0.3})),
+    // Europe
+    ...Array.from({length: 50}, () => ({x: 0.45 + Math.random() * 0.1, y: 0.15 + Math.random() * 0.2})),
+    // Africa
+    ...Array.from({length: 70}, () => ({x: 0.45 + Math.random() * 0.12, y: 0.35 + Math.random() * 0.35})),
+    // Asia
+    ...Array.from({length: 100}, () => ({x: 0.55 + Math.random() * 0.25, y: 0.12 + Math.random() * 0.35})),
+    // Australia
+    ...Array.from({length: 30}, () => ({x: 0.75 + Math.random() * 0.1, y: 0.6 + Math.random() * 0.15})),
+  ];
+  return continents;
+}
+
+const worldDots = generateWorldDots();
+
+function drawMap(time) {
+  const w = mapCanvas.width;
+  const h = mapCanvas.height;
+  if (w === 0 || h === 0) { requestAnimationFrame(drawMap); return; }
+
+  mapCtx.clearRect(0, 0, w, h);
+
+  // Background glow
+  const grad = mapCtx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, w * 0.6);
+  grad.addColorStop(0, 'rgba(0, 229, 200, 0.02)');
+  grad.addColorStop(1, 'transparent');
+  mapCtx.fillStyle = grad;
+  mapCtx.fillRect(0, 0, w, h);
+
+  // World dots
+  worldDots.forEach(d => {
+    mapCtx.beginPath();
+    mapCtx.arc(d.x * w, d.y * h, 1.2, 0, Math.PI * 2);
+    mapCtx.fillStyle = 'rgba(90, 98, 120, 0.35)';
+    mapCtx.fill();
+  });
+
+  // Grid lines on map
+  mapCtx.strokeStyle = 'rgba(0, 229, 200, 0.04)';
+  mapCtx.lineWidth = 0.5;
+  for (let i = 0; i < 10; i++) {
+    const y = (i / 10) * h;
+    mapCtx.beginPath(); mapCtx.moveTo(0, y); mapCtx.lineTo(w, y); mapCtx.stroke();
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = (i / 16) * w;
+    mapCtx.beginPath(); mapCtx.moveTo(x, 0); mapCtx.lineTo(x, h); mapCtx.stroke();
+  }
+
+  // Threat points
+  const t = time * 0.001;
+  threatPoints.forEach(tp => {
+    const x = tp.x * w;
+    const y = tp.y * h;
+    tp.pulse = (tp.pulse + 0.02) % (Math.PI * 2);
+
+    let color;
+    switch (tp.type) {
+      case 'critical': color = { r: 230, g: 57, b: 70 }; break;
+      case 'elevated': color = { r: 212, g: 160, b: 23 }; break;
+      case 'monitored': color = { r: 0, g: 229, b: 200 }; break;
+      default: color = { r: 0, g: 230, b: 118 }; break;
+    }
+
+    // Pulse ring
+    const pulseSize = 6 + Math.sin(tp.pulse) * 4;
+    const pulseAlpha = 0.3 - Math.sin(tp.pulse) * 0.2;
+    mapCtx.beginPath();
+    mapCtx.arc(x, y, pulseSize + 8, 0, Math.PI * 2);
+    mapCtx.strokeStyle = `rgba(${color.r},${color.g},${color.b},${Math.max(0, pulseAlpha)})`;
+    mapCtx.lineWidth = 1;
+    mapCtx.stroke();
+
+    // Second pulse ring
+    const pulseSize2 = 6 + Math.sin(tp.pulse + 1) * 4;
+    mapCtx.beginPath();
+    mapCtx.arc(x, y, pulseSize2 + 14, 0, Math.PI * 2);
+    mapCtx.strokeStyle = `rgba(${color.r},${color.g},${color.b},${Math.max(0, pulseAlpha * 0.4)})`;
+    mapCtx.lineWidth = 0.5;
+    mapCtx.stroke();
+
+    // Core dot
+    mapCtx.beginPath();
+    mapCtx.arc(x, y, 4, 0, Math.PI * 2);
+    mapCtx.fillStyle = `rgba(${color.r},${color.g},${color.b},0.9)`;
+    mapCtx.fill();
+
+    // Glow
+    mapCtx.beginPath();
+    mapCtx.arc(x, y, 8, 0, Math.PI * 2);
+    const glow = mapCtx.createRadialGradient(x, y, 0, x, y, 8);
+    glow.addColorStop(0, `rgba(${color.r},${color.g},${color.b},0.3)`);
+    glow.addColorStop(1, 'transparent');
+    mapCtx.fillStyle = glow;
+    mapCtx.fill();
+
+    // Label
+    mapCtx.font = '9px Rajdhani';
+    mapCtx.fillStyle = `rgba(${color.r},${color.g},${color.b},0.7)`;
+    mapCtx.textAlign = 'center';
+    mapCtx.fillText(tp.label, x, y - 14);
+  });
+
+  // Connection lines between critical/elevated points
+  const activePoints = threatPoints.filter(p => p.type === 'critical' || p.type === 'elevated');
+  for (let i = 0; i < activePoints.length; i++) {
+    for (let j = i + 1; j < activePoints.length; j++) {
+      const ax = activePoints[i].x * w;
+      const ay = activePoints[i].y * h;
+      const bx = activePoints[j].x * w;
+      const by = activePoints[j].y * h;
+      const dist = Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
+      if (dist < w * 0.5) {
+        const alpha = 0.08 + Math.sin(t + i + j) * 0.04;
+        mapCtx.beginPath();
+        mapCtx.moveTo(ax, ay);
+        mapCtx.lineTo(bx, by);
+        mapCtx.strokeStyle = `rgba(230, 57, 70, ${Math.max(0, alpha)})`;
+        mapCtx.lineWidth = 0.5;
+        mapCtx.setLineDash([4, 4]);
+        mapCtx.stroke();
+        mapCtx.setLineDash([]);
+      }
+    }
+  }
+
+  requestAnimationFrame(drawMap);
+}
+requestAnimationFrame(drawMap);
+
+// ========== TOAST ==========
+function showToast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<i class="fa-solid ${type === 'alert' ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${msg}`;
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3500);
+}
+
+// ========== INITIAL TOAST ==========
+setTimeout(() => {
+  showToast('Tactical interface online — all systems nominal', 'success');
+}, 800);
+
+setTimeout(() => {
+  showToast('New threat signature detected in Eastern Europe', 'alert');
+}, 3000);
+
+// Select first hero by default
+setTimeout(() => selectHero('ironman'), 500);
+</script>
+</body>
+</html>
